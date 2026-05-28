@@ -152,7 +152,6 @@ fn dry_run_writes_savefile_and_email_copy_without_uploading() {
         email: "payer@example.com".into(),
         mode: SubmissionMode::DryRun,
         dispatcher: None,
-        legacy_tools_dir: None,
         fetch_dispatcher: false,
     };
 
@@ -192,7 +191,6 @@ fn invalid_dispatcher_secret_returns_log_path_and_writes_error_log() {
             username: "encrypted-user".into(),
             password: "encrypted-pass".into(),
         }),
-        legacy_tools_dir: None,
         fetch_dispatcher: false,
     };
 

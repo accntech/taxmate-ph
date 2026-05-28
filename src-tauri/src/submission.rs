@@ -44,7 +44,6 @@ pub struct SubmissionRequest {
     pub email: String,
     pub mode: SubmissionMode,
     pub dispatcher: Option<DispatcherSettings>,
-    pub legacy_tools_dir: Option<String>,
     pub fetch_dispatcher: bool,
 }
 
@@ -319,17 +318,17 @@ fn resolve_dispatcher(
     primary_url: &str,
     logger: &SubmissionLogger,
 ) -> Result<DispatcherSettings, SubmissionError> {
-    if let Some(dispatcher) = &request.dispatcher {
-        logger.log(format!(
-            "dispatcher_source=manual mode={} server_present={} port={}",
-            dispatcher.mode,
-            !dispatcher.server.is_empty(),
-            dispatcher.port
-        ));
-        return Ok(dispatcher.clone());
-    }
-
     if !request.fetch_dispatcher {
+        if let Some(dispatcher) = &request.dispatcher {
+            logger.log(format!(
+                "dispatcher_source=manual mode={} server_present={} port={}",
+                dispatcher.mode,
+                !dispatcher.server.is_empty(),
+                dispatcher.port
+            ));
+            return Ok(dispatcher.clone());
+        }
+
         let message = "Dispatcher settings are required unless dispatcher fetching is enabled.";
         logger.log(format!("dispatcher_missing {message}"));
         return Err(SubmissionError::with_log_path(message, logger));
