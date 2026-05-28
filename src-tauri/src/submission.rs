@@ -1,5 +1,5 @@
 use std::{
-    fs,
+    env, fs,
     fs::OpenOptions,
     io,
     io::{Read, Write},
@@ -24,8 +24,8 @@ use tauri::Manager;
 const CURRENT_VERSION: &str = "7.9.6.0";
 const PRIMARY_DISPATCHER_BASE: &str = "http://birgovph.com/";
 const BACKUP_DISPATCHER_BASE: &str = "http://ws1.birgovph.com/";
-const DISPATCHER_SECRET_PASSWORD: &str = "***REMOVED***";
-const RETURN_COPY_PASSWORD: &str = "***REMOVED***";
+const DISPATCHER_SECRET_PASSWORD_ENV: &str = "EBIRFORMS_DISPATCHER_SECRET_PASSWORD";
+const RETURN_COPY_PASSWORD_ENV: &str = "EBIRFORMS_RETURN_COPY_PASSWORD";
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
@@ -385,13 +385,9 @@ pub fn decrypt_dispatcher_secret(cipher_text: &str) -> Result<String, Submission
     let salt = &payload[..32];
     let iv = &payload[32..48];
     let cipher_text = &payload[48..];
+    let password = secret_from_env(DISPATCHER_SECRET_PASSWORD_ENV, "Dispatcher secret password")?;
     let mut key = [0_u8; 32];
-    pbkdf2_hmac::<Sha1>(
-        DISPATCHER_SECRET_PASSWORD.as_bytes(),
-        salt,
-        100_000,
-        &mut key,
-    );
+    pbkdf2_hmac::<Sha1>(password.as_bytes(), salt, 100_000, &mut key);
 
     let plain = aes_256_cbc_decrypt_pkcs7(&key, iv, cipher_text)?;
 
@@ -534,7 +530,8 @@ fn dcpcrypt_decrypt(encrypted: &[u8]) -> Result<Vec<u8>, SubmissionError> {
 }
 
 fn dcpcrypt_transform(input: &[u8], encrypt: bool) -> Result<Vec<u8>, SubmissionError> {
-    let key = Sha256::digest(RETURN_COPY_PASSWORD.as_bytes());
+    let password = secret_from_env(RETURN_COPY_PASSWORD_ENV, "Return copy password")?;
+    let key = Sha256::digest(password.as_bytes());
     let cipher = Aes256::new_from_slice(&key)
         .map_err(|error| SubmissionError::new(format!("Return copy cipher failed: {error}")))?;
     let mut chain = [0_u8; 16];
@@ -573,6 +570,11 @@ fn dcpcrypt_transform(input: &[u8], encrypt: bool) -> Result<Vec<u8>, Submission
     }
 
     Ok(output)
+}
+
+fn secret_from_env(name: &str, label: &str) -> Result<String, SubmissionError> {
+    let _ = dotenvy::dotenv();
+    env::var(name).map_err(|_| SubmissionError::new(format!("{label} requires {name} to be set.")))
 }
 
 fn aes_256_cbc_decrypt_pkcs7(
