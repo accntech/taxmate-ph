@@ -36,11 +36,11 @@ fn update_final_flag_rewrites_existing_legacy_record() {
 
 #[test]
 fn build_dispatcher_url_uses_legacy_query_shape() {
-    let url = build_dispatcher_url("http://birgovph.com/", "1234567890000", "1601EQ", "7.9.6.0");
+    let url = build_dispatcher_url("http://birgovph.com/", "123456789", "1601EQ", "7.9.6.0");
 
     assert_eq!(
         url,
-        "http://birgovph.com/tinDispatcherSFTP.php?t=1234567890000&f=1601EQ&v=7.9.6.0"
+        "http://birgovph.com/tinDispatcherSFTP.php?t=123456789&f=1601EQ&v=7.9.6.0"
     );
 }
 
@@ -148,7 +148,7 @@ fn dry_run_writes_savefile_and_email_copy_without_uploading() {
         xml: "<?xml version='1.0'?><div>txtFinalFlag=0txtFinalFlag=</div>".into(),
         return_filename: "1234567890000-1601EQ-2026Q1.xml".into(),
         form_code: "1601EQ".into(),
-        tin: "1234567890000".into(),
+        tin: "123456789".into(),
         email: "payer@example.com".into(),
         mode: SubmissionMode::DryRun,
         dispatcher: None,
@@ -181,7 +181,7 @@ fn invalid_dispatcher_secret_returns_log_path_and_writes_error_log() {
         xml: "<?xml version='1.0'?><div>txtFinalFlag=0txtFinalFlag=</div>".into(),
         return_filename: "1234567890000-1601EQ-2026Q1.xml".into(),
         form_code: "1601EQ".into(),
-        tin: "1234567890000".into(),
+        tin: "123456789".into(),
         email: "payer@example.com".into(),
         mode: SubmissionMode::LegacySftp,
         dispatcher: Some(DispatcherSettings {

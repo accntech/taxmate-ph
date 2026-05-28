@@ -16,6 +16,11 @@ pub struct TaxpayerProfile {
     pub branch_code: String,
     pub rdo_code: String,
     pub taxpayer_name: String,
+    pub address: String,
+    pub address2: String,
+    pub zip_code: String,
+    pub contact_number: String,
+    pub category: String,
     pub email: String,
 }
 
@@ -139,6 +144,11 @@ fn serialize_profile_xml(profile: &TaxpayerProfile) -> String {
         field_xml("tin3", &profile.tin3),
         field_xml("tin4", &profile.branch_code),
         field_xml("rdo", &profile.rdo_code),
+        field_xml("addr", &escape_legacy_value(&profile.address)),
+        field_xml("addr2", &escape_legacy_value(&profile.address2)),
+        field_xml("zip", &profile.zip_code),
+        field_xml("tel", &profile.contact_number),
+        field_xml("category", &profile.category),
         field_xml("email", &profile.email),
         "</div>".to_string(),
     ]
@@ -163,6 +173,11 @@ fn parse_profile_xml(xml: &str) -> Result<TaxpayerProfile, ProfileStoreError> {
         branch_code,
         rdo_code: read_field(xml, "rdo"),
         taxpayer_name: unescape_legacy_value(&read_field(xml, "fn"))?,
+        address: unescape_legacy_value(&read_field(xml, "addr"))?,
+        address2: unescape_legacy_value(&read_field(xml, "addr2"))?,
+        zip_code: read_field(xml, "zip"),
+        contact_number: read_field(xml, "tel"),
+        category: read_field(xml, "category"),
         email: read_field(xml, "email"),
     })
 }

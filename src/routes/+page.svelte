@@ -6,6 +6,7 @@
 	import {
 		buildProfileFilename,
 		buildReturnFilename,
+		buildTaxpayerProfileFormValues,
 		normalizeTinNumber,
 		normalizeTinParts,
 		upsertTaxpayerProfile,
@@ -32,6 +33,11 @@
 		branchCode: '0000',
 		rdoCode: '040',
 		taxpayerName: 'Sample Taxpayer',
+		address: '',
+		address2: '',
+		zipCode: '',
+		contactNumber: '',
+		category: 'P',
 		email: 'taxpayer@example.com'
 	};
 
@@ -56,15 +62,24 @@
 	let profile = $state<TaxpayerProfile>({ ...initialProfile });
 	let profiles = $state<TaxpayerProfile[]>([{ ...initialProfile }]);
 	let formValues = $state<Record<string, string>>({
-		'frm1601EQ:txtTIN1': initialProfile.tin1,
-		'frm1601EQ:txtTIN2': initialProfile.tin2,
-		'frm1601EQ:txtTIN3': initialProfile.tin3,
-		'frm1601EQ:txtBranchCode': initialProfile.branchCode,
-		'frm1601EQ:txtRDOCode': initialProfile.rdoCode,
-		'frm1601EQ:txtTaxpayerName': initialProfile.taxpayerName,
+		...buildTaxpayerProfileFormValues(initialProfile),
 		'frm1601EQ:txtYear': '2026',
 		'frm1601EQ:optQuarter': 'Q1',
-		'frm1601EQ:txtTaxDue': '0.00'
+		'frm1601EQ:optAmendedReturn': 'N',
+		'frm1601EQ:optTaxesWithheld': 'Y',
+		'frm1601EQ:txtSheetsAttached': '0',
+		'frm1601EQ:txtTotalTaxesWithheld': '0.00',
+		'frm1601EQ:txtRemittanceFirstMonth': '0.00',
+		'frm1601EQ:txtRemittanceSecondMonth': '0.00',
+		'frm1601EQ:txtTaxRemittedPreviousReturn': '0.00',
+		'frm1601EQ:txtOverremittancePreviousQuarter': '0.00',
+		'frm1601EQ:txtTotalRemittances': '0.00',
+		'frm1601EQ:txtTaxStillDue': '0.00',
+		'frm1601EQ:txtSurcharge': '0.00',
+		'frm1601EQ:txtInterest': '0.00',
+		'frm1601EQ:txtCompromise': '0.00',
+		'frm1601EQ:txtTotalPenalties': '0.00',
+		'frm1601EQ:txtTotalAmountDue': '0.00'
 	});
 
 	let returnPeriod = $derived(
@@ -99,7 +114,7 @@
 	let generatedXml = $derived(
 		serializeLegacyXml({
 			...formValues,
-			txtEmail: profile.email,
+			txtEmail: formValues.txtEmail || profile.email,
 			txtFinalFlag: finalFlag
 		})
 	);
@@ -112,12 +127,7 @@
 	];
 
 	function syncProfileToForm() {
-		formValues['frm1601EQ:txtTIN1'] = profile.tin1;
-		formValues['frm1601EQ:txtTIN2'] = profile.tin2;
-		formValues['frm1601EQ:txtTIN3'] = profile.tin3;
-		formValues['frm1601EQ:txtBranchCode'] = profile.branchCode;
-		formValues['frm1601EQ:txtRDOCode'] = profile.rdoCode;
-		formValues['frm1601EQ:txtTaxpayerName'] = profile.taxpayerName;
+		formValues = { ...formValues, ...buildTaxpayerProfileFormValues(profile) };
 		statusMessage = 'Profile values copied into the active return.';
 	}
 
@@ -130,6 +140,11 @@
 			branchCode: '0000',
 			rdoCode: '',
 			taxpayerName: '',
+			address: '',
+			address2: '',
+			zipCode: '',
+			contactNumber: '',
+			category: 'P',
 			email: ''
 		};
 		selectedProfileId = '';
@@ -210,7 +225,7 @@
 				returnFilename,
 				formCode: '1601EQ',
 				tin: dispatcherTin,
-				email: profile.email,
+				email: formValues.txtEmail || profile.email,
 				mode: submissionMode,
 				dispatcher: submissionMode === 'legacy_sftp' && !fetchDispatcher ? dispatcher : undefined,
 				legacyToolsDir: submissionMode === 'legacy_sftp' ? legacyToolsDir : undefined,
@@ -322,6 +337,7 @@
 									<th>TIN</th>
 									<th>Taxpayer</th>
 									<th>RDO</th>
+									<th>Category</th>
 									<th>Email</th>
 									<th>Action</th>
 								</tr>
@@ -332,6 +348,7 @@
 										<td class="codex-code font-semibold">{savedProfile.id}</td>
 										<td>{savedProfile.taxpayerName}</td>
 										<td>{savedProfile.rdoCode}</td>
+										<td>{savedProfile.category === 'G' ? 'Government' : 'Private'}</td>
 										<td>{savedProfile.email}</td>
 										<td>
 											<button
@@ -377,6 +394,29 @@
 						<label class="codex-label md:col-span-2">
 							<span class="codex-label-text">Taxpayer Name</span>
 							<input class="codex-input" bind:value={profile.taxpayerName} />
+						</label>
+						<label class="codex-label md:col-span-2">
+							<span class="codex-label-text">Registered Address</span>
+							<input class="codex-input" bind:value={profile.address} />
+						</label>
+						<label class="codex-label md:col-span-2">
+							<span class="codex-label-text">Registered Address Line 2</span>
+							<input class="codex-input" bind:value={profile.address2} />
+						</label>
+						<label class="codex-label">
+							<span class="codex-label-text">ZIP Code</span>
+							<input class="codex-input" bind:value={profile.zipCode} />
+						</label>
+						<label class="codex-label">
+							<span class="codex-label-text">Contact Number</span>
+							<input class="codex-input" bind:value={profile.contactNumber} />
+						</label>
+						<label class="codex-label">
+							<span class="codex-label-text">Category</span>
+							<select class="codex-input" bind:value={profile.category}>
+								<option value="P">Private</option>
+								<option value="G">Government</option>
+							</select>
 						</label>
 						<label class="codex-label">
 							<span class="codex-label-text">Email</span>
