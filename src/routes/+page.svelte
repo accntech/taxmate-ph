@@ -16,7 +16,6 @@
 	import {
 		createSubmissionClient,
 		formatSubmissionError,
-		type DispatcherSettings,
 		type SubmissionMode,
 		type SubmissionReceipt
 	} from '$lib/tauri/submission';
@@ -47,18 +46,8 @@
 	let isSubmitting = $state(false);
 	let statusMessage = $state('Draft return ready for local compatibility testing.');
 	let submissionMode = $state<SubmissionMode>('dry_run');
-	let fetchDispatcher = $state(false);
-	let legacyToolsDir = $state('/Users/ogie/WebProjects/eBIRForms');
 	let submissionReceipt = $state<SubmissionReceipt | null>(null);
 	let selectedProfileId = $state(initialProfile.id);
-	let dispatcher = $state<DispatcherSettings>({
-		mode: '2',
-		server: '',
-		sslPort: '',
-		port: '22',
-		username: '',
-		password: ''
-	});
 	let profile = $state<TaxpayerProfile>({ ...initialProfile });
 	let profiles = $state<TaxpayerProfile[]>([{ ...initialProfile }]);
 	let formValues = $state<Record<string, string>>({
@@ -227,9 +216,8 @@
 				tin: dispatcherTin,
 				email: formValues.txtEmail || profile.email,
 				mode: submissionMode,
-				dispatcher: submissionMode === 'legacy_sftp' && !fetchDispatcher ? dispatcher : undefined,
-				legacyToolsDir: submissionMode === 'legacy_sftp' ? legacyToolsDir : undefined,
-				fetchDispatcher
+				dispatcher: undefined,
+				fetchDispatcher: submissionMode === 'legacy_sftp'
 			});
 
 			submissionReceipt = receipt;
@@ -529,43 +517,9 @@
 
 						{#if submissionMode === 'legacy_sftp'}
 							<div class="grid gap-3 rounded-md border border-line-soft bg-surface-muted p-3">
-								<label class="codex-label">
-									<span class="codex-label-text">Legacy tools folder</span>
-									<input class="codex-input codex-code" bind:value={legacyToolsDir} />
-								</label>
-								<label class="flex items-center gap-2 text-sm font-medium text-text-muted">
-									<input class="size-4" type="checkbox" bind:checked={fetchDispatcher} />
-									Fetch dispatcher settings from BIR
-								</label>
-
-								{#if !fetchDispatcher}
-									<div class="grid gap-3 md:grid-cols-3">
-										<label class="codex-label">
-											<span class="codex-label-text">Encrypted host</span>
-											<input class="codex-input" bind:value={dispatcher.server} />
-										</label>
-										<label class="codex-label">
-											<span class="codex-label-text">Port</span>
-											<input class="codex-input" bind:value={dispatcher.port} />
-										</label>
-										<label class="codex-label">
-											<span class="codex-label-text">Mode</span>
-											<input class="codex-input" bind:value={dispatcher.mode} />
-										</label>
-										<label class="codex-label">
-											<span class="codex-label-text">Encrypted username</span>
-											<input class="codex-input" bind:value={dispatcher.username} />
-										</label>
-										<label class="codex-label">
-											<span class="codex-label-text">Encrypted password</span>
-											<input class="codex-input" bind:value={dispatcher.password} />
-										</label>
-										<label class="codex-label">
-											<span class="codex-label-text">SSL port</span>
-											<input class="codex-input" bind:value={dispatcher.sslPort} />
-										</label>
-									</div>
-								{/if}
+								<p class="text-sm font-medium text-text-muted">
+									Direct dispatcher settings are loaded from BIR during submission.
+								</p>
 							</div>
 						{/if}
 

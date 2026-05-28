@@ -19,7 +19,6 @@ export type SubmissionRequest = {
 	email: string
 	mode: SubmissionMode
 	dispatcher?: DispatcherSettings
-	legacyToolsDir?: string
 	fetchDispatcher: boolean
 }
 
