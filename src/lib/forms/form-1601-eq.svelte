@@ -294,7 +294,7 @@
 				<span class="print-page-count"></span>
 			</div>
 			<div class="print-page-footer" aria-hidden="true">
-				<span>eBIRForms Tauri - BIR Form No. {definition.code}</span>
+				<span>BIR Tools - BIR Form No. {definition.code}</span>
 				<span>{printDate}</span>
 			</div>
 

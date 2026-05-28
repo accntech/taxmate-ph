@@ -236,7 +236,7 @@
 </script>
 
 <svelte:head>
-	<title>eBIRForms Tauri</title>
+	<title>BIR Tools</title>
 </svelte:head>
 
 <main class="codex-shell min-h-screen text-text-main">
@@ -246,7 +246,7 @@
 				<p class="codex-code font-semibold uppercase text-codex-accent">
 					Tauri workspace
 				</p>
-				<h1 class="text-2xl font-semibold">eBIRForms Tauri</h1>
+				<h1 class="text-2xl font-semibold">BIR Tools</h1>
 			</div>
 			<div class="codex-code text-right text-text-muted">
 				<p class="font-medium text-text-main">{returnFilename}</p>

@@ -75,7 +75,7 @@ describe('print HTML export', () => {
 			bodyHtml:
 				'<div class="print-page-header">BIR Form No. 1601EQ</div>' +
 				'<article class="legacy-container">Form</article>' +
-				'<div class="print-page-footer">eBIRForms Tauri</div>',
+				'<div class="print-page-footer">BIR Tools</div>',
 			styleHtml: '',
 			assets: {}
 		})
