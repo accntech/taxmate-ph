@@ -23,7 +23,6 @@
 	let returnPeriod = $derived(
 		`${values['frm1601EQ:txtYear'] || 'YYYY'} ${values['frm1601EQ:optQuarter'] || 'Q'}`
 	);
-	let taxDue = $derived(values['frm1601EQ:txtTaxDue'] || '0.00');
 
 	function updateField(id: string, value: string) {
 		values[id] = value;
@@ -39,6 +38,39 @@
 
 	function isCategory(category: string) {
 		return values['frm1601EQ:optCategory'] === category;
+	}
+
+	function isOption(id: string, value: string) {
+		return values[id] === value;
+	}
+
+	function moneyValue(id: string) {
+		return values[id] || '0.00';
+	}
+
+	function optionLabel(id: string, option: string) {
+		const labels: Record<string, Record<string, string>> = {
+			'frm1601EQ:optQuarter': {
+				Q1: '1ST',
+				Q2: '2ND',
+				Q3: '3RD',
+				Q4: '4TH'
+			},
+			'frm1601EQ:optAmendedReturn': {
+				Y: 'Yes',
+				N: 'No'
+			},
+			'frm1601EQ:optTaxesWithheld': {
+				Y: 'Yes',
+				N: 'No'
+			},
+			'frm1601EQ:optCategory': {
+				P: 'Private',
+				G: 'Government'
+			}
+		};
+
+		return labels[id]?.[option] ?? option;
 	}
 
 	function cancelPrintPreview() {
@@ -359,9 +391,27 @@
 															<span>Amended Return?</span>
 														</div>
 														<div class="legacy-box-row legacy-centered">
-															<span class="legacy-radio"></span><span>Yes</span>
-															<span class="legacy-radio legacy-radio-selected">
-																<span class="legacy-radio-dot">●</span>
+															<span
+																class={[
+																	'legacy-radio',
+																	isOption('frm1601EQ:optAmendedReturn', 'Y') &&
+																		'legacy-radio-selected'
+																]}
+															>
+																{#if isOption('frm1601EQ:optAmendedReturn', 'Y')}
+																	<span class="legacy-radio-dot">●</span>
+																{/if}
+															</span><span>Yes</span>
+															<span
+																class={[
+																	'legacy-radio',
+																	isOption('frm1601EQ:optAmendedReturn', 'N') &&
+																		'legacy-radio-selected'
+																]}
+															>
+																{#if isOption('frm1601EQ:optAmendedReturn', 'N')}
+																	<span class="legacy-radio-dot">●</span>
+																{/if}
 															</span><span>No</span>
 														</div>
 													</td>
@@ -371,10 +421,28 @@
 															<span>Any Taxes Withheld?</span>
 														</div>
 														<div class="legacy-box-row legacy-centered">
-															<span class="legacy-radio legacy-radio-selected">
-																<span class="legacy-radio-dot">●</span>
+															<span
+																class={[
+																	'legacy-radio',
+																	isOption('frm1601EQ:optTaxesWithheld', 'Y') &&
+																		'legacy-radio-selected'
+																]}
+															>
+																{#if isOption('frm1601EQ:optTaxesWithheld', 'Y')}
+																	<span class="legacy-radio-dot">●</span>
+																{/if}
 															</span><span>Yes</span>
-															<span class="legacy-radio"></span><span>No</span>
+															<span
+																class={[
+																	'legacy-radio',
+																	isOption('frm1601EQ:optTaxesWithheld', 'N') &&
+																		'legacy-radio-selected'
+																]}
+															>
+																{#if isOption('frm1601EQ:optTaxesWithheld', 'N')}
+																	<span class="legacy-radio-dot">●</span>
+																{/if}
+															</span><span>No</span>
 														</div>
 													</td>
 													<td class="tblFormTd legacy-item legacy-sheets">
@@ -382,7 +450,11 @@
 															<b>5</b>
 															<span>No. of Sheet/s Attached</span>
 														</div>
-														<input class="legacy-right legacy-input legacy-short" readonly value="0" />
+														<input
+															class="legacy-right legacy-input legacy-short"
+															readonly
+															value={fieldValue('frm1601EQ:txtSheetsAttached') || '0'}
+														/>
 													</td>
 												</tr>
 											</tbody>
@@ -628,7 +700,11 @@
 													<td>Total Taxes Withheld for the Quarter <i>(Sum of Items 13 to 18)</i></td>
 													<td class="legacy-mirror-number">19</td>
 													<td>
-														<input class="legacy-input legacy-money" readonly value={taxDue} />
+														<input
+															class="legacy-input legacy-money"
+															readonly
+															value={moneyValue('frm1601EQ:txtTotalTaxesWithheld')}
+														/>
 													</td>
 												</tr>
 												<tr>
@@ -636,7 +712,11 @@
 													<td>Less: Remittances Made: 1<sup>st</sup> Month of the Quarter</td>
 													<td class="legacy-mirror-number">20</td>
 													<td>
-														<input class="legacy-input legacy-money" readonly value="0.00" />
+														<input
+															class="legacy-input legacy-money"
+															readonly
+															value={moneyValue('frm1601EQ:txtRemittanceFirstMonth')}
+														/>
 													</td>
 												</tr>
 												<tr>
@@ -644,7 +724,11 @@
 													<td><span class="legacy-indent">2<sup>nd</sup> Month of the Quarter</span></td>
 													<td class="legacy-mirror-number">21</td>
 													<td>
-														<input class="legacy-input legacy-money" readonly value="0.00" />
+														<input
+															class="legacy-input legacy-money"
+															readonly
+															value={moneyValue('frm1601EQ:txtRemittanceSecondMonth')}
+														/>
 													</td>
 												</tr>
 												<tr>
@@ -656,7 +740,11 @@
 													</td>
 													<td class="legacy-mirror-number">22</td>
 													<td>
-														<input class="legacy-input legacy-money" readonly value="0.00" />
+														<input
+															class="legacy-input legacy-money"
+															readonly
+															value={moneyValue('frm1601EQ:txtTaxRemittedPreviousReturn')}
+														/>
 													</td>
 												</tr>
 												<tr>
@@ -668,7 +756,11 @@
 													</td>
 													<td class="legacy-mirror-number">23</td>
 													<td>
-														<input class="legacy-input legacy-money" readonly value="0.00" />
+														<input
+															class="legacy-input legacy-money"
+															readonly
+															value={moneyValue('frm1601EQ:txtOverremittancePreviousQuarter')}
+														/>
 													</td>
 												</tr>
 												<tr>
@@ -679,7 +771,7 @@
 														<input
 															class="legacy-input legacy-money legacy-disabled"
 															readonly
-															value="0.00"
+															value={moneyValue('frm1601EQ:txtTotalRemittances')}
 														/>
 													</td>
 												</tr>
@@ -688,7 +780,11 @@
 													<td><b>Tax Still Due</b>/(Over-remittance) <i>(Item 19 less Item 24)</i></td>
 													<td class="legacy-mirror-number">25</td>
 													<td>
-														<input class="legacy-input legacy-money legacy-disabled" readonly value={taxDue} />
+														<input
+															class="legacy-input legacy-money legacy-disabled"
+															readonly
+															value={moneyValue('frm1601EQ:txtTaxStillDue')}
+														/>
 													</td>
 												</tr>
 												<tr>
@@ -696,7 +792,11 @@
 													<td>Add: Penalties <b>26</b> Surcharge</td>
 													<td class="legacy-mirror-number">26</td>
 													<td>
-														<input class="legacy-input legacy-money" readonly value="0.00" />
+														<input
+															class="legacy-input legacy-money"
+															readonly
+															value={moneyValue('frm1601EQ:txtSurcharge')}
+														/>
 													</td>
 												</tr>
 												<tr>
@@ -704,7 +804,11 @@
 													<td><span class="legacy-indent-penalty"><b>27</b> Interest</span></td>
 													<td class="legacy-mirror-number">27</td>
 													<td>
-														<input class="legacy-input legacy-money" readonly value="0.00" />
+														<input
+															class="legacy-input legacy-money"
+															readonly
+															value={moneyValue('frm1601EQ:txtInterest')}
+														/>
 													</td>
 												</tr>
 												<tr>
@@ -712,7 +816,11 @@
 													<td><span class="legacy-indent-penalty"><b>28</b> Compromise</span></td>
 													<td class="legacy-mirror-number">28</td>
 													<td>
-														<input class="legacy-input legacy-money" readonly value="0.00" />
+														<input
+															class="legacy-input legacy-money"
+															readonly
+															value={moneyValue('frm1601EQ:txtCompromise')}
+														/>
 													</td>
 												</tr>
 												<tr>
@@ -723,7 +831,7 @@
 														<input
 															class="legacy-input legacy-money legacy-disabled"
 															readonly
-															value="0.00"
+															value={moneyValue('frm1601EQ:txtTotalPenalties')}
 														/>
 													</td>
 												</tr>
@@ -735,7 +843,11 @@
 													</td>
 													<td class="legacy-mirror-number">30</td>
 													<td>
-														<input class="legacy-input legacy-money legacy-disabled" readonly value={taxDue} />
+														<input
+															class="legacy-input legacy-money legacy-disabled"
+															readonly
+															value={moneyValue('frm1601EQ:txtTotalAmountDue')}
+														/>
 													</td>
 												</tr>
 											</tbody>
@@ -939,7 +1051,7 @@
 						>
 							<option value="">Select</option>
 							{#each field.options ?? [] as option (option)}
-								<option value={option}>{option}</option>
+								<option value={option}>{optionLabel(field.id, option)}</option>
 							{/each}
 						</select>
 					{:else}

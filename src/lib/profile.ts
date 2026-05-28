@@ -14,6 +14,11 @@ export type ReturnFilenameInput = TinParts & {
 export type TaxpayerProfileInput = TinParts & {
 	rdoCode: string;
 	taxpayerName: string;
+	address: string;
+	address2: string;
+	zipCode: string;
+	contactNumber: string;
+	category: string;
 	email: string;
 };
 
@@ -66,4 +71,21 @@ export function upsertTaxpayerProfile(
 	}
 
 	return profiles.map((item, index) => (index === profileIndex ? profile : item));
+}
+
+export function buildTaxpayerProfileFormValues(profile: TaxpayerProfile): Record<string, string> {
+	return {
+		'frm1601EQ:txtTIN1': profile.tin1,
+		'frm1601EQ:txtTIN2': profile.tin2,
+		'frm1601EQ:txtTIN3': profile.tin3,
+		'frm1601EQ:txtBranchCode': profile.branchCode,
+		'frm1601EQ:txtRDOCode': profile.rdoCode,
+		'frm1601EQ:txtTaxpayerName': profile.taxpayerName,
+		'frm1601EQ:txtAddress': profile.address,
+		'frm1601EQ:txtAddress2': profile.address2,
+		'frm1601EQ:txtZipCode': profile.zipCode,
+		'frm1601EQ:txtTelNum': profile.contactNumber,
+		'frm1601EQ:optCategory': profile.category,
+		txtEmail: profile.email
+	};
 }

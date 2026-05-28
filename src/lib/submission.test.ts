@@ -8,7 +8,7 @@ describe('createSubmissionClient', () => {
 			xml: '<div>txtFinalFlag=0txtFinalFlag=</div>',
 			returnFilename: '1234567890000-1601EQ-2026Q1.xml',
 			formCode: '1601EQ',
-			tin: '1234567890000',
+			tin: '123456789',
 			email: 'payer@example.com',
 			mode: 'dry_run',
 			fetchDispatcher: false

@@ -16,6 +16,11 @@ describe('createProfileStoreClient', () => {
 			branchCode: '0000',
 			rdoCode: '040',
 			taxpayerName: 'Sample Taxpayer',
+			address: '123 Sample Street',
+			address2: 'Barangay Example, Makati City',
+			zipCode: '1200',
+			contactNumber: '09171234567',
+			category: 'P',
 			email: 'taxpayer@example.com'
 		};
 		const receipt: TaxpayerProfileSaveReceipt = {
@@ -43,6 +48,11 @@ describe('createProfileStoreClient', () => {
 				branchCode: '0000',
 				rdoCode: '040',
 				taxpayerName: 'Sample Taxpayer',
+				address: '123 Sample Street',
+				address2: 'Barangay Example, Makati City',
+				zipCode: '1200',
+				contactNumber: '09171234567',
+				category: 'P',
 				email: 'taxpayer@example.com'
 			}
 		];
