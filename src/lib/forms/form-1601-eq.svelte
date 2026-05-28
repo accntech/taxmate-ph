@@ -5,10 +5,10 @@
 		buildPdfExportFilename,
 		createPdfExportClient,
 		formatPdfExportError
-	} from './pdfExport';
-	import type { FormDefinition } from './forms';
-	import { buildPrintHtml } from './printHtml';
-	import { getPrintProfile, printProfiles, type PrintPaperSize } from './printProfiles';
+	} from '$lib/tauri/pdf-export';
+	import type { FormDefinition } from '$lib/forms';
+	import { buildPrintHtml } from '$lib/printing/html';
+	import { getPrintProfile, printProfiles, type PrintPaperSize } from '$lib/printing/profiles';
 
 	type Props = {
 		definition: FormDefinition;

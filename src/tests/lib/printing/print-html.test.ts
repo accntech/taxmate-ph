@@ -5,8 +5,8 @@ import {
 	escapeHtml,
 	markStylesAsPrintOnly,
 	replaceLegacyAssetUrls
-} from './printHtml'
-import { getPrintProfile } from './printProfiles'
+} from '$lib/printing/html'
+import { getPrintProfile } from '$lib/printing/profiles'
 
 describe('print HTML export', () => {
 	test('escapes text used in the document title', () => {

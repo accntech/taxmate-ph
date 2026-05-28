@@ -6,7 +6,7 @@ import {
 	normalizeTinNumber,
 	normalizeTinParts,
 	upsertTaxpayerProfile
-} from './profile';
+} from '$lib/profiles/profile';
 
 describe('profile helpers', () => {
 	it('normalizes TIN parts into the legacy taxpayer id', () => {

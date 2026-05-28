@@ -1,6 +1,6 @@
 import { invoke } from '@tauri-apps/api/core'
 
-import type { PrintPaperSize } from './printProfiles'
+import type { PrintPaperSize } from '$lib/printing/profiles'
 
 export type PdfExportRequest = {
 	formCode: string

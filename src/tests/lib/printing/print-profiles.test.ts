@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest'
 
-import { getPrintProfile, printProfiles, type PrintPaperSize } from './printProfiles'
+import { getPrintProfile, printProfiles, type PrintPaperSize } from '$lib/printing/profiles'
 
 describe('print profiles', () => {
 	test('defines the supported paper sizes in UI order', () => {

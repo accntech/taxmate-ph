@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import { parseLegacyXml, serializeLegacyXml } from './legacyXml'
+import { parseLegacyXml, serializeLegacyXml } from '$lib/legacy/xml'
 
 const xmlDeclaration = '<?xml version=\'1.0\'?>'
 const legacyFooter = 'All Rights Reserved BIR 2012.0'
