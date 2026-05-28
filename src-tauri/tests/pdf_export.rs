@@ -9,7 +9,7 @@ fn validate_export_request_accepts_1601eq_long_html() {
         form_code: "1601EQ".into(),
         paper_size: "long".into(),
         html: "<!doctype html><html><body>1601EQ</body></html>".into(),
-        suggested_filename: "1601EQ-long.pdf".into(),
+        suggested_filename: "1601EQ-2026-Q1.pdf".into(),
         output_path: None,
     };
 
@@ -37,13 +37,13 @@ fn resolve_output_path_uses_save_dialog_path_when_present() {
         form_code: "1601EQ".into(),
         paper_size: "long".into(),
         html: "<!doctype html><html><body>1601EQ</body></html>".into(),
-        suggested_filename: "1601EQ-long.pdf".into(),
-        output_path: Some("/tmp/chosen/1601EQ-long.pdf".into()),
+        suggested_filename: "1601EQ-2026-Q1.pdf".into(),
+        output_path: Some("/tmp/chosen/1601EQ-2026-Q1.pdf".into()),
     };
 
     assert_eq!(
         resolve_output_path(&request),
-        std::path::PathBuf::from("/tmp/chosen/1601EQ-long.pdf")
+        std::path::PathBuf::from("/tmp/chosen/1601EQ-2026-Q1.pdf")
     );
 }
 
@@ -53,13 +53,13 @@ fn resolve_output_path_adds_pdf_extension_to_save_dialog_path() {
         form_code: "1601EQ".into(),
         paper_size: "long".into(),
         html: "<!doctype html><html><body>1601EQ</body></html>".into(),
-        suggested_filename: "1601EQ-long.pdf".into(),
-        output_path: Some("/tmp/chosen/1601EQ-long".into()),
+        suggested_filename: "1601EQ-2026-Q1.pdf".into(),
+        output_path: Some("/tmp/chosen/1601EQ-2026-Q1".into()),
     };
 
     assert_eq!(
         resolve_output_path(&request),
-        std::path::PathBuf::from("/tmp/chosen/1601EQ-long.pdf")
+        std::path::PathBuf::from("/tmp/chosen/1601EQ-2026-Q1.pdf")
     );
 }
 
