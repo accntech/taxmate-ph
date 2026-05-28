@@ -24,6 +24,16 @@ export type PdfExportError = {
 
 export type ExportPdf = (request: PdfExportRequest) => Promise<PdfExportReceipt>
 
+export type PdfExportFilenameInput = {
+	formCode: string
+	year: string
+	quarter: string
+}
+
+export function buildPdfExportFilename(input: PdfExportFilenameInput): string {
+	return `${input.formCode}-${input.year}-${input.quarter}.pdf`
+}
+
 export function createPdfExportClient(
 	call: typeof invoke<PdfExportReceipt> = invoke<PdfExportReceipt>
 ): ExportPdf {

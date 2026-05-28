@@ -1,7 +1,11 @@
 <script lang="ts">
 	import { save } from '@tauri-apps/plugin-dialog';
 	import { tick } from 'svelte';
-	import { createPdfExportClient, formatPdfExportError } from './pdfExport';
+	import {
+		buildPdfExportFilename,
+		createPdfExportClient,
+		formatPdfExportError
+	} from './pdfExport';
 	import type { FormDefinition } from './forms';
 	import { buildPrintHtml } from './printHtml';
 	import { getPrintProfile, printProfiles, type PrintPaperSize } from './printProfiles';
@@ -22,6 +26,13 @@
 
 	let returnPeriod = $derived(
 		`${values['frm1601EQ:txtYear'] || 'YYYY'} ${values['frm1601EQ:optQuarter'] || 'Q'}`
+	);
+	let pdfFilename = $derived(
+		buildPdfExportFilename({
+			formCode: definition.code,
+			year: values['frm1601EQ:txtYear'] || 'YYYY',
+			quarter: values['frm1601EQ:optQuarter'] || 'Q'
+		})
 	);
 
 	function updateField(id: string, value: string) {
@@ -174,7 +185,7 @@
 		try {
 			const profile = getPrintProfile(selectedPaperSize);
 			const outputPath = await save({
-				defaultPath: `${definition.code}-${profile.size}.pdf`,
+				defaultPath: pdfFilename,
 				filters: [
 					{
 						name: 'PDF',
@@ -200,7 +211,7 @@
 				formCode: definition.code,
 				paperSize: profile.size,
 				html,
-				suggestedFilename: `${definition.code}-${profile.size}.pdf`,
+				suggestedFilename: pdfFilename,
 				outputPath
 			});
 
