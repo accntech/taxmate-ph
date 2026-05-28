@@ -1,6 +1,10 @@
 import { describe, expect, test } from 'vitest'
 
-import { createSubmissionClient, formatSubmissionError, type SubmissionRequest } from './submission'
+import {
+	createSubmissionClient,
+	formatSubmissionError,
+	type SubmissionRequest
+} from '$lib/tauri/submission'
 
 describe('createSubmissionClient', () => {
 	test('invokes the Tauri submit_return command with a typed request envelope', async () => {

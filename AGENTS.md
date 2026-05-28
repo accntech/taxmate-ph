@@ -23,3 +23,6 @@
   ignoring them unless the user explicitly confirms they should be committed.
 - When merging worktree branches into `main`, keep history linear and author-date-ordered. Use
   fast-forward merges or cherry-picks, not merge commits.
+
+## Code Style
+- Use kebab-case for TypeScript and Svelte filenames.

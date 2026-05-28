@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { getFormDefinition, listForms } from './forms';
+import { getFormDefinition, listForms } from '$lib/forms';
 
 describe('form metadata', () => {
 	it('lists the first migrated form as 1601EQ', () => {

@@ -5,7 +5,7 @@ import {
 	createPdfExportClient,
 	formatPdfExportError,
 	type PdfExportRequest
-} from './pdfExport'
+} from '$lib/tauri/pdf-export'
 
 describe('buildPdfExportFilename', () => {
 	test('adds the year and quarter while omitting the paper size suffix', () => {

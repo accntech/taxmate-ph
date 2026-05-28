@@ -1,4 +1,4 @@
-import type { PrintProfile } from './printProfiles'
+import type { PrintProfile } from './profiles'
 
 export type PrintHtmlInput = {
 	title: string

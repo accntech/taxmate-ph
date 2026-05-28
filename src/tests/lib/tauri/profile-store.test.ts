@@ -4,7 +4,7 @@ import {
 	createProfileStoreClient,
 	type SavedTaxpayerProfile,
 	type TaxpayerProfileSaveReceipt
-} from './profileStore';
+} from '$lib/tauri/profile-store';
 
 describe('createProfileStoreClient', () => {
 	test('saves taxpayer profiles through the Tauri profile command', async () => {

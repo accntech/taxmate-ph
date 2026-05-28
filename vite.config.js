@@ -30,6 +30,6 @@ export default defineConfig(async () => ({
 		}
 	},
 	test: {
-		include: ['src/**/*.{test,spec}.ts']
+		include: ['src/tests/**/*.{test,spec}.ts']
 	}
 }));

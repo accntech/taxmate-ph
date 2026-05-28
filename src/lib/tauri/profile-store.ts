@@ -1,6 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
 
-import type { TaxpayerProfile } from './profile';
+import type { TaxpayerProfile } from '$lib/profiles/profile';
 
 export type SavedTaxpayerProfile = TaxpayerProfile;
 

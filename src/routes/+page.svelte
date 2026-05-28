@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import Form1601EQ from '$lib/Form1601EQ.svelte';
+	import Form1601EQ from '$lib/forms/form-1601-eq.svelte';
 	import { getFormDefinition, listForms } from '$lib/forms';
-	import { parseLegacyXml, serializeLegacyXml } from '$lib/legacyXml';
+	import { parseLegacyXml, serializeLegacyXml } from '$lib/legacy/xml';
 	import {
 		buildProfileFilename,
 		buildReturnFilename,
@@ -11,15 +11,15 @@
 		normalizeTinParts,
 		upsertTaxpayerProfile,
 		type TaxpayerProfile
-	} from '$lib/profile';
-	import { createProfileStoreClient, formatProfileStoreError } from '$lib/profileStore';
+	} from '$lib/profiles/profile';
+	import { createProfileStoreClient, formatProfileStoreError } from '$lib/tauri/profile-store';
 	import {
 		createSubmissionClient,
 		formatSubmissionError,
 		type DispatcherSettings,
 		type SubmissionMode,
 		type SubmissionReceipt
-	} from '$lib/submission';
+	} from '$lib/tauri/submission';
 
 	type Tab = 'profile' | 'forms' | 'saved' | 'submission';
 
