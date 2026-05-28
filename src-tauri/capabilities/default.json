@@ -5,9 +5,10 @@
   "windows": [
     "main"
   ],
-	"permissions": [
-		"core:default",
-		"core:webview:allow-print",
-		"opener:default"
-	]
+  "permissions": [
+    "core:default",
+    "core:webview:allow-print",
+    "opener:default",
+    "dialog:default"
+  ]
 }
