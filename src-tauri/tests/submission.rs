@@ -1,11 +1,21 @@
-use std::fs;
+use std::{
+    fs,
+    sync::{Mutex, OnceLock},
+};
 
+use aes::{
+    cipher::{generic_array::GenericArray, BlockEncrypt, KeyInit},
+    Aes256,
+};
+use base64::{engine::general_purpose::STANDARD, Engine};
 use ebirforms_tauri_lib::submission::{
     build_dispatcher_url, build_sftp_upload_plan, decrypt_dispatcher_secret,
     decrypt_native_return_copy, email_file_name, encrypt_native_return_copy,
     parse_dispatcher_response, run_submission, update_final_flag, DispatcherSettings,
     SubmissionMode, SubmissionRequest, SubmissionStatus,
 };
+use pbkdf2::pbkdf2_hmac;
+use sha1::Sha1;
 
 #[test]
 fn email_file_name_matches_legacy_hash_format() {
@@ -86,59 +96,87 @@ fn parse_dispatcher_response_accepts_legacy_single_quoted_object() {
 }
 
 #[test]
-fn decrypt_dispatcher_secret_matches_legacy_ebfsftp() {
-    let cipher_text =
-        "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQECAgICAgICAgICAgICAgICpfxuKBDDJkXbDSZOg59i6yINTItcWddk8Xo9Y4loPvs=";
+fn decrypt_dispatcher_secret_requires_env_password() {
+    with_submission_env(None, None, || {
+        let cipher_text = dispatcher_cipher_text("sftp.example.test");
 
-    assert_eq!(
-        decrypt_dispatcher_secret(cipher_text).expect("decrypted dispatcher value"),
-        "sftp.example.test"
-    );
+        let error = decrypt_dispatcher_secret(&cipher_text).expect_err("missing env password");
+
+        assert!(error
+            .message
+            .contains("EBIRFORMS_DISPATCHER_SECRET_PASSWORD"));
+    });
+}
+
+#[test]
+fn decrypt_dispatcher_secret_uses_env_password() {
+    with_submission_env(Some("test-dispatcher-password"), None, || {
+        let cipher_text = dispatcher_cipher_text("sftp.example.test");
+
+        assert_eq!(
+            decrypt_dispatcher_secret(&cipher_text).expect("decrypted dispatcher value"),
+            "sftp.example.test"
+        );
+    });
 }
 
 #[test]
 fn native_return_copy_encryption_round_trips_compressed_xml() {
-    let root = tempfile::tempdir().expect("root temp dir");
-    let file = root.path().join("return.xml");
-    let xml = "<?xml version='1.0'?><div>txtFinalFlag=2txtFinalFlag=</div>";
-    fs::write(&file, xml).unwrap();
+    with_submission_env(None, Some("test-return-copy-password"), || {
+        let root = tempfile::tempdir().expect("root temp dir");
+        let file = root.path().join("return.xml");
+        let xml = "<?xml version='1.0'?><div>txtFinalFlag=2txtFinalFlag=</div>";
+        fs::write(&file, xml).unwrap();
 
-    encrypt_native_return_copy(&file).expect("encrypt return copy");
-    let encrypted = fs::read(&file).expect("encrypted file");
+        encrypt_native_return_copy(&file).expect("encrypt return copy");
+        let encrypted = fs::read(&file).expect("encrypted file");
 
-    assert_ne!(encrypted, xml.as_bytes());
-    assert_eq!(
-        decrypt_native_return_copy(&encrypted).expect("decrypt return copy"),
-        xml.as_bytes()
-    );
+        assert_ne!(encrypted, xml.as_bytes());
+        assert_eq!(
+            decrypt_native_return_copy(&encrypted).expect("decrypt return copy"),
+            xml.as_bytes()
+        );
+    });
+}
+
+#[test]
+fn native_return_copy_encryption_requires_env_password() {
+    with_submission_env(None, None, || {
+        let root = tempfile::tempdir().expect("root temp dir");
+        let file = root.path().join("return.xml");
+        fs::write(&file, "<?xml version='1.0'?>").unwrap();
+
+        let error = encrypt_native_return_copy(&file).expect_err("missing env password");
+
+        assert!(error.message.contains("EBIRFORMS_RETURN_COPY_PASSWORD"));
+    });
 }
 
 #[test]
 fn sftp_upload_plan_decrypts_dispatcher_and_uses_legacy_remote_folder() {
-    let local_path = "/tmp/4215391750000-1601EQ-2026Q2#payer@example.com#.xml";
-    let dispatcher = DispatcherSettings {
-        mode: "2".into(),
-        server: "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQECAgICAgICAgICAgICAgICpfxuKBDDJkXbDSZOg59i6yINTItcWddk8Xo9Y4loPvs="
-            .into(),
-        ssl_port: "990".into(),
-        port: "23".into(),
-        username: "AwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMEBAQEBAQEBAQEBAQEBAQEUwWPq6ChnjBjKitWTgFgrA=="
-            .into(),
-        password: "BQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUGBgYGBgYGBgYGBgYGBgYGdo/Tl/0ZvE1Tk/KIX8vDjA=="
-            .into(),
-    };
+    with_submission_env(Some("test-dispatcher-password"), None, || {
+        let local_path = "/tmp/4215391750000-1601EQ-2026Q2#payer@example.com#.xml";
+        let dispatcher = DispatcherSettings {
+            mode: "2".into(),
+            server: dispatcher_cipher_text("sftp.example.test"),
+            ssl_port: "990".into(),
+            port: "23".into(),
+            username: dispatcher_cipher_text("sample-user"),
+            password: dispatcher_cipher_text("sample-password"),
+        };
 
-    let plan =
-        build_sftp_upload_plan(&dispatcher, "1601EQ", local_path.into()).expect("sftp upload plan");
+        let plan = build_sftp_upload_plan(&dispatcher, "1601EQ", local_path.into())
+            .expect("sftp upload plan");
 
-    assert_eq!(plan.host, "sftp.example.test");
-    assert_eq!(plan.port, 23);
-    assert_eq!(plan.username, "sample-user");
-    assert_eq!(plan.password, "sample-password");
-    assert_eq!(
-        plan.remote_path,
-        "/1601EQ/4215391750000-1601EQ-2026Q2#payer@example.com#.xml"
-    );
+        assert_eq!(plan.host, "sftp.example.test");
+        assert_eq!(plan.port, 23);
+        assert_eq!(plan.username, "sample-user");
+        assert_eq!(plan.password, "sample-password");
+        assert_eq!(
+            plan.remote_path,
+            "/1601EQ/4215391750000-1601EQ-2026Q2#payer@example.com#.xml"
+        );
+    });
 }
 
 #[test]
@@ -175,31 +213,107 @@ fn dry_run_writes_savefile_and_email_copy_without_uploading() {
 
 #[test]
 fn invalid_dispatcher_secret_returns_log_path_and_writes_error_log() {
-    let root = tempfile::tempdir().expect("root temp dir");
-    let request = SubmissionRequest {
-        xml: "<?xml version='1.0'?><div>txtFinalFlag=0txtFinalFlag=</div>".into(),
-        return_filename: "1234567890000-1601EQ-2026Q1.xml".into(),
-        form_code: "1601EQ".into(),
-        tin: "123456789".into(),
-        email: "payer@example.com".into(),
-        mode: SubmissionMode::LegacySftp,
-        dispatcher: Some(DispatcherSettings {
-            mode: "2".into(),
-            server: "encrypted-host".into(),
-            ssl_port: "".into(),
-            port: "22".into(),
-            username: "encrypted-user".into(),
-            password: "encrypted-pass".into(),
-        }),
-        fetch_dispatcher: false,
-    };
+    with_submission_env(
+        Some("test-dispatcher-password"),
+        Some("test-return-copy-password"),
+        || {
+            let root = tempfile::tempdir().expect("root temp dir");
+            let request = SubmissionRequest {
+                xml: "<?xml version='1.0'?><div>txtFinalFlag=0txtFinalFlag=</div>".into(),
+                return_filename: "1234567890000-1601EQ-2026Q1.xml".into(),
+                form_code: "1601EQ".into(),
+                tin: "123456789".into(),
+                email: "payer@example.com".into(),
+                mode: SubmissionMode::LegacySftp,
+                dispatcher: Some(DispatcherSettings {
+                    mode: "2".into(),
+                    server: "encrypted-host".into(),
+                    ssl_port: "".into(),
+                    port: "22".into(),
+                    username: "encrypted-user".into(),
+                    password: "encrypted-pass".into(),
+                }),
+                fetch_dispatcher: false,
+            };
 
-    let error = run_submission(root.path(), request).expect_err("invalid dispatcher should fail");
-    let log_path = error.log_path.expect("log path");
-    let log = fs::read_to_string(log_path).expect("submission log");
+            let error =
+                run_submission(root.path(), request).expect_err("invalid dispatcher should fail");
+            let log_path = error.log_path.expect("log path");
+            let log = fs::read_to_string(log_path).expect("submission log");
 
-    assert!(error.message.contains("Dispatcher secret is not base64"));
-    assert!(log.contains("submission_start"));
-    assert!(log.contains("native_encrypt_complete"));
-    assert!(log.contains("native_sftp_plan_error"));
+            assert!(error.message.contains("Dispatcher secret is not base64"));
+            assert!(log.contains("submission_start"));
+            assert!(log.contains("native_encrypt_complete"));
+            assert!(log.contains("native_sftp_plan_error"));
+        },
+    );
+}
+
+fn with_submission_env<T>(
+    dispatcher_password: Option<&str>,
+    return_copy_password: Option<&str>,
+    action: impl FnOnce() -> T,
+) -> T {
+    static ENV_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+    let _guard = ENV_LOCK.get_or_init(|| Mutex::new(())).lock().unwrap();
+    let previous_dispatcher = std::env::var("EBIRFORMS_DISPATCHER_SECRET_PASSWORD").ok();
+    let previous_return_copy = std::env::var("EBIRFORMS_RETURN_COPY_PASSWORD").ok();
+
+    set_or_remove_env("EBIRFORMS_DISPATCHER_SECRET_PASSWORD", dispatcher_password);
+    set_or_remove_env("EBIRFORMS_RETURN_COPY_PASSWORD", return_copy_password);
+    let result = action();
+    set_or_remove_env(
+        "EBIRFORMS_DISPATCHER_SECRET_PASSWORD",
+        previous_dispatcher.as_deref(),
+    );
+    set_or_remove_env(
+        "EBIRFORMS_RETURN_COPY_PASSWORD",
+        previous_return_copy.as_deref(),
+    );
+
+    result
+}
+
+fn set_or_remove_env(name: &str, value: Option<&str>) {
+    if let Some(value) = value {
+        std::env::set_var(name, value);
+    } else {
+        std::env::remove_var(name);
+    }
+}
+
+fn dispatcher_cipher_text(plain: &str) -> String {
+    let salt = [1_u8; 32];
+    let iv = [2_u8; 16];
+    let mut key = [0_u8; 32];
+    pbkdf2_hmac::<Sha1>(b"test-dispatcher-password", &salt, 100_000, &mut key);
+
+    let mut padded = plain.as_bytes().to_vec();
+    let padding_len = 16 - padded.len() % 16;
+    padded.extend(std::iter::repeat(padding_len as u8).take(padding_len));
+
+    let cipher = Aes256::new_from_slice(&key).expect("test cipher");
+    let mut encrypted = Vec::with_capacity(padded.len());
+    let mut previous = iv;
+
+    for chunk in padded.chunks_exact(16) {
+        let mut block = [0_u8; 16];
+        block.copy_from_slice(chunk);
+
+        for index in 0..16 {
+            block[index] ^= previous[index];
+        }
+
+        let block_ref = GenericArray::from_mut_slice(&mut block);
+        cipher.encrypt_block(block_ref);
+        encrypted.extend_from_slice(&block);
+        previous = block;
+    }
+
+    let mut payload = Vec::with_capacity(salt.len() + iv.len() + encrypted.len());
+    payload.extend_from_slice(&salt);
+    payload.extend_from_slice(&iv);
+    payload.extend_from_slice(&encrypted);
+
+    STANDARD.encode(payload)
 }
