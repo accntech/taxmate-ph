@@ -47,6 +47,26 @@ export function normalizeTinNumber(parts: Pick<TinParts, 'tin1' | 'tin2' | 'tin3
 	return [padPart(parts.tin1, 3), padPart(parts.tin2, 3), padPart(parts.tin3, 3)].join('');
 }
 
+export function parseTinInput(value: string): TinParts {
+	const digits = digitsOnly(value);
+
+	return {
+		tin1: digits.slice(0, 3),
+		tin2: digits.slice(3, 6),
+		tin3: digits.slice(6, 9),
+		branchCode: digits.slice(9, 13)
+	};
+}
+
+export function formatTinInput(parts: TinParts): string {
+	const tin1 = padPart(parts.tin1, 3);
+	const tin2 = padPart(parts.tin2, 3);
+	const tin3 = padPart(parts.tin3, 3);
+	const branchCode = padPart(parts.branchCode, 4);
+
+	return `${tin1}-${tin2}-${tin3}-${branchCode}`;
+}
+
 export function buildProfileFilename(parts: TinParts): string {
 	return `${normalizeTinParts(parts)}.xml`;
 }

@@ -6,9 +6,15 @@
 		createPdfExportClient,
 		formatPdfExportError
 	} from '$lib/tauri/pdf-export';
+	import CloseCircle from '@solar-icons/svelte/category/ui/Linear/CloseCircle.svelte';
+	import DownloadSquare from
+		'@solar-icons/svelte/category/arrows-action/Linear/DownloadSquare.svelte';
+	import FileSend from '@solar-icons/svelte/category/files/Linear/FileSend.svelte';
+	import Printer2 from '@solar-icons/svelte/category/devices/Linear/Printer2.svelte';
 	import type { FormDefinition } from '$lib/forms';
 	import { buildPrintHtml } from '$lib/printing/html';
 	import { getPrintProfile, printProfiles, type PrintPaperSize } from '$lib/printing/profiles';
+	import { Button, Input, Select } from '$lib/components/ui';
 
 	type Props = {
 		definition: FormDefinition;
@@ -23,6 +29,10 @@
 	let selectedPaperSize = $state<PrintPaperSize>('long');
 	let exportStatus = $state('');
 	let exportPdf = createPdfExportClient();
+	const paperOptions = printProfiles.map((profile) => ({
+		value: profile.size,
+		label: profile.label
+	}));
 
 	let returnPeriod = $derived(
 		`${values['frm1601EQ:txtYear'] || 'YYYY'} ${values['frm1601EQ:optQuarter'] || 'Q'}`
@@ -84,6 +94,13 @@
 		return labels[id]?.[option] ?? option;
 	}
 
+	function fieldOptions(field: FormDefinition['fields'][number]) {
+		return (field.options ?? []).map((option) => ({
+			value: option,
+			label: optionLabel(field.id, option)
+		}));
+	}
+
 	function cancelPrintPreview() {
 		isPrintPreview = false;
 	}
@@ -141,8 +158,6 @@
 
 	async function collectLegacyAssets() {
 		const assetUrls = [
-			'/legacy/img/bcs_new.png',
-			'/legacy/img/header_logo.png',
 			'/legacy/img/frmbg.png',
 			'/legacy/img/1601EQ_BarCode/1601EQ_p1.png'
 		];
@@ -243,48 +258,61 @@
 	class={['grid gap-4', isPrintPreview && 'print-preview-active']}
 	data-paper-size={selectedPaperSize}
 >
-	<div class="flex justify-between items-start gap-4 pb-3 border-line-soft border-b form-toolbar">
-		<div>
-			<h2 class="font-semibold text-text-main text-lg">BIR Form {definition.code}</h2>
-			<p class="text-text-muted text-sm">{definition.title}</p>
+	<div class="form-toolbar">
+		<div class="form-toolbar-title">
+			<span class="form-toolbar-icon" aria-hidden="true">
+				<FileSend size={20} color="currentColor" />
+			</span>
+			<div>
+				<p class="font-mono text-xs font-semibold uppercase text-accent">review and print</p>
+				<h2>BIR Form {definition.code}</h2>
+				<p>{definition.title}</p>
+			</div>
 		</div>
-		<div class="flex flex-wrap justify-end gap-2">
-			<label class="codex-label min-w-32">
-				<span class="codex-label-text">Paper</span>
-				<select class="codex-input" bind:value={selectedPaperSize}>
-					{#each printProfiles as profile (profile.size)}
-						<option value={profile.size}>{profile.label}</option>
-					{/each}
-				</select>
-			</label>
+		<div class="form-toolbar-actions">
+			<Select
+				label="Paper"
+				options={paperOptions}
+				bind:value={selectedPaperSize}
+				class="min-w-36"
+			/>
 			{#if isPrintPreview}
-				<button class="codex-button" type="button" onclick={cancelPrintPreview}>Close Preview</button>
-				<button class="codex-button-primary" type="button" onclick={printCurrentForm}>
+				<Button variant="secondary" type="button" onclick={cancelPrintPreview}>
+					<CloseCircle size={17} color="currentColor" />
+					Close preview
+				</Button>
+				<Button type="button" onclick={printCurrentForm}>
+					<Printer2 size={17} color="currentColor" />
 					Print / Save PDF
-				</button>
+				</Button>
 			{:else}
-				<button class="codex-button-primary" type="button" onclick={printCurrentForm}>
+				<Button type="button" onclick={printCurrentForm}>
+					<Printer2 size={17} color="currentColor" />
 					Print / Save PDF
-				</button>
+				</Button>
 			{/if}
-			<button class="codex-button-primary" type="button" onclick={exportCurrentFormPdf}>
+			<Button type="button" onclick={exportCurrentFormPdf}>
+				<DownloadSquare size={17} color="currentColor" />
 				Export PDF
-			</button>
+			</Button>
 		</div>
 	</div>
 
 	{#if isPrintPreview}
 		<div
-			class="gap-3 grid bg-bir-gold/10 p-3 border border-bir-gold/40 rounded-sm text-text-main text-sm preview-notice"
+			class={[
+				'grid gap-3 rounded-md border border-warn/35 bg-warn-soft p-3',
+				'text-sm text-fg preview-notice'
+			]}
 		>
 			<p class="font-semibold">
 				This form preview is prepared for {getPrintProfile(selectedPaperSize).label} paper.
 			</p>
-			<p class="text-text-muted">
+			<p class="text-fg-muted">
 				Choose your printer or Save as PDF in the system print dialog.
 			</p>
 			{#if exportStatus}
-				<p class="text-text-muted">{exportStatus}</p>
+				<p class="text-fg-muted">{exportStatus}</p>
 			{/if}
 		</div>
 
@@ -294,7 +322,7 @@
 				<span class="print-page-count"></span>
 			</div>
 			<div class="print-page-footer" aria-hidden="true">
-				<span>BIR Tools - BIR Form No. {definition.code}</span>
+				<span>TaxMate PH - BIR Form No. {definition.code}</span>
 				<span>{printDate}</span>
 			</div>
 
@@ -313,12 +341,12 @@
 										<table class="legacy-top-header" cellspacing="0" cellpadding="0">
 											<tbody>
 												<tr>
-													<td class="legacy-bcs-cell">
-														<img alt="BIR BCS" src="/legacy/img/bcs_new.png" />
-													</td>
-													<td class="legacy-logo-cell">
-														<img alt="Bureau of Internal Revenue" src="/legacy/img/header_logo.png" />
-													</td>
+														<td class="legacy-bcs-cell legacy-text-mark">
+															eBIRForms compatible
+														</td>
+														<td class="legacy-logo-cell legacy-text-mark">
+															Local print preview
+														</td>
 												</tr>
 											</tbody>
 										</table>
@@ -1046,35 +1074,22 @@
 	{:else}
 		<div class="gap-3 grid md:grid-cols-2 xl:grid-cols-3">
 			{#each definition.fields as field (field.id)}
-				<label class="codex-label">
-					<span class="codex-label-text">
-						{field.label}
-						{#if field.required}
-							<span class="text-bir-red">*</span>
-						{/if}
-					</span>
-
-					{#if field.type === 'select'}
-						<select
-							class="codex-input"
-							value={values[field.id] ?? ''}
-							onchange={(event) => updateField(field.id, event.currentTarget.value)}
-						>
-							<option value="">Select</option>
-							{#each field.options ?? [] as option (option)}
-								<option value={option}>{optionLabel(field.id, option)}</option>
-							{/each}
-						</select>
-					{:else}
-						<input
-							class="codex-input"
-							inputmode={field.type === 'number' ? 'decimal' : 'text'}
-							type="text"
-							value={values[field.id] ?? ''}
-							oninput={(event) => updateField(field.id, event.currentTarget.value)}
-						/>
-					{/if}
-				</label>
+				{#if field.type === 'select'}
+					<Select
+						label={`${field.label}${field.required ? ' *' : ''}`}
+						options={[{ value: '', label: 'Select' }, ...fieldOptions(field)]}
+						value={fieldValue(field.id)}
+						onchange={(next) => updateField(field.id, next)}
+					/>
+				{:else}
+					<Input
+						label={`${field.label}${field.required ? ' *' : ''}`}
+						inputmode={field.type === 'number' ? 'decimal' : 'text'}
+						type="text"
+						value={fieldValue(field.id)}
+						oninput={(event) => updateField(field.id, event.currentTarget.value)}
+					/>
+				{/if}
 			{/each}
 		</div>
 	{/if}
@@ -1083,7 +1098,7 @@
 <style>
 	.legacy-container {
 		color: #000;
-		font-family: Arial, Helvetica, sans-serif;
+		font-family: 'Arimo', Arial, Helvetica, sans-serif;
 		font-size: 12px;
 		overflow-x: auto;
 	}
@@ -1126,19 +1141,18 @@
 		vertical-align: bottom;
 	}
 
-	.legacy-bcs-cell img {
-		width: 80px;
-		height: 25px;
-	}
-
 	.legacy-logo-cell {
 		text-align: left;
 		vertical-align: middle;
 	}
 
-	.legacy-logo-cell img {
-		width: 210px;
-		height: 50px;
+	.legacy-text-mark {
+		color: #111;
+		font-family: 'Arimo', Arial, sans-serif;
+		font-size: 10px;
+		font-weight: 700;
+		letter-spacing: 0;
+		text-transform: uppercase;
 	}
 
 	.legacy-form-header {
@@ -1301,7 +1315,7 @@
 		border: 1px inset #fff;
 		background: #fff;
 		color: #000 !important;
-		font-family: Arial, Helvetica, sans-serif;
+		font-family: 'Arimo', Arial, Helvetica, sans-serif;
 		font-size: 12px;
 		padding: 0 2px;
 	}
@@ -1606,6 +1620,82 @@
 		display: none;
 	}
 
+	.form-toolbar {
+		display: grid;
+		gap: 1rem;
+		border: 1px solid var(--border);
+		border-radius: 0.75rem;
+		background:
+			linear-gradient(
+				135deg,
+				color-mix(in srgb, var(--accent) 8%, transparent),
+				transparent 46%
+			),
+			var(--bg-elev);
+		padding: 0.9rem;
+		box-shadow: var(--shadow-ui-sm);
+	}
+
+	.form-toolbar-title {
+		display: grid;
+		grid-template-columns: auto minmax(0, 1fr);
+		gap: 0.75rem;
+		align-items: start;
+		min-width: 0;
+	}
+
+	.form-toolbar-icon {
+		display: grid;
+		width: 2.5rem;
+		height: 2.5rem;
+		place-items: center;
+		border-radius: 0.7rem;
+		background: var(--accent-soft);
+		color: var(--accent);
+	}
+
+	.form-toolbar h2,
+	.form-toolbar p {
+		margin: 0;
+	}
+
+	.form-toolbar h2 {
+		margin-top: 0.15rem;
+		color: var(--fg);
+		font-size: 1.1rem;
+		font-weight: 720;
+		line-height: 1.2;
+	}
+
+	.form-toolbar-title p:last-child {
+		margin-top: 0.2rem;
+		color: var(--fg-muted);
+		font-size: 0.86rem;
+		line-height: 1.45;
+	}
+
+	.form-toolbar-actions {
+		display: grid;
+		gap: 0.6rem;
+	}
+
+	.preview-notice {
+		border-radius: 0.75rem;
+	}
+
+	@media (min-width: 760px) {
+		.form-toolbar {
+			grid-template-columns: minmax(0, 1fr) auto;
+			align-items: start;
+		}
+
+		.form-toolbar-actions {
+			grid-template-columns: auto auto auto;
+			align-items: end;
+			justify-content: end;
+		}
+	}
+
 	@media print {
 		@page {
 			size: var(--pdf-paper-width, 8.5in) var(--pdf-paper-height, 13in);
@@ -1633,10 +1723,10 @@
 			visibility: hidden;
 		}
 
-		:global(.codex-shell),
-		:global(.codex-shell > div),
-		:global(.codex-shell section),
-		:global(.codex-section) {
+		:global(.app-shell),
+		:global(.app-shell > div),
+		:global(.app-main),
+		:global(.app-main section) {
 			display: block !important;
 			width: auto !important;
 			max-width: none !important;
@@ -1647,13 +1737,14 @@
 			box-shadow: none !important;
 		}
 
-		:global(.codex-shell header),
-		:global(.codex-shell nav),
-		:global(.codex-section:not(:has(.print-preview-active))) {
+		:global(.app-shell header),
+		:global(.app-shell aside),
+		:global(.app-shell nav),
+		:global(.app-main > :not(:has(.print-preview-active))) {
 			display: none !important;
 		}
 
-		:global(.codex-section:has(.print-preview-active) > :not(.print-preview-active)) {
+		:global(.app-main section:has(.print-preview-active) > :not(.print-preview-active)) {
 			display: none !important;
 		}
 

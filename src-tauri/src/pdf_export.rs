@@ -158,7 +158,9 @@ pub async fn export_form_pdf(
     validate_export_request(&request)?;
 
     let output_path = resolve_output_path(&request);
-    let input_path = std::env::temp_dir().join(&request.suggested_filename).with_extension("html");
+    let input_path = std::env::temp_dir()
+        .join(&request.suggested_filename)
+        .with_extension("html");
 
     let input_url = tauri::Url::from_file_path(&input_path)
         .map_err(|_| PdfExportError::new("Could not convert export HTML path to a file URL."))?;

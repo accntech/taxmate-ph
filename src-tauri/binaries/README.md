@@ -1,4 +1,4 @@
-# BIR Tools PDF Renderer
+# TaxMate PH PDF Renderer
 
 The PDF export command renders with a Chromium-compatible browser. It first checks
 `EBIRFORMS_PDF_RENDERER`, then common Chrome, Chromium, and Edge install paths.
