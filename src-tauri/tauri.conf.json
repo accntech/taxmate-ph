@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "BIR Tools",
+  "productName": "TaxMate PH",
   "version": "0.1.0",
-  "identifier": "ph.gov.bir.ebirforms.tauri",
+  "identifier": "ph.taxmate.desktop",
   "build": {
     "beforeDevCommand": "bun run dev",
     "devUrl": "http://localhost:1420",
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "BIR Tools",
+        "title": "TaxMate PH",
         "width": 800,
         "height": 600
       }

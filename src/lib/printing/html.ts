@@ -1,3 +1,4 @@
+import { arimoFontFaceCss } from './arimo-font'
 import type { PrintProfile } from './profiles'
 
 export type PrintHtmlInput = {
@@ -52,6 +53,7 @@ export function buildPrintHtml(input: PrintHtmlInput): string {
 	<meta charset="utf-8">
 	<title>${escapeHtml(input.title)}</title>
 	<style>
+${arimoFontFaceCss}
 		:root {
 			--pdf-paper-width: ${input.profile.width};
 			--pdf-paper-height: ${input.profile.height};
@@ -82,7 +84,7 @@ export function buildPrintHtml(input: PrintHtmlInput): string {
 				width: 100%;
 				min-height: 100%;
 				color: #000;
-				font-family: Arial, Helvetica, sans-serif;
+				font-family: 'Arimo', Arial, Helvetica, sans-serif;
 				font-size: 12px;
 			}
 

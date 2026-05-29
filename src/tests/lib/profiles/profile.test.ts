@@ -2,9 +2,11 @@ import { describe, expect, it } from 'vitest';
 import {
 	buildProfileFilename,
 	buildReturnFilename,
+	formatTinInput,
 	buildTaxpayerProfileFormValues,
 	normalizeTinNumber,
 	normalizeTinParts,
+	parseTinInput,
 	upsertTaxpayerProfile
 } from '$lib/profiles/profile';
 
@@ -28,6 +30,26 @@ describe('profile helpers', () => {
 				tin3: '175'
 			})
 		).toBe('421539175');
+	});
+
+	it('parses one mixed TIN input into taxpayer id parts', () => {
+		expect(parseTinInput('421-539-175-0007')).toEqual({
+			tin1: '421',
+			tin2: '539',
+			tin3: '175',
+			branchCode: '0007'
+		});
+	});
+
+	it('formats taxpayer id parts as one readable TIN input', () => {
+		expect(
+			formatTinInput({
+				tin1: '421',
+				tin2: '539',
+				tin3: '175',
+				branchCode: '0007'
+			})
+		).toBe('421-539-175-0007');
 	});
 
 	it('builds the profile filename from taxpayer id fields', () => {

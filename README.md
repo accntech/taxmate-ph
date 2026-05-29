@@ -1,4 +1,4 @@
-# BIR Tools
+# TaxMate PH
 
 Proof-of-concept cross-platform app for Philippine Bureau of Internal Revenue (BIR)
 tools, built with Tauri, SvelteKit, and TypeScript.

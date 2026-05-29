@@ -14,16 +14,15 @@ describe('print HTML export', () => {
 	})
 
 	test('replaces known legacy asset URLs with data URLs', () => {
-		const html = '<img src="/legacy/img/header_logo.png">'
+		const html = '<img src="/legacy/img/frmbg.png">'
 		const css = ".x{background-image:url('/legacy/img/frmbg.png')}"
 		const assets = {
-			'/legacy/img/header_logo.png': 'data:image/png;base64,logo',
 			'/legacy/img/frmbg.png': 'data:image/png;base64,bg'
 		}
 
 		const result = replaceLegacyAssetUrls(`${html}<style>${css}</style>`, assets)
 
-		expect(result).toContain('src="data:image/png;base64,logo"')
+		expect(result).toContain('src="data:image/png;base64,bg"')
 		expect(result).toContain("url('data:image/png;base64,bg')")
 	})
 
@@ -31,11 +30,13 @@ describe('print HTML export', () => {
 		expect(
 			markStylesAsPrintOnly(
 				'<style>.screen{display:block}</style>\n' +
-					'<style type="text/css" data-vite-dev-id="/src/app.css">@media print{body{margin:0}}</style>'
+					'<style type="text/css" data-vite-dev-id="/src/app.css">' +
+					'@media print{body{margin:0}}</style>'
 			)
 		).toBe(
 			'<style media="print">.screen{display:block}</style>\n' +
-				'<style media="print" type="text/css" data-vite-dev-id="/src/app.css">@media print{body{margin:0}}</style>'
+				'<style media="print" type="text/css" data-vite-dev-id="/src/app.css">' +
+				'@media print{body{margin:0}}</style>'
 		)
 	})
 
@@ -75,7 +76,7 @@ describe('print HTML export', () => {
 			bodyHtml:
 				'<div class="print-page-header">BIR Form No. 1601EQ</div>' +
 				'<article class="legacy-container">Form</article>' +
-				'<div class="print-page-footer">BIR Tools</div>',
+				'<div class="print-page-footer">TaxMate PH</div>',
 			styleHtml: '',
 			assets: {}
 		})
@@ -161,7 +162,8 @@ describe('print HTML export', () => {
 			profile: getPrintProfile('long'),
 			bodyHtml: '<div class="print-export-root s-abc123">Form</div>',
 			styleHtml:
-				'<style media="print">.print-preview-active.s-abc123{width:calc(var(--pdf-paper-width) - 1in)}</style>',
+				'<style media="print">' +
+				'.print-preview-active.s-abc123{width:calc(var(--pdf-paper-width) - 1in)}</style>',
 			assets: {}
 		})
 
