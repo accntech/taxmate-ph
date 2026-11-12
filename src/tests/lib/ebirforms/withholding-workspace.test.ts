@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const { submit } = vi.hoisted(() => ({ submit: vi.fn() }));
 vi.mock('$lib/tauri/submission', () => ({ createSubmissionClient: () => submit, formatSubmissionError: String }));
 import { ebirformsWorkspace as workspace, initialProfile } from '$lib/ebirforms/ebirforms-workspace.svelte';
+import { settings } from '$lib/settings.svelte';
 import { getFormDefinition } from '$lib/forms';
 import { getManagedTaxpayerValues, getReturnEmail } from '$lib/forms/form-runtime';
 
@@ -16,6 +17,7 @@ beforeEach(async () => {
  workspace.isSubmitting = false;
  await workspace.loadCreatedReturns();
  submit.mockReset();
+ settings.updatePrefs({ submissionMode: 'legacy_sftp' });
 });
 
 describe('withholding return lifecycle', () => {
@@ -45,17 +47,32 @@ describe('withholding return lifecycle', () => {
   await workspace.submitCurrentReturn();
   expect(submit).not.toHaveBeenCalled();
  });
- it('forces an explicitly simulated submission and persists its status', async () => {
+ it('submits 1601EQ using the sending preference and persists actual success', async () => {
   const id = workspace.createReturn(initialProfile.id, '1601EQ');
-  expect(id).toBeTruthy();
   workspace.updateFormValues({ 'frm1601EQ:txtYear': '2026', 'frm1601EQ:optTaxesWithheld': 'N' });
   await workspace.saveActiveReturn();
-  submit.mockResolvedValue({status:'simulated',finalFlag:'2',savePath:'mock.xml',sendPath:'',message:'Mock submission saved. Nothing sent to BIR.'});
-  workspace.submissionMode = 'legacy_sftp';
+  const revision = workspace.historyRevision;
+  submit.mockResolvedValue({status:'submitted',finalFlag:'1',savePath:'return.xml',sendPath:'',message:'Uploaded'});
   await workspace.submitCurrentReturn();
-  expect(submit).toHaveBeenCalledWith(expect.objectContaining({ mode: 'mock', fetchDispatcher: false, formCode:'1601EQ' }));
-  expect(workspace.createdReturns.find(record => record.id === id)?.status).toBe('Simulated');
-  expect(workspace.historyRevision).toBe(0);
+  expect(submit).toHaveBeenCalledWith(expect.objectContaining({ mode: 'legacy_sftp', fetchDispatcher: true, formCode:'1601EQ' }));
+  expect(workspace.createdReturns.find(record => record.id === id)?.status).toBe('Submitted');
+  expect(workspace.historyRevision).toBe(revision + 1);
+ });
+ it('honors local preparation selected in Settings without marking submitted', async () => {
+  const id = workspace.createReturn(initialProfile.id, '1601EQ');
+  workspace.updateFormValues({ 'frm1601EQ:optTaxesWithheld': 'N' });
+  await workspace.saveActiveReturn();
+  settings.updatePrefs({ submissionMode: 'dry_run' });
+  submit.mockResolvedValue({status:'drafted',finalFlag:'2',savePath:'return.xml',sendPath:'',message:'Prepared locally'});
+  await workspace.submitCurrentReturn();
+  expect(submit).toHaveBeenCalledWith(expect.objectContaining({ mode: 'dry_run', fetchDispatcher: false }));
+  expect(workspace.createdReturns.find(record => record.id === id)?.status).toBe('Draft');
+ });
+ it('blocks live submission of other forms before invoking native transport', async () => {
+  workspace.createReturn(initialProfile.id, '0619E');
+  await workspace.submitCurrentReturn();
+  expect(submit).not.toHaveBeenCalled();
+  expect(workspace.statusMessage).toContain('1601-EQ');
  });
 });
 it('refreshes profile-owned business and classification when reopening a saved return', async () => {

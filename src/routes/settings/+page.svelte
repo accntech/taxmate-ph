@@ -164,6 +164,13 @@
 	/>
 {/snippet}
 
+{#snippet sendingControl()}
+	<div role="group" aria-label="Sending mode" class="inline-flex rounded-md border border-border bg-bg-elev-2 p-0.5">
+		{@render segmented(settings.prefs.submissionMode === 'legacy_sftp', () => settings.updatePrefs({ submissionMode: 'legacy_sftp' }), 'Send to BIR')}
+		{@render segmented(settings.prefs.submissionMode === 'dry_run', () => settings.updatePrefs({ submissionMode: 'dry_run' }), 'Prepare locally')}
+	</div>
+{/snippet}
+
 {#snippet storageControl()}
 	<Badge tone="success"><InfoCircle size={13} color="currentColor" />On this device only</Badge>
 {/snippet}
@@ -205,15 +212,21 @@
 	</Card>
 
 	<Card variant="panel" padding="lg" class="grid gap-1">
+		{@render sectionTitle('Sending', 'BIR submission is available for Form 1601-EQ first.', Settings)}
+		{@render row('Sending mode', 'Send to BIR uploads the return. Prepare locally saves a package on this device without sending it.', sendingControl, true)}
+		<p class="pb-2 text-[13px] leading-5 text-fg-muted">Server settings are retrieved automatically from the BIR dispatcher when sending.</p>
+	</Card>
+
+	<Card variant="panel" padding="lg" class="grid gap-1">
 		{@render sectionTitle('Data & storage', 'Where your information lives.', Database)}
 		{@render row(
 			'Local-first',
-			'Preferences and records stay in this app’s local storage and never leave your device.',
+			'Preferences and working copies are stored on this device. Returns are sent to BIR when you submit them.',
 			storageControl
 		)}
 		{@render row(
 			'Reset preferences',
-			'Restore theme, sidebar, and defaults to their original values.',
+			'Restore theme, sidebar, sending mode, and defaults to their original values.',
 			resetControl,
 			true
 		)}
@@ -257,7 +270,7 @@
 	bind:open={resetOpen}
 	size="sm"
 	title="Reset preferences?"
-	description="Theme, sidebar, and default values return to their originals. Taxpayer records are not affected."
+	description="Theme, sidebar, sending mode, and default values return to their originals. Taxpayer records are not affected."
 >
 	{#snippet footer()}
 		<Button variant="secondary" onclick={() => (resetOpen = false)}>Cancel</Button>

@@ -37,6 +37,7 @@
 	let generatedPdfPath = $state('');
 	let errorRecordId = $state('');
 	let actionErrors = $state<Record<string, string>>({});
+	let submissionNotice = $state<{ message: string; error: boolean } | null>(null);
 	let archivedNotice = $state<string | null>(null);
 	const profile = $derived(workspace.profiles.find(profile => profile.id === params.id));
 	const archived = $derived(workspace.archivedTaxpayerIds.includes(params.id));
@@ -71,7 +72,7 @@
 		if (busy || !storageReady) return;
 		return workspace.createdReturns.find(record => record.id === id && record.taxpayerId === params.id);
 	}
-	function clearErrors() { errorRecordId = ''; actionErrors = {}; }
+	function clearErrors() { errorRecordId = ''; actionErrors = {}; submissionNotice = null; }
 	function captureErrors(id: string) {
 		errorRecordId = id;
 		actionErrors = { ...workspace.validationErrors };
@@ -104,9 +105,13 @@
 			await workspace.markNeedsResend();
 			if (workspace.finalFlag !== '2') return;
 		}
-		workspace.submissionMode = 'mock';
+		submissionNotice = { message: settings.prefs.submissionMode === 'legacy_sftp' ? 'Submitting to BIR…' : 'Preparing local package…', error: false };
 		await workspace.submitCurrentReturn();
 		captureErrors(id);
+		submissionNotice = Object.keys(actionErrors).length ? null : {
+			message: workspace.statusMessage,
+			error: !workspace.submissionReceipt || workspace.submissionReceipt.status === 'failed'
+		};
 	}
 	async function print(id: string) {
 		const record = recordForAction(id);
@@ -212,6 +217,11 @@
 				<ButtonLink href={`${route(errorRecord.id, errorRecord.formCode)}&validate=true`} variant="secondary" size="sm">Edit return to fix errors</ButtonLink>
 			</div>
 		{/if}
+		{#if submissionNotice}
+			<p role={submissionNotice.error ? 'alert' : 'status'} class={['rounded-md border border-border bg-bg-elev p-4 text-sm break-words', submissionNotice.error ? 'text-danger' : 'text-fg']}>
+				{submissionNotice.message}
+			</p>
+		{/if}
 		{#if !storageReady}<p role="alert" class="text-sm text-danger">{workspace.statusMessage}</p>{/if}
 		<RecordTable {rows} {columns} {filters} label="Tax returns" stateKey={`forms-${params.id}`}
 			initialFilters={{ status: ['Draft', 'Final', 'Submitted', 'Simulated', 'For resubmission'] }}
@@ -236,7 +246,7 @@
 						<p class="action-heading">BIR Form {row.form} · {row.period}</p>
 						<MenuItem variant="ghost" size="compact" class="form-action" onSelect={() => { close(); row.status === 'Archived' ? restoreForm(row.id) : archiveForm(row.id); }}><span class="action-icon"><Icon icon={row.status === 'Archived' ? glyphs.refresh : glyphs.archive} /></span>{row.status === 'Archived' ? 'Restore' : 'Archive'}</MenuItem>
 						<MenuItem variant="ghost" size="compact" class="form-action" onSelect={() => { close(); finalize(row.id); }}><span class="action-icon"><Icon icon={glyphs.checkCircle} /></span>Mark as final</MenuItem>
-						<MenuItem variant="ghost" size="compact" class="form-action" onSelect={() => { close(); void submit(row.id); }}><span class="action-icon"><Icon icon={glyphs.send} /></span>Mock submit</MenuItem>
+						<MenuItem variant="ghost" size="compact" class="form-action" disabled={settings.prefs.submissionMode === 'legacy_sftp' && row.form !== '1601EQ'} onSelect={() => { close(); void submit(row.id); }}><span class="action-icon"><Icon icon={glyphs.send} /></span>{settings.prefs.submissionMode === 'legacy_sftp' ? 'Submit to BIR' : 'Prepare locally'}</MenuItem>
 						<MenuItem variant="ghost" size="compact" class="form-action" onSelect={() => { close(); void print(row.id); }}><span class="action-icon"><Icon icon={glyphs.printer} /></span>Generate PDF</MenuItem>
 						<div class="action-separator" role="separator"></div>
 						<MenuItem variant="destructive-ghost" size="compact" class="form-action" onSelect={() => { close(); deleteId = row.id; }}><span class="action-icon"><Icon icon={glyphs.trash} /></span>Delete…</MenuItem>

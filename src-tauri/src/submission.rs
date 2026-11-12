@@ -3,8 +3,9 @@ use std::{
     fs::OpenOptions,
     io,
     io::{Read, Write},
+    net::TcpStream,
     path::{Path, PathBuf},
-    time::{SystemTime, UNIX_EPOCH},
+    time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
 use aes::{
@@ -17,8 +18,12 @@ use pbkdf2::pbkdf2_hmac;
 use serde::{Deserialize, Serialize};
 use sha1::Sha1;
 use sha2::{Digest, Sha256};
+use ssh2::Session;
 use tauri::Manager;
 
+const CURRENT_VERSION: &str = "7.9.6.0";
+const PRIMARY_DISPATCHER_BASE: &str = "http://birgovph.com/";
+const BACKUP_DISPATCHER_BASE: &str = "http://ws1.birgovph.com/";
 const DISPATCHER_SECRET_PASSWORD_ENV: &str = "EBIRFORMS_DISPATCHER_SECRET_PASSWORD";
 const RETURN_COPY_PASSWORD_ENV: &str = "EBIRFORMS_RETURN_COPY_PASSWORD";
 
@@ -26,7 +31,6 @@ const RETURN_COPY_PASSWORD_ENV: &str = "EBIRFORMS_RETURN_COPY_PASSWORD";
 #[serde(rename_all = "snake_case")]
 pub enum SubmissionMode {
     DryRun,
-    Mock,
     LegacySftp,
 }
 
@@ -61,7 +65,6 @@ pub struct DispatcherSettings {
 #[serde(rename_all = "snake_case")]
 pub enum SubmissionStatus {
     Drafted,
-    Simulated,
     Submitted,
     Failed,
 }
@@ -77,7 +80,6 @@ pub struct SubmissionReceipt {
     pub exit_code: Option<i32>,
     pub log_path: Option<String>,
     pub message: String,
-    pub reference: Option<String>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -116,6 +118,12 @@ pub async fn submit_return(
         .app_data_dir()
         .map_err(|error| SubmissionError::new(format!("Could not resolve app data: {error}")))?;
 
+    if request.mode == SubmissionMode::LegacySftp {
+        // Load deployment secrets at the app boundary; local preparation and
+        // the submission engine never read credentials from a developer's .env.
+        let _ = dotenvy::dotenv();
+    }
+
     tauri::async_runtime::spawn_blocking(move || run_submission(&root, request))
         .await
         .map_err(|error| SubmissionError::new(format!("Submission task failed: {error}")))?
@@ -125,77 +133,136 @@ pub fn run_submission(
     root: &Path,
     request: SubmissionRequest,
 ) -> Result<SubmissionReceipt, SubmissionError> {
-    // Fail closed at the native command boundary, even if an old UI requests live mode.
-    if request.mode == SubmissionMode::LegacySftp {
+    if request.mode == SubmissionMode::LegacySftp && request.form_code != "1601EQ" {
         return Err(SubmissionError::new(
-            "Live submission is disabled. Use mock submission for testing.",
+            "Live submission is only available for Form 1601EQ.",
         ));
     }
+    let logger = SubmissionLogger::new(root)?;
+    logger.log(format!(
+        "submission_start mode={:?} form={} tin={} return_filename={}",
+        request.mode, request.form_code, request.tin, request.return_filename
+    ));
+
     validate_request(&request)?;
-    let email_name = email_file_name(&request.return_filename, &request.email)?;
-    let simulated = request.mode == SubmissionMode::Mock;
-    let reference = simulated.then(|| {
-        static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
-        format!(
-            "MOCK-{}-{}",
-            SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .unwrap_or_default()
-                .as_nanos(),
-            NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
-        )
-    });
-    // Simulations never overwrite real legacy savefiles or enter genuine submission history.
-    let output_root = reference
-        .as_ref()
-        .map(|id| root.join("mock-submissions").join(id))
-        .unwrap_or_else(|| root.to_path_buf());
-    let logger = SubmissionLogger::new(&output_root)?;
-    let save_dir = output_root.join("savefile");
-    let rdo_dir = output_root.join("IAF_RDO_Copy");
+
+    let save_dir = root.join("savefile");
+    let rdo_dir = root.join("IAF_RDO_Copy");
     fs::create_dir_all(&save_dir)?;
     fs::create_dir_all(&rdo_dir)?;
+
+    let email_name = email_file_name(&request.return_filename, &request.email)?;
     let save_path = save_dir.join(&request.return_filename);
     let send_path = rdo_dir.join(email_name);
     let prepared_xml = update_final_flag(&request.xml, "2");
-    if !simulated {
-        crate::return_history::load_history(root)?;
-    }
+
+    // Preserve any legacy submitted copy before a draft or resend overwrites it.
+    crate::return_history::load_history(root)?;
     fs::write(&save_path, &prepared_xml)?;
     fs::write(&send_path, &prepared_xml)?;
-    let receipt = SubmissionReceipt {
-        status: if simulated {
-            SubmissionStatus::Simulated
-        } else {
-            SubmissionStatus::Drafted
+    logger.log(format!(
+        "files_prepared save_path={} send_path={}",
+        path_to_string(&save_path),
+        path_to_string(&send_path)
+    ));
+
+    if request.mode == SubmissionMode::DryRun {
+        logger.log("dry_run_complete");
+        return Ok(SubmissionReceipt {
+            status: SubmissionStatus::Drafted,
+            final_flag: "2".into(),
+            save_path: path_to_string(&save_path),
+            send_path: path_to_string(&send_path),
+            dispatcher_url: None,
+            exit_code: None,
+            log_path: Some(logger.path_string()),
+            message: "Dry run prepared the savefile and email-named RDO copy without upload."
+                .into(),
+        });
+    }
+
+    let dispatcher_url = build_dispatcher_url(
+        PRIMARY_DISPATCHER_BASE,
+        &request.tin,
+        &request.form_code,
+        CURRENT_VERSION,
+    );
+    let dispatcher = resolve_dispatcher(&request, &dispatcher_url, &logger)?;
+    encrypt_native_return_copy(&send_path).map_err(|error| {
+        logger.log(format!("native_encrypt_error {}", error.message));
+        SubmissionError::with_log_path(error.message, &logger)
+    })?;
+    logger.log(format!(
+        "native_encrypt_complete file={}",
+        path_to_string(&send_path)
+    ));
+
+    let plan = build_sftp_upload_plan(&dispatcher, &request.form_code, send_path.clone()).map_err(
+        |error| {
+            logger.log(format!("native_sftp_plan_error {}", error.message));
+            SubmissionError::with_log_path(error.message, &logger)
         },
-        final_flag: "2".into(),
+    )?;
+    let exit_code = run_native_sftp(&plan, &logger);
+    let submitted = exit_code == 0;
+    let final_flag = if submitted { "1" } else { "2" };
+    let final_xml = update_final_flag(&prepared_xml, final_flag);
+
+    // The remote upload has already succeeded: local history errors must not invite a resend.
+    let mut history_warning = if submitted {
+        crate::return_history::record_submission(
+            root,
+            &save_path,
+            &final_xml,
+            &request.form_code,
+            &request.tin,
+        )
+        .err()
+        .map(|error| format!(" Submission succeeded, but history could not be saved: {error}"))
+    } else {
+        None
+    };
+    if let Err(error) = fs::write(&save_path, &final_xml) {
+        if !submitted {
+            return Err(error.into());
+        }
+        let warning = format!(
+            " Submission succeeded, but the local return copy could not be updated: {error}"
+        );
+        history_warning
+            .get_or_insert_with(String::new)
+            .push_str(&warning);
+    }
+    if let Some(warning) = &history_warning {
+        logger.log(warning);
+    }
+    logger.log(format!(
+        "submission_complete status={} final_flag={}",
+        if submitted { "submitted" } else { "failed" },
+        final_flag
+    ));
+
+    Ok(SubmissionReceipt {
+        status: if submitted {
+            SubmissionStatus::Submitted
+        } else {
+            SubmissionStatus::Failed
+        },
+        final_flag: final_flag.into(),
         save_path: path_to_string(&save_path),
         send_path: path_to_string(&send_path),
-        dispatcher_url: None,
-        exit_code: None,
+        dispatcher_url: Some(dispatcher_url),
+        exit_code: Some(exit_code),
         log_path: Some(logger.path_string()),
-        reference,
-        message: if simulated {
-            "Mock submission accepted locally for testing. Nothing was sent to BIR."
+        message: if submitted {
+            format!(
+                "Native SFTP upload reported a successful submission.{}",
+                history_warning.unwrap_or_default()
+            )
         } else {
-            "Dry run prepared local copies without upload."
-        }
-        .into(),
-    };
-    if simulated {
-        fs::write(
-            output_root.join("receipt.json"),
-            serde_json::to_vec_pretty(&receipt)
-                .map_err(|error| SubmissionError::new(error.to_string()))?,
-        )?;
-    }
-    logger.log(if simulated {
-        "mock_submission_complete no_network=true"
-    } else {
-        "dry_run_complete"
-    });
-    Ok(receipt)
+            "Native SFTP upload did not report success.".into()
+        },
+    })
 }
 
 pub fn email_file_name(file_name: &str, email: &str) -> Result<String, SubmissionError> {
@@ -289,6 +356,64 @@ fn validate_request(request: &SubmissionRequest) -> Result<(), SubmissionError> 
     Ok(())
 }
 
+fn resolve_dispatcher(
+    request: &SubmissionRequest,
+    primary_url: &str,
+    logger: &SubmissionLogger,
+) -> Result<DispatcherSettings, SubmissionError> {
+    if !request.fetch_dispatcher {
+        if let Some(dispatcher) = &request.dispatcher {
+            logger.log(format!(
+                "dispatcher_source=manual mode={} server_present={} port={}",
+                dispatcher.mode,
+                !dispatcher.server.is_empty(),
+                dispatcher.port
+            ));
+            return Ok(dispatcher.clone());
+        }
+
+        let message = "Dispatcher settings are required unless dispatcher fetching is enabled.";
+        logger.log(format!("dispatcher_missing {message}"));
+        return Err(SubmissionError::with_log_path(message, logger));
+    }
+
+    logger.log(format!("dispatcher_fetch_primary url={primary_url}"));
+    fetch_dispatcher(primary_url).or_else(|primary_error| {
+        logger.log(format!(
+            "dispatcher_fetch_primary_error {}",
+            primary_error.message
+        ));
+        let backup_url = build_dispatcher_url(
+            BACKUP_DISPATCHER_BASE,
+            &request.tin,
+            &request.form_code,
+            CURRENT_VERSION,
+        );
+        logger.log(format!("dispatcher_fetch_backup url={backup_url}"));
+
+        fetch_dispatcher(&backup_url).map_err(|backup_error| {
+            logger.log(format!(
+                "dispatcher_fetch_backup_error {}",
+                backup_error.message
+            ));
+            SubmissionError::with_log_path(backup_error.message, logger)
+        })
+    })
+}
+
+fn fetch_dispatcher(url: &str) -> Result<DispatcherSettings, SubmissionError> {
+    let response = ureq::AgentBuilder::new()
+        .timeout(Duration::from_secs(8))
+        .build()
+        .get(url)
+        .call()
+        .map_err(|error| SubmissionError::new(format!("Dispatcher request failed: {error}")))?
+        .into_string()
+        .map_err(|error| SubmissionError::new(format!("Dispatcher response failed: {error}")))?;
+
+    parse_dispatcher_response(&response)
+}
+
 pub fn decrypt_dispatcher_secret(cipher_text: &str) -> Result<String, SubmissionError> {
     let payload = STANDARD.decode(cipher_text.trim()).map_err(|error| {
         SubmissionError::new(format!("Dispatcher secret is not base64: {error}"))
@@ -363,6 +488,58 @@ pub fn build_sftp_upload_plan(
         local_path,
         remote_path: format!("/{remote_folder}/{file_name}"),
     })
+}
+
+fn run_native_sftp(plan: &SftpUploadPlan, logger: &SubmissionLogger) -> i32 {
+    logger.log(format!(
+        "native_sftp_start host={} port={} remote_path={}",
+        plan.host, plan.port, plan.remote_path
+    ));
+
+    match upload_native_sftp(plan) {
+        Ok(()) => {
+            logger.log("native_sftp_complete");
+            0
+        }
+        Err(error) => {
+            logger.log(format!("native_sftp_error {}", error.message));
+            1
+        }
+    }
+}
+
+fn upload_native_sftp(plan: &SftpUploadPlan) -> Result<(), SubmissionError> {
+    let tcp = TcpStream::connect((plan.host.as_str(), plan.port))
+        .map_err(|error| SubmissionError::new(format!("SFTP connection failed: {error}")))?;
+    tcp.set_read_timeout(Some(Duration::from_secs(30)))?;
+    tcp.set_write_timeout(Some(Duration::from_secs(30)))?;
+
+    let mut session = Session::new()
+        .map_err(|error| SubmissionError::new(format!("SFTP session failed: {error}")))?;
+    session.set_tcp_stream(tcp);
+    session
+        .handshake()
+        .map_err(|error| SubmissionError::new(format!("SFTP handshake failed: {error}")))?;
+    session
+        .userauth_password(&plan.username, &plan.password)
+        .map_err(|error| SubmissionError::new(format!("SFTP authentication failed: {error}")))?;
+
+    if !session.authenticated() {
+        return Err(SubmissionError::new("SFTP authentication was rejected."));
+    }
+
+    let sftp = session
+        .sftp()
+        .map_err(|error| SubmissionError::new(format!("SFTP channel failed: {error}")))?;
+    let mut local = fs::File::open(&plan.local_path)?;
+    let mut remote = sftp
+        .create(Path::new(&plan.remote_path))
+        .map_err(|error| SubmissionError::new(format!("SFTP upload create failed: {error}")))?;
+
+    io::copy(&mut local, &mut remote)
+        .map_err(|error| SubmissionError::new(format!("SFTP upload failed: {error}")))?;
+
+    Ok(())
 }
 
 fn legacy_remote_folder(form_code: &str) -> String {
@@ -548,6 +725,13 @@ impl SubmissionError {
         Self {
             message: message.into(),
             log_path: None,
+        }
+    }
+
+    fn with_log_path(message: impl Into<String>, logger: &SubmissionLogger) -> Self {
+        Self {
+            message: message.into(),
+            log_path: Some(logger.path_string()),
         }
     }
 }
