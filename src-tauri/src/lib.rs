@@ -2,8 +2,8 @@ pub mod pdf_export;
 pub mod profile_store;
 pub mod return_history;
 pub mod submission;
-pub mod working_returns;
 mod window_chrome;
+pub mod working_returns;
 
 use tauri::Manager;
 
@@ -17,11 +17,38 @@ fn show_main_window(app: &tauri::AppHandle) -> Result<(), String> {
     let window = app
         .get_webview_window("main")
         .ok_or("Main window is unavailable")?;
-    #[cfg(target_os = "windows")]
-    window_chrome::prepare(&window);
     window.unminimize().map_err(|error| error.to_string())?;
     window.show().map_err(|error| error.to_string())?;
     window.set_focus().map_err(|error| error.to_string())?;
+    Ok(())
+}
+
+/// Reveal the first window only after the mounted frontend has resolved its theme.
+#[tauri::command]
+fn window_ready(
+    window: tauri::WebviewWindow,
+    dark: bool,
+    color: tauri::window::Color,
+) -> Result<(), String> {
+    if window.label() != "main" {
+        return Err("Startup presentation is available only to the main window".into());
+    }
+    let theme = if dark {
+        tauri::Theme::Dark
+    } else {
+        tauri::Theme::Light
+    };
+    // Appearance support varies by host; a failure must not hide the app forever.
+    if let Err(error) = window.set_theme(Some(theme)) {
+        eprintln!("Unable to set startup window theme: {error}");
+    }
+    if let Err(error) = window.set_background_color(Some(color)) {
+        eprintln!("Unable to set startup window background: {error}");
+    }
+    #[cfg(target_os = "windows")]
+    window_chrome::prepare(&window, dark);
+    #[cfg(desktop)]
+    show_main_window(window.app_handle())?;
     Ok(())
 }
 
@@ -33,6 +60,7 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
             desktop_platform,
+            window_ready,
             window_chrome::window_background_sync,
             window_chrome::window_chrome_sync,
             window_chrome::window_chrome_pointer_enter,
@@ -49,12 +77,6 @@ pub fn run() {
         .build(tauri::generate_context!())
         .expect("error while building tauri application");
     app.run(|app, event| match event {
-        #[cfg(desktop)]
-        tauri::RunEvent::Ready => {
-            if let Err(error) = show_main_window(app) {
-                eprintln!("Unable to show main window: {error}");
-            }
-        }
         #[cfg(target_os = "macos")]
         tauri::RunEvent::Reopen { .. } => {
             if let Err(error) = show_main_window(app) {
