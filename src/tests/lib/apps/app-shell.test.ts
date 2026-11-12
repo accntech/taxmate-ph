@@ -66,6 +66,7 @@ describe('suite app shell metadata', () => {
 			{ id: 'profile', label: 'Profile', description: 'Select or create the taxpayer record.' },
 			{ id: 'prepare', label: 'Prepare', description: 'Complete the active BIR form sections.' },
 			{ id: 'review', label: 'Review', description: 'Check validation and final-copy status.' },
+			{ id: 'submit', label: 'Submit', description: 'Send the return to BIR and capture the reference number.' },
 			{ id: 'export', label: 'Export', description: 'Generate savefiles, printouts, and receipts.' }
 		]);
 	});

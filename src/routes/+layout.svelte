@@ -1,10 +1,12 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import {
-		getFieldKitSteps,
 		listSuiteNavItems,
+		buildTaxpayerRoute,
 		type SuiteNavItem
 	} from '$lib/apps/app-shell';
+	import { ebirformsWorkspace as workspace } from '$lib/ebirforms/ebirforms-workspace.svelte';
+	import { formatTinInput } from '$lib/profiles/profile';
 	import { settings } from '$lib/settings.svelte';
 	import Home2 from '@solar-icons/svelte/category/ui/Linear/Home2.svelte';
 	import DocumentText from '@solar-icons/svelte/category/notes/Linear/DocumentText.svelte';
@@ -18,7 +20,12 @@
 	import '@fontsource-variable/source-serif-4';
 	import '@fontsource/arimo/400.css';
 	import '@fontsource/arimo/700.css';
+	import '@pcsti/ui/styles/scales.css';
 	import '../app.css';
+
+	onMount(() => {
+		if (import.meta.env.DEV) void import('virtual:stylex:runtime');
+	});
 
 	const appLogoPath = '/brand/taxmate-logo.svg';
 	let { children } = $props();
@@ -26,17 +33,36 @@
 	let isMobile = $state(false);
 
 	const navItems = listSuiteNavItems();
-	const fieldKitSteps = getFieldKitSteps();
 
 	let pathname = $derived(page.url.pathname);
 	let onSettings = $derived(pathname === '/settings' || pathname.startsWith('/settings/'));
 	let crumbs: Crumb[] = $derived.by(() => {
-		if (onSettings) {
-			return [{ label: 'TaxMate PH', href: '/' }, { label: 'Settings' }];
+		if (onSettings) return [{ label: 'Settings' }];
+
+		if (pathname === '/ebirforms/taxpayers' || pathname.startsWith('/ebirforms/taxpayers/')) {
+			const directory = { label: 'eBIRForms', href: '/ebirforms/taxpayers' };
+			if (pathname === directory.href) return [{ label: directory.label }];
+			if (pathname === `${directory.href}/new`) return [directory, { label: 'New taxpayer' }];
+
+			const id = page.params.id;
+			if (!id) return [directory];
+			const taxpayerPath = buildTaxpayerRoute(id);
+			const profile = workspace.profiles.find(profile => profile.id === id);
+			const taxpayer = {
+				label: profile ? formatTinInput(profile) : 'Taxpayer',
+				href: taxpayerPath
+			};
+			if (pathname === `${taxpayerPath}/edit`) return [directory, taxpayer, { label: 'Edit taxpayer' }];
+			if (pathname === `${taxpayerPath}/forms`) return [directory, taxpayer, { label: 'Tax Returns' }];
+			if (page.params.formCode) {
+				return [directory, taxpayer, { label: 'Tax Returns', href: `${taxpayerPath}/forms` },
+					{ label: `BIR Form ${page.params.formCode}` }];
+			}
+			return [directory, { label: taxpayer.label }];
 		}
 
 		const current = navItems.find((item) => isCurrent(item));
-		return [{ label: 'TaxMate PH', href: '/' }, { label: current?.name ?? 'Workspace' }];
+		return [{ label: current?.name ?? 'Workspace' }];
 	});
 
 	function handleMenu() {
@@ -79,6 +105,9 @@
 
 <svelte:head>
 	<title>TaxMate PH</title>
+	{#if import.meta.env.DEV}
+		<link rel="stylesheet" href="/virtual:stylex.css" />
+	{/if}
 </svelte:head>
 
 <a class="skip-link" href="#main-content">Skip to content</a>
@@ -163,29 +192,6 @@
 				</a>
 			{/each}
 
-			<div
-				class={[
-					'mt-3 grid gap-3 border-t border-border-soft px-2 pt-3',
-					sidebarCollapsed && 'hidden'
-				]}
-				aria-label="eBIRForms preparation steps"
-			>
-				{#each fieldKitSteps as step, index (step.id)}
-					<div class="grid grid-cols-[auto_minmax(0,1fr)] gap-2.5">
-						<span
-							class="grid size-6 place-items-center rounded-full border border-accent/25 bg-accent-soft text-xs font-bold text-accent"
-						>
-							{index + 1}
-						</span>
-						<span class="min-w-0">
-							<span class="block text-xs font-semibold text-fg">{step.label}</span>
-							<span class="block text-[11px] leading-snug text-fg-subtle">
-								{step.description}
-							</span>
-						</span>
-					</div>
-				{/each}
-			</div>
 		{/snippet}
 
 		{#snippet footer({ collapsed: sidebarCollapsed })}
