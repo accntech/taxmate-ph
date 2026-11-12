@@ -116,7 +116,6 @@
 	h1, h2, h3, p { margin: 0; }
 
 	.suite-heading h1 {
-		font-family: var(--font-sans);
 		font-size: 1.75rem;
 		font-weight: 650;
 		letter-spacing: -0.025em;
