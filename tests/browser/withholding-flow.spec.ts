@@ -23,15 +23,17 @@ async function openDisclosure(page: Page, title: string) {
 test('adding an ATC schedule row opens it and moves keyboard focus to its first field', async ({ page }) => {
 	await seedWorkspace(page);
 	await create(page, '1601E');
-	await page.getByRole('button', { name: 'Add row to Computation by ATC', exact: true }).click();
-	await expect(field(page, 'frm1601E:txtAtcCode2')).toBeVisible();
-	await expect(field(page, 'frm1601E:txtAtcCode2')).toBeFocused();
+	await page.getByRole('button', { name: 'Add line item to Computation by ATC', exact: true }).click();
+	await expect(page.getByRole('dialog', { name: 'New line item', exact: true })).toBeVisible();
+	await expect(field(page, 'frm1601E:txtAtcCode1')).toBeVisible();
+	await expect(field(page, 'frm1601E:txtAtcCode1')).toBeFocused();
 });
 
 test('new withholding templates reuse the searchable ATC picker and packaged tax rate', async ({ page }) => {
 	await seedWorkspace(page);
 	await create(page, '1601E');
 	await page.getByRole('radiogroup', { name: 'Any tax withheld?' }).getByLabel('Yes', { exact: true }).check();
+	await page.getByRole('button', { name: 'Add line item to Computation by ATC', exact: true }).click();
 	const atc = field(page, 'frm1601E:txtAtcCode1');
 	await expect(atc).toHaveAttribute('role', 'combobox');
 	await atc.click();
@@ -41,6 +43,8 @@ test('new withholding templates reuse the searchable ATC picker and packaged tax
 	await search.press('Enter');
 	await field(page, 'frm1601E:txtTaxBase1').fill('100000');
 	await expect(field(page, 'frm1601E:txtTaxbeWithHeld1')).toContainText('2,000.00');
+	await page.getByRole('dialog', { name: 'New line item', exact: true }).getByRole('button', { name: 'Add', exact: true }).click();
+	await expect(page.getByRole('list', { name: 'Computation by ATC line items', exact: true })).toContainText('2,000.00');
 });
 
 async function create(page: Page, code: string) {
@@ -137,22 +141,29 @@ test('an incomplete withholding draft is saved; final validation links back to i
 	await expect(field(page, 'frm0619E:txtYear')).toBeFocused();
 });
 
-test('a required schedule date error opens the collapsed section and focuses its date input', async ({ page }) => {
+test('a required schedule date error opens the collapsed section and focuses its editor date input', async ({ page }) => {
 	await seedWorkspace(page);
-	await create(page, '1604C');
-	await field(page, 'frm1604c:txtYear').fill('2025');
-	await openDisclosure(page, 'Schedule 1');
-	await field(page, 'frm1604c:txtSched1TaxWheld1').fill('1000');
-	await page.getByRole('button', { name: 'Save draft', exact: true }).click();
+	await page.addInitScript(() => {
+		const data = JSON.parse(localStorage.getItem('ebirforms-created-returns-v1')!);
+		data.returns.push({
+			id: 'invalid-annual-remittance', taxpayerId: data.returns[0].taxpayerId,
+			formCode: '1604C', returnPeriod: '2025', status: 'Draft', updatedAt: 1794441600000, finalFlag: '0',
+			values: { 'frm1604c:txtYear': '2025', 'frm1604c:txtSched1TaxWheld1': '1000' }
+		});
+		localStorage.setItem('ebirforms-created-returns-v1', JSON.stringify(data));
+	});
+	await page.goto(listPath);
 	const row = page.getByRole('row').filter({ hasText: '1604C' });
 	await row.getByRole('button', { name: /^More actions/ }).click();
 	await page.getByRole('menuitem', { name: 'Mark as final', exact: true }).click();
 	await page.getByRole('link', { name: 'Edit return to fix errors', exact: true }).click();
+	const scheduleSummary = page.locator('summary').filter({ hasText: 'Schedule 1' }).first();
+	if (await scheduleSummary.locator('..').getAttribute('open') !== null) await scheduleSummary.click();
 	const date = field(page, 'frm1604c:txtSched1Date1');
-	await expect(date).toHaveAttribute('aria-invalid', 'true');
-	await page.locator('summary').filter({ hasText: 'Schedule 1' }).click();
 	await expect(date).toBeHidden();
 	await page.getByRole('alert').getByRole('link', { name: /^Date remitted:/ }).first().click();
+	await expect(page.getByRole('dialog', { name: 'Edit line item 1', exact: true })).toBeVisible();
+	await expect(date).toHaveAttribute('aria-invalid', 'true');
 	await expect(date).toBeFocused();
 });
 

@@ -60,6 +60,7 @@
 		$effect(() => {
 			if (open && !el.open) {
 				el.showModal();
+				el.focus();
 			} else if (!open && el.open) {
 				el.close();
 			}
@@ -100,6 +101,7 @@
 	aria-labelledby={title ? titleId : undefined}
 	aria-describedby={description ? descId : undefined}
 	class={[
+		'focus:outline-none focus-visible:[box-shadow:none]',
 		'fixed inset-y-0 m-0 h-dvh max-h-none w-dvw max-w-none border-0 bg-transparent p-0',
 		'text-fg opacity-0 transition-[opacity,translate] backdrop:bg-black/45 open:opacity-100',
 		sideClass,

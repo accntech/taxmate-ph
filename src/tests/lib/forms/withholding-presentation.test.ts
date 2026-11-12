@@ -55,11 +55,13 @@ describe('withholding form presentation', () => {
 		expect(html).toContain('Attachments');
 		expect(html).toContain('class="eq-totals"');
 	});
-	it('starts a repeatable schedule with one editable row instead of ten empty disclosures', () => {
+	it('starts a repeatable schedule with an empty state and a draft editor action', () => {
 		const source = getWithholdingDefinition('1601E')!;
 		const html = render(WithholdingEditor, { props: { definition: source, values: {} } }).body;
-		expect(html.includes('id="frm1601E:txtAtcCode1"')).toBe(true);
-		expect(html.includes('id="frm1601E:txtAtcCode2"')).toBe(false);
+		expect(html).toContain('No line items yet');
+		expect(html).toContain('aria-label="Add line item to Computation by ATC"');
+		expect(html).not.toContain('id="frm1601E:txtAtcCode1"');
+		expect(html).not.toContain('id="frm1601E:txtAtcCode2"');
 	});
 	for (const source of withholdingDefinitions) {
 		it(`renders editor for exact template ${source.code}`, () => {
@@ -72,9 +74,12 @@ describe('withholding form presentation', () => {
 	it('offers repeatable schedule rows and renders preserved rows beyond the initial ten', () => {
 		const source = getWithholdingDefinition('1601E')!;
 		const countKey = withholdingRowCountKey(source, 'atc');
-		const html = render(WithholdingEditor, { props: { definition: source, values: { [countKey]: '11' } } }).body;
-		expect(html).toContain('Add row');
-		expect(html).toContain('id="frm1601E:txtAtcCode11"');
+		const html = render(WithholdingEditor, { props: { definition: source, values: { [countKey]: '11', 'frm1601E:txtAtcCode11': 'WI120', 'frm1601E:txtTaxBase11': '100000' } } }).body;
+		expect(html).toContain('aria-label="Add line item to Computation by ATC"');
+		expect(html).toContain('aria-label="Computation by ATC line items"');
+		expect(html).toContain('WI120');
+		expect(html).toContain('100,000.00');
+		expect(html).toContain('aria-label="Edit line item 1"');
 	});
 	it('groups source fields without duplicating taxpayer profile details or a testing banner', () => {
 		const html = render(WithholdingEditor, { props: { definition, values, taxpayerHref: '/taxpayer/edit' } }).body;
@@ -94,6 +99,8 @@ describe('withholding form presentation', () => {
 		expect(html).toContain('Previously remitted');
 		expect(html).toContain('Enter a valid amount.');
 		expect(html).toMatch(/<input[^>]*id="frm0619E:txtTax14"[^>]*aria-invalid="true"/);
-		expect(html).toContain('aria-label="Remittance schedule: January"');
+		expect(html).toContain('aria-label="Remittance schedule line items"');
+		expect(html).toContain('January');
+		expect(html).toContain('aria-label="Edit line item 1"');
 	});
 });

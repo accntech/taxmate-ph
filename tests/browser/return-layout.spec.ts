@@ -21,8 +21,12 @@ for (const width of [1440, 1100, 390]) {
 		} else {
 			expect(summary!.y).toBeGreaterThan(period!.y + period!.height);
 		}
-		await page.getByRole('button', { name: 'Add ATC row', exact: true }).click();
-		await expect(page.getByRole('group', { name: 'ATC row 2', exact: true })).toBeVisible();
+		await page.getByRole('button', { name: /^Add line item/ }).click();
+		const editor = page.getByRole('dialog', { name: 'New line item', exact: true });
+		await expect(editor).toBeVisible();
+		await expect(editor.getByRole('group', { name: 'ATC row 2', exact: true })).toBeVisible();
+		await editor.getByRole('button', { name: 'Cancel', exact: true }).click();
+		await expect(editor).toBeHidden();
 		await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
 		const bar = await actions.boundingBox();
 		expect(bar!.y + bar!.height).toBeLessThanOrEqual(961);

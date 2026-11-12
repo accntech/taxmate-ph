@@ -23,8 +23,8 @@ describe('1601EQ preparation', () => {
 	it('uses currency controls for money and a separate whole-number attachment count', () => {
 		const body = markup({ 'frm1601EQ:optTaxesWithheld': 'Y', 'frm1601EQ:txtATC13': 'WI120', 'frm1601EQ:txtTaxBase13': '100000' });
 		expect(body).toContain('data-slot="currency-input"');
-		expect(body).toContain('value="100,000.00"');
-		expect(body).toContain('id="frm1601EQ:txtTaxBase13"');
+		expect(body).toContain('₱100,000.00');
+		expect(body).toContain('aria-label="Edit line item 1"');
 		expect(body).toContain('inputmode="numeric"');
 	});
 	it('does not present an invalid amount as a calculated zero', () => {
@@ -32,9 +32,10 @@ describe('1601EQ preparation', () => {
 		expect(body).toContain('Correct the amounts to calculate the total.');
 		expect(body).not.toContain('₱ 0.00');
 	});
-	it('gives repeated ATC fields a semantic row group', () => {
-		const body = markup({ 'frm1601EQ:optTaxesWithheld': 'Y' });
-		expect(body).toMatch(/<fieldset[^>]*aria-label="ATC row 1"/);
+	it('groups committed ATC items in a semantic list', () => {
+		const body = markup({ 'frm1601EQ:optTaxesWithheld': 'Y', 'frm1601EQ:txtATC13': 'WI120', 'frm1601EQ:txtTaxBase13': '1000' });
+		expect(body).toMatch(/<ol[^>]*aria-label="ATC line items"/);
+		expect(body).toContain('aria-label="Edit line item 1"');
 	});
 	it('hides ATC entry on a nil return', () => {
 		expect(markup().includes('Tax Base')).toBe(false);
@@ -43,12 +44,15 @@ describe('1601EQ preparation', () => {
 		expect(markup().includes('Previously filed return')).toBe(false);
 		expect(markup({ 'frm1601EQ:optAmendedReturn': 'Y' })).toContain('Previously filed return');
 	});
-	it('shows a single initial ATC row and preserves imported later rows', () => {
+	it('starts empty and preserves imported later rows', () => {
 		const initial = markup({ 'frm1601EQ:optTaxesWithheld': 'Y' });
-		expect(initial.match(/aria-label="ATC row /g)).toHaveLength(1);
+		expect(initial).toContain('No line items yet');
+		expect(initial).toContain('Add first line item');
+		expect(initial).not.toContain('aria-label="Edit line item');
 		const imported = markup({ 'frm1601EQ:optTaxesWithheld': 'Y', 'frm1601EQ:txtATC18': 'WI010', 'frm1601EQ:txtTaxBase18': '1000', 'frm1601EQ:txtTaxRate18': '5' });
 		expect(imported).toContain('WI010');
-		expect(imported).toContain('aria-label="ATC row 6"');
+		expect(imported).toContain('aria-label="Edit line item 1"');
+		expect(imported).toContain('₱1,000.00');
 	});
 	it('only exposes previous quarter credits after Q1', () => {
 		expect(markup().includes('Over-remittance from previous quarter')).toBe(false);
@@ -56,7 +60,7 @@ describe('1601EQ preparation', () => {
 	});
 	it('renders calculated withholding and exposes over-remittance disposition', () => {
 		const body = markup({ 'frm1601EQ:optTaxesWithheld': 'Y', 'frm1601EQ:txtATC13': 'WI120', 'frm1601EQ:txtTaxBase13': '100000', 'frm1601EQ:txtTaxRate13': '2', 'frm1601EQ:txtRemittanceFirstMonth': '2500' });
-		expect(body).toMatch(/<output[^>]*id="frm1601EQ:txtTaxWithheld13"[^>]*>₱2,000.00<\/output>/);
+		expect(body).toContain('₱2,000.00');
 		expect(body).toContain('-₱500.00');
 		expect(body).toContain('Apply over-remittance as');
 	});
