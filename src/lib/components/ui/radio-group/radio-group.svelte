@@ -70,7 +70,7 @@
 
 <style>
 	fieldset { min-width: 0; margin: 0; padding: 0; border: 0; }
-	legend { margin-bottom: .5rem; padding: 0; font-size: .875rem; font-weight: 500; line-height: 1; }
+	legend { margin-bottom: var(--form-label-gap); padding: 0; color: var(--fg-muted); font-size: var(--form-label-size); font-weight: 500; line-height: var(--form-label-line-height); }
 	.choices { display: flex; flex-wrap: wrap; gap: 1.25rem; }
 	.choices + :global(*) { margin-top: .5rem; }
 	.choice { display: flex; min-height: 2.375rem; align-items: center; gap: .5rem; padding-block: .375rem; cursor: pointer; }
@@ -84,7 +84,7 @@
 	fieldset[aria-invalid='true'] .radio-control { outline: 1px solid var(--field-error-border); outline-offset: 0; box-shadow: 0 0 0 3px var(--field-error-halo); }
 	fieldset[aria-invalid='true'] .radio-control:has(input:focus-visible) { box-shadow: 0 0 0 3px var(--field-error-focus-halo); }
 	.radio-control input:focus-visible { outline: none; box-shadow: none; }
-	.choice-label { display: block; font-size: .875rem; font-weight: 500; }
+	.choice-label { display: block; font-size: var(--form-control-size); font-weight: 500; }
 	.choice-description, .help { display: block; color: var(--fg-muted); font-size: .75rem; line-height: 1.4; }
 	fieldset:disabled .choice { cursor: default; opacity: .6; }
 	@media (forced-colors: active) {

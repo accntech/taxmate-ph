@@ -367,7 +367,7 @@
 	.add-row { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem; margin-top: .875rem; }
 	.add-row .help { margin: 0; }
 	.error { color: var(--danger); font-size: .8rem; }
-	.editor-fields { display: grid; gap: 1.25rem; min-width: 0; margin: 0; padding: 1.25rem; border: 0; }
+	.editor-fields { display: grid; gap: var(--form-field-row-gap); min-width: 0; margin: 0; padding: 1.25rem; border: 0; }
 	.editor-actions { display: flex; justify-content: end; gap: .5rem; }
 	@media (forced-colors: active) { .item-details:focus-visible, .grip:focus-visible { outline: 2px solid Highlight; box-shadow: none; } }
 </style>

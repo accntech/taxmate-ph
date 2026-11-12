@@ -31,13 +31,14 @@
 		grouped
 			? 'flex-1 border-0 bg-transparent px-0 focus-visible:shadow-none'
 			: 'rounded-md border border-border px-3 bg-bg-input shadow-[var(--shadow-ui-sm)] field-focus',
-		size === 'touch' ? 'min-h-12 text-base' : 'min-h-9 text-base md:text-sm',
+		size === 'touch' ? 'min-h-12 text-base' : 'normal-size',
 		className
 	]}
 	{...restProps}
 />
 
 <style>
+	.normal-size { min-height: var(--form-control-height); font-size: var(--form-control-size); }
 	.field-focus:focus-visible { border-color: var(--field-focus-border); background-color: var(--bg-elev); box-shadow: 0 0 0 3px var(--field-focus-halo); }
 	.field-focus[aria-invalid='true'] { border-color: var(--field-error-border); box-shadow: 0 0 0 3px var(--field-error-halo); }
 	.field-focus[aria-invalid='true']:focus-visible { box-shadow: 0 0 0 3px var(--field-error-focus-halo); }

@@ -302,7 +302,7 @@
 		clear: both;
 		display: grid;
 		grid-template-columns: minmax(0, 1fr);
-		gap: 1.125rem 1.25rem;
+		gap: var(--form-field-row-gap) var(--form-field-column-gap);
 		align-items: start;
 	}
 	.field-grid > * {

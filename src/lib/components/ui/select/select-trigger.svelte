@@ -14,7 +14,7 @@
 	bind:ref
 	data-slot="select-trigger"
 	class={[
-		'flex min-h-9 w-full min-w-0 items-center justify-between gap-2 rounded-md border border-border bg-bg-input px-3 py-1.5 text-left text-sm text-fg shadow-[var(--shadow-ui-sm)] outline-none transition-[color,box-shadow,border-color] disabled:cursor-not-allowed disabled:opacity-50',
+		'select-normal-size flex w-full min-w-0 items-center justify-between gap-2 rounded-md border border-border bg-bg-input px-3 py-1.5 text-left text-fg shadow-[var(--shadow-ui-sm)] outline-none transition-[color,box-shadow,border-color] disabled:cursor-not-allowed disabled:opacity-50',
 		'field-focus',
 		className
 	]}
@@ -27,6 +27,7 @@
 </SelectPrimitive.Trigger>
 
 <style>
+	:global(.select-normal-size[data-slot="select-trigger"]) { min-height: var(--form-control-height); font-size: var(--form-control-size); }
 	:global(.field-focus[data-slot='select-trigger']:focus-visible) { border-color: var(--field-focus-border); background-color: var(--bg-elev); box-shadow: 0 0 0 3px var(--field-focus-halo); }
 	:global(.field-focus[data-slot='select-trigger'][aria-invalid='true']) { border-color: var(--field-error-border); box-shadow: 0 0 0 3px var(--field-error-halo); }
 	:global(.field-focus[data-slot='select-trigger'][aria-invalid='true']:focus-visible) { box-shadow: 0 0 0 3px var(--field-error-focus-halo); }

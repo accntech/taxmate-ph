@@ -30,7 +30,7 @@
 .eq-section { min-width: 0; padding: 1.25rem 1rem; }
 .eq-section-header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; }
 .eq-section-header h2, .eq-summary-heading { margin: 0; font-family: var(--font-sans); font-size: .875rem; font-weight: 600; }
-.eq-field-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.125rem 1.25rem; align-items: start; }
+.eq-field-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--form-field-row-gap) var(--form-field-column-gap); align-items: start; }
 .eq-year { width: 100%; max-width: 10rem; }
 .eq-disclosure > summary { display: flex; width: fit-content; align-items: center; gap: .5rem; list-style: none; cursor: pointer; border: 1px solid transparent; border-radius: .25rem; font-size: .875rem; font-weight: 600; }
 .eq-disclosure > summary::-webkit-details-marker { display: none; }

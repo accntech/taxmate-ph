@@ -49,6 +49,13 @@
 	--sidebar-w: 17.5rem;
 	--sidebar-w-collapsed: 4.5rem;
 	--ring: color-mix(in oklch, var(--accent) 24%, transparent);
+	--form-label-size: .8rem;
+	--form-label-line-height: 1.25rem;
+	--form-control-size: 13px;
+	--form-control-height: 2.375rem;
+	--form-label-gap: .5rem;
+	--form-field-row-gap: 1.125rem;
+	--form-field-column-gap: 1.25rem;
 	--field-focus-border: color-mix(in oklch, var(--accent) 60%, var(--border));
 	--field-focus-halo: color-mix(in oklch, var(--accent) 18%, transparent);
 	--field-error-border: color-mix(in oklch, var(--danger) 60%, var(--border));
