@@ -28,7 +28,6 @@ export const styles = stylex.create({
     "paddingBlock": "calc(var(--spacing) * 2)"
   },
   "heading": {
-    "fontFamily": "var(--font-sans)",
     "fontSize": "1.5rem",
     "lineHeight": "calc(2 / 1.5)",
     "fontWeight": 600,

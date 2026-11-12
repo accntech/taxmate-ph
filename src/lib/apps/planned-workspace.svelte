@@ -79,7 +79,6 @@
 	.workspace-title { display: flex; align-items: center; flex-wrap: wrap; gap: 0.75rem; }
 
 	h1 {
-		font-family: var(--font-sans);
 		font-size: 1.75rem;
 		font-weight: 650;
 		letter-spacing: -0.025em;

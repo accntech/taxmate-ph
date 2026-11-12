@@ -21,7 +21,7 @@
 }
 .eq-heading { min-width: 0; flex: 1 1 16rem; }
 .eq-title-row { display: flex; flex-wrap: wrap; align-items: center; gap: .625rem; }
-.eq-title-row h1 { margin: 0; font-family: var(--font-sans); font-size: 1rem; font-weight: 600; letter-spacing: -.015em; }
+.eq-title-row h1 { margin: 0; font-size: 1rem; font-weight: 600; letter-spacing: -.015em; }
 .eq-description { margin-top: .125rem; max-width: 68ch; color: var(--fg-muted); font-size: .8rem; line-height: 1.25rem; }
 .eq-form-controls { min-width: 0; margin: 0; padding: 0; border: 0; }
 .eq-layout { display: grid; grid-template-columns: minmax(0, 1fr); }

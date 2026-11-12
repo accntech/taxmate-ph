@@ -268,7 +268,6 @@
 	h1 {
 		margin: 0;
 		min-width: 0;
-		font-family: var(--font-sans);
 		font-size: 1rem;
 		font-weight: 600;
 		letter-spacing: -0.015em;
