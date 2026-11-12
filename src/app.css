@@ -4,7 +4,7 @@
 
 /* Keep native caption controls outside the sidebar and page navigation. */
 html[data-tauri-platform] {
-	--desktop-titlebar-height: 64px;
+	--desktop-titlebar-height: 48px;
 }
 
 html[data-tauri-platform='macos']:not([data-tauri-fullscreen]) {
@@ -18,7 +18,7 @@ html[data-tauri-platform='windows'][data-windows-titlebar] {
 }
 
 :root {
-	--app-shell-top: var(--desktop-titlebar-height, 64px);
+	--app-shell-top: var(--desktop-titlebar-height, 48px);
 }
 
 .app-shell {

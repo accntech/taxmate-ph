@@ -224,6 +224,12 @@ export function startWindowChrome(): () => void {
   function syncMacTheme() {
     const dark = root.dataset.theme === "dark";
     void appWindow.setTheme(dark ? "dark" : "light").catch(() => undefined);
+    // Native backing can show through when macOS rubber-bands the web content.
+    const background = getComputedStyle(root).getPropertyValue("--bg").trim();
+    if (background)
+      void invoke("window_background_sync", { color: background }).catch((error) => {
+        console.warn("Unable to sync native window background", error);
+      });
   }
 
   void (async () => {

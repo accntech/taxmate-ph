@@ -68,6 +68,22 @@ pub fn prepare(window: &tauri::WebviewWindow) {
     }
 }
 
+/// Keep the window and WebKit overscroll backing on the same explicit color.
+#[tauri::command]
+pub fn window_background_sync(
+    window: tauri::WebviewWindow,
+    color: tauri::window::Color,
+) -> Result<(), String> {
+    if window.label() != "main" {
+        return Err("Window background is available only to the main window".into());
+    }
+    // The bundled JS background setters and locked core disagree on the IPC
+    // argument name. Use the typed Rust API so neither layer receives None.
+    window
+        .set_background_color(Some(color))
+        .map_err(|error| error.to_string())
+}
+
 #[tauri::command]
 pub async fn window_chrome_sync(
     window: tauri::WebviewWindow,
