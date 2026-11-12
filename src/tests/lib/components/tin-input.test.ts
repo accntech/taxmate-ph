@@ -8,6 +8,13 @@ describe('TIN input', () => {
 		expect(formatTinValue('1234567890007')).toBe('123-456-789-0007');
 		expect(getTinDigits('123-456-789-0007')).toBe('1234567890007');
 	});
+	it('preserves a five-digit branch in the input and rendered field', () => {
+		expect(getTinDigits('001-002-003-12345')).toBe('00100200312345');
+		expect(formatTinValue('00100200312345')).toBe('001-002-003-12345');
+		const { body } = render(TinInput, { props: { value: '00100200312345' } });
+		expect(body).toContain('value="001-002-003-12345"');
+		expect(body).toContain('maxlength="17"');
+	});
 	it('retains incomplete TINs instead of inventing a branch code', () => {
 		expect(formatTinValue('123456789')).toBe('123-456-789');
 		expect(formatTinValue('12345678900')).toBe('123-456-789-00');

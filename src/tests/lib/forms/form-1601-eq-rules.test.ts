@@ -202,9 +202,9 @@ describe('1601EQ source-based validation and computation', () => {
 		expect(result[field('txtTaxWithheld13')]).toBe('0.00');
 	});
 
-	it('rejects branches the existing taxpayer identifier cannot preserve', () => {
+	it('rejects malformed or excessive branch digits', () => {
 		const values = validReturn();
-		for (const branch of ['ABCDE', '12345']) {
+		for (const branch of ['ABCDE', '123456']) {
 			values[field('txtBranchCode')] = branch;
 			expect(validate1601EQ(values, now)[field('txtBranchCode')]).toBeTruthy();
 		}
@@ -257,4 +257,10 @@ describe('1601EQ source-based validation and computation', () => {
 		values[field('overpaymentOption')] = 'refund';
 		expect(validate1601EQ(values, now)).toEqual({});
 	});
+});
+
+it('accepts a five-digit branch code', () => {
+ const values = validReturn();
+ values[field('txtBranchCode')] = '12345';
+ expect(validate1601EQ(values, now)[field('txtBranchCode')]).toBeUndefined();
 });

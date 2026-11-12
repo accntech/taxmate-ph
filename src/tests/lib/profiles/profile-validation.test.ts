@@ -45,6 +45,8 @@ describe('taxpayer profile save validation', () => {
 		['placeholder RDO', { rdoCode: '000' }],
 		['unknown RDO', { rdoCode: '999' }],
 		['unsupported category', { category: 'X' }],
+		['unsupported taxpayer size', { taxpayerSize: 'I' }],
+		['nonnumeric PSIC code', { psicCode: '01AB' }],
 		['malformed optional email', { email: 'name@' }],
 		['malformed optional ZIP', { zipCode: '12345' }]
 	])('rejects %s before saving', async (_name, fields) => {
@@ -70,7 +72,7 @@ describe('taxpayer profile save validation', () => {
 		expect(workspace.profiles[0].rdoCode).toBe(rdoCode);
 	});
 
-	it.each(['12345678900001', '123456789000', '123abc4567890000'])(
+	it.each(['123456789000001', '123456789000', '123abc4567890000'])(
 		'rejects raw TIN %s instead of silently truncating it',
 		async (rawTin) => {
 			await workspace.saveTaxpayerProfile(rawTin);
@@ -78,10 +80,10 @@ describe('taxpayer profile save validation', () => {
 			expect(workspace.profiles).toEqual([initialProfile]);
 		}
 	);
-	it('allows a formatted TIN and a government profile with branch 0000', async () => {
+	it('allows a formatted TIN and a government profile with branch 00000', async () => {
 		workspace.profile.category = 'G';
 		workspace.profile.email = '';
-		await workspace.saveTaxpayerProfile('123-456-789-0000');
+		await workspace.saveTaxpayerProfile('123-456-789-00000');
 		expect(save).toHaveBeenCalledTimes(1);
 	});
 
@@ -124,6 +126,13 @@ describe('taxpayer profile save validation', () => {
 });
 
 describe('taxpayer information for withholding forms', () => {
+ it.each(['micro', 'small', 'medium', 'large'])(
+  'saves %s size separately from individual classification and business', async (taxpayerSize) => {
+   Object.assign(workspace.profile, { psicCode: '0123', taxpayerSize, lineOfBusiness: 'Accounting services', taxpayerClassification: 'N' });
+   expect(await workspace.saveTaxpayerProfile()).toBe(true);
+   expect(save).toHaveBeenCalledWith(expect.objectContaining({ psicCode: '0123', taxpayerSize, lineOfBusiness: 'Accounting services', taxpayerClassification: 'N' }));
+  }
+ );
  it('rejects an unsupported tax classification before saving', async () => {
   Object.assign(workspace.profile, { taxpayerClassification: 'X' });
   expect(await workspace.saveTaxpayerProfile()).toBe(false);
@@ -134,4 +143,16 @@ describe('taxpayer information for withholding forms', () => {
   expect(await workspace.saveTaxpayerProfile()).toBe(true);
   expect(save).toHaveBeenCalledWith(expect.objectContaining({ lineOfBusiness: 'Accounting services', taxpayerClassification: 'N' }));
  });
+});
+
+it('saves the selected legacy file when equivalent branch identities coexist', async () => {
+ const first = { ...initialProfile, id: '123456789007', branchCode: '007', taxpayerName: 'First' };
+ const second = { ...first, id: '1234567890007', branchCode: '0007', taxpayerName: 'Second' };
+ workspace.profiles = [first, second];
+ workspace.selectTaxpayerProfile(second.id);
+ workspace.profile.taxpayerName = 'Updated second';
+ expect(await workspace.saveTaxpayerProfile('123-456-789-00007')).toBe(true);
+ expect(save).toHaveBeenCalledWith(expect.objectContaining({ id: second.id, taxpayerName: 'Updated second', branchCode: '00007' }));
+ expect(workspace.profiles[0]).toEqual(first);
+ expect(workspace.selectedProfileId).toBe(second.id);
 });

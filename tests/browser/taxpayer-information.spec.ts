@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { seedWorkspace, taxpayerId } from './fixtures';
 
-test('business and tax classification are saved and edited in taxpayer information', async ({ page }) => {
+test('business, PSIC and both classifications are saved and edited in taxpayer information', async ({ page }, testInfo) => {
  await seedWorkspace(page);
  await page.addInitScript(() => {
   const key = 'ebirforms-created-returns-v1';
@@ -25,14 +25,27 @@ test('business and tax classification are saved and edited in taxpayer informati
  });
  const editPath = `/ebirforms/taxpayers/${taxpayerId}/edit`;
  await page.goto(editPath);
+ await expect(page.getByRole('textbox', { name: 'PSIC code', exact: true })).toHaveValue('');
  await page.getByRole('textbox', { name: 'Line of business / occupation', exact: true }).fill('Accounting and advisory services');
+ await page.getByRole('textbox', { name: 'PSIC code', exact: true }).fill('0123');
+ await page.getByRole('combobox', { name: 'Taxpayer size classification', exact: true }).click();
+ await page.getByRole('option', { name: 'Small', exact: true }).click();
  await page.getByRole('combobox', { name: 'Tax classification', exact: true }).click();
  await page.getByRole('option', { name: 'Non-individual', exact: true }).click();
  await page.getByRole('button', { name: 'Save profile', exact: true }).click();
  await expect(page).toHaveURL('/ebirforms/taxpayers');
  await page.goto(editPath);
  await expect(page.getByRole('textbox', { name: 'Line of business / occupation', exact: true })).toHaveValue('Accounting and advisory services');
+ await expect(page.getByRole('textbox', { name: 'PSIC code', exact: true })).toHaveValue('0123');
+ await expect(page.getByRole('combobox', { name: 'Taxpayer size classification', exact: true })).toHaveText('Small');
  await expect(page.getByRole('combobox', { name: 'Tax classification', exact: true })).toHaveText('Non-individual');
+ for (const width of [1280, 390]) {
+  await page.setViewportSize({ width, height: 900 });
+  if (width < 768) await expect(page.getByRole('complementary', { name: 'Primary' })).not.toBeInViewport();
+  await expect(page.getByRole('textbox', { name: 'PSIC code', exact: true })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  await page.screenshot({ path: testInfo.outputPath(`taxpayer-information-${width}.png`), fullPage: true, animations: 'disabled' });
+ }
  await page.goto(`/ebirforms/taxpayers/${taxpayerId}/forms/0605?return=profile-0605`);
  await expect(page.locator('input[id="frm0605:txtLineBus"]')).toHaveCount(0);
  await expect(page.getByRole('combobox', { name: 'Taxpayer classification', exact: true })).toHaveCount(0);

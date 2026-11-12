@@ -1,6 +1,6 @@
-// Adapted from PCSTI's TIN helper for this app's four-digit branch code.
+// Adapted from PCSTI's TIN helper for this app's five-digit branch code.
 export function getTinDigits(value: string | null | undefined): string {
-	return (value ?? '').replace(/\D/g, '').slice(0, 13);
+	return (value ?? '').replace(/\D/g, '').slice(0, 14);
 }
 
 /** Group available digits without completing an unfinished identifier. */

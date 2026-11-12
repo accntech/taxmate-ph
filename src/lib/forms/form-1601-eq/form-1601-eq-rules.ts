@@ -100,8 +100,8 @@ export function validate1601EQ(values: Record<string, string>, now = new Date())
 	for (const name of ['txtTIN1', 'txtTIN2', 'txtTIN3']) {
 		if (text(values, name) && !/^\d{3}$/.test(text(values, name))) errors[id(name)] = 'Enter three digits for each TIN segment.';
 	}
-	if (text(values, 'txtBranchCode') && !/^\d{4}$/.test(text(values, 'txtBranchCode'))) {
-		errors[id('txtBranchCode')] = 'Enter the four-digit branch code used by the taxpayer profile.';
+	if (text(values, 'txtBranchCode') && !/^\d{3,5}$/.test(text(values, 'txtBranchCode'))) {
+		errors[id('txtBranchCode')] = 'Enter the 3- to 5-digit branch code used by the taxpayer profile.';
 	}
 	if (text(values, 'txtRDOCode') && !isPackagedRdoCode(text(values, 'txtRDOCode'))) {
 		errors[id('txtRDOCode')] = 'Enter a supported RDO code, such as 040 or 17A. Update the taxpayer details.';
