@@ -627,18 +627,36 @@ for (const code of printCodes.filter(code => !['1601EQ', '0619E', '0619F'].inclu
 
 }
 
-for (const paper of ['letter', 'a4', 'long']) {
-	test(`1601Cv2018 ${paper} PDF pages have matching side margins`, async ({ page }, testInfo) => {
-		const print = await printForm(page, '1601Cv2018', paper);
-		const margins = await print.locator('#formPaper').evaluateAll(frames => frames.map(frame => {
-			const box = frame.getBoundingClientRect();
-			const sheet = frame.closest('.withholding-print-page')!.getBoundingClientRect();
-			return { left: box.left - sheet.left, right: sheet.right - box.right, style: frame.closest('.withholding-print-page')!.getAttribute('style'), width: box.width };
-		}));
-		await print.pdf({ path: testInfo.outputPath('1601cv2018.pdf'), preferCSSPageSize: true, printBackground: true });
-		expect(margins).toHaveLength(2);
-		expect(Math.abs(margins[0].left - margins[1].left), JSON.stringify(margins)).toBeLessThan(1);
-		expect(Math.abs(margins[0].right - margins[1].right), JSON.stringify(margins)).toBeLessThan(1);
-		await print.close();
-	});
+for (const [code, pageCount] of Object.entries({
+	'1600PTv2018': 2, '1600VTv2018': 2, '1601Cv2018': 2, '1601F': 2,
+	'1601FQ': 2, '1602': 2, '1602Qv2018': 3, '1603Qv2018': 2,
+	'1604Ev2018': 2, '1604F': 2
+})) {
+	for (const paper of ['letter', 'a4', 'long']) {
+		test(`${code} ${paper} PDF pages have matching side margins`, async ({ page }, testInfo) => {
+			const print = await printForm(page, code, paper);
+			const margins = await print.locator('#formPaper').evaluateAll(frames => frames.map(frame => {
+				const box = frame.getBoundingClientRect();
+				const sheet = frame.closest('.withholding-print-page')!.getBoundingClientRect();
+				return { left: box.left - sheet.left, right: sheet.right - box.right };
+			}));
+			await print.pdf({ path: testInfo.outputPath(`${code}.pdf`), preferCSSPageSize: true, printBackground: true });
+			const pdfPath = testInfo.outputPath(`${code}.pdf`);
+			expect(execFileSync('pdfinfo', [pdfPath]).toString().match(/^Pages:\s+(\d+)/m)?.[1]).toBe(String(pageCount));
+			const overflow = await print.locator('.withholding-print-page').evaluateAll(frames => frames.flatMap(frame => {
+				const sheet = frame.getBoundingClientRect();
+				const header = frame.querySelector('.withholding-page-header')!.getBoundingClientRect();
+				const footer = frame.querySelector('.withholding-page-footer')!.getBoundingClientRect();
+				return [...frame.querySelectorAll('.withholding-print-page-content, .withholding-print-page-content *')].filter(element => {
+					const box = element.getBoundingClientRect();
+					return box.width > 0 && box.height > 0 && (box.left < sheet.left - 1 || box.right > sheet.right + 1 || box.top < header.bottom || box.bottom > footer.top);
+				}).map(element => element.id || element.className);
+			}));
+			expect(overflow).toEqual([]);
+			expect(margins).toHaveLength(pageCount);
+			expect(Math.max(...margins.map(box => box.left)) - Math.min(...margins.map(box => box.left)), JSON.stringify(margins)).toBeLessThan(1);
+			expect(Math.max(...margins.map(box => box.right)) - Math.min(...margins.map(box => box.right)), JSON.stringify(margins)).toBeLessThan(1);
+			await print.close();
+		});
+	}
 }
