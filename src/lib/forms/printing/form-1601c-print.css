@@ -340,3 +340,36 @@ color:#000 !important;
 .withholding-print[data-form-code="1601C"] [id="frm1601c:j_id680"] {
  color: #000 !important;
 }
+
+/* Footer strips follow their enclosing form width instead of legacy raster dimensions. */
+@layer withholding-inline-important {
+ .withholding-print[data-form-code="1601C"] .imgClass,
+ .withholding-print[data-form-code="1601C"] .imgClass > :is(table, img) {
+  width: 100% !important;
+  max-width: 100% !important;
+ }
+}
+
+/* All compensation sections share the complete form's inner frame. */
+@layer withholding-inline-important {
+ .withholding-print[data-form-code="1601C"] :is(
+  .wh-inline-9383a0774137, .wh-inline-a9c35cd8fd89,
+  .wh-inline-5a315681b67d, .wh-inline-791ae3b18231,
+  .wh-inline-96a4c96170f9, .wh-inline-1c938c99ea38,
+  .wh-inline-651d1d4392b4, .wh-inline-5714969ae5fa,
+  .wh-inline-e94d29b872a3, .wh-inline-ad96f0f4cd0a, .wh-inline-31b448824b2a
+ ) { width: 100% !important; max-width: 100% !important; box-sizing: border-box; }
+ .withholding-print[data-form-code="1601C"] .wh-print-select {
+  display: inline-block;
+  box-sizing: border-box;
+  height: 19px !important;
+  line-height: normal;
+  vertical-align: middle;
+ }
+}
+.withholding-print[data-form-code="1601C"] table { border-spacing: 0; }
+
+/* Keep the specification box visible even when no tax relief is selected. */
+@layer withholding-inline-important {
+ .withholding-print[data-form-code="1601C"] [id="frm1601c:selTreaty"] { width: 160px !important; }
+}

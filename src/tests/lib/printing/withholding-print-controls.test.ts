@@ -8,6 +8,23 @@ import { createWithholdingPrintModel } from '$lib/printing/withholding-print-mod
 import { initialProfile } from '$lib/ebirforms/ebirforms-workspace.svelte';
 
 describe('source-native withholding print controls', () => {
+ it.each(['', '1'])('leaves the special-law print field blank for No with saved value %j', (savedLaw) => {
+  const values = createWithholdingValues('1601E', initialProfile);
+  values['frm1601E:optRelief'] = 'N';
+  values['frm1601E:j_id402'] = savedLaw;
+  const html = render(Form1601EPrint, { props: { values } }).body;
+  const law = html.match(/<span\b[^>]*id="frm1601E:j_id402"[^>]*>(.*?)<\/span>/s)?.[1];
+  expect(law?.replace(/<!--.*?-->/gs, '')).toBe('');
+  const no = html.match(/<input\b[^>]*id="frm1601E:j_id398:_2"[^>]*>/)?.[0];
+  expect(no).toMatch(/\bchecked\b/);
+ });
+ it('prints the special law when tax relief is Yes', () => {
+  const values = createWithholdingValues('1601E', initialProfile);
+  values['frm1601E:optRelief'] = 'Y';
+  const html = render(Form1601EPrint, { props: { values } }).body;
+  const law = html.match(/<span\b[^>]*id="frm1601E:j_id402"[^>]*>(.*?)<\/span>/s)?.[1];
+  expect(law?.replace(/<!--.*?-->/gs, '')).toBe('Special Law');
+ });
  it('preserves source field sizes and distinguishes radios from checkboxes', () => {
   const values = createWithholdingValues('0605', initialProfile);
   const html = render(Form0605Print, { props: { values } }).body;

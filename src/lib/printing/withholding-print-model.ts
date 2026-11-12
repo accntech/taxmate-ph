@@ -474,6 +474,13 @@ export function createWithholdingPrintModel(
       mapped.add(prefix + "txtAddress2");
     }
     value = binding.options?.[value] ?? value;
+    if (
+      code === "1601E" &&
+      binding.id === prefix + "j_id402" &&
+      values[prefix + "optRelief"] !== "Y"
+    ) {
+      value = "";
+    }
     value = printDate(value);
     if (binding.moneyPart !== undefined)
       value = (Number(value.replaceAll(",", "")) || 0).toFixed(2).split(".")[

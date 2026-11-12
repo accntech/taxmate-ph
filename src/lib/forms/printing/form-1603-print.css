@@ -299,3 +299,36 @@ color:#000 !important;
 .withholding-print[data-form-code="1603"] .wh-inline-ea46c8e8187c{ width: 740px !important;}
 }
 .withholding-print[data-form-code="1603"] .wh-page-1603-1 { width: 832.34375px; }
+
+/* Footer strips follow their enclosing form width instead of legacy raster dimensions. */
+@layer withholding-inline-important {
+ .withholding-print[data-form-code="1603"] .imgClass,
+ .withholding-print[data-form-code="1603"] .imgClass > :is(table, img) {
+  width: 100% !important;
+  max-width: 100% !important;
+ }
+}
+
+/* Keep item 14 choices separated and its blank specification box readable. */
+@layer withholding-inline-important {
+ .withholding-print[data-form-code="1603"] .wh-inline-74e905a72558 {
+  width: auto !important;
+  float: none !important;
+  margin-inline: auto !important;
+ }
+ .withholding-print[data-form-code="1603"] .wh-inline-74e905a72558 td {
+  padding-inline: 6px !important;
+ }
+ .withholding-print[data-form-code="1603"] [id="frm1603:lstTaxTreaty"] {
+  display: inline-block;
+  box-sizing: border-box;
+  width: 160px !important;
+  height: 19px !important;
+  line-height: normal;
+  vertical-align: middle;
+ }
+}
+
+@layer withholding-inline-important {
+ .withholding-print[data-form-code="1603"] .wh-inline-d26ae0e8e671 { width: 100% !important; }
+}

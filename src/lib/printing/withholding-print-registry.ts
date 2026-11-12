@@ -1,5 +1,6 @@
 import type { Component } from 'svelte';
 import sharedStyles from '../forms/printing/withholding-print.css?raw';
+import monthlyRemittanceStyles from '../forms/printing/form-0619-layout.css?raw';
 
 export type WithholdingPrintComponent = Component<{ values: Record<string, string> }>;
 type ComponentModule = { default: WithholdingPrintComponent };
@@ -67,5 +68,6 @@ export async function getWithholdingPrintComponent(code: string): Promise<Withho
 export async function getWithholdingPrintStyles(code: string): Promise<string> {
  const load = overrides[code];
  if (!load) throw new Error(`No print stylesheet is available for ${code}.`);
- return `${sharedStyles}\n${(await load()).default}`;
+ const layoutStyles = code === '0619E' || code === '0619F' ? monthlyRemittanceStyles : '';
+ return `${sharedStyles}\n${(await load()).default}\n${layoutStyles}`;
 }

@@ -163,6 +163,7 @@
 </script>
 
 <script lang="ts">
+  import PrintLayout from "./form-0619-layout.svelte";
   import { createWithholdingPrintModel } from "$lib/printing/withholding-print-model";
   let { values }: { values: Record<string, string> } = $props();
   const model = $derived(
@@ -180,11 +181,7 @@
     data-source-page="1"
   >
     <div class="original-withholding-form wh-inline-a466d2cb556e" id="wrapper">
-      <img
-        alt="BIR form identifying mark"
-        class="wh-inline-e8a41a47c07d"
-        src="/legacy/img/withholding/original-0892cf9ac6a65a9c.png"
-      />
+      <PrintLayout variant="E" />
       <div class="wh-inline-9758e05ec3bc">
         <div class="wh-inline-0363fb7b37ef">
           <span class="smallBold" data-field-id="txtMonth" id="txtMonth"
@@ -440,7 +437,7 @@
     >
       <section class="original-continuation withholding-print-continuation">
         <h2>BIR Form 0619E — {continuation.title}</h2>
-        <p>{model.taxpayerName} · TIN {model.tin}</p>
+        <p><span data-print-value="">{model.taxpayerName}</span> · TIN <span data-print-value="">{model.tin}</span></p>
         <table>
           <thead
             ><tr

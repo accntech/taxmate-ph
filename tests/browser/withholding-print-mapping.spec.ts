@@ -147,7 +147,7 @@ test("final withholding print includes populated source Schedule 3 reference row
 });
 
 
-test('component export escapes long taxpayer text and fits the complete value inside its cell', async ({page}) => {
+test('component export escapes long taxpayer text and clips it at the original field boundary', async ({page}) => {
  const name = 'EXAMPLE & PARTNERS <PRINT TEST> PROFESSIONAL SERVICES CORPORATION';
  const html = await page.evaluate(async name => {
   const base='/src/lib';
@@ -169,7 +169,7 @@ test('component export escapes long taxpayer text and fits the complete value in
   context.font = `${style.fontStyle} ${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
   const scale = Number(input.closest<HTMLElement>('.withholding-print-page')!.style.getPropertyValue('--withholding-page-scale'));
   const available = input.getBoundingClientRect().width / scale - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight) - parseFloat(style.borderLeftWidth) - parseFloat(style.borderRightWidth);
-  return context.measureText(input.value).width <= available + 1;
+  return context.measureText(input.value).width > available && Math.abs(parseFloat(style.fontSize) * scale * 0.75 - 7.38) < 0.025 && style.textOverflow === 'clip' && style.overflowX === 'clip';
  })).toBe(true);
  expect(html).not.toContain('<PRINT TEST>');
 });

@@ -455,7 +455,7 @@ export const printBindings: readonly PrintBinding[] = [
         border="1"
         cellpadding="0"
         cellspacing="0"
-        class="wh-inline-96b27c8a836c"
+        class="wh-inline-96b27c8a836c wh-eq-header"
       >
         <tbody
           ><tr>
@@ -2048,7 +2048,7 @@ export const printBindings: readonly PrintBinding[] = [
                         border="1"
                         cellpadding="0"
                         cellspacing="0"
-                        class="wh-inline-51312fc9f886"
+                        class="wh-inline-51312fc9f886 wh-eq-header"
                       >
                         <tbody
                           ><tr>
@@ -2636,7 +2636,7 @@ export const printBindings: readonly PrintBinding[] = [
     >
       <section class="original-continuation withholding-print-continuation">
         <h2>BIR Form 1604F — {continuation.title}</h2>
-        <p>{model.taxpayerName} · TIN {model.tin}</p>
+        <p><span data-print-value="">{model.taxpayerName}</span> · TIN <span data-print-value="">{model.tin}</span></p>
         <table>
           <thead
             ><tr

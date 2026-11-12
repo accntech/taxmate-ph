@@ -328,3 +328,21 @@ color:#000 !important;
 }
 .withholding-print[data-form-code="1601F"] .wh-page-1601f-1 { width: 907.34375px; }
 .withholding-print[data-form-code="1601F"] .wh-page-1601f-2 { width: 806px; }
+
+/* Footer strips follow their enclosing form width instead of legacy raster dimensions. */
+@layer withholding-inline-important {
+ .withholding-print[data-form-code="1601F"] .imgClass,
+ .withholding-print[data-form-code="1601F"] .imgClass > :is(table, img) {
+  width: 100% !important;
+  max-width: 100% !important;
+ }
+}
+
+/* The treaty schedule shares the full width of its own page frame. */
+@layer withholding-inline-important {
+ .withholding-print[data-form-code="1601F"] :is(#modalScheduleI, .wh-inline-f89a97a0f7fc, .wh-inline-c6a1710039d5) {
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box;
+ }
+}

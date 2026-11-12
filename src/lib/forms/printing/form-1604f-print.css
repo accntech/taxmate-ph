@@ -303,3 +303,20 @@ color:#000 !important;
 }
 .withholding-print[data-form-code="1604F"] .wh-page-1604f-1 { width: 883.34375px; }
 .withholding-print[data-form-code="1604F"] .wh-page-1604f-2 { width: 800px; }
+
+/* Main sections retain a common edge when the outer frame expands. */
+@layer withholding-inline-important {
+ .withholding-print[data-form-code="1604F"] :is(
+  .wh-inline-e40b23c7aa3d, .wh-inline-96b27c8a836c, .wh-inline-02b193bd7728,
+  .wh-inline-fe37f6126e21, .wh-inline-09fdaa189848, .wh-inline-1496179f2d7d,
+  .wh-inline-61b06adb7789, .wh-inline-26fe619e893a
+ ) { width: 100% !important; max-width: 100% !important; box-sizing: border-box; }
+}
+
+@layer withholding-inline-important {
+ .withholding-print[data-form-code="1604F"] :is(
+  .wh-inline-e2d7ad1eb5b2, .wh-inline-25b5bd730945, .wh-inline-f0ca793a1b7e,
+  .wh-inline-e5d4d4eac38a, .wh-inline-d64511d57940,
+  .wh-inline-76b7da88753b, .wh-inline-ef74251dc06e
+ ) { width: 100% !important; max-width: 100% !important; box-sizing: border-box; }
+}
