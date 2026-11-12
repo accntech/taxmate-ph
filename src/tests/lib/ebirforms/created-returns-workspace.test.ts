@@ -39,6 +39,7 @@ describe('taxpayer scoped return workspace', () => {
   workspace.formValues['frm1601EQ:txtRemittanceFirstMonth'] = '12.';
   expect(workspace.saveActiveReturn()).toBe(true);
   const second = workspace.createReturn(other.id, '1601EQ');
+  expect(workspace.saveActiveReturn()).toBe(true);
   expect(second).not.toBe(first);
   expect(workspace.formValues['frm1601EQ:txtRemittanceFirstMonth']).toBe('0.00');
   expect(workspace.openReturn(first!)).toBe(true);
@@ -71,7 +72,8 @@ describe('taxpayer scoped return workspace', () => {
   expect(typeof workspace.createReturn).toBe('function');
   workspace.loadCreatedReturns();
   vi.stubGlobal('localStorage', { getItem: () => null, setItem: () => { throw new Error('Disk full'); } });
-  expect(workspace.createReturn(initialProfile.id, '1601EQ')).toBeNull();
+  expect(workspace.createReturn(initialProfile.id, '1601EQ')).toBeTruthy();
+  expect(workspace.saveActiveReturn()).toBe(false);
   expect(workspace.createdReturns).toHaveLength(0);
   expect(workspace.statusMessage).toContain('Disk full');
  });
@@ -93,6 +95,7 @@ function validReturn() {
   'frm1601EQ:txtYear': '2025',
   'frm1601EQ:optTaxesWithheld': 'N'
  });
+ workspace.saveActiveReturn();
  return id;
 }
 
@@ -246,13 +249,13 @@ describe('editing saved return state', () => {
   expect(stored.values['frm1601EQ:txtRemittanceFirstMonth']).toBe('12.');
   expect(workspace.hasUnsavedChanges).toBe(false);
  });
- it('does not allow navigation when saving the dirty return fails', () => {
+ it('retains dirty edits when saving the return fails', () => {
   workspace.loadCreatedReturns();
   validReturn();
   expect(typeof workspace.editFormField).toBe('function');
   workspace.editFormField('frm1601EQ:txtAddress', 'Unsaved correction');
   vi.stubGlobal('localStorage', { getItem: (key: string) => saved.get(key) ?? null, setItem: () => { throw new Error('Disk full'); } });
-  expect(workspace.saveBeforeLeaving()).toBe(false);
+  expect(workspace.saveActiveReturn()).toBe(false);
   expect(workspace.hasUnsavedChanges).toBe(true);
   expect(workspace.statusMessage).toContain('Disk full');
  });

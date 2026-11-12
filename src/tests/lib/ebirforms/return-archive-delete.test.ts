@@ -22,6 +22,7 @@ beforeEach(() => {
 describe('saved form archive and deletion', () => {
 	it('archives and restores a saved form across reloads without changing its filing status', () => {
 		const id = workspace.createReturn(initialProfile.id, '1601EQ')!;
+		workspace.saveActiveReturn();
 		workspace.finalFlag = '1';
 		workspace.saveActiveReturn('Final');
 		expect(typeof workspace.archiveReturn).toBe('function');
@@ -34,7 +35,9 @@ describe('saved form archive and deletion', () => {
 	});
 	it('deletes only the selected working copy and clears its active editor state', () => {
 		const otherId = workspace.createReturn(initialProfile.id, '1601EQ')!;
+		workspace.saveActiveReturn();
 		const id = workspace.createReturn(initialProfile.id, '1601EQ')!;
+		workspace.saveActiveReturn();
 		workspace.finalFlag = '1';
 		workspace.validationErrors = { year: 'Invalid' };
 		workspace.importBuffer = 'old data';
@@ -51,13 +54,16 @@ describe('saved form archive and deletion', () => {
 	});
 	it('does not clear an editor for another record when deleting a row', () => {
 		const id = workspace.createReturn(initialProfile.id, '1601EQ')!;
+		workspace.saveActiveReturn();
 		const otherId = workspace.createReturn(initialProfile.id, '1601EQ')!;
+		workspace.saveActiveReturn();
 		expect(typeof workspace.deleteReturn).toBe('function');
 		expect(workspace.deleteReturn(id)).toBe(true);
 		expect(workspace.activeReturnId).toBe(otherId);
 	});
 	it('leaves state and saved data untouched when lifecycle writes fail', () => {
 		const id = workspace.createReturn(initialProfile.id, '1601EQ')!;
+		workspace.saveActiveReturn();
 		const before = saved.get(key);
 		vi.stubGlobal('localStorage', { getItem: (key: string) => saved.get(key) ?? null, setItem: () => { throw new Error('Disk full'); } });
 		expect(typeof workspace.archiveReturn).toBe('function');
@@ -72,6 +78,7 @@ describe('saved form archive and deletion', () => {
 	});
 	it('rejects missing records and changes while a submission or draft save is running', () => {
 		const id = workspace.createReturn(initialProfile.id, '1601EQ')!;
+		workspace.saveActiveReturn();
 		const before = saved.get(key);
 		expect(typeof workspace.archiveReturn).toBe('function');
 		for (const method of ['archiveReturn', 'restoreReturn', 'deleteReturn'] as const) {
@@ -87,6 +94,7 @@ describe('saved form archive and deletion', () => {
 	});
 	it('does not overwrite corrupt storage after a failed load', () => {
 		const id = workspace.createReturn(initialProfile.id, '1601EQ')!;
+		workspace.saveActiveReturn();
 		saved.set(key, '{broken');
 		expect(workspace.loadCreatedReturns()).toBe(false);
 		expect(typeof workspace.archiveReturn).toBe('function');
@@ -97,6 +105,7 @@ describe('saved form archive and deletion', () => {
 	});
 	it('loads legacy v1 records and rejects nonboolean archive metadata', () => {
 		workspace.createReturn(initialProfile.id, '1601EQ');
+		workspace.saveActiveReturn();
 		expect(loadCreatedReturnsData().returns[0].archived).toBeUndefined();
 		const data = JSON.parse(saved.get(key)!);
 		data.returns[0].archived = 'yes';

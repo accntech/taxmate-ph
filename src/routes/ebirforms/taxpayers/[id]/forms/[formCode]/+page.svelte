@@ -21,9 +21,15 @@
 		if (busy) {
 			workspace.statusMessage = 'Wait for the current operation to finish before leaving.';
 			cancel();
+		} else {
+			workspace.discardReturnChanges();
 		}
 	});
 	function openRequestedReturn() {
+		if (!recordId && page.url.searchParams.get('new') === 'true') {
+			recordError = workspace.createReturn(params.id, params.formCode) ? '' : workspace.statusMessage;
+			return;
+		}
 		const record = workspace.createdReturns.find(item => item.id === recordId);
 		if (!record || record.taxpayerId !== params.id || record.formCode !== params.formCode) {
 			recordError = 'Choose a saved form from this taxpayer’s forms list, or create a new form there.';
@@ -38,7 +44,6 @@
 	}
 	function cancel() {
 		if (busy) return;
-		if (recordId) workspace.openReturn(recordId);
 		void goto(`/ebirforms/taxpayers/${params.id}/forms`);
 	}
 </script>
