@@ -36,6 +36,7 @@ pub fn run() {
             window_chrome::window_chrome_sync,
             window_chrome::window_chrome_pointer_enter,
             pdf_export::export_form_pdf,
+            pdf_export::cancel_pdf_export,
             profile_store::list_taxpayer_profiles,
             profile_store::save_taxpayer_profile,
             profile_store::delete_taxpayer_profile,

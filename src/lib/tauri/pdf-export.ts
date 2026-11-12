@@ -1,8 +1,9 @@
-import { invoke } from '@tauri-apps/api/core'
+import { Channel, invoke } from '@tauri-apps/api/core'
 
 import type { PrintPaperSize } from '$lib/printing/profiles'
 
 export type PdfExportRequest = {
+	jobId?: string
 	formCode: string
 	paperSize: PrintPaperSize
 	html: string
@@ -22,7 +23,13 @@ export type PdfExportError = {
 	logPath?: string
 }
 
-export type ExportPdf = (request: PdfExportRequest) => Promise<PdfExportReceipt>
+export type PdfExportProgress = {
+	completedSteps: number
+	totalSteps: number
+	stage: string
+}
+
+export type ExportPdf = (request: PdfExportRequest, onProgress?: (progress: PdfExportProgress) => void) => Promise<PdfExportReceipt>
 
 export type PdfExportFilenameInput = {
 	formCode: string
@@ -38,7 +45,10 @@ export function buildPdfExportFilename(input: PdfExportFilenameInput): string {
 export function createPdfExportClient(
 	call: typeof invoke<PdfExportReceipt> = invoke<PdfExportReceipt>
 ): ExportPdf {
-	return (request) => call('export_form_pdf', { request })
+	return (request, onProgress) => call('export_form_pdf', {
+		request,
+		...(onProgress ? { onProgress: new Channel<PdfExportProgress>(onProgress) } : {})
+	})
 }
 
 export function formatPdfExportError(error: unknown): string {
@@ -60,4 +70,8 @@ function isPdfExportError(error: unknown): error is PdfExportError {
 		'message' in error &&
 		typeof (error as { message: unknown }).message === 'string'
 	)
+}
+
+export function cancelPdfExport(jobId: string): Promise<boolean> {
+	return invoke<boolean>('cancel_pdf_export', { jobId })
 }

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { toast, Toaster } from '@pcsti/ui/toaster';
 	import { resolve } from '$app/paths';
 	import { beforeNavigate, goto } from '$app/navigation';
 	import { save } from '@tauri-apps/plugin-dialog';
@@ -12,7 +13,7 @@
 	import FormCommand from '$lib/ebirforms/form-command.svelte';
 	import { settings } from '$lib/settings.svelte';
 	import { buildReturnReport } from '$lib/printing/return-report';
-	import { buildPdfExportFilename, createPdfExportClient, formatPdfExportError } from '$lib/tauri/pdf-export';
+	import { buildPdfExportFilename, cancelPdfExport, createPdfExportClient, formatPdfExportError, type PdfExportProgress } from '$lib/tauri/pdf-export';
 	import { Badge, Button, ButtonLink, Dialog, Page } from '$lib/components/ui';
 	import Menu from '$lib/components/ui/pcsti/menu.svelte';
 	import MenuItem from '$lib/components/ui/pcsti/menu-item.svelte';
@@ -29,6 +30,11 @@
 	let createError = $state('');
 	let deleteId = $state('');
 	let isPrinting = $state(false);
+	let isGenerating = $state(false);
+	let pdfProgress = $state<PdfExportProgress>({ completedSteps: 0, totalSteps: 7, stage: 'Loading print template' });
+	const pdfPercent = $derived(Math.round(pdfProgress.completedSteps / pdfProgress.totalSteps * 100));
+	let isCanceling = $state(false);
+	let pdfJob: { id: string; submitted: boolean; canceled: boolean } | undefined;
 	let generatedPdfPath = $state('');
 	let errorRecordId = $state('');
 	let actionErrors = $state<Record<string, string>>({});
@@ -108,21 +114,50 @@
 		const definition = record && getFormDefinition(record.formCode);
 		if (!record || !definition) return;
 		isPrinting = true;
+		const job = { id: crypto.randomUUID(), submitted: false, canceled: false };
+		pdfJob = job;
 		const values = { ...record.values, ...(profile ? getManagedTaxpayerValues(record.formCode, profile, record.status) : {}) };
 		const paperSize = settings.prefs.paperSize;
 		try {
 			const suggestedFilename = buildPdfExportFilename({ formCode: record.formCode,
 				period: getReturnPeriod(record.formCode, values) });
 			const outputPath = await save({ defaultPath: suggestedFilename, filters: [{ name: 'PDF document', extensions: ['pdf'] }] });
-			if (!outputPath) { workspace.statusMessage = 'PDF export canceled.'; return; }
-			workspace.statusMessage = 'Generating PDF…';
-			const receipt = await createPdfExportClient()({ formCode: record.formCode, paperSize,
-				html: await buildReturnReport(definition, values, record.status, paperSize), suggestedFilename, outputPath });
-			workspace.statusMessage = `PDF saved to ${receipt.path}`;
+			if (!outputPath) { toast.info('PDF export canceled.'); return; }
+			pdfProgress = { completedSteps: 0, totalSteps: 7, stage: 'Loading print template' };
+			isGenerating = true;
+			const updateProgress = (progress: PdfExportProgress) => {
+				if (pdfJob === job && !isCanceling && !job.canceled && progress.completedSteps >= pdfProgress.completedSteps) pdfProgress = progress;
+			};
+			const html = await buildReturnReport(definition, values, record.status, paperSize, (completedSteps, stage) => updateProgress({ completedSteps, totalSteps: 7, stage }));
+			if (job.canceled) { toast.info('PDF export canceled.'); return; }
+			updateProgress({ completedSteps: 4, totalSteps: 7, stage: 'Starting PDF renderer' });
+			job.submitted = true;
+			const receipt = await createPdfExportClient()({ jobId: job.id, formCode: record.formCode, paperSize,
+				html, suggestedFilename, outputPath }, updateProgress);
+			toast.success(`PDF saved to ${receipt.path}`);
 			generatedPdfPath = receipt.path;
 		} catch (error) {
-			workspace.statusMessage = `PDF export failed: ${formatPdfExportError(error)}`;
-		} finally { isPrinting = false; }
+			const message = formatPdfExportError(error);
+			if (message === 'PDF export canceled.') toast.info(message);
+			else toast.error(`PDF export failed: ${message}`);
+		} finally {
+			pdfJob = undefined;
+			isGenerating = false;
+			isCanceling = false;
+			isPrinting = false;
+		}
+	}
+	async function cancelGeneration() {
+		const job = pdfJob;
+		if (!job || isCanceling) return;
+		isCanceling = true;
+		if (!job.submitted) { job.canceled = true; return; }
+		try {
+			await cancelPdfExport(job.id);
+		} catch (error) {
+			toast.error(`Could not cancel PDF export: ${formatPdfExportError(error)}`);
+			if (pdfJob === job) isCanceling = false;
+		}
 	}
 	async function openGeneratedPdf() {
 		if (!generatedPdfPath || busy) return;
@@ -132,7 +167,7 @@
 		try {
 			await openPath(path);
 		} catch (error) {
-			workspace.statusMessage = `PDF saved to ${path}, but could not open it: ${formatPdfExportError(error)}`;
+			toast.error(`PDF saved to ${path}, but could not open it: ${formatPdfExportError(error)}`);
 		} finally { isPrinting = false; }
 	}
 	function date(timestamp: number) { return new Intl.DateTimeFormat('en-PH', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Manila' }).format(timestamp); }
@@ -144,7 +179,7 @@
 		});
 	});
 	beforeNavigate(({ cancel }) => {
-		if (busy) { workspace.statusMessage = 'Wait for the current operation to finish before leaving.'; cancel(); }
+		if (busy) { toast.info('Wait for the current operation to finish before leaving.'); cancel(); }
 	});
 </script>
 
@@ -211,7 +246,6 @@
 				</Menu>
 			{/snippet}
 		</RecordTable>
-		<p role="status" aria-live="polite" class="text-xs text-fg-muted">{workspace.statusMessage}</p>
 	{/if}
 </Page>
 <Dialog bind:open={createOpen} layout="command" size="xl" hideCloseButton title="Create a tax return" description={`Choose the form type for a new return for ${profile?.taxpayerName || 'this taxpayer'}.`}>
@@ -227,6 +261,20 @@
 		<Button variant="danger" disabled={busy || !storageReady} onclick={deleteForm}>Delete return</Button>
 	{/snippet}
 </Dialog>
+<Toaster />
+<Dialog open={isGenerating} title="Generating PDF" description={isCanceling ? 'Canceling PDF generation…' : 'Please wait while your tax return is prepared.'}
+	closedByBackdrop={false} closedByEscape={false} hideCloseButton>
+	{#if isGenerating}
+		<div role="progressbar" aria-label="PDF generation progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow={pdfPercent} aria-valuetext={`${pdfPercent}% — ${pdfProgress.completedSteps} of ${pdfProgress.totalSteps} export steps completed`} class="pdf-progress mt-1 h-1.5 overflow-hidden rounded-full bg-bg-hover">
+			<span class="pdf-progress-indicator block h-full rounded-full bg-accent" style:width={`${pdfPercent}%`}></span>
+		</div>
+	{/if}
+	<p role="status" class="mt-3 text-sm text-fg-muted">{isCanceling ? 'Stopping the export…' : pdfProgress.stage}</p>
+	<p class="mt-1 text-xs text-fg-muted"><span class="font-medium tabular-nums text-fg">{pdfPercent}%</span> · {pdfProgress.completedSteps} of {pdfProgress.totalSteps} export steps completed</p>
+	{#snippet footer()}
+		<Button variant="secondary" disabled={isCanceling} onclick={cancelGeneration}>{isCanceling ? 'Canceling…' : 'Cancel'}</Button>
+	{/snippet}
+</Dialog>
 <Dialog open={!!generatedPdfPath} onOpenChange={(open) => { if (!open) generatedPdfPath = ''; }} title="Open generated PDF?"
 	description="Your PDF has been saved. Open it in your default PDF viewer?">
 	<p class="break-all text-sm text-fg-muted">{generatedPdfPath}</p>
@@ -237,6 +285,11 @@
 </Dialog>
 
 <style>
+	.pdf-progress-indicator { transition: width 180ms ease-out; }
+	@media (prefers-reduced-motion: reduce) {
+		.pdf-progress-indicator { transition: none; }
+	}
+
 	:global(.form-actions-trigger) { min-width: 1.875rem; min-height: 1.875rem; padding: .375rem; background: var(--bg); color: var(--fg-muted); }
 	:global(.form-actions-panel) { min-width: 12.5rem; max-width: calc(100vw - 1rem); }
 	.action-icon { display: block; flex: none; width: 1rem; height: 1rem; }
