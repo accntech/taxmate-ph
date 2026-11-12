@@ -33,6 +33,7 @@ export async function seedWorkspace(page: Page, theme = 'light', profileState: '
 		}));
 		Object.assign(window, { __TAURI_INTERNALS__: {
 			invoke: async (command: string, args?: { profile?: typeof profile }) => {
+				if (command === 'submit_return') return { status: 'simulated', finalFlag: '2', savePath: 'mock.xml', sendPath: '', message: 'Mock submission saved. Nothing sent to BIR.', reference: 'MOCK-BROWSER' };
 				if (command === 'list_taxpayer_profiles') {
 					if (profileState === 'error') throw new Error('Disk unavailable for review');
 					return profileState === 'empty' ? [] : [profile];

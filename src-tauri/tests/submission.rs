@@ -46,11 +46,16 @@ fn update_final_flag_rewrites_existing_legacy_record() {
 
 #[test]
 fn build_dispatcher_url_uses_legacy_query_shape() {
-    let url = build_dispatcher_url("http://birgovph.com/", "123456789", "1601EQ", "7.9.6.0");
+    let url = build_dispatcher_url(
+        "https://dispatcher.example.invalid/",
+        "123456789",
+        "1601EQ",
+        "7.9.6.0",
+    );
 
     assert_eq!(
         url,
-        "http://birgovph.com/tinDispatcherSFTP.php?t=123456789&f=1601EQ&v=7.9.6.0"
+        "https://dispatcher.example.invalid/tinDispatcherSFTP.php?t=123456789&f=1601EQ&v=7.9.6.0"
     );
 }
 
@@ -212,7 +217,7 @@ fn dry_run_writes_savefile_and_email_copy_without_uploading() {
 }
 
 #[test]
-fn invalid_dispatcher_secret_returns_log_path_and_writes_error_log() {
+fn live_submission_is_rejected_before_writing_or_networking() {
     with_submission_env(
         Some("test-dispatcher-password"),
         Some("test-return-copy-password"),
@@ -238,13 +243,8 @@ fn invalid_dispatcher_secret_returns_log_path_and_writes_error_log() {
 
             let error =
                 run_submission(root.path(), request).expect_err("invalid dispatcher should fail");
-            let log_path = error.log_path.expect("log path");
-            let log = fs::read_to_string(log_path).expect("submission log");
-
-            assert!(error.message.contains("Dispatcher secret is not base64"));
-            assert!(log.contains("submission_start"));
-            assert!(log.contains("native_encrypt_complete"));
-            assert!(log.contains("native_sftp_plan_error"));
+            assert!(error.message.contains("Live submission is disabled"));
+            assert!(!root.path().join("savefile").exists());
         },
     );
 }
@@ -316,4 +316,64 @@ fn dispatcher_cipher_text(plain: &str) -> String {
     payload.extend_from_slice(&encrypted);
 
     STANDARD.encode(payload)
+}
+
+#[test]
+fn mock_mode_is_supported_and_explicitly_simulated() {
+    let root = tempfile::tempdir().unwrap();
+    let request: SubmissionRequest = serde_json::from_value(serde_json::json!({
+        "xml": "<div>txtFinalFlag=0txtFinalFlag=</div>",
+        "returnFilename": "1234567890000-0619E-202601.xml", "formCode": "0619E",
+        "tin": "123456789", "email": "payer@example.com", "mode": "mock",
+        "fetchDispatcher": true
+    }))
+    .expect("mock mode supported");
+    let receipt = run_submission(root.path(), request).unwrap();
+    let json = serde_json::to_value(&receipt).unwrap();
+    assert_eq!(json["status"], "simulated");
+    assert_eq!(receipt.final_flag, "2");
+    assert!(json["reference"].as_str().unwrap().starts_with("MOCK-"));
+    assert!(receipt.dispatcher_url.is_none());
+    assert!(
+        ebirforms_tauri_lib::return_history::load_history(root.path())
+            .unwrap()
+            .is_empty()
+    );
+}
+
+#[test]
+fn live_fetch_is_rejected_and_mock_cannot_overwrite_real_submission() {
+    let root = tempfile::tempdir().unwrap();
+    let filename = "1234567890000-0619E-202601.xml";
+    let save_dir = root.path().join("savefile");
+    fs::create_dir_all(&save_dir).unwrap();
+    fs::write(save_dir.join(filename), "original-submitted-copy").unwrap();
+    for mode in ["legacy_sftp", "mock"] {
+        let request: SubmissionRequest = serde_json::from_value(serde_json::json!({
+            "xml":"<div>txtFinalFlag=0txtFinalFlag=</div>", "returnFilename":filename,
+            "formCode":"0619E", "tin":"123456789", "email":"payer@example.com",
+            "mode":mode, "fetchDispatcher":true
+        }))
+        .unwrap();
+        let result = run_submission(root.path(), request);
+        if mode == "legacy_sftp" {
+            assert!(result
+                .unwrap_err()
+                .message
+                .contains("Live submission is disabled"));
+        } else {
+            let receipt = result.unwrap();
+            assert!(std::path::Path::new(&receipt.save_path)
+                .parent()
+                .unwrap()
+                .parent()
+                .unwrap()
+                .join("receipt.json")
+                .exists());
+        }
+        assert_eq!(
+            fs::read_to_string(save_dir.join(filename)).unwrap(),
+            "original-submitted-copy"
+        );
+    }
 }

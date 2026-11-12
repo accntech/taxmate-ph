@@ -83,7 +83,7 @@ class EbirformsWorkspace {
 	profileLoadErrorDetails = $state('');
 	hasLoadedProfiles = $state(false);
 	statusMessage = $state('Choose a taxpayer to begin a return.');
-	submissionMode = $state<SubmissionMode>('dry_run');
+	submissionMode = $state<SubmissionMode>('mock');
 	submissionReceipt = $state<SubmissionReceipt | null>(null);
 	selectedProfileId = $state(initialProfile.id);
 	profile = $state<TaxpayerProfile>({ ...initialProfile });
@@ -459,7 +459,7 @@ class EbirformsWorkspace {
 		this.validationErrors = validateReturnValues(this.selectedForm?.code ?? '1601EQ', this.formValues);
 		if (Object.keys(this.validationErrors).length) {
 			this.statusMessage =
-				'Correct the highlighted return details before saving, finalizing or submitting.';
+				'Correct the highlighted return details before finalizing or mock submitting.';
 			return false;
 		}
 		if (applyCalculations) this.formValues = calculateReturn(this.selectedForm?.code ?? '1601EQ', this.formValues);
@@ -471,7 +471,7 @@ class EbirformsWorkspace {
 		const previousFlag = this.finalFlag;
 		this.finalFlag = '1';
 		if (this.activeReturnId && !this.saveActiveReturn('Final')) { this.finalFlag = previousFlag; return; }
-		this.statusMessage = 'Return validated and marked final locally. Submit to send it to BIR.';
+		this.statusMessage = 'Return validated and marked final locally. Mock submit tests the workflow without sending to BIR.';
 	}
 
 	markNeedsResend() {
@@ -508,7 +508,7 @@ class EbirformsWorkspace {
 				formCode: this.selectedForm?.code ?? '1601EQ',
 				tin: this.dispatcherTin,
 				email: getReturnEmail(this.selectedForm?.code ?? '1601EQ', this.formValues, this.profile),
-				mode: this.submissionMode,
+				mode: 'mock',
 				dispatcher: undefined,
 				fetchDispatcher: this.submissionMode === 'legacy_sftp'
 			});
@@ -523,7 +523,7 @@ class EbirformsWorkspace {
 			if (returnId && receipt.status !== 'failed') {
 				const active = this.createdReturns.find(item => item.id === returnId && item.taxpayerId === taxpayerId);
 				if (active) {
-					const status: CreatedReturnStatus = receipt.status === 'submitted' ? 'Submitted' : receipt.finalFlag === '1' ? 'Final' : 'Draft';
+					const status: CreatedReturnStatus = receipt.status === 'simulated' ? 'Simulated' : receipt.status === 'submitted' ? 'Submitted' : receipt.finalFlag === '1' ? 'Final' : 'Draft';
 					const record: CreatedReturn = { ...active, values: submittedValues, returnPeriod: submittedPeriod,
 						status, finalFlag: receipt.finalFlag, updatedAt: Date.now() };
 					if (!this.#persistWorkingCopies(this.createdReturns.map(item => item.id === returnId ? record : item))) {
