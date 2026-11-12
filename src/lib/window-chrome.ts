@@ -209,6 +209,8 @@ export function startWindowChrome(): () => void {
   let observer: MutationObserver | undefined;
   let settled: number | undefined;
   let revision = 0;
+  let nativeTheme: "light" | "dark" | null | undefined;
+  let themeUpdate = Promise.resolve();
 
   async function syncMacFullscreen() {
     const current = ++revision;
@@ -221,9 +223,20 @@ export function startWindowChrome(): () => void {
     }
   }
 
-  function syncMacTheme() {
-    const dark = root.dataset.theme === "dark";
-    void appWindow.setTheme(dark ? "dark" : "light").catch(() => undefined);
+  function syncNativeTheme() {
+    const desired = root.dataset.themeMode === "system"
+      ? null
+      : root.dataset.theme === "dark" ? "dark" : "light";
+    if (nativeTheme !== desired) {
+      nativeTheme = desired;
+      // Serialize overrides so a slower previous choice cannot replace System.
+      themeUpdate = themeUpdate.then(async () => {
+        if (active && nativeTheme === desired) await appWindow.setTheme(desired);
+      }).catch(() => {
+        if (nativeTheme === desired) nativeTheme = undefined;
+      });
+    }
+    if (root.dataset.tauriPlatform !== "macos") return;
     // Native backing can show through when macOS rubber-bands the web content.
     const background = getComputedStyle(root).getPropertyValue("--bg").trim();
     if (background)
@@ -245,20 +258,21 @@ export function startWindowChrome(): () => void {
       void root.offsetHeight;
       await invoke("window_ready", {
         dark: root.dataset.theme === "dark",
+        followSystem: root.dataset.themeMode === "system",
         color: getComputedStyle(root).getPropertyValue("--bg").trim(),
       });
       if (!active) return;
+      observer = new MutationObserver(syncNativeTheme);
+      observer.observe(root, {
+        attributes: true,
+        attributeFilter: ["data-theme", "data-theme-mode", "data-palette"],
+      });
+      syncNativeTheme();
       if (platform === "windows") {
         stopWindows = startWindowsChrome();
         return;
       }
       if (platform !== "macos") return;
-      syncMacTheme();
-      observer = new MutationObserver(syncMacTheme);
-      observer.observe(root, {
-        attributes: true,
-        attributeFilter: ["data-theme"],
-      });
       document.addEventListener("fullscreenchange", syncMacFullscreen);
       await syncMacFullscreen();
       if (!active) return;

@@ -28,18 +28,21 @@ fn show_main_window(app: &tauri::AppHandle) -> Result<(), String> {
 fn window_ready(
     window: tauri::WebviewWindow,
     dark: bool,
+    follow_system: bool,
     color: tauri::window::Color,
 ) -> Result<(), String> {
     if window.label() != "main" {
         return Err("Startup presentation is available only to the main window".into());
     }
-    let theme = if dark {
-        tauri::Theme::Dark
+    let theme = if follow_system {
+        None
+    } else if dark {
+        Some(tauri::Theme::Dark)
     } else {
-        tauri::Theme::Light
+        Some(tauri::Theme::Light)
     };
     // Appearance support varies by host; a failure must not hide the app forever.
-    if let Err(error) = window.set_theme(Some(theme)) {
+    if let Err(error) = window.set_theme(theme) {
         eprintln!("Unable to set startup window theme: {error}");
     }
     if let Err(error) = window.set_background_color(Some(color)) {
