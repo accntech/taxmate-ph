@@ -77,6 +77,29 @@ function fitSourceFrames(surface: HTMLElement): void {
 			throw new Error('The source print frame does not enclose its fixed tables.');
 		}
 	}
+	// Original pages in a return share a physical frame; continuation tables retain their own layout.
+	const sourceFrames = [...surface.querySelectorAll<HTMLElement>('.withholding-print-page-content:not(.wh-continuation-page) #formPaper')];
+	if (sourceFrames.length < 2) return;
+	const commonWidth = Math.max(0, ...sourceFrames.map(frame => frame.getBoundingClientRect().width));
+	for (const frame of sourceFrames) {
+		const box = frame.getBoundingClientRect();
+		const border = parseFloat(getComputedStyle(frame).borderRightWidth);
+		const sections = [...frame.querySelectorAll<HTMLElement>('table')].filter(table => {
+			const bounds = table.getBoundingClientRect();
+			return bounds.width >= (box.width - border * 2) * 0.95 &&
+				Math.abs(bounds.left - box.left - border) <= 2 &&
+				table.parentElement!.getBoundingClientRect().width >= (box.width - border * 2) * 0.95;
+		});
+		if (commonWidth > box.width + 1) {
+			for (const section of sections) {
+				if (section.parentElement !== frame) section.parentElement!.style.setProperty('width', '100%', 'important');
+				section.style.setProperty('width', '100%', 'important');
+				section.style.removeProperty('max-width');
+			}
+		}
+		frame.style.width = `${commonWidth}px`;
+		frame.style.minWidth = `${commonWidth}px`;
+	}
 }
 
 /** Freeze source field geometry before applying consistent value typography. */
@@ -277,6 +300,28 @@ function fitPages(surface: HTMLElement, paperSize: PrintPaperSize, status: strin
 			watermark.setAttribute('aria-hidden', 'true');
 			watermark.textContent = 'DRAFT';
 			frame.append(watermark);
+		}
+	}
+	// Use the most constrained original page's fit throughout the return.
+	const sourcePages = [...surface.querySelectorAll<HTMLElement>('.withholding-print-page:has(.withholding-print-page-content:not(.wh-continuation-page) #formPaper)')];
+	if (sourcePages.length > 1) {
+		let commonScale = Math.min(...sourcePages.map(frame => Number(frame.style.getPropertyValue('--withholding-page-scale'))));
+		const layouts = sourcePages.map(frame => {
+			frame.style.setProperty('--withholding-page-scale', String(commonScale));
+			const content = frame.querySelector<HTMLElement>('.withholding-print-page-content')!;
+			const box = content.getBoundingClientRect();
+			const paper = frame.querySelector<HTMLElement>('#formPaper')!.getBoundingClientRect();
+			const center = (paper.left + paper.right) / 2;
+			const bounds = [box, ...[...content.querySelectorAll('*')].map(child => child.getBoundingClientRect()).filter(child => child.width > 0)];
+			// Reserve wrapper overflow on both sides of the visible frame so moving
+			// the complete layout cannot clip an ancestor table or its border.
+			const radius = Math.max(...bounds.flatMap(child => [center - child.left, child.right - center])) / commonScale;
+			return { frame, content, center: (center - box.left) / commonScale, radius };
+		});
+		commonScale = Math.min(commonScale, ...layouts.map(layout => (width - 0.5) / (2 * layout.radius)));
+		for (const { frame, content, center } of layouts) {
+			frame.style.setProperty('--withholding-page-scale', String(commonScale));
+			content.style.left = `${width / (2 * commonScale) - center}px`;
 		}
 	}
 	if (!pages.length && status === 'Draft') {
