@@ -293,3 +293,19 @@ color:#000 !important;
 }
 .withholding-print[data-form-code="1602"] .wh-page-1602-1 { width: 867.34375px; }
 .withholding-print[data-form-code="1602"] .wh-page-1602-2 { width: 807.78125px; }
+
+/* Footer strips follow their enclosing form width instead of legacy raster dimensions. */
+@layer withholding-inline-important {
+ .withholding-print[data-form-code="1602"] .imgClass,
+ .withholding-print[data-form-code="1602"] .imgClass > :is(table, img) {
+  width: 100% !important;
+  max-width: 100% !important;
+ }
+}
+@layer withholding-inline-important {
+ /* The legacy parent cell reserves two pixels beyond its footer strip. */
+ .withholding-print[data-form-code="1602"] .imgClass {
+  width: calc(100% + 2px) !important;
+  max-width: none !important;
+ }
+}

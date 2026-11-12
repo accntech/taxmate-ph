@@ -512,7 +512,7 @@ export const printBindings: readonly PrintBinding[] = [
                 border="0"
                 cellpadding="0"
                 cellspacing="0"
-                class="FormHeader wh-inline-0ee3c4c4ed4a"
+                class="FormHeader wh-inline-0ee3c4c4ed4a wh-eq-header"
               >
                 <tbody
                   ><tr>
@@ -1613,7 +1613,7 @@ export const printBindings: readonly PrintBinding[] = [
     <div id="formPaper" data-source-form-frame>
     <div class="noCellSpace wh-inline-41b262cb38b5" id="Page2Content">
       <div class="SubPageDiv">
-        <table class="FormHeader wh-inline-0ee3c4c4ed4a">
+        <table class="FormHeader wh-inline-0ee3c4c4ed4a wh-eq-header">
           <tbody
             ><tr>
               <td>
@@ -1897,7 +1897,7 @@ export const printBindings: readonly PrintBinding[] = [
                       </tr>
                     </tbody>
                   </table>
-                  <table class="wh-inline-c9283bc11c55">
+                  <table class="wh-inline-c9283bc11c55 wh-atc-reference-table">
                     <tbody
                       ><tr>
                         <td class="wh-inline-59165a617646">
@@ -1912,7 +1912,7 @@ export const printBindings: readonly PrintBinding[] = [
                       </tr>
                     </tbody>
                   </table>
-                  <table class="wh-inline-cbc7ea467ab5">
+                  <table class="wh-inline-cbc7ea467ab5 wh-atc-reference-table">
                     <tbody
                       ><tr>
                         <td class="wh-inline-66aa48377825">
@@ -1923,7 +1923,7 @@ export const printBindings: readonly PrintBinding[] = [
                       </tr>
                     </tbody>
                   </table>
-                  <table class="wh-inline-e830b922a6d9">
+                  <table class="wh-inline-e830b922a6d9 wh-atc-reference-table">
                     <tbody
                       ><tr>
                         <td class="wh-inline-d26ef6cd6b3a">
@@ -1953,7 +1953,7 @@ export const printBindings: readonly PrintBinding[] = [
                       </tr>
                     </tbody>
                   </table>
-                  <table class="wh-inline-724c3b7bb1dc">
+                  <table class="wh-inline-724c3b7bb1dc wh-atc-reference-table">
                     <tbody
                       ><tr>
                         <td class="wh-inline-66aa48377825">
@@ -1965,7 +1965,7 @@ export const printBindings: readonly PrintBinding[] = [
                       </tr>
                     </tbody>
                   </table>
-                  <table class="wh-inline-0ee3c4c4ed4a">
+                  <table class="wh-inline-0ee3c4c4ed4a wh-atc-reference-table">
                     <tbody
                       ><tr>
                         <td class="wh-inline-d26ef6cd6b3a">
@@ -2103,7 +2103,7 @@ export const printBindings: readonly PrintBinding[] = [
     >
       <section class="original-continuation withholding-print-continuation">
         <h2>BIR Form 1600VTv2018 — {continuation.title}</h2>
-        <p>{model.taxpayerName} · TIN {model.tin}</p>
+        <p><span data-print-value="">{model.taxpayerName}</span> · TIN <span data-print-value="">{model.tin}</span></p>
         <table>
           <thead
             ><tr

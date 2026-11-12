@@ -2549,7 +2549,7 @@ export const printBindings: readonly PrintBinding[] = [
     >
       <section class="original-continuation withholding-print-continuation">
         <h2>BIR Form 1604Ev2018 — {continuation.title}</h2>
-        <p>{model.taxpayerName} · TIN {model.tin}</p>
+        <p><span data-print-value="">{model.taxpayerName}</span> · TIN <span data-print-value="">{model.tin}</span></p>
         <table>
           <thead
             ><tr

@@ -1153,3 +1153,59 @@ color:#000 !important;
 .withholding-print[data-form-code="1600PTv2018"] [id="frm1600PT:txtPg1TIN4"] + .ContentBold {
  margin-left: 190px;
 }
+
+/* Each reference section shares one full-width 70/15/15 column grid. */
+@layer withholding-inline-important {
+ .withholding-print[data-form-code="1600PTv2018"] .wh-atc-reference-table {
+  width: 100% !important;
+  table-layout: fixed;
+  border-collapse: collapse;
+  border-spacing: 0;
+ }
+ .withholding-print[data-form-code="1600PTv2018"] .wh-atc-reference-table td:first-child { width: 70%; }
+ .withholding-print[data-form-code="1600PTv2018"] .wh-atc-reference-table td:nth-child(2),
+ .withholding-print[data-form-code="1600PTv2018"] .wh-atc-reference-table td:nth-child(3) { width: 15%; }
+}
+
+/* Use the EQ header grid so the number, title and barcode have stable columns. */
+@layer withholding-inline-important {
+ .withholding-print[data-form-code="1600PTv2018"] table.FormHeader { table-layout: fixed !important; }
+ .withholding-print[data-form-code="1600PTv2018"] table.FormHeader > tbody > tr > td:first-child { width: 17.47% !important; }
+ .withholding-print[data-form-code="1600PTv2018"] table.FormHeader > tbody > tr > td:nth-child(2) { width: 57.23% !important; }
+ .withholding-print[data-form-code="1600PTv2018"] table.FormHeader > tbody > tr > td:last-child { width: 25.3% !important; }
+ .withholding-print[data-form-code="1600PTv2018"] table.FormHeader > tbody > tr > td:first-child .FormHeader1 { white-space: nowrap; }
+ .withholding-print[data-form-code="1600PTv2018"] table.FormHeader img { display: block; max-width: 100%; margin: 0 auto; }
+ .withholding-print[data-form-code="1600PTv2018"] table.FormHeader td:last-child > span { display: block; white-space: normal; }
+}
+
+/* Fill each section's enclosing cell rather than retaining captured pixel gaps. */
+@layer withholding-inline-important {
+ .withholding-print[data-form-code="1600PTv2018"] :is(
+  .wh-inline-0ee3c4c4ed4a, .wh-inline-81a195c0a6e8, .wh-inline-6cf195dfe548,
+  .wh-inline-dba48f7afc33, .wh-inline-3a11ec522262, .wh-inline-6f8940345139,
+  .wh-inline-bf86e2b2ab3e, .wh-inline-298c56dc6254, .wh-inline-32a05c30a1d2,
+  .wh-inline-028e56601406, .wh-inline-5de3708b1c06, .wh-inline-c983fe83f7f4,
+  .wh-inline-078faed31491, .wh-inline-85a533a5c7b6, .wh-inline-9e4fa37ad723,
+  .wh-inline-928454b7fcc8
+ ) { width: 100% !important; max-width: 100% !important; margin-left: 0 !important; box-sizing: border-box; }
+ .withholding-print[data-form-code="1600PTv2018"] :is(
+  input.wh-inline-81ac1b266f21, input.wh-inline-7744d51241f9, input.wh-inline-b05a6885cb8b,
+  input.wh-inline-7d7091035e0a, input.wh-inline-0c3cc0c26807, input.wh-inline-4a6e4644cae0,
+  input.wh-inline-d9dd516c9cca, .ContentRight > input,
+  input[id="frm1600PT:txtPg1Pt1I9ContactNumber"], input[id="frm1600PT:txtPg1Pt1I12TaxReliefSpec"],
+  input[id="frm1600PT:txtTotalOtherTax"], input[data-field-id^="frm1600PT:txtPg1Pt4"],
+  input[data-field-id^="frm1600PT:Pg2Sc1"], input[data-field-id^="frm1600PT:txtPg1Pt3"][data-field-id$="Date"]
+ ) { display: block; width: 100% !important; max-width: 100% !important; box-sizing: border-box; }
+}
+
+/* Default HTML table spacing otherwise accumulates at each nested section. */
+.withholding-print[data-form-code="1600PTv2018"] table { border-spacing: 0; }
+
+@layer withholding-inline-important {
+ .withholding-print[data-form-code="1600PTv2018"] table:has(> tbody > tr > td.ContentRight) { table-layout: fixed; }
+ .withholding-print[data-form-code="1600PTv2018"] td.ContentRight { width: 32.5%; padding-right: 0 !important; }
+ .withholding-print[data-form-code="1600PTv2018"] input[data-print-control="text"] { height: 19px !important; box-sizing: border-box; }
+}
+
+.withholding-print[data-form-code="1600PTv2018"] td:has(> input[id="frm1600PT:txtPg1Pt1I11Email"]) { display: flex; align-items: center; gap: 3px; }
+.withholding-print[data-form-code="1600PTv2018"] input[id="frm1600PT:txtPg1Pt1I11Email"] { flex: 1; min-width: 0; }

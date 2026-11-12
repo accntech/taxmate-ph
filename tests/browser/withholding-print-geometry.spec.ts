@@ -3,10 +3,10 @@ import { writeFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
 import { seedWorkspace, taxpayerId } from './fixtures';
 
-async function printForm(page: Page, code: string, paper = 'long', hostile = false, status = 'Draft', name = 'PRINT GEOMETRY TEST') {
+async function printForm(page: Page, code: string, paper = 'long', hostile = false, status = 'Draft', name = 'PRINT GEOMETRY TEST', overrides: Record<string, string> = {}) {
 	await seedWorkspace(page);
 	await page.goto(`/ebirforms/taxpayers/${taxpayerId}/forms`);
-	const html = await page.evaluate(async ({ code, paper, hostile, status, name }) => {
+	const html = await page.evaluate(async ({ code, paper, hostile, status, name, overrides }) => {
 		if (hostile) { const style = document.createElement('style'); style.textContent = '* { line-height: 3 !important; letter-spacing: 8px !important; } table { border-spacing: 30px !important; }'; document.head.append(style); }
 		const base = '/src/lib';
 		const catalog = await import(`${base}/forms/index.ts`);
@@ -29,8 +29,9 @@ async function printForm(page: Page, code: string, paper = 'long', hostile = fal
 			[definition.prefix + 'txtAtcCode1']: definitions.getWithholdingAtcs(code, 'P')[0].code,
 			[definition.prefix + 'txtTaxBase1']: '1000.00'
 		});
+		Object.assign(values, overrides);
 		return reports.buildReturnReport(catalog.getFormDefinition(code), values, status, paper);
-	}, { code, paper, hostile, status, name });
+	}, { code, paper, hostile, status, name, overrides });
 	const result = await page.context().newPage();
 	await result.setContent(html);
 	await result.emulateMedia({ media: 'print' });
@@ -38,7 +39,7 @@ async function printForm(page: Page, code: string, paper = 'long', hostile = fal
 	return result;
 }
 
-test('legacy title zero-width hint remains auto and ATC values retain native-input typography', async ({ page }) => {
+test('legacy title zero-width hint remains auto and ATC values use uniform typography', async ({ page }) => {
 	const print = await printForm(page, '1600');
 	const title = print.locator('span').filter({ hasText: /^Monthly Remittance Return of[\s\S]*Percentage[\s\S]*Taxes Withheld$/ });
 	const width = await title.locator('..').evaluate(element => parseFloat(getComputedStyle(element).width));
@@ -46,10 +47,10 @@ test('legacy title zero-width hint remains auto and ATC values retain native-inp
 	expect(width).toBeGreaterThan(550);
 	await expect(title).toHaveCSS('font-size', '24px');
 	const amount = print.locator('[id="frm1600:txtTaxBase1"]');
-	const font = await amount.evaluate(element => ({ size: parseFloat(getComputedStyle(element).fontSize), height: getComputedStyle(element).lineHeight }));
-	// The source native input retains its UA font instead of inheriting the table's 7px text.
-	expect(font.size).toBeCloseTo(13.3333, 3);
-	expect(font.height).toBe('normal');
+	const font = await amount.evaluate(element => ({ size: parseFloat(getComputedStyle(element).fontSize), height: getComputedStyle(element).lineHeight, scale: Number(element.closest<HTMLElement>('.withholding-print-page')!.style.getPropertyValue('--withholding-page-scale')) }));
+	// Entered amounts use the shared value size instead of the table label size.
+	expect(font.size * font.scale * 0.75).toBeCloseTo(7.38, 2);
+	expect(parseFloat(font.height)).toBeGreaterThan(12);
 	await print.close();
 });
 
@@ -172,10 +173,10 @@ test('0605 preserves source native field boxes, radios and printed outer frame',
 		const result = getComputedStyle(element).borderTopWidth; content.style.zoom = previous; return result;
 	});
 	expect(border).toBe('2px');
-	await expect(month).toHaveCSS('font-size', '13.3333px');
+	await expect(month).toHaveCSS('font-size', '12px');
 	const tin = print.locator('[id="frm0605:txtTIN1"]');
 	await expect(tin).not.toHaveAttribute('data-fitted-print-value', '');
-	await expect(tin).toHaveCSS('font-size', '13.3333px');
+	await expect(tin).toHaveCSS('font-size', '12px');
 	const tinWidth = await tin.evaluate(element => element.getBoundingClientRect().width / Number(element.closest<HTMLElement>('.withholding-print-page')!.style.getPropertyValue('--withholding-page-scale')));
 	expect(tinWidth).toBeCloseTo(46, 1);
 	for (const [id, expected] of [['frm0605:txtTaxPayerName', 416], ['frm0605:txtTax19', 151]] as const) {
@@ -199,7 +200,7 @@ test('0605 preserves source native field boxes, radios and printed outer frame',
 	await print.close();
 });
 
-test('0605 Letter retains EQ profile scale and native PDF value typography', async ({page}) => {
+test('0605 Letter retains EQ profile scale and uniform PDF value typography', async ({page}) => {
 	const print = await printForm(page, '0605', 'letter');
 
 	const scale = await print.locator('.withholding-print-page').first().evaluate(element => Number((element as HTMLElement).style.getPropertyValue('--withholding-page-scale')));
@@ -207,12 +208,12 @@ test('0605 Letter retains EQ profile scale and native PDF value typography', asy
 	const pdf = await print.pdf({path:'/tmp/withholding-native0605-letter.pdf', preferCSSPageSize: true, printBackground: true});
 	const sizes = JSON.parse(execFileSync('python3', ['-c', 'import sys,io,json,pdfplumber\nwith pdfplumber.open(io.BytesIO(sys.stdin.buffer.read())) as pdf: print(json.dumps([w["size"] for w in pdf.pages[0].extract_words(extra_attrs=["size"]) if w["text"] in ("PRINT", "001")]))'], {input:pdf}).toString());
 	expect(sizes.length).toBeGreaterThanOrEqual(2);
-	for (const size of sizes) expect(size).toBeCloseTo(7.5, 1);
+	for (const size of sizes) expect(size).toBeCloseTo(7.38, 2);
 	await print.close();
 });
 
 
-test('0605 text fitting preserves source boxes and changes font only for overflow', async ({page}) => {
+test('0605 clipping preserves source boxes and font size for overflow', async ({page}) => {
 	const measure = async (name: string) => {
 		const print = await printForm(page, '0605', 'letter', false, 'Draft', name);
 		const value = print.locator('[id="frm0605:txtTaxPayerName"]');
@@ -229,9 +230,9 @@ test('0605 text fitting preserves source boxes and changes font only for overflo
 	const normal = await measure('PRINT GEOMETRY TEST');
 	const long = await measure('EXAMPLE & PARTNERS <PRINT TEST> PROFESSIONAL SERVICES CORPORATION');
 	expect(normal.fitted).toBe(false);
-	expect(normal.font).toBeCloseTo(13.3333, 3);
-	expect(long.fitted).toBe(true);
-	expect(long.font).toBeLessThan(normal.font);
+	expect(normal.font * 0.75 * 0.75).toBeCloseTo(7.38, 2);
+	expect(long.fitted).toBe(false);
+	expect(long.font).toBe(normal.font);
 	expect(long.width).toBeCloseTo(normal.width, 1);
 	expect(long.height).toBeCloseTo(normal.height, 1);
 });
@@ -306,6 +307,338 @@ for (const paper of ['letter', 'a4', 'long']) {
 			return unit.left < input.right - 1 || unit.top >= input.bottom;
 		}).length);
 		expect(wrapped).toBe(0);
+		await print.close();
+	});
+}
+
+for (const paper of ['long', 'letter', 'a4']) {
+ test(`0605 ${paper} uses uniform clipped values and matching year-ended borders`, async ({ page }, testInfo) => {
+  const name = 'HARBORVIEW TRADING AND SERVICES CORPORATION WITH A DELIBERATELY OVERLONG REGISTERED NAME';
+  const print = await printForm(page, '0605', paper, false, 'Draft', name);
+  const values = print.locator('[data-print-value], [data-print-control="select"], #rdoSelect');
+  const sizes = await values.evaluateAll(elements => elements.map(e => parseFloat(getComputedStyle(e).fontSize) * Number(e.closest<HTMLElement>('.withholding-print-page')!.style.getPropertyValue('--withholding-page-scale')) * 0.75));
+  for (const size of sizes) expect(size).toBeCloseTo(7.38, 2);
+  const field = print.locator('[id="frm0605:txtTaxPayerName"]');
+  await expect(field).toHaveValue(name);
+  await expect(field).not.toHaveAttribute('data-fitted-print-value', '');
+  await expect(field).toHaveCSS('overflow-x', 'clip');
+  await expect(field).toHaveCSS('text-overflow', 'clip');
+  const borders = await print.locator('[id="frm0605:itemYearEndMonth"], [id="frm0605:txtYearEnded"], [id="frm0605:txtDueDateMonth"]').evaluateAll(elements => {
+   elements[0].closest<HTMLElement>('.withholding-print-page-content')!.style.zoom = '1';
+   return elements.map(e => {const s=getComputedStyle(e);return [s.borderTopWidth,s.borderTopStyle,s.borderTopColor,s.height];});
+  });
+  expect(borders[0]).toEqual(borders[1]);
+  expect(borders[1]).toEqual(borders[2]);
+  // Restore export scaling after measurement.
+  await print.locator('.withholding-print-page-content').evaluate(e => (e as HTMLElement).style.removeProperty('zoom'));
+  const pdf = await print.pdf({ path: testInfo.outputPath(`0605-${paper}-overflow.pdf`), preferCSSPageSize: true, printBackground: true });
+  expect(execFileSync('pdfinfo', ['-'], { input: pdf }).toString().match(/^Pages:\s+(\d+)/m)?.[1]).toBe('1');
+  await print.close();
+ });
+}
+
+test('0605 prints black radio dots and joins full-width sections to the right frame', async ({page}) => {
+ const print = await printForm(page, '0605');
+ const checked=print.locator('input[type="radio"]:checked').first();
+ await expect(checked).toHaveCSS('appearance','none');
+ await expect(checked).toHaveCSS('border-radius','50%');
+ const gaps=await print.locator('#formPaper').evaluate(frame=>{
+  frame.closest<HTMLElement>('.withholding-print-page-content')!.style.zoom='1';
+  const right=frame.getBoundingClientRect().right-parseFloat(getComputedStyle(frame).borderRightWidth);
+  return [...frame.querySelectorAll('table')].filter(t=>t.getBoundingClientRect().width>=800).map(t=>({section:t.className,gap:right-t.getBoundingClientRect().right})).filter(t=>Math.abs(t.gap)>1);
+ });
+ expect(gaps).toEqual([]);
+ await print.locator('.withholding-print-page-content').evaluate(e => (e as HTMLElement).style.removeProperty('zoom'));
+ const pdf = await print.pdf({preferCSSPageSize:true, printBackground:true});
+ const gridRules = Number(execFileSync('python3', ['-c', 'import sys,io,pdfplumber\nwith pdfplumber.open(io.BytesIO(sys.stdin.buffer.read())) as pdf: print(sum(1 for r in pdf.pages[0].rects if r.get("non_stroking_color") and all(abs(c-2/3)<0.01 for c in r["non_stroking_color"])))'], {input:pdf}).toString());
+ expect(gridRules, 'the original gray table grid remains painted in the PDF').toBeGreaterThan(40);
+ await print.close();
+});
+
+test('0605 uppercases entered values while preserving template case', async ({page}) => {
+ const print = await printForm(page, '0605', 'long', false, 'Draft', 'Mixed Case Taxpayer');
+ await expect(print.locator('[data-form-code="0605"]')).toHaveCSS('text-transform','none');
+ await expect(print.locator('[id="frm0605:txtTaxPayerName"]')).toHaveCSS('text-transform','uppercase');
+ await expect(print.getByText('Payment Form', {exact:true})).toHaveCSS('text-transform','none');
+ await expect(print.locator('img[id="frm0605_2:jurat"]')).toHaveCount(1);
+ await print.close();
+});
+
+test('0605 radio rings and selected centers use circular vector shapes', async ({page}) => {
+ const print=await printForm(page,'0605');
+ const radio=print.locator('input[type="radio"]:checked').first();
+ const geometry=await radio.evaluate(e=>{const s=getComputedStyle(e),b=e.getBoundingClientRect();return {width:b.width,height:b.height,image:s.backgroundImage};});
+ expect(geometry.width).toBeCloseTo(geometry.height,5);
+ await expect(radio.locator('..').locator('.pdf-radio-vector circle')).toHaveCount(2);
+ const empty=print.locator('input[type="radio"]:not(:checked)').first();
+ await expect(empty.locator('..').locator('.pdf-radio-vector circle')).toHaveCount(1);
+ await print.close();
+});
+
+for (const paper of ['letter', 'a4', 'long']) {
+	test(`1601E ${paper} select values fit vertically and footer sections reach the frame`, async ({ page }, testInfo) => {
+		const print = await printForm(page, '1601E', paper);
+		const fields = await print.locator('[id="frm1601E:j_id201"], [id="frm1601E:j_id402"], [id="frm1601E:txtYear"]').evaluateAll(elements => elements.map(element => {
+			const style = getComputedStyle(element);
+			return { id: element.id, height: parseFloat(style.height), boxSizing: style.boxSizing,
+				available: element.clientHeight - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom),
+				font: parseFloat(style.fontSize) };
+		}));
+		for (const field of fields.filter(field => field.id !== 'frm1601E:txtYear')) {
+			expect(field.available, `${field.id} must contain a full line of text`).toBeGreaterThanOrEqual(field.font);
+			expect(field.height).toBeCloseTo(fields.find(field => field.id === 'frm1601E:txtYear')!.height, 0);
+		}
+		const sections = await print.locator('.imgClass').evaluateAll(elements => elements.map(element => {
+			const frame = element.closest('#formPaper')!;
+			const scale = Number(element.closest<HTMLElement>('.withholding-print-page')!.style.getPropertyValue('--withholding-page-scale'));
+			const right = frame.getBoundingClientRect().right - parseFloat(getComputedStyle(frame).borderRightWidth) * scale;
+			return { wrapper: (right - element.getBoundingClientRect().right) / scale,
+				content: (right - element.firstElementChild!.getBoundingClientRect().right) / scale };
+		}));
+		for (const section of sections) {
+			expect(Math.abs(section.wrapper)).toBeLessThan(2);
+			expect(Math.abs(section.content)).toBeLessThan(2);
+		}
+		const pdf = await print.pdf({ preferCSSPageSize: true, printBackground: true });
+		writeFileSync(testInfo.outputPath('1601e.pdf'), pdf);
+		const png = execFileSync('pdftoppm', ['-f', '1', '-singlefile', '-r', '140', '-png', '-'], { input: pdf });
+		writeFileSync(testInfo.outputPath('1601e.png'), png);
+		await testInfo.attach('1601e', { path: testInfo.outputPath('1601e.png'), contentType: 'image/png' });
+		await print.close();
+	});
+}
+
+for (const paper of ['letter', 'a4', 'long']) {
+test(`1600PT ${paper} header follows the EQ column proportions without wrapping the form number`, async ({ page }, testInfo) => {
+	const eq = await printForm(page, '1601EQ', paper);
+	const proportions = await eq.locator('.legacy-form-header > tbody > tr > td').evaluateAll(cells => cells.map(cell => cell.getBoundingClientRect().width / cell.parentElement!.getBoundingClientRect().width));
+	await eq.close();
+	const print = await printForm(page, '1600PTv2018', paper);
+	for (const header of await print.locator('table.FormHeader').all()) {
+		const geometry = await header.evaluate(table => {
+			const cells = [...table.querySelectorAll(':scope > tbody > tr > td')];
+			const number = cells[0].querySelector('.FormHeader1')!;
+			const range = document.createRange();
+			range.selectNodeContents(number);
+			const barcode = cells[2].querySelector('img')!;
+			const caption = cells[2].querySelector('span')!;
+			return { proportions: cells.map(cell => cell.getBoundingClientRect().width / table.getBoundingClientRect().width),
+				numberLines: range.getClientRects().length, barcodeBottom: barcode.getBoundingClientRect().bottom, captionTop: caption.getBoundingClientRect().top };
+		});
+		expect(geometry.numberLines).toBe(1);
+		geometry.proportions.forEach((width, index) => expect(Math.abs(width - proportions[index]), JSON.stringify({ actual: geometry.proportions, eq: proportions })).toBeLessThan(0.025));
+		expect(geometry.captionTop).toBeGreaterThanOrEqual(geometry.barcodeBottom - 1);
+	}
+	const pdf = await print.pdf({ path: testInfo.outputPath('1600pt.pdf'), preferCSSPageSize: true, printBackground: true });
+	writeFileSync(testInfo.outputPath('1600pt-page2.png'), execFileSync('pdftoppm', ['-f', '2', '-singlefile', '-r', '140', '-png', '-'], { input: pdf }));
+	writeFileSync(testInfo.outputPath('1600pt.png'), execFileSync('pdftoppm', ['-f', '1', '-singlefile', '-r', '140', '-png', '-'], { input: pdf }));
+	await print.close();
+});
+
+test(`1600PT ${paper} standalone fields fill their cells and section borders reach the frame`, async ({ page }) => {
+	const print = await printForm(page, '1600PTv2018', paper);
+	const issues = await print.locator('#formPaper').evaluateAll(frames => frames.flatMap(frame => {
+		frame.closest<HTMLElement>('.withholding-print-page-content')!.style.zoom = '1';
+		const issues: string[] = [];
+		for (const input of frame.querySelectorAll('input[data-print-control="text"]')) {
+			const cell = input.parentElement!;
+			if (cell.tagName !== 'TD' || cell.children.length !== 1 || ![...cell.childNodes].every(node => node === input || !node.textContent?.trim())) continue;
+			const style = getComputedStyle(cell);
+			const available = cell.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+			const gap = available - input.getBoundingClientRect().width;
+			if (Math.abs(gap) > 2) issues.push(`${input.id}: field gap ${gap}`);
+		}
+		const right = frame.getBoundingClientRect().right - parseFloat(getComputedStyle(frame).borderRightWidth);
+		for (const table of frame.querySelectorAll('table')) {
+			const box = table.getBoundingClientRect();
+			if (box.width < frame.clientWidth * 0.95 || Math.abs(box.left - frame.getBoundingClientRect().left) > 8) continue;
+			if (Math.abs(right - box.right) > 2) issues.push(`${table.className}: section gap ${right - box.right}`);
+		}
+		return issues;
+	}));
+	expect(issues).toEqual([]);
+	await print.close();
+});
+
+test(`1600PT ${paper} tax amount column stays aligned and all fields have full text height`, async ({ page }) => {
+	const print = await printForm(page, '1600PTv2018', paper);
+	const amounts = await print.locator('.ContentRight > input').evaluateAll(inputs => inputs.map(input => input.getBoundingClientRect().left));
+	expect(Math.max(...amounts) - Math.min(...amounts)).toBeLessThan(1);
+	const amountGaps = await print.locator('.ContentRight > input').evaluateAll(inputs => inputs.map(input => input.parentElement!.getBoundingClientRect().right - input.getBoundingClientRect().right));
+	for (const gap of amountGaps) expect(gap).toBeLessThan(1);
+	const emailGap = await print.locator('[id="frm1600PT:txtPg1Pt1I11Email"]').evaluate(input => input.parentElement!.getBoundingClientRect().right - input.getBoundingClientRect().right);
+	expect(emailGap).toBeLessThan(2);
+	const heights = await print.locator('input[data-print-control="text"]').evaluateAll(inputs => inputs.map(input => input.getBoundingClientRect().height / Number(input.closest<HTMLElement>('.withholding-print-page')!.style.getPropertyValue('--withholding-page-scale'))));
+	for (const height of heights.filter(height => height > 0)) expect(height).toBeGreaterThanOrEqual(18.5);
+	await print.close();
+});
+
+}
+
+for (const paper of ['letter', 'a4', 'long']) {
+	test(`1601C ${paper} encloses every section and renders full-height select values`, async ({ page }, testInfo) => {
+		const print = await printForm(page, '1601C', paper);
+		const outside = await print.locator('.withholding-print-page-content:not(.wh-continuation-page) [data-field-id]').evaluateAll(fields => fields.filter(field => !field.closest('#formPaper')).map(field => field.id));
+		expect(outside).toEqual([]);
+		for (const field of await print.locator('.wh-print-select').all()) {
+			const metrics = await field.evaluate(element => ({ available: element.clientHeight, font: parseFloat(getComputedStyle(element).fontSize) }));
+			expect(metrics.available).toBeGreaterThanOrEqual(metrics.font);
+		}
+		const gaps = await print.locator('#formPaper').evaluate(frame => {
+			frame.closest<HTMLElement>('.withholding-print-page-content')!.style.zoom = '1';
+			const right = frame.getBoundingClientRect().right - parseFloat(getComputedStyle(frame).borderRightWidth);
+			return [...frame.querySelectorAll<HTMLElement>('.wh-inline-96a4c96170f9, #tblSched1, #tblSched2, .imgClass')].map(element => ({ section: element.id || element.className, gap: right - element.getBoundingClientRect().right }));
+		});
+		for (const section of gaps) expect(Math.abs(section.gap), section.section).toBeLessThan(2);
+		// Reload the same report because the geometry check temporarily removes its print scale.
+		await print.close();
+		const rendered = await printForm(page, '1601C', paper);
+		const pdf = await rendered.pdf({ path: testInfo.outputPath('1601c.pdf'), preferCSSPageSize: true, printBackground: true });
+		expect(execFileSync('pdfinfo', ['-'], { input: pdf }).toString().match(/^Pages:\s+(\d+)/m)?.[1]).toBe('1');
+		writeFileSync(testInfo.outputPath('1601c.png'), execFileSync('pdftoppm', ['-f', '1', '-singlefile', '-r', '140', '-png', '-'], { input: pdf }));
+		await rendered.close();
+	});
+}
+
+for (const [code, id] of [['1601E', 'frm1601E:j_id402'], ['1601C', 'frm1601c:selTreaty'], ['1603', 'frm1603:lstTaxTreaty']]) {
+	for (const value of ['', '1']) {
+		test(`${code} tax relief specification keeps a usable width for ${value ? 'selected' : 'blank'} values`, async ({ page }, testInfo) => {
+			const print = await printForm(page, code, 'long', false, 'Draft', 'PRINT GEOMETRY TEST', { [id]: value, ...(code === '1601E' ? { 'frm1601E:optRelief': value ? 'Y' : 'N' } : {}) });
+			const field = print.locator(`[id="${id}"]`);
+			const width = await field.evaluate(element => element.getBoundingClientRect().width / Number(element.closest<HTMLElement>('.withholding-print-page')!.style.getPropertyValue('--withholding-page-scale')));
+			expect(width).toBeGreaterThanOrEqual(159);
+			if (code === '1603') {
+				const gap = await print.locator('.wh-inline-74e905a72558').evaluate(table => {
+					const labels = table.querySelectorAll('.wh-inline-429482632af7');
+					const scale = Number(table.closest<HTMLElement>('.withholding-print-page')!.style.getPropertyValue('--withholding-page-scale'));
+					return (labels[1].getBoundingClientRect().left - labels[0].getBoundingClientRect().right) / scale;
+				});
+				expect(gap).toBeGreaterThanOrEqual(11.5);
+				expect(gap).toBeLessThanOrEqual(24);
+				await print.screenshot({ path: testInfo.outputPath('1603-tax-relief.png'), fullPage: true });
+			}
+			if (value) await expect(field).not.toHaveText('');
+			await print.close();
+		});
+	}
+}
+
+for (const code of printCodes.filter(code => !['1601EQ', '0619E', '0619F'].includes(code))) {
+	test(`${code} all original sections stay inside their frame and select text is legible`, async ({ page }) => {
+		const print = await printForm(page, code);
+		const issues = await print.locator('.withholding-print-page-content:not(.wh-continuation-page)').evaluateAll(pages => pages.flatMap(page => {
+			const issues: string[] = [];
+			for (const field of page.querySelectorAll<HTMLElement>('[data-field-id], .imgClass')) {
+				if (field.getBoundingClientRect().width && !field.closest('#formPaper')) issues.push(`outside frame: ${field.id || field.className}`);
+			}
+			for (const field of page.querySelectorAll<HTMLElement>('.wh-print-select')) {
+				if (!field.getBoundingClientRect().width) continue;
+				const style = getComputedStyle(field);
+				if (field.clientHeight < parseFloat(style.fontSize)) issues.push(`select clips vertically: ${field.id}`);
+				const scale = Number(page.closest<HTMLElement>('.withholding-print-page')!.style.getPropertyValue('--withholding-page-scale'));
+				if (/(?:selTreaty|lstTaxTreaty|lstSpecialTax|drpSpecialTax|SpecialLawSelect|j_id402)$/i.test(field.id) && field.getBoundingClientRect().width / scale < 100) issues.push(`select collapsed: ${field.id}`);
+			}
+			(page as HTMLElement).style.zoom = '1';
+			for (const frame of page.querySelectorAll<HTMLElement>('#formPaper')) {
+				const box = frame.getBoundingClientRect();
+				const scale = 1;
+				const border = parseFloat(getComputedStyle(frame).borderRightWidth) * scale;
+				const width = box.width - border * 2;
+				for (const section of frame.querySelectorAll('table')) {
+					const bounds = section.getBoundingClientRect();
+					if (bounds.width < width * 0.9 || section.parentElement!.getBoundingClientRect().width < width * 0.95 || Math.abs(bounds.left - box.left - border) > scale * 2) continue;
+					const gap = (box.right - border - bounds.right) / scale;
+					if (gap > 2) issues.push(`section stops short: ${section.className} (${gap.toFixed(1)}px)`);
+				}
+			}
+			return issues;
+		}));
+		expect(issues).toEqual([]);
+		await print.close();
+	});
+}
+
+for (const code of ['1601F', '1601FQ']) {
+	test(`${code} treaty schedule select boxes fill their allotted cells`, async ({ page }) => {
+		const print = await printForm(page, code);
+		const gaps = await print.locator('[data-source-page="2"] .wh-print-select').evaluateAll(fields => fields.filter(field => field.getBoundingClientRect().width).map(field => {
+			const cell = field.parentElement!;
+			const style = getComputedStyle(cell);
+			return { id: field.id, gap: cell.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight) - field.getBoundingClientRect().width / Number(field.closest<HTMLElement>('.withholding-print-page')!.style.getPropertyValue('--withholding-page-scale')) };
+		}));
+		expect(gaps.length).toBeGreaterThan(0);
+		for (const field of gaps) expect(Math.abs(field.gap), field.id).toBeLessThan(2);
+		await print.close();
+	});
+}
+
+for (const paper of ['letter', 'a4', 'long']) {
+for (const code of printCodes.filter(code => !['1601EQ', '0619E', '0619F'].includes(code))) {
+	test(`${code} ${paper} source headers keep readable columns like EQ`, async ({ page }, testInfo) => {
+		const print = await printForm(page, code, paper);
+		const issues = await print.locator('.withholding-print-page-content:not(.wh-continuation-page)').evaluateAll(pages => pages.flatMap(page => {
+			const issues: string[] = [];
+			for (const header of page.querySelectorAll('table.wh-eq-header')) {
+				const cells = header.querySelectorAll(':scope > tbody > tr:first-child > td');
+				if (cells.length !== 3 || !cells[0].textContent?.includes('BIR Form No.') || !cells[2].querySelector('img')) issues.push('header grid applied to a body table');
+			}
+			const labels = [...page.querySelectorAll('span')].filter(element => [...element.childNodes].some(node => node.nodeType === Node.TEXT_NODE && /BIR Form No\./.test(node.textContent ?? '')));
+			for (const label of labels) {
+				const cell = label.closest('td');
+				const row = cell?.parentElement;
+				if (!cell || row?.tagName !== 'TR' || row.children.length < 3 || row.children.length > 4) continue;
+				const cells = [...row.children];
+				const number = [...cell.querySelectorAll('span')].find(element => /^\d{4}(?:[- ]?[A-Z]{1,3})?\s*$/.test(element.textContent?.trim() ?? ''));
+				if (number) {
+					const range = document.createRange(); range.selectNodeContents(number);
+					if (range.getBoundingClientRect().height > parseFloat(getComputedStyle(number).fontSize) * 1.7) issues.push(`form number wraps: ${number.textContent}`);
+				}
+				for (const headerCell of cells) {
+					const bounds = headerCell.getBoundingClientRect();
+					const walker = document.createTreeWalker(headerCell, NodeFilter.SHOW_TEXT);
+					let text: Node | null;
+					while ((text = walker.nextNode())) {
+						if (!text.textContent?.trim()) continue;
+						const range = document.createRange(); range.selectNodeContents(text);
+						if ([...range.getClientRects()].some(box => box.left < bounds.left - 1 || box.right > bounds.right + 1)) issues.push(`header text crosses its column: ${text.textContent.trim().slice(0, 50)}`);
+					}
+				}
+				if (cells.length !== 3 || cells[0] !== cell || !cells[2].querySelector('img')) continue;
+				const proportions = cells.map(cell => cell.getBoundingClientRect().width / row.getBoundingClientRect().width);
+				[0.175, 0.565, 0.26].forEach((expected, index) => {
+					if (Math.abs(proportions[index] - expected) > 0.035) issues.push(`header column ${index + 1}: ${(proportions[index] * 100).toFixed(1)}%`);
+				});
+				const barcode = cells[2].querySelector('img')!;
+				const image = barcode.getBoundingClientRect();
+				const box = cells[2].getBoundingClientRect();
+				if (image.right > box.right + 1) issues.push('barcode crosses its cell');
+				for (const caption of cells[2].querySelectorAll('span')) {
+					if (caption.textContent?.trim() && caption.getBoundingClientRect().top < image.bottom - 1) issues.push('barcode caption sits beside its image');
+				}
+			}
+			return issues;
+		}));
+		expect(issues).toEqual([]);
+		const pdf = await print.pdf({ path: testInfo.outputPath(`${code}-headers.pdf`), preferCSSPageSize: true, printBackground: true });
+		if (paper === 'long') writeFileSync(testInfo.outputPath(`${code}-header.png`), execFileSync('pdftoppm', ['-f', '1', '-singlefile', '-r', '140', '-x', '0', '-y', '90', '-W', '1300', '-H', '380', '-png', '-'], { input: pdf }));
+		await print.close();
+	});
+}
+
+}
+
+for (const paper of ['letter', 'a4', 'long']) {
+	test(`1601Cv2018 ${paper} PDF pages have matching side margins`, async ({ page }, testInfo) => {
+		const print = await printForm(page, '1601Cv2018', paper);
+		const margins = await print.locator('#formPaper').evaluateAll(frames => frames.map(frame => {
+			const box = frame.getBoundingClientRect();
+			const sheet = frame.closest('.withholding-print-page')!.getBoundingClientRect();
+			return { left: box.left - sheet.left, right: sheet.right - box.right, style: frame.closest('.withholding-print-page')!.getAttribute('style'), width: box.width };
+		}));
+		await print.pdf({ path: testInfo.outputPath('1601cv2018.pdf'), preferCSSPageSize: true, printBackground: true });
+		expect(margins).toHaveLength(2);
+		expect(Math.abs(margins[0].left - margins[1].left), JSON.stringify(margins)).toBeLessThan(1);
+		expect(Math.abs(margins[0].right - margins[1].right), JSON.stringify(margins)).toBeLessThan(1);
 		await print.close();
 	});
 }

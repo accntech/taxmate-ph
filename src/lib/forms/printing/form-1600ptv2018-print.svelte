@@ -1883,7 +1883,7 @@ export const printBindings: readonly PrintBinding[] = [
                       </tr>
                     </tbody>
                   </table>
-                  <table class="wh-inline-c9283bc11c55">
+                  <table class="wh-inline-c9283bc11c55 wh-atc-reference-table">
                     <tbody
                       ><tr>
                         <td class="wh-inline-59165a617646">
@@ -1898,7 +1898,7 @@ export const printBindings: readonly PrintBinding[] = [
                       </tr>
                     </tbody>
                   </table>
-                  <table class="wh-inline-4a941700633f">
+                  <table class="wh-inline-4a941700633f wh-atc-reference-table">
                     <tbody
                       ><tr>
                         <td class="wh-inline-66aa48377825">
@@ -1909,7 +1909,7 @@ export const printBindings: readonly PrintBinding[] = [
                       </tr>
                     </tbody>
                   </table>
-                  <table class="wh-inline-0ee3c4c4ed4a">
+                  <table class="wh-inline-0ee3c4c4ed4a wh-atc-reference-table">
                     <tbody
                       ><tr>
                         <td class="wh-inline-d26ef6cd6b3a">
@@ -2254,7 +2254,7 @@ export const printBindings: readonly PrintBinding[] = [
                       </tr>
                     </tbody>
                   </table>
-                  <table class="wh-inline-cb80e9e1079c">
+                  <table class="wh-inline-cb80e9e1079c wh-atc-reference-table">
                     <tbody
                       ><tr>
                         <td class="wh-inline-66aa48377825">
@@ -2266,7 +2266,7 @@ export const printBindings: readonly PrintBinding[] = [
                       </tr>
                     </tbody>
                   </table>
-                  <table class="wh-inline-a0550a7992eb">
+                  <table class="wh-inline-a0550a7992eb wh-atc-reference-table">
                     <tbody
                       ><tr>
                         <td class="wh-inline-d26ef6cd6b3a">
@@ -2328,7 +2328,7 @@ export const printBindings: readonly PrintBinding[] = [
     >
       <section class="original-continuation withholding-print-continuation">
         <h2>BIR Form 1600PTv2018 — {continuation.title}</h2>
-        <p>{model.taxpayerName} · TIN {model.tin}</p>
+        <p><span data-print-value="">{model.taxpayerName}</span> · TIN <span data-print-value="">{model.tin}</span></p>
         <table>
           <thead
             ><tr

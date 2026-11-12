@@ -294,3 +294,8 @@ color:#000 !important;
 .withholding-print[data-form-code="1604Ev2018"] #inserted p.wh-inline-39997ba1ea12 {
  margin-left: 120px;
 }
+
+/* Alphalist schedules fill their enclosing page section. */
+@layer withholding-inline-important {
+ .withholding-print[data-form-code="1604Ev2018"] :is(.wh-inline-41061bbc17ac, .wh-inline-8d4e7e3effd4) { width: 100% !important; }
+}

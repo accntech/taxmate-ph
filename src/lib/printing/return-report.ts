@@ -59,6 +59,7 @@ function snapshotControls(surface: HTMLElement): void {
 /** Enclose fixed source tables, including the border restored from printme(). */
 function fitSourceFrames(surface: HTMLElement): void {
 	for (const frame of surface.querySelectorAll<HTMLElement>('#formPaper')) {
+		frame.style.setProperty('--print-frame-border-width', getComputedStyle(frame).borderRightWidth);
 		for (let attempt = 0; attempt < 6; attempt++) {
 			const bounds = frame.getBoundingClientRect();
 			const border = parseFloat(getComputedStyle(frame).borderRightWidth);
@@ -78,32 +79,138 @@ function fitSourceFrames(surface: HTMLElement): void {
 	}
 }
 
-/** Fit already rendered vector text; the form's CSS keeps its original cell geometry. */
+/** Freeze source field geometry before applying consistent value typography. */
 function fitValues(surface: HTMLElement): void {
-	const context = document.createElement('canvas').getContext('2d');
-	if (!context) throw new Error('Print text measurement is unavailable.');
-	for (const value of surface.querySelectorAll<HTMLElement>('[data-print-value]:not([data-print-multiline])')) {
-		const bounds = value.getBoundingClientRect();
-		const text = value instanceof HTMLInputElement || value instanceof HTMLTextAreaElement ? value.value : value.textContent;
-		if (bounds.width && (value instanceof HTMLInputElement || value instanceof HTMLTextAreaElement)) {
-			// Native size-based controls derive their box from font metrics, including
-			// device-pixel rounding under zoom. Keep the source box for every value.
-			value.style.boxSizing = 'border-box';
-			value.style.width = `${bounds.width}px`;
-			value.style.height = `${bounds.height}px`;
-		}
-		if (!bounds.width || !text) continue;
-		const style = getComputedStyle(value);
-		const size = parseFloat(style.fontSize);
-		context.font = `${style.fontStyle} ${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
-		const width = context.measureText(text).width;
-		const available = Math.max(bounds.width - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight) - parseFloat(style.borderLeftWidth) - parseFloat(style.borderRightWidth), 1);
-		if (width > available && Number.isFinite(size)) {
+ const candidates = [...surface.querySelectorAll<HTMLElement>(
+  'input:not([type="radio"]):not([type="checkbox"]), textarea, [data-print-value], [data-print-control="select"], [data-field-id], .legacy-label-value'
+ )].filter(value => !value.matches('[type="radio"], [type="checkbox"], .wh-print-check') &&
+  !(/:([YNGPF]|Q[1-4])$/.test(value.dataset.fieldId ?? '') && !value.hasAttribute('data-print-value')));
+ const boxes = candidates.map(value => {
+  const box = value.getBoundingClientRect();
+  const style = getComputedStyle(value);
+  const parent = value.parentElement!;
+  const parentBox = parent.getBoundingClientRect();
+  const parentStyle = getComputedStyle(parent);
+  const native = value instanceof HTMLInputElement || value instanceof HTMLTextAreaElement;
+  const cell = value.tagName === 'TD';
+  // Positioned OCR fields must stay within their original fixed wrapper.
+  const available = Math.max(0, parentBox.right - box.left - parseFloat(parentStyle.paddingRight));
+  const constrained = !native && !cell && parentStyle.display !== 'inline' && available > 0;
+  const onlyValue = parent.children.length === 1 && [...parent.childNodes].every(node => node === value || !node.textContent?.trim());
+  const fieldWidth = constrained && onlyValue ? available : box.width;
+  return { value, box, style, native, cell, available, width: constrained ? Math.min(fieldWidth || available, available) : box.width };
+ });
+ for (const { value, box, style, native, cell, available, width } of boxes) {
+  value.dataset.normalizedPrintValue = '';
+  if (width > 0 && !cell) {
+   const headingValue = value.hasAttribute('data-print-value') && !value.dataset.fieldId && !native;
+   value.style.width = headingValue ? 'auto' : `${width}px`;
+   if (headingValue) value.style.maxWidth = `${available}px`;
+   value.style.boxSizing = 'border-box';
+   if (native) value.style.height = `${box.height}px`;
+   else {
+    value.style.display = 'inline-block';
+    value.style.verticalAlign = 'top';
+   }
+  }
+  // Isolate values embedded directly in table cells from table intrinsic sizing.
+  if (cell && width > 0) {
+   const text = document.createElement('span');
+   text.style.cssText = `display:block;width:${Math.max(width - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight) - parseFloat(style.borderLeftWidth) - parseFloat(style.borderRightWidth), 0)}px;max-width:100%;overflow:hidden;text-overflow:clip;white-space:nowrap`;
+   text.append(...value.childNodes);
+   value.append(text);
+  }
+  value.style.setProperty('line-height', style.lineHeight === 'normal' ? '14.4px' : style.lineHeight, 'important');
+  value.style.setProperty('font-size', '12px', 'important');
+  value.style.setProperty('font-family', 'Arial, Helvetica, sans-serif', 'important');
+  value.style.setProperty('font-weight', '400', 'important');
+  const email = /email/i.test(value.dataset.fieldId ?? value.id) || value.classList.contains('legacy-email-input');
+  value.style.setProperty('text-transform', email ? 'lowercase' : 'uppercase', 'important');
+  value.style.setProperty('white-space', 'nowrap', 'important');
+  value.style.setProperty('overflow', native ? 'clip' : 'hidden', 'important');
+  value.style.setProperty('text-overflow', 'clip', 'important');
+  if (native || value.matches('[data-print-control="select"]')) {
+   const reference = surface.querySelector<HTMLInputElement>('input:not([type="radio"]):not([type="checkbox"])');
+   const thickness = reference && reference.getBoundingClientRect().height <= 16 ? 1 : 2;
+   value.style.setProperty('border', `${thickness}px inset rgb(118, 118, 118)`);
+   value.style.setProperty('border-radius', '0');
+  }
+ }
+}
 
-			value.dataset.fittedPrintValue = '';
-			value.style.setProperty('--withholding-value-font-size', `${size * available / width}px`);
-		}
-	}
+/** Inline SVG preserves circular paths when Chromium rounds fractional print viewports. */
+function normalizeRadioControls(surface: HTMLElement): void {
+ const ns = 'http://www.w3.org/2000/svg';
+ for (const control of surface.querySelectorAll<HTMLElement>('input[type="radio"], .legacy-radio')) {
+  const checked = control instanceof HTMLInputElement ? control.checked : control.classList.contains('legacy-radio-selected');
+  let host = control;
+  if (control instanceof HTMLInputElement) {
+   host = document.createElement('span');
+   host.className = 'pdf-radio-control';
+   const style = getComputedStyle(control);
+   host.style.cssText = `display:inline-block;position:relative;width:13px;height:13px;vertical-align:middle;margin:${style.margin};padding:0;border:0`;
+   control.before(host);
+   host.append(control);
+   control.style.setProperty('position', 'absolute', 'important');
+   control.style.setProperty('inset', '0', 'important');
+   control.style.setProperty('margin', '0', 'important');
+   control.style.setProperty('opacity', '0', 'important');
+  }
+  host.style.setProperty('background', 'none', 'important');
+  host.style.setProperty('border', '0', 'important');
+  const svg = document.createElementNS(ns, 'svg');
+  svg.setAttribute('viewBox', '0 0 14 14');
+  svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+  svg.setAttribute('aria-hidden', 'true');
+  svg.classList.add('pdf-radio-vector');
+  svg.style.cssText = 'position:absolute;inset:0;display:block;width:100%;height:100%;overflow:visible;pointer-events:none';
+  const ring = document.createElementNS(ns, 'circle');
+  for (const [name, value] of Object.entries({ cx: '7', cy: '7', r: '6', fill: 'white', stroke: 'black', 'stroke-width': '1' })) ring.setAttribute(name, value);
+  svg.append(ring);
+  if (checked) {
+   const dot = document.createElementNS(ns, 'circle');
+   for (const [name, value] of Object.entries({ cx: '7', cy: '7', r: '3.5', fill: 'black' })) dot.setAttribute(name, value);
+   svg.append(dot);
+  }
+  host.append(svg);
+ }
+}
+
+/** Compensate page fitting so all entered values retain a 7.38pt printed size. */
+function setPrintedValueSize(surface: HTMLElement, paperSize: PrintPaperSize): void {
+ const targetPixels = 7.38 / 0.75;
+ for (const value of surface.querySelectorAll<HTMLElement>('[data-normalized-print-value]')) {
+  const frame = value.closest<HTMLElement>('.withholding-print-page');
+  const scale = frame ? Number(frame.style.getPropertyValue('--withholding-page-scale')) : Number(getPrintProfile(paperSize).scale);
+  value.style.setProperty('font-size', `${targetPixels / scale}px`, 'important');
+ }
+}
+
+/** Join only the near-full-width sections to their original frame's inner edge. */
+function alignSourceSections(surface: HTMLElement): void {
+ for (const frame of surface.querySelectorAll<HTMLElement>('#formPaper')) {
+  const bounds = frame.getBoundingClientRect();
+  const border = parseFloat(getComputedStyle(frame).borderRightWidth);
+  const right = bounds.right - border;
+  const sections = [...frame.querySelectorAll<HTMLElement>('table, .imgClass > img')].map(element => ({ element, box: element.getBoundingClientRect(), parent: element.parentElement!.getBoundingClientRect() }));
+  for (const { element, box, parent } of sections) {
+   if (box.width >= (bounds.width - border * 2) * 0.95 &&
+    Math.abs(box.left - bounds.left - border) <= 2 &&
+    parent.width >= (bounds.width - border * 2) * 0.95 && right - box.right > 1) {
+    const container = element.parentElement!;
+    if (right - parent.right > 2) {
+     container.style.setProperty('width', `${right - parent.left}px`, 'important');
+     container.style.boxSizing = 'border-box';
+    }
+    const inset = right - parent.right;
+    const width = inset > 0.5 && inset <= 2 &&
+     (right - box.right > 2 || element.style.width.startsWith('calc('))
+     ? 'calc(100% + 1px)' : '100%';
+    element.style.setProperty('width', width, 'important');
+    element.style.removeProperty('max-width');
+   }
+  }
+ }
 }
 
 function fitPages(surface: HTMLElement, paperSize: PrintPaperSize, status: string, title: string): void {
@@ -211,9 +318,15 @@ export async function buildReturnReport(definition: FormDefinition, values: Reco
 		await waitForLayout(surface);
 		onProgress?.(3, 'Preparing document');
 		snapshotControls(surface);
-		fitSourceFrames(surface);
 		fitValues(surface);
+		normalizeRadioControls(surface);
+		for (let pass = 0; pass < 3; pass++) {
+			fitSourceFrames(surface);
+			alignSourceSections(surface);
+		}
+		fitSourceFrames(surface);
 		fitPages(surface, paperSize, status, `BIR Form ${definition.code}`);
+		setPrintedValueSize(surface, paperSize);
 		const profile = getPrintProfile(paperSize);
 		return buildPrintHtml({
 			title: `BIR Form ${definition.code}`,

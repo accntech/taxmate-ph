@@ -1152,3 +1152,19 @@ color:#000 !important;
 .withholding-print[data-form-code="1600VTv2018"] [id="frm1600VT:txtPg1TIN4"] ~ .ContentBold {
  margin-left: 190px;
 }
+
+/* Each reference section shares one full-width 70/15/15 column grid. */
+@layer withholding-inline-important {
+ .withholding-print[data-form-code="1600VTv2018"] .wh-atc-reference-table {
+  width: 100% !important;
+  table-layout: fixed;
+  border-collapse: collapse;
+  border-spacing: 0;
+ }
+ .withholding-print[data-form-code="1600VTv2018"] .wh-atc-reference-table td:first-child { width: 70%; }
+ .withholding-print[data-form-code="1600VTv2018"] .wh-atc-reference-table td:nth-child(2),
+ .withholding-print[data-form-code="1600VTv2018"] .wh-atc-reference-table td:nth-child(3) { width: 15%; }
+}
+
+/* Nested section rules meet the enclosing frame without default table gaps. */
+.withholding-print[data-form-code="1600VTv2018"] table { border-spacing: 0; }

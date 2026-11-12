@@ -287,3 +287,28 @@ color:#000 !important;
 .withholding-print[data-form-code="1601E"] .wh-inline-9bdcb5cfc112{ width: 830px !important;}
 }
 .withholding-print[data-form-code="1601E"] .wh-page-1601e-1 { width: 942.34375px; }
+
+/* Footer strips follow their enclosing form width instead of legacy raster dimensions. */
+@layer withholding-inline-important {
+ .withholding-print[data-form-code="1601E"] .imgClass,
+ .withholding-print[data-form-code="1601E"] .imgClass > :is(table, img) {
+  width: 100% !important;
+  max-width: 100% !important;
+ }
+}
+
+/* Replaced selects need the same text clearance as the adjacent input boxes. */
+@layer withholding-inline-important {
+ .withholding-print[data-form-code="1601E"] .wh-print-select {
+  display: inline-block;
+  box-sizing: border-box;
+  height: 19px !important;
+  line-height: normal;
+  vertical-align: middle;
+ }
+}
+
+/* Keep the specification box visible even when no tax relief is selected. */
+@layer withholding-inline-important {
+ .withholding-print[data-form-code="1601E"] [id="frm1601E:j_id402"] { width: 160px !important; }
+}

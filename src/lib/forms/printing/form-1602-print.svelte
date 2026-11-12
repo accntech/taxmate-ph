@@ -3577,6 +3577,7 @@ export const printBindings: readonly PrintBinding[] = [
     class="withholding-print-page-content wh-page-1602-2"
     data-source-page="2"
   >
+    <div id="formPaper" data-source-form-frame>
     <div class="wh-inline-e8ed64de3156" id="sched1Div1602">
       <table
         border="0"
@@ -3985,6 +3986,7 @@ export const printBindings: readonly PrintBinding[] = [
         </tbody>
       </table>
     </div>
+    </div>
   </div>
   {#each model.continuations as continuation (continuation.id)}
     <div
@@ -3993,7 +3995,7 @@ export const printBindings: readonly PrintBinding[] = [
     >
       <section class="original-continuation withholding-print-continuation">
         <h2>BIR Form 1602 — {continuation.title}</h2>
-        <p>{model.taxpayerName} · TIN {model.tin}</p>
+        <p><span data-print-value="">{model.taxpayerName}</span> · TIN <span data-print-value="">{model.tin}</span></p>
         <table>
           <thead
             ><tr

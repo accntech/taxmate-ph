@@ -323,3 +323,12 @@ color:#000 !important;
 .withholding-print[data-form-code="1606"] .wh-inline-55d4b5500669{ width: 990px !important;}
 }
 .withholding-print[data-form-code="1606"] .wh-page-1606-1 { width: 1016px; }
+
+/* Footer strips follow their enclosing form width instead of legacy raster dimensions. */
+@layer withholding-inline-important {
+ .withholding-print[data-form-code="1606"] .imgClass,
+ .withholding-print[data-form-code="1606"] .imgClass > :is(table, img) {
+  width: 100% !important;
+  max-width: 100% !important;
+ }
+}

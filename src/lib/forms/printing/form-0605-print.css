@@ -268,18 +268,18 @@ color:#000 !important;
 .withholding-print[data-form-code="0605"] .wh-inline-5d6dbfb86dc0{;font-size:9px;}
 .withholding-print[data-form-code="0605"] .wh-inline-9bdcb5cfc112{;font-size: 12px; text-align: left; vertical-align: top;}
 .withholding-print[data-form-code="0605"] .wh-inline-163ebcb5ea49{;border-top: 3px solid #000;}
-/* Legacy IE size-only intrinsic widths, calibrated from original0605 outer inset-border curves. Other sizes are interpolated. Explicit source widths take precedence. */
-.withholding-print[data-form-code="0605"] .wh-source-size-2{box-sizing:border-box;width:3.45em}
-.withholding-print[data-form-code="0605"] .wh-source-size-3{box-sizing:border-box;width:3.825em}
-.withholding-print[data-form-code="0605"] .wh-source-size-4{box-sizing:border-box;width:4.275em}
-.withholding-print[data-form-code="0605"] .wh-source-size-6{box-sizing:border-box;width:5.175em}
-.withholding-print[data-form-code="0605"] .wh-source-size-7{box-sizing:border-box;width:5.614286em}
-.withholding-print[data-form-code="0605"] .wh-source-size-8{box-sizing:border-box;width:6.053571em}
-.withholding-print[data-form-code="0605"] .wh-source-size-10{box-sizing:border-box;width:6.932143em}
-.withholding-print[data-form-code="0605"] .wh-source-size-15{box-sizing:border-box;width:9.128571em}
-.withholding-print[data-form-code="0605"] .wh-source-size-20{box-sizing:border-box;width:11.325em}
-.withholding-print[data-form-code="0605"] .wh-source-size-30{box-sizing:border-box;width:15.741667em}
-.withholding-print[data-form-code="0605"] .wh-source-size-65{box-sizing:border-box;width:31.2em}
+/* Fixed source widths retain the original boxes when value typography changes. */
+.withholding-print[data-form-code="0605"] .wh-source-size-2{box-sizing:border-box;width:46px}
+.withholding-print[data-form-code="0605"] .wh-source-size-3{box-sizing:border-box;width:51px}
+.withholding-print[data-form-code="0605"] .wh-source-size-4{box-sizing:border-box;width:57px}
+.withholding-print[data-form-code="0605"] .wh-source-size-6{box-sizing:border-box;width:69px}
+.withholding-print[data-form-code="0605"] .wh-source-size-7{box-sizing:border-box;width:74.8571px}
+.withholding-print[data-form-code="0605"] .wh-source-size-8{box-sizing:border-box;width:80.7143px}
+.withholding-print[data-form-code="0605"] .wh-source-size-10{box-sizing:border-box;width:92.4286px}
+.withholding-print[data-form-code="0605"] .wh-source-size-15{box-sizing:border-box;width:121.7143px}
+.withholding-print[data-form-code="0605"] .wh-source-size-20{box-sizing:border-box;width:151px}
+.withholding-print[data-form-code="0605"] .wh-source-size-30{box-sizing:border-box;width:209.8889px}
+.withholding-print[data-form-code="0605"] .wh-source-size-65{box-sizing:border-box;width:416px}
 @layer withholding-inline-important {
 
 .withholding-print[data-form-code="0605"] .wh-inline-38ab657e77ab{;width: 836px !important;}
@@ -329,3 +329,72 @@ color:#000 !important;
 .withholding-print[data-form-code="0605"] .wh-inline-9bdcb5cfc112{ width: 830px !important;}
 }
 .withholding-print[data-form-code="0605"] .wh-page-0605-1 { width: 836px; }
+
+/* Keep entered values legible and consistent without changing source field boxes. */
+.withholding-print[data-form-code="0605"] :is([data-print-value], [data-print-control="select"], #rdoSelect) {
+ font: normal 400 12px/15px Arial, Helvetica, sans-serif !important;
+ white-space: nowrap;
+ overflow: hidden;
+ text-overflow: clip;
+}
+.withholding-print[data-form-code="0605"] :is(input[data-print-control="text"], [data-print-control="select"]) {
+ appearance: none;
+ box-sizing: border-box;
+ height: 19px;
+ padding: 0 2px;
+ border: 2px inset rgb(118, 118, 118);
+ border-radius: 0;
+ vertical-align: middle;
+}
+.withholding-print[data-form-code="0605"] [data-print-control="select"] {
+ display: inline-block;
+ width: 107px;
+}
+/* SVG circles keep both the ring and selected center round at fractional print scales. */
+.withholding-print[data-form-code="0605"] input[type="radio"] {
+ appearance: none;
+ display: inline-block;
+ box-sizing: border-box;
+ width: 13px;
+ height: 13px;
+ min-width: 13px;
+ min-height: 13px;
+ padding: 0;
+ border: 0;
+ border-radius: 50%;
+ vertical-align: middle;
+ opacity: 1;
+ background-size: 100% 100%;
+ background-repeat: no-repeat;
+}
+@layer withholding-normalization {
+ .withholding-print[data-form-code="0605"] input[type="radio"] {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 14'%3E%3Ccircle cx='7' cy='7' r='6' fill='white' stroke='black' stroke-width='1'/%3E%3C/svg%3E") !important;
+ }
+ .withholding-print[data-form-code="0605"] input[type="radio"]:checked {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 14'%3E%3Ccircle cx='7' cy='7' r='6' fill='white' stroke='black' stroke-width='1'/%3E%3Ccircle cx='7' cy='7' r='3.5' fill='black'/%3E%3C/svg%3E") !important;
+ }
+}
+/* Full-width sections must share the frame's content width, including footer artwork. */
+@layer withholding-inline-important {
+ .withholding-print[data-form-code="0605"] #Content > table,
+ .withholding-print[data-form-code="0605"] #Content > table > tbody > tr > td > table {
+  width: 100% !important;
+ }
+ .withholding-print[data-form-code="0605"] .imgClass {
+  width: 100% !important;
+  max-width: 100% !important;
+ }
+}
+
+@layer withholding-inline-important {
+ .withholding-print[data-form-code="0605"] #Content :is(.wh-inline-2264c6225ee9, .wh-inline-7b70192016f2, .wh-inline-039f43351894, .wh-inline-c55d7695fe70),
+ .withholding-print[data-form-code="0605"] #Content .imgClass > :is(table, img) {
+  width: 100% !important;
+ }
+}
+
+/* Capitalize entered values while preserving the original template lettering. */
+.withholding-print[data-form-code="0605"] :is([data-print-value], [data-print-control="select"], #rdoSelect) {
+ text-transform: uppercase;
+}
