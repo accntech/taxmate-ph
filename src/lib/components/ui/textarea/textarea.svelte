@@ -1,11 +1,15 @@
 <script lang="ts">
 	import type { HTMLTextareaAttributes } from 'svelte/elements';
+	import { Textarea as PcstiTextarea } from '@pcsti/ui/textarea';
+	import { Label } from '../label';
+	import { FieldErrors } from '../field-errors';
 
 	let {
 		value = $bindable(''),
 		invalid = false,
 		label = '',
 		help = '',
+		error = '',
 		class: className = '',
 		...rest
 	}: {
@@ -13,33 +17,37 @@
 		invalid?: boolean;
 		label?: string;
 		help?: string;
+		error?: string;
 		class?: string;
 	} & Omit<HTMLTextareaAttributes, 'value' | 'class'> = $props();
+
+	const uid = $props.id();
+	const controlId = $derived(rest.id ?? `${uid}-textarea`);
+	const helpId = `${uid}-help`;
+	const hasError = $derived(invalid || !!error);
+	const describedBy = $derived(
+		[rest['aria-describedby'], (help || error) && helpId].filter(Boolean).join(' ') || undefined
+	);
 </script>
 
-{#snippet field()}
-	<textarea
-		bind:value
+<div data-slot="form-item" class="grid min-w-0 gap-2">
+	{#if label}
+		<Label for={controlId} class="text-fg-muted">
+			{label}{#if rest.required}<span class="text-danger" aria-hidden="true">*</span>{/if}
+		</Label>
+	{/if}
+	<PcstiTextarea
 		{...rest}
-		class={[
-			'min-h-28 w-full rounded-md border border-border bg-bg-input px-3 py-2 text-sm text-fg',
-			'outline-none transition-all placeholder:text-fg-subtle hover:border-fg-subtle/40',
-			'focus:border-accent focus:bg-bg-elev focus:shadow-[0_0_0_3px_var(--ring)]',
-			invalid && 'border-danger! shadow-[0_0_0_3px_color-mix(in_oklch,var(--danger)_16%,transparent)]!',
-			className
-		]}
-		data-invalid={invalid ? 'true' : undefined}
-	></textarea>
-{/snippet}
-
-{#if label}
-	<label class="flex flex-col gap-1.5">
-		<span class="text-[13px] font-medium text-fg-muted">{label}</span>
-		{@render field()}
-		{#if help}
-			<span class="text-xs text-fg-subtle">{help}</span>
-		{/if}
-	</label>
-{:else}
-	{@render field()}
-{/if}
+		id={controlId}
+		bind:value
+		invalid={hasError}
+		aria-invalid={hasError || rest['aria-invalid'] || undefined}
+		aria-describedby={describedBy}
+		class={className}
+	/>
+	{#if error}
+		<FieldErrors id={helpId} errors={[error]} />
+	{:else if help}
+		<p id={helpId} class="text-xs text-fg-subtle">{help}</p>
+	{/if}
+</div>

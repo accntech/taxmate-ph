@@ -8,6 +8,7 @@
 		open = $bindable(false),
 		onOpenChange,
 		size = 'md',
+		layout = 'default',
 		closedByBackdrop = true,
 		closedByEscape = true,
 		hideCloseButton = false,
@@ -20,6 +21,7 @@
 		open?: boolean;
 		onOpenChange?: (open: boolean) => void;
 		size?: Size;
+		layout?: 'default' | 'command';
 		closedByBackdrop?: boolean;
 		closedByEscape?: boolean;
 		hideCloseButton?: boolean;
@@ -29,6 +31,8 @@
 		footer?: Snippet;
 		class?: string;
 	} = $props();
+
+	let present = $state(false);
 
 	const uid = $props.id();
 	const titleId = `${uid}-title`;
@@ -52,15 +56,27 @@
 
 	function syncOpen(el: HTMLDialogElement) {
 		$effect(() => {
-			if (open && !el.open) {
-				el.showModal();
-			} else if (!open && el.open) {
-				el.close();
+			if (open) {
+				delete el.dataset.closing;
+				if (!el.open) el.showModal();
+				present = true;
+			} else if (el.open) {
+				// WebKit removes the top layer immediately on close(), so finish motion first.
+				el.dataset.closing = '';
+				getComputedStyle(el).opacity;
+				let cancelled = false;
+				void Promise.allSettled(el.getAnimations().map(animation => animation.finished)).then(() => {
+					if (!cancelled) {
+						el.close();
+						present = false;
+					}
+				});
+				return () => { cancelled = true; };
 			}
 		});
 
 		$effect(() => {
-			if (!open) {
+			if (!present) {
 				return;
 			}
 
@@ -82,9 +98,8 @@
 	}
 
 	function onCancel(event: Event) {
-		if (!closedByEscape) {
-			event.preventDefault();
-		}
+		event.preventDefault();
+		if (closedByEscape) setOpen(false);
 	}
 
 	function onDialogClick(event: MouseEvent) {
@@ -96,28 +111,33 @@
 
 <dialog
 	{@attach syncOpen}
-	onclose={() => setOpen(false)}
+	onclose={(event) => {
+		if (!event.currentTarget.open) {
+			present = false;
+			setOpen(false);
+		}
+	}}
 	oncancel={onCancel}
 	onclick={onDialogClick}
 	aria-labelledby={title ? titleId : undefined}
 	aria-describedby={description ? descId : undefined}
 	class={[
 		'fixed inset-x-0 bottom-0 top-auto m-0 h-auto max-h-[90dvh] w-dvw max-w-none',
-		'border-0 bg-transparent p-0 text-fg opacity-0 transition-[opacity,translate,scale]',
-		'backdrop:bg-black/45 open:opacity-100 sm:inset-0 sm:m-auto sm:h-fit',
+		'border-0 bg-transparent p-0 text-fg',
+		'sm:inset-0 sm:m-auto sm:h-fit',
 		'sm:max-h-[calc(100dvh-2rem)] sm:w-[calc(100vw-2rem)]',
-		'motion-safe:translate-y-0 motion-safe:sm:scale-96 motion-safe:sm:open:scale-100',
 		sizeClass[size]
 	]}
 >
 	<div
 		class={[
 			'relative flex max-h-[90dvh] flex-col overflow-hidden rounded-t-xl border',
-			'border-border bg-bg-elev p-5 shadow-lg sm:max-h-[calc(100dvh-2rem)] sm:rounded-xl',
+			'border-border bg-bg-elev shadow-lg sm:max-h-[calc(100dvh-2rem)] sm:rounded-xl',
+			layout === 'command' ? 'p-0' : 'p-5',
 			className
 		]}
 	>
-		<div class="mx-auto mb-3 h-1 w-9 flex-none rounded-full bg-fg-subtle/40 sm:hidden"></div>
+		{#if layout !== 'command'}<div class="mx-auto mb-3 h-1 w-9 flex-none rounded-full bg-fg-subtle/40 sm:hidden"></div>{/if}
 		{#if showCloseButton}
 			<button
 				type="button"
@@ -129,17 +149,17 @@
 			</button>
 		{/if}
 		{#if title}
-			<h2 id={titleId} class="m-0 text-[15px] font-semibold tracking-tight text-fg">
+			<h2 id={titleId} class={layout === 'command' ? 'sr-only' : 'm-0 text-[15px] font-semibold tracking-tight text-fg'}>
 				{title}
 			</h2>
 		{/if}
 		{#if description}
-			<p id={descId} class="text-[13px] leading-snug text-fg-subtle {title ? 'mt-1.5' : ''}">
+			<p id={descId} class={layout === 'command' ? 'sr-only' : `text-[13px] leading-snug text-fg-subtle ${title ? 'mt-1.5' : ''}`}>
 				{description}
 			</p>
 		{/if}
 		{#if children}
-			<div class="-mx-5 min-h-0 flex-1 overflow-y-auto px-5 {title || description ? 'mt-4' : ''}">
+			<div class={layout === 'command' ? 'flex min-h-0 flex-col overflow-hidden' : `-mx-5 min-h-0 flex-1 overflow-y-auto px-5 ${title || description ? 'mt-4' : ''}`}>
 				{@render children()}
 			</div>
 		{/if}
@@ -150,3 +170,71 @@
 		{/if}
 	</div>
 </dialog>
+
+<style>
+	/* The closing state shares the initial opacity and transform. */
+	dialog {
+		opacity: 0;
+		translate: 0 100%;
+		transition:
+			opacity 180ms cubic-bezier(0.22, 1, 0.36, 1),
+			translate 180ms cubic-bezier(0.22, 1, 0.36, 1),
+			scale 180ms cubic-bezier(0.22, 1, 0.36, 1);
+	}
+
+	dialog[open]:not([data-closing]) {
+		opacity: 1;
+		translate: 0 0;
+		transition-duration: 240ms;
+	}
+
+	dialog::backdrop {
+		background: rgb(0 0 0 / 0.45);
+		opacity: 0;
+		transition: opacity 180ms ease-out;
+	}
+
+	dialog[open]:not([data-closing])::backdrop {
+		opacity: 1;
+		transition-duration: 240ms;
+	}
+
+	@starting-style {
+		dialog[open]:not([data-closing]) {
+			opacity: 0;
+			translate: 0 100%;
+		}
+
+		dialog[open]:not([data-closing])::backdrop {
+			opacity: 0;
+		}
+	}
+
+	@media (min-width: 40rem) {
+		dialog {
+			translate: 0 0;
+			scale: 0.96;
+		}
+
+		dialog[open]:not([data-closing]) {
+			scale: 1;
+		}
+
+		@starting-style {
+			dialog[open]:not([data-closing]) {
+				opacity: 0;
+				translate: 0 0;
+				scale: 0.96;
+			}
+		}
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		dialog,
+		dialog[open]:not([data-closing]),
+		dialog::backdrop,
+		dialog[open]:not([data-closing])::backdrop {
+			transition: none;
+		}
+	}
+</style>

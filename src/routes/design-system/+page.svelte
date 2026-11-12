@@ -1,11 +1,10 @@
 <script lang="ts">
-	import { Badge, Button, Card, Dialog, Drawer, Input, Page, PageHeader, Select, Textarea, ToggleGroup } from '$lib/components/ui';
+	import { Badge, Button, Card, Dialog, Drawer, Input, TinInput, CurrencyInput, NumberInput, Page, PageHeader, Select, Textarea, ToggleGroup } from '$lib/components/ui';
 	import ArrowRight from '@solar-icons/svelte/category/arrows/Linear/ArrowRight.svelte';
 	import CheckCircle from '@solar-icons/svelte/category/ui/Linear/CheckCircle.svelte';
 	import InfoCircle from '@solar-icons/svelte/category/ui/Linear/InfoCircle.svelte';
 	import DangerTriangle from '@solar-icons/svelte/category/ui/Linear/DangerTriangle.svelte';
 	import Copy from '@solar-icons/svelte/category/ui/Linear/Copy.svelte';
-	import Wallet from '@solar-icons/svelte/category/money/Linear/Wallet.svelte';
 
 	type TokenRow = { token: string; note: string };
 
@@ -349,16 +348,11 @@
 		<Card variant="panel" padding="lg" class="grid gap-4">
 			<p class="font-mono text-[11px] uppercase tracking-wide text-fg-subtle">Fields</p>
 			<div class="grid gap-4 md:grid-cols-2">
-				<Input bind:value={tin} label="Taxpayer TIN" help="9 or 12 digits, branch code optional." />
-				<Input value="0.00" label="Amount due" help="Pesos and centavos.">
-					{#snippet leading()}
-						<span class="text-fg-subtle"><Wallet size={16} color="currentColor" /></span>
-					{/snippet}
-					{#snippet trailing()}
-						<span class="font-mono text-xs text-fg-subtle">PHP</span>
-					{/snippet}
-				</Input>
-				<Input value="not-an-email" label="Email" invalid help="Enter a valid email address." />
+				<TinInput bind:value={tin} label="TIN and branch code" help="9 TIN digits and a 4-digit branch code." />
+				<CurrencyInput value="0.00" label="Amount due" help="Pesos and centavos." />
+				<CurrencyInput value="1234.56" label="Calculated withholding" readonly help="Calculated amounts remain read-only." />
+				<NumberInput value="0" label="Sheets attached" min={0} help="Whole numbers only." />
+				<Input type="email" value="not-an-email" label="Email" invalid help="Enter a valid email address." />
 				<Textarea bind:value={notes} label="Reviewer notes" placeholder="Optional remarks for this filing…" />
 			</div>
 		</Card>

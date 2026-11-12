@@ -1,10 +1,8 @@
 <script lang="ts">
-	import type { Snippet } from 'svelte';
+	import type { Component, Snippet } from 'svelte';
+	import { Button as PcstiButton, type ButtonVariant as PcstiButtonVariant, type ButtonSize as PcstiButtonSize } from '@pcsti/ui/button';
 	import type { HTMLButtonAttributes } from 'svelte/elements';
 	import {
-		buttonBaseClass,
-		buttonSizeClass,
-		buttonVariantClass,
 		type ButtonSize,
 		type ButtonVariant
 	} from './styles';
@@ -23,17 +21,21 @@
 		class?: string;
 		children?: Snippet;
 	} & Omit<HTMLButtonAttributes, 'class' | 'type'> = $props();
+	// The source uses intersected anchor/button handlers; this wrapper selects one native element.
+	const SourceButton = PcstiButton as unknown as Component<Omit<HTMLButtonAttributes, 'type'> & {
+		children?: Snippet;
+		type?: 'button' | 'submit' | 'reset';
+		variant?: PcstiButtonVariant;
+		size?: PcstiButtonSize;
+	}>;
 </script>
 
-<button
-	{type}
+<SourceButton
 	{...rest}
-	class={[
-		buttonBaseClass,
-		buttonVariantClass[variant],
-		buttonSizeClass[size],
-		className
-	]}
+	{type}
+	variant={variant === 'primary' ? 'accent' : variant === 'secondary' ? 'outlined' : variant === 'danger' ? 'destructive' : variant === 'warn' ? 'primary-soft' : 'ghost'}
+	size={size === 'sm' ? 'compact' : size === 'icon' ? 'icon' : 'normal'}
+	class={[size === 'touch' ? 'min-h-12 px-4 text-base' : '', variant === 'warn' ? 'ui-warning-action' : '', className].filter(Boolean).join(' ')}
 >
 	{@render children?.()}
-</button>
+</SourceButton>

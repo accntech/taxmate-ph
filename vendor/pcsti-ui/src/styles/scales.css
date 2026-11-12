@@ -1,0 +1,476 @@
+/* Shared scales and composition defaults used by the compiled styles. */
+@layer theme {
+  :root {
+    --animate-shimmer: origin-shimmer 1.6s linear infinite;
+    --animate-shimmer-name: origin-shimmer;
+    --animate-shimmer-duration: 1.6s;
+    --animate-shimmer-timing-function: linear;
+    --animate-shimmer-delay: 0s;
+    --animate-shimmer-iteration-count: infinite;
+    --animate-shimmer-direction: normal;
+    --animate-shimmer-fill-mode: none;
+    --animate-shimmer-play-state: running;
+    --animate-breathe: origin-breathe 2.4s cubic-bezier(0.23, 1, 0.32, 1)
+      infinite;
+    --animate-breathe-name: origin-breathe;
+    --animate-breathe-duration: 2.4s;
+    --animate-breathe-timing-function: cubic-bezier(0.23, 1, 0.32, 1);
+    --animate-breathe-delay: 0s;
+    --animate-breathe-iteration-count: infinite;
+    --animate-breathe-direction: normal;
+    --animate-breathe-fill-mode: none;
+    --animate-breathe-play-state: running;
+    --animate-row-in: origin-row-in 0.32s cubic-bezier(0.23, 1, 0.32, 1) both;
+    --animate-row-in-name: origin-row-in;
+    --animate-row-in-duration: 0.32s;
+    --animate-row-in-timing-function: cubic-bezier(0.23, 1, 0.32, 1);
+    --animate-row-in-delay: 0s;
+    --animate-row-in-iteration-count: 1;
+    --animate-row-in-direction: normal;
+    --animate-row-in-fill-mode: both;
+    --animate-row-in-play-state: running;
+    --animate-float-y: origin-float-y 9s ease-in-out infinite;
+    --animate-float-y-name: origin-float-y;
+    --animate-float-y-duration: 9s;
+    --animate-float-y-timing-function: ease-in-out;
+    --animate-float-y-delay: 0s;
+    --animate-float-y-iteration-count: infinite;
+    --animate-float-y-direction: normal;
+    --animate-float-y-fill-mode: none;
+    --animate-float-y-play-state: running;
+    --animate-caret-blink: origin-caret-blink 1s step-end infinite;
+    --animate-caret-blink-name: origin-caret-blink;
+    --animate-caret-blink-duration: 1s;
+    --animate-caret-blink-timing-function: step-end;
+    --animate-caret-blink-delay: 0s;
+    --animate-caret-blink-iteration-count: infinite;
+    --animate-caret-blink-direction: normal;
+    --animate-caret-blink-fill-mode: none;
+    --animate-caret-blink-play-state: running;
+    --animate-spin-ring: spin 0.7s linear infinite;
+    --animate-spin-ring-name: spin;
+    --animate-spin-ring-duration: 0.7s;
+    --animate-spin-ring-timing-function: linear;
+    --animate-spin-ring-delay: 0s;
+    --animate-spin-ring-iteration-count: infinite;
+    --animate-spin-ring-direction: normal;
+    --animate-spin-ring-fill-mode: none;
+    --animate-spin-ring-play-state: running;
+    --animate-av-spin: spin 18s linear infinite;
+    --animate-av-spin-name: spin;
+    --animate-av-spin-duration: 18s;
+    --animate-av-spin-timing-function: linear;
+    --animate-av-spin-delay: 0s;
+    --animate-av-spin-iteration-count: infinite;
+    --animate-av-spin-direction: normal;
+    --animate-av-spin-fill-mode: none;
+    --animate-av-spin-play-state: running;
+    --animate-bulk-bar-in: origin-bulk-bar-in 0.22s
+      cubic-bezier(0.23, 1, 0.32, 1) both;
+    --animate-bulk-bar-in-name: origin-bulk-bar-in;
+    --animate-bulk-bar-in-duration: 0.22s;
+    --animate-bulk-bar-in-timing-function: cubic-bezier(0.23, 1, 0.32, 1);
+    --animate-bulk-bar-in-delay: 0s;
+    --animate-bulk-bar-in-iteration-count: 1;
+    --animate-bulk-bar-in-direction: normal;
+    --animate-bulk-bar-in-fill-mode: both;
+    --animate-bulk-bar-in-play-state: running;
+    --animate-chip-in: origin-chip-in 0.22s cubic-bezier(0.23, 1, 0.32, 1) both;
+    --animate-chip-in-name: origin-chip-in;
+    --animate-chip-in-duration: 0.22s;
+    --animate-chip-in-timing-function: cubic-bezier(0.23, 1, 0.32, 1);
+    --animate-chip-in-delay: 0s;
+    --animate-chip-in-iteration-count: 1;
+    --animate-chip-in-direction: normal;
+    --animate-chip-in-fill-mode: both;
+    --animate-chip-in-play-state: running;
+    --animate-empty-in: origin-empty-in 0.28s cubic-bezier(0.23, 1, 0.32, 1)
+      both;
+    --animate-empty-in-name: origin-empty-in;
+    --animate-empty-in-duration: 0.28s;
+    --animate-empty-in-timing-function: cubic-bezier(0.23, 1, 0.32, 1);
+    --animate-empty-in-delay: 0s;
+    --animate-empty-in-iteration-count: 1;
+    --animate-empty-in-direction: normal;
+    --animate-empty-in-fill-mode: both;
+    --animate-empty-in-play-state: running;
+    --animate-rubber: origin-rubber 0.32s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    --animate-rubber-name: origin-rubber;
+    --animate-rubber-duration: 0.32s;
+    --animate-rubber-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --animate-rubber-delay: 0s;
+    --animate-rubber-iteration-count: 1;
+    --animate-rubber-direction: normal;
+    --animate-rubber-fill-mode: both;
+    --animate-rubber-play-state: running;
+    --animate-pending-reveal: origin-pending-reveal 0.18s ease-out 350ms both;
+    --animate-pending-reveal-name: origin-pending-reveal;
+    --animate-pending-reveal-duration: 0.18s;
+    --animate-pending-reveal-timing-function: ease-out;
+    --animate-pending-reveal-delay: 350ms;
+    --animate-pending-reveal-iteration-count: 1;
+    --animate-pending-reveal-direction: normal;
+    --animate-pending-reveal-fill-mode: both;
+    --animate-pending-reveal-play-state: running;
+    --animate-step-in: origin-step-in 0.24s cubic-bezier(0.23, 1, 0.32, 1) both;
+    --animate-step-in-name: origin-step-in;
+    --animate-step-in-duration: 0.24s;
+    --animate-step-in-timing-function: cubic-bezier(0.23, 1, 0.32, 1);
+    --animate-step-in-delay: 0s;
+    --animate-step-in-iteration-count: 1;
+    --animate-step-in-direction: normal;
+    --animate-step-in-fill-mode: both;
+    --animate-step-in-play-state: running;
+    --animate-tab-in: origin-tab-in 0.32s cubic-bezier(0.23, 1, 0.32, 1) both;
+    --animate-tab-in-name: origin-tab-in;
+    --animate-tab-in-duration: 0.32s;
+    --animate-tab-in-timing-function: cubic-bezier(0.23, 1, 0.32, 1);
+    --animate-tab-in-delay: 0s;
+    --animate-tab-in-iteration-count: 1;
+    --animate-tab-in-direction: normal;
+    --animate-tab-in-fill-mode: both;
+    --animate-tab-in-play-state: running;
+    --animate-spin: spin 1s linear infinite;
+    --animate-spin-name: spin;
+    --animate-spin-duration: 1s;
+    --animate-spin-timing-function: linear;
+    --animate-spin-delay: 0s;
+    --animate-spin-iteration-count: infinite;
+    --animate-spin-direction: normal;
+    --animate-spin-fill-mode: none;
+    --animate-spin-play-state: running;
+    --animate-ping: ping 1s cubic-bezier(0, 0, 0.2, 1) infinite;
+    --animate-ping-name: ping;
+    --animate-ping-duration: 1s;
+    --animate-ping-timing-function: cubic-bezier(0, 0, 0.2, 1);
+    --animate-ping-delay: 0s;
+    --animate-ping-iteration-count: infinite;
+    --animate-ping-direction: normal;
+    --animate-ping-fill-mode: none;
+    --animate-ping-play-state: running;
+    --font-weight-semibold: 600;
+    --tracking-tight: -0.025em;
+    --leading-snug: 1.375;
+    --spacing: 0.25rem;
+    --radius-md: 8px;
+    --text-xs: 0.75rem;
+    --text-xs--line-height: calc(1 / 0.75);
+    --radius-lg: 10px;
+    --radius-xl: 12px;
+    --default-transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    --default-transition-duration: 150ms;
+    --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+    --radius-sm: 4px;
+    --container-sm: 24rem;
+    --container-md: 28rem;
+    --container-lg: 32rem;
+    --container-2xl: 42rem;
+    --animate-pulse-soft: origin-pulse-soft 2.6s ease-in-out infinite;
+    --animate-pulse-soft-name: origin-pulse-soft;
+    --animate-pulse-soft-duration: 2.6s;
+    --animate-pulse-soft-timing-function: ease-in-out;
+    --animate-pulse-soft-delay: 0s;
+    --animate-pulse-soft-iteration-count: infinite;
+    --animate-pulse-soft-direction: normal;
+    --animate-pulse-soft-fill-mode: none;
+    --animate-pulse-soft-play-state: running;
+    --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+    --animate-pulse: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    --animate-pulse-name: pulse;
+    --animate-pulse-duration: 2s;
+    --animate-pulse-timing-function: cubic-bezier(0.4, 0, 0.6, 1);
+    --animate-pulse-delay: 0s;
+    --animate-pulse-iteration-count: infinite;
+    --animate-pulse-direction: normal;
+    --animate-pulse-fill-mode: none;
+    --animate-pulse-play-state: running;
+    --text-sm: 0.875rem;
+    --text-sm--line-height: calc(1.25 / 0.875);
+    --font-weight-medium: 500;
+  }
+}
+
+@property --sx-font-weight {
+  syntax: "*";
+  inherits: false;
+}
+
+@property --sx-tracking {
+  syntax: "*";
+  inherits: false;
+}
+
+@property --sx-leading {
+  syntax: "*";
+  inherits: false;
+}
+
+@property --sx-border-style {
+  syntax: "*";
+  inherits: false;
+  initial-value: solid;
+}
+
+@property --sx-duration {
+  syntax: "*";
+  inherits: false;
+}
+
+@property --sx-ease {
+  syntax: "*";
+  inherits: false;
+}
+
+@property --sx-scale-x {
+  syntax: "*";
+  inherits: false;
+  initial-value: 1;
+}
+
+@property --sx-scale-y {
+  syntax: "*";
+  inherits: false;
+  initial-value: 1;
+}
+
+@property --sx-scale-z {
+  syntax: "*";
+  inherits: false;
+  initial-value: 1;
+}
+
+@property --sx-shadow {
+  syntax: "*";
+  inherits: false;
+  initial-value: 0 0 #0000;
+}
+
+@property --sx-shadow-color {
+  syntax: "*";
+  inherits: false;
+}
+
+@property --sx-shadow-alpha {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 100%;
+}
+
+@property --sx-inset-shadow {
+  syntax: "*";
+  inherits: false;
+  initial-value: 0 0 #0000;
+}
+
+@property --sx-inset-shadow-color {
+  syntax: "*";
+  inherits: false;
+}
+
+@property --sx-inset-shadow-alpha {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 100%;
+}
+
+@property --sx-ring-color {
+  syntax: "*";
+  inherits: false;
+}
+
+@property --sx-ring-shadow {
+  syntax: "*";
+  inherits: false;
+  initial-value: 0 0 #0000;
+}
+
+@property --sx-inset-ring-color {
+  syntax: "*";
+  inherits: false;
+}
+
+@property --sx-inset-ring-shadow {
+  syntax: "*";
+  inherits: false;
+  initial-value: 0 0 #0000;
+}
+
+@property --sx-ring-inset {
+  syntax: "*";
+  inherits: false;
+}
+
+@property --sx-ring-offset-width {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+
+@property --sx-ring-offset-color {
+  syntax: "*";
+  inherits: false;
+  initial-value: #fff;
+}
+
+@property --sx-ring-offset-shadow {
+  syntax: "*";
+  inherits: false;
+  initial-value: 0 0 #0000;
+}
+
+@property --sx-translate-x {
+  syntax: "*";
+  inherits: false;
+  initial-value: 0;
+}
+
+@property --sx-translate-y {
+  syntax: "*";
+  inherits: false;
+  initial-value: 0;
+}
+
+@property --sx-translate-z {
+  syntax: "*";
+  inherits: false;
+  initial-value: 0;
+}
+
+@property --sx-space-y-reverse {
+  syntax: "*";
+  inherits: false;
+  initial-value: 0;
+}
+
+@property --sx-divide-y-reverse {
+  syntax: "*";
+  inherits: false;
+  initial-value: 0;
+}
+
+@property --sx-gradient-position {
+  syntax: "*";
+  inherits: false;
+}
+
+@property --sx-gradient-from {
+  syntax: "<color>";
+  inherits: false;
+  initial-value: #0000;
+}
+
+@property --sx-gradient-via {
+  syntax: "<color>";
+  inherits: false;
+  initial-value: #0000;
+}
+
+@property --sx-gradient-to {
+  syntax: "<color>";
+  inherits: false;
+  initial-value: #0000;
+}
+
+@property --sx-gradient-stops {
+  syntax: "*";
+  inherits: false;
+}
+
+@property --sx-gradient-via-stops {
+  syntax: "*";
+  inherits: false;
+}
+
+@property --sx-gradient-from-position {
+  syntax: "<length-percentage>";
+  inherits: false;
+  initial-value: 0%;
+}
+
+@property --sx-gradient-via-position {
+  syntax: "<length-percentage>";
+  inherits: false;
+  initial-value: 50%;
+}
+
+@property --sx-gradient-to-position {
+  syntax: "<length-percentage>";
+  inherits: false;
+  initial-value: 100%;
+}
+
+@property --sx-ordinal {
+  syntax: "*";
+  inherits: false;
+}
+
+@property --sx-slashed-zero {
+  syntax: "*";
+  inherits: false;
+}
+
+@property --sx-numeric-figure {
+  syntax: "*";
+  inherits: false;
+}
+
+@property --sx-numeric-spacing {
+  syntax: "*";
+  inherits: false;
+}
+
+@property --sx-numeric-fraction {
+  syntax: "*";
+  inherits: false;
+}
+
+@property --sx-backdrop-blur {
+  syntax: "*";
+  inherits: false;
+}
+
+@property --sx-backdrop-brightness {
+  syntax: "*";
+  inherits: false;
+}
+
+@property --sx-backdrop-contrast {
+  syntax: "*";
+  inherits: false;
+}
+
+@property --sx-backdrop-grayscale {
+  syntax: "*";
+  inherits: false;
+}
+
+@property --sx-backdrop-hue-rotate {
+  syntax: "*";
+  inherits: false;
+}
+
+@property --sx-backdrop-invert {
+  syntax: "*";
+  inherits: false;
+}
+
+@property --sx-backdrop-opacity {
+  syntax: "*";
+  inherits: false;
+}
+
+@property --sx-backdrop-saturate {
+  syntax: "*";
+  inherits: false;
+}
+
+@property --sx-backdrop-sepia {
+  syntax: "*";
+  inherits: false;
+}
+
+@property --sx-content {
+  syntax: "*";
+  initial-value: "";
+  inherits: false;
+}

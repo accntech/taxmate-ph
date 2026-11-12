@@ -1,6 +1,10 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
+	import { Input as PcstiInput, type InputProps } from '@pcsti/ui/input';
 	import type { HTMLInputAttributes } from 'svelte/elements';
+	import { FieldErrors } from '../field-errors';
+	import { Label } from '../label';
+	import InputControl from './input-control.svelte';
 
 	let {
 		value = $bindable(''),
@@ -8,7 +12,10 @@
 		class: className = '',
 		label = '',
 		help = '',
+		error = '',
 		size = 'md',
+		type = 'text',
+		list,
 		leading,
 		trailing,
 		...rest
@@ -18,56 +25,64 @@
 		class?: string;
 		label?: string;
 		help?: string;
+		error?: string;
 		size?: 'md' | 'touch';
 		leading?: Snippet;
 		trailing?: Snippet;
 	} & Omit<HTMLInputAttributes, 'value' | 'class' | 'size'> = $props();
 
-	const sizeClass = $derived(size === 'touch' ? 'min-h-12 text-base' : 'min-h-9 text-sm');
+	const uid = $props.id();
+	const helpId = `${uid}-help`;
+	const controlId = $derived(rest.id ?? `${uid}-input`);
+	const hasError = $derived(invalid || !!error);
+	const grouped = $derived(!!leading || !!trailing);
+	const textType = $derived(type as InputProps['type']);
+	const sourceAttributes = $derived(rest as Omit<InputProps, 'type' | 'list' | 'value'>);
+	const describedBy = $derived(
+		[rest['aria-describedby'], (help || error) && helpId].filter(Boolean).join(' ') || undefined
+	);
 </script>
 
 {#snippet field()}
-	<div
-		class={[
-			'group flex items-center gap-2 rounded-md border border-border bg-bg-input px-3 py-1.5',
-			'transition-all hover:border-[color-mix(in_oklch,var(--fg-subtle)_30%,var(--border))]',
-			'focus-within:border-[color-mix(in_oklch,var(--accent)_60%,var(--border))]',
-			'focus-within:bg-bg-elev',
-			'focus-within:shadow-[0_0_0_3px_color-mix(in_oklch,var(--accent)_18%,transparent)]',
-			invalid &&
-				'border-[color-mix(in_oklch,var(--danger)_60%,var(--border))]! shadow-[0_0_0_3px_color-mix(in_oklch,var(--danger)_12%,transparent)]!',
-			sizeClass,
-			className
-		]}
-		data-invalid={invalid ? 'true' : undefined}
-	>
-		{@render leading?.()}
-		<input
+	{#if !list && (type === 'text' || type === 'search' || type === 'email' || type === 'tel' || type === 'url')}
+		<PcstiInput
+			{...sourceAttributes}
+			id={controlId}
 			bind:value
-			class="min-w-0 flex-1 bg-transparent text-fg outline-none focus-visible:shadow-none placeholder:text-fg-subtle"
-			{...rest}
+			type={textType}
+			{leading}
+			{trailing}
+			invalid={hasError}
+			class={[size === 'touch' ? 'min-h-12 text-base' : '', className].filter(Boolean).join(' ')}
+			data-slot={grouped ? 'input-group-control' : 'input'}
+			aria-invalid={hasError || rest['aria-invalid'] || undefined}
+			aria-describedby={describedBy}
 		/>
-		{@render trailing?.()}
-	</div>
+	{:else}
+		<InputControl
+			{...rest}
+			{type}
+			{list}
+			id={controlId}
+			bind:value
+			{size}
+			class={className}
+			aria-invalid={hasError || rest['aria-invalid'] || undefined}
+			aria-describedby={describedBy}
+		/>
+	{/if}
 {/snippet}
 
-{#if label}
-	<label class="flex flex-col gap-1.5">
-		<span class="text-[13px] font-medium text-fg-muted">{label}</span>
-		{@render field()}
-		{#if help}
-			<span class="text-xs text-fg-subtle">{help}</span>
-		{/if}
-	</label>
-{:else}
+<div data-slot="form-item" class="grid min-w-0 gap-2">
+	{#if label}
+		<Label for={controlId} class="text-fg-muted">
+			{label}{#if rest.required}<span class="text-danger" aria-hidden="true">*</span>{/if}
+		</Label>
+	{/if}
 	{@render field()}
-{/if}
-
-<style>
-	input:-webkit-autofill {
-		-webkit-text-fill-color: var(--fg);
-		-webkit-box-shadow: 0 0 0 1000px var(--bg-input) inset;
-		caret-color: var(--fg);
-		transition: background-color 9999s ease-out 0s;
-	}
-</style>
+	{#if error}
+		<FieldErrors id={helpId} errors={[error]} />
+	{:else if help}
+		<p id={helpId} data-slot="form-description" class="text-xs text-fg-subtle">{help}</p>
+	{/if}
+</div>
