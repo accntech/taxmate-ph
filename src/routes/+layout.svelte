@@ -21,7 +21,7 @@
 	import '@fontsource-variable/source-serif-4';
 	import '@fontsource/arimo/400.css';
 	import '@fontsource/arimo/700.css';
-	import '@pcsti/ui/styles/scales.css';
+	import '$lib/components/ui/styles/scales.css';
 	import '../app.css';
 
 	onMount(() => {

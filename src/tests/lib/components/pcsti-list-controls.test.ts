@@ -1,11 +1,11 @@
 import { render } from 'svelte/server';
 import { createRawSnippet } from 'svelte';
 import { describe, expect, it } from 'vitest';
-import Menu from '$lib/components/ui/pcsti/menu.svelte';
-import Checkbox from '$lib/components/ui/pcsti/checkbox.svelte';
-import DensityToggle from '$lib/components/ui/pcsti/density-toggle.svelte';
-import ListSortHeader from '$lib/components/ui/pcsti/list-sort-header.svelte';
-import ListColumnsMenu from '$lib/components/ui/pcsti/list-columns-menu.svelte';
+import Menu from '$lib/components/ui/menu/menu.svelte';
+import Checkbox from '$lib/components/ui/checkbox/checkbox.svelte';
+import DensityToggle from '$lib/components/ui/density-toggle/density-toggle.svelte';
+import ListSortHeader from '$lib/components/ui/list-sort-header/list-sort-header.svelte';
+import ListColumnsMenu from '$lib/components/ui/list-columns-menu/list-columns-menu.svelte';
 
 const trigger = createRawSnippet<[{ open: boolean }]>(() => ({ render: () => '<span>More actions</span>' }));
 const content = createRawSnippet<[{ close: () => void }]>(() => ({ render: () => '<button type="button" role="menuitem">Archive taxpayer</button>' }));

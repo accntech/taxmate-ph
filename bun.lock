@@ -8,13 +8,19 @@
         "@fontsource-variable/inter": "^5.2.8",
         "@fontsource-variable/source-serif-4": "^5.2.9",
         "@fontsource/arimo": "^5.2.8",
-        "@pcsti/ui": "workspace:*",
         "@solar-icons/svelte": "^1.1.1",
+        "@solar-icons/svelte-v2": "npm:@solar-icons/svelte@2.3.3",
         "@stylexjs/stylex": "^0.19.1",
+        "@tanstack/svelte-virtual": "^3.13.36",
         "@tauri-apps/api": "^2",
         "@tauri-apps/plugin-dialog": "~2",
         "@tauri-apps/plugin-opener": "^2",
         "bits-ui": "2.16.2",
+        "cropperjs": "^2.2.0",
+        "formsnap": "^2.1.0",
+        "fuzzysort": "^4.0.2",
+        "mode-watcher": "^1.1.0",
+        "sveltekit-superforms": "^2.30.2",
       },
       "devDependencies": {
         "@playwright/test": "^1.63.0",
@@ -25,29 +31,12 @@
         "@tailwindcss/vite": "^4.3.0",
         "@tauri-apps/cli": "^2",
         "@types/node": "^25.9.1",
-        "svelte": "^5.0.0",
+        "svelte": "^5.55.9",
         "svelte-check": "^4.0.0",
         "tailwindcss": "^4.3.0",
         "typescript": "~5.6.2",
         "vite": "^6.0.3",
         "vitest": "^4.1.7",
-      },
-    },
-    "vendor/pcsti-ui": {
-      "name": "@pcsti/ui",
-      "version": "0.0.0",
-      "dependencies": {
-        "@solar-icons/svelte": "2.3.3",
-        "@stylexjs/stylex": "^0.19.1",
-        "@tanstack/svelte-virtual": "^3.13.36",
-        "cropperjs": "^2.2.0",
-        "formsnap": "^2.1.0",
-        "fuzzysort": "^4.0.2",
-        "mode-watcher": "^1.1.0",
-        "sveltekit-superforms": "^2.30.2",
-      },
-      "peerDependencies": {
-        "svelte": "^5.55.9",
       },
     },
   },
@@ -204,8 +193,6 @@
 
     "@jridgewell/trace-mapping": ["@jridgewell/trace-mapping@0.3.31", "", { "dependencies": { "@jridgewell/resolve-uri": "^3.1.0", "@jridgewell/sourcemap-codec": "^1.4.14" } }, "sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw=="],
 
-    "@pcsti/ui": ["@pcsti/ui@workspace:vendor/pcsti-ui"],
-
     "@playwright/test": ["@playwright/test@1.65.0", "", { "dependencies": { "playwright": "1.65.0" }, "bin": { "playwright": "cli.js" } }, "sha512-iGURLGuKDLakSEl7Pgfv8h7f+XLT+V861Wfhz0zlEl5nyFuKUopdkFBPKqTllTUp06aOwPuH8iuUEb3yp3MpbQ=="],
 
     "@polka/url": ["@polka/url@1.0.0-next.29", "", {}, "sha512-wwQAWhWSuHaag8c4q/KN/vCoeOJYshAIvMQwD4GpSb3OiZklFfvAgmj0VCBBImRpuF/aFgIRzllXlVX93Jevww=="],
@@ -269,6 +256,8 @@
     "@sideway/pinpoint": ["@sideway/pinpoint@2.0.0", "", {}, "sha512-RNiOoTPkptFtSVzQevY/yWtZwf/RxyVnPy/OcA9HBM3MlGDnBEYL5B41H0MTn0Uec8Hi+2qUtTfG2WWZBmMejQ=="],
 
     "@solar-icons/svelte": ["@solar-icons/svelte@1.1.1", "", { "peerDependencies": { "svelte": ">= 4.0.0" } }, "sha512-MPeTQN1eaz5rk9a78JPHHq4BNFhhyPIfPb8MEXG4PWjEs98OW0rTp0th8TO8984DArucB3fOj02QDmUlhiPnbg=="],
+
+    "@solar-icons/svelte-v2": ["@solar-icons/svelte@2.3.3", "", { "peerDependencies": { "svelte": ">= 5.0.0" } }, "sha512-EfQVBqQ02T+FOkxE9QoMyxfiTqOiOeRT3/P4VRIzIRYGTLN2VFr26XfmAiMkbIa14wmZWeiEl3uniQ6ljyx14Q=="],
 
     "@standard-schema/spec": ["@standard-schema/spec@1.1.0", "", {}, "sha512-l2aFy5jALhniG5HgqrD6jXLi/rUWrKvqN/qJx6yoJsgKhblVd+iqqU4RCXavm/jPityDo5TCvKMnpjKnOriy0w=="],
 
@@ -661,8 +650,6 @@
     "zod": ["zod@4.6.7", "", {}, "sha512-g8W2D2kU6a8untc053fX1uVBKzM7yqAxW/3zwk83+6RyF2+SKOuV+c0wBDhUwzV1PaGapmZH+rmcUzPf+3CGwg=="],
 
     "zod-v3-to-json-schema": ["zod-v3-to-json-schema@4.0.0", "", { "peerDependencies": { "zod": "^3.25 || ^4.0.14" } }, "sha512-KixLrhX/uPmRFnDgsZrzrk4x5SSJA+PmaE5adbfID9+3KPJcdxqRobaHU397EfWBqfQircrjKqvEqZ/mW5QH6w=="],
-
-    "@pcsti/ui/@solar-icons/svelte": ["@solar-icons/svelte@2.3.3", "", { "peerDependencies": { "svelte": ">= 5.0.0" } }, "sha512-EfQVBqQ02T+FOkxE9QoMyxfiTqOiOeRT3/P4VRIzIRYGTLN2VFr26XfmAiMkbIa14wmZWeiEl3uniQ6ljyx14Q=="],
 
     "@tailwindcss/oxide-wasm32-wasi/@emnapi/core": ["@emnapi/core@1.10.0", "", { "dependencies": { "@emnapi/wasi-threads": "1.2.1", "tslib": "^2.4.0" }, "bundled": true }, "sha512-yq6OkJ4p82CAfPl0u9mQebQHKPJkY7WrIuk205cTYnYe+k2Z8YBh11FrbRG/H6ihirqcacOgl2BIO8oyMQLeXw=="],
 

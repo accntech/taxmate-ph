@@ -1,1 +1,16 @@
 export { default as DateInput } from './date-input.svelte';
+export { DateCalendar } from './base';
+export { DateInput as BaseDateInput } from './base';
+export { addMonths } from './base';
+export { addYears } from './base';
+export { clampIso } from './base';
+export { daysInMonth } from './base';
+export { firstWeekdayOfMonth } from './base';
+export { formatIso } from './base';
+export { isWithin } from './base';
+export { monthNames } from './base';
+export { pickSide } from './base';
+export { place } from './base';
+export { getPopoverPortalParent } from './base';
+export { parseIso } from './base';
+export { weekdayNames } from './base';

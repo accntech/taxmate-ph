@@ -3,7 +3,7 @@
 	import { flip } from 'svelte/animate';
 	import { cubicOut } from 'svelte/easing';
 	import { prefersReducedMotion } from 'svelte/motion';
-	import { Sheet } from '@pcsti/ui/sheet';
+	import { Sheet } from '$lib/components/ui/sheet';
 	import TrashBinTrash from '@solar-icons/svelte/category/ui/Linear/TrashBinTrash.svelte';
 	import BillList from '@solar-icons/svelte/category/money/Linear/BillList.svelte';
 	import { Button, CalculatedValue, CurrencyInput } from '$lib/components/ui';

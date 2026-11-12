@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cloneFilterValues, filterPatch, toggleFilterValue, type FilterDescriptor } from '$lib/components/ui/pcsti/filter-types';
+import { cloneFilterValues, filterPatch, toggleFilterValue, type FilterDescriptor } from '$lib/components/ui/filter-menu/filter-types';
 
 const status: FilterDescriptor = { id: 'status', label: 'Status', mode: 'multi', options: [{ value: 'active', label: 'Active' }, { value: 'archived', label: 'Archived' }] };
 const category: FilterDescriptor = { id: 'category', label: 'Category', mode: 'single', options: [{ value: 'private', label: 'Private' }] };
@@ -28,8 +28,8 @@ describe('PCSTI staged filters', () => {
 });
 
 import { render } from 'svelte/server';
-import FilterMenu from '$lib/components/ui/pcsti/filter-menu.svelte';
-import FilterChip from '$lib/components/ui/pcsti/filter-chip.svelte';
+import FilterMenu from '$lib/components/ui/filter-menu/filter-menu.svelte';
+import FilterChip from '$lib/components/ui/filter-chip/filter-chip.svelte';
 
 describe('PCSTI filter presentation', () => {
 	it('renders a labelled filter trigger without exposing staged choices before opening', () => {

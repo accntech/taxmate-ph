@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
-	import { Input as PcstiInput, type InputProps } from '@pcsti/ui/input';
+	import { Input as PcstiInput, type InputProps } from '$lib/components/ui/input/base';
 	import type { HTMLInputAttributes } from 'svelte/elements';
 	import { FieldErrors } from '../field-errors';
 	import { Label } from '../label';

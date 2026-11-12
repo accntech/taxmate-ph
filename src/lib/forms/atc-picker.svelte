@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Combobox } from '@pcsti/ui/combobox';
+	import { Combobox } from '$lib/components/ui/combobox';
 	import { Label, FieldErrors } from '$lib/components/ui';
 	import { get1601EQATCDescription, get1601EQRate } from './form-1601-eq/form-1601-eq-atcs';
 	import { filterATCOptions, getLegacyInterestATCOptions } from './atc-picker';

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildPaginationItems } from "$lib/components/ui/pcsti/pagination-helpers";
+import { buildPaginationItems } from "$lib/components/ui/pagination/pagination-helpers";
 
 describe("PCSTI pagination ranges", () => {
   it("shows every page for a small list, including one empty-data page", () => {
@@ -16,8 +16,8 @@ describe("PCSTI pagination ranges", () => {
 });
 
 import { render } from "svelte/server";
-import Pagination from "$lib/components/ui/pcsti/pagination.svelte";
-import PageSizePicker from "$lib/components/ui/pcsti/list-page-size-picker.svelte";
+import Pagination from "$lib/components/ui/pagination/pagination.svelte";
+import PageSizePicker from "$lib/components/ui/list-page-size-picker/list-page-size-picker.svelte";
 function renderedText(body: string) {
   return body
     .replace(/<[^>]*>/g, "")

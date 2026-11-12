@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { ButtonLink } from '$lib/components/ui';
-	import Icon from '$lib/components/ui/pcsti/icon.svelte';
-	import { glyphs } from '$lib/components/ui/pcsti/icons';
+	import Icon from '$lib/components/ui/icon/icon.svelte';
+	import { glyphs } from '$lib/components/ui/icons';
 	import type { TaxpayerProfile } from '$lib/profiles/profile';
 	import { formatTinInput } from '$lib/profiles/profile';
 	import { getWithholdingDefinition } from './withholding-definitions';

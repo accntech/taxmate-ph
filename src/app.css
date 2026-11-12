@@ -1,6 +1,6 @@
 @import 'tailwindcss';
 @import './lib/components/ui/theme.css';
-@import './lib/components/ui/pcsti/host.css';
+@import './lib/components/ui/styles/list-controls.css';
 
 /* Keep native caption controls outside the sidebar and page navigation. */
 html[data-tauri-platform] {

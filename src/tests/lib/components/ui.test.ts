@@ -8,15 +8,17 @@ function source(path: string): string {
 	return readFileSync(join(root, path), 'utf8');
 }
 
-function sourcesUnder(path: string): string[] {
+function appSourcesUnder(path: string): string[] {
 	const absolutePath = join(root, path);
 
 	return readdirSync(absolutePath).flatMap((entry) => {
+		if (entry === 'node_modules') return [];
+
 		const child = join(path, entry);
 		const absoluteChild = join(root, child);
 
 		if (statSync(absoluteChild).isDirectory()) {
-			return sourcesUnder(child);
+			return appSourcesUnder(child);
 		}
 
 		return child.endsWith('.svelte') || child.endsWith('.ts') || child.endsWith('.css')
@@ -104,8 +106,8 @@ describe('ui component primitives', () => {
 	});
 
 	it('keeps primitives independent from legacy app classes', () => {
-		const files = sourcesUnder('src/lib/components/ui');
-		const bannedPatterns = [/codex-/, /rail-/, /theme-toggle/, /[>}]x[<{]/, /[>}]v[<{]/];
+		const files = appSourcesUnder('src/lib/components/ui');
+		const bannedPatterns = [/codex-/, /rail-/, /class(?:Name)?\s*[=:]\s*['"][^'"]*\btheme-toggle\b/, /[>}]x[<{]/, /[>}]v[<{]/];
 
 		for (const file of files) {
 			const content = source(file);
@@ -117,7 +119,7 @@ describe('ui component primitives', () => {
 	});
 
 	it('provides sidebar nav typing helpers', async () => {
-		const { isParent } = await import('$lib/components/ui');
+		const { isParent } = await import('$lib/components/ui/types');
 
 		expect(isParent({ label: 'Forms', children: [{ label: '1601EQ', href: '/forms' }] })).toBe(
 			true

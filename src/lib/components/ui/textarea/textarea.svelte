@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { HTMLTextareaAttributes } from 'svelte/elements';
-	import { Textarea as PcstiTextarea } from '@pcsti/ui/textarea';
+	import { Textarea as PcstiTextarea } from '$lib/components/ui/textarea/base';
 	import { Label } from '../label';
 	import { FieldErrors } from '../field-errors';
 

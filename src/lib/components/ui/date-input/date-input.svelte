@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { DateInput as PcstiDateInput } from '@pcsti/ui/date-input';
+	import { DateInput as PcstiDateInput } from '$lib/components/ui/date-input/base';
 	import Label from '../label/label.svelte';
 	import FieldErrors from '../field-errors/field-errors.svelte';
 	let { id, label = '', value = $bindable(''), error = '', required = false, disabled = false, min, max, onchange, onblur }: {

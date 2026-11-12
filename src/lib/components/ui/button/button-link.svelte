@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { Component, Snippet } from 'svelte';
-	import { Button as PcstiButton, type ButtonVariant as PcstiButtonVariant, type ButtonSize as PcstiButtonSize } from '@pcsti/ui/button';
+	import { Button as PcstiButton, type ButtonVariant as PcstiButtonVariant, type ButtonSize as PcstiButtonSize } from '$lib/components/ui/button/base';
 	import type { HTMLAnchorAttributes } from 'svelte/elements';
 	import {
 		type ButtonSize,
