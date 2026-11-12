@@ -28,7 +28,7 @@
 		<SidebarMinimalistic size={18} color="currentColor" aria-hidden="true" />
 	</button>
 
-	<nav class="hidden min-w-0 flex-1 items-center gap-2 text-[13px] text-fg-muted md:flex">
+	<nav aria-label="Breadcrumb" class="hidden min-w-0 flex-1 items-center gap-2 text-[13px] text-fg-muted md:flex">
 		{#each crumbs as crumb, index (index)}
 			{#if index > 0}
 				<span class="text-fg-subtle" aria-hidden="true">/</span>
@@ -41,7 +41,7 @@
 					{crumb.label}
 				</a>
 			{:else}
-				<span class="truncate text-fg-subtle last:text-fg last:font-medium">{crumb.label}</span>
+				<span aria-current={index === crumbs.length - 1 ? 'page' : undefined} class="truncate text-fg-subtle last:text-fg last:font-medium">{crumb.label}</span>
 			{/if}
 		{/each}
 	</nav>

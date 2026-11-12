@@ -86,7 +86,6 @@ describe('ui component primitives', () => {
 			/launcher-/,
 			/product-card/,
 			/placeholder-/,
-			/planned-/,
 			/desktop-rail/,
 			/mobile-bottom-nav/,
 			/theme-toggle/,

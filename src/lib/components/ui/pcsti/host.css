@@ -1,0 +1,38 @@
+/* Map the copied library's host contract to TaxMate's existing semantic theme. */
+:root {
+	--primary: var(--accent);
+	--primary-hover: var(--accent-hover);
+	--primary-soft: var(--accent-soft);
+	--primary-fg: var(--accent-fg);
+	--shadow-sm: var(--shadow-ui-sm);
+	--shadow-md: var(--shadow-ui-md);
+	--shadow-lg: var(--shadow-ui-lg);
+	--shadow-sticky-bar: var(--shadow-ui-md);
+	--radius-2xl: 1rem;
+	--container-xs: 20rem;
+	--aspect-video: 16 / 9;
+	--blur-sm: 8px;
+	--font-weight-bold: 700;
+	--leading-normal: 1.5;
+	--leading-relaxed: 1.625;
+	--text-lg: 1.125rem;
+	--text-lg--line-height: 1.75rem;
+	--tracking-wide: 0.025em;
+	--tracking-widest: 0.1em;
+	--color-black: #000;
+	--color-white: #fff;
+}
+
+/* PCSTI's soft primary action supplies the mechanics for our warning variant. */
+.ui-warning-action {
+	--primary: var(--warn);
+	--primary-hover: var(--warn);
+	--primary-soft: var(--warn-soft);
+}
+
+@media (forced-colors: active) {
+	:root :is(input, textarea, button, a, [tabindex]):focus-visible {
+		outline: 2px solid Highlight;
+		outline-offset: 2px;
+	}
+}
