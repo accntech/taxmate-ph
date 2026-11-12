@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { toast, Toaster } from '@pcsti/ui/toaster';
+	import { toast, Toaster } from '$lib/components/ui/toaster';
 	import { resolve } from '$app/paths';
 	import { beforeNavigate, goto } from '$app/navigation';
 	import { save } from '@tauri-apps/plugin-dialog';
@@ -15,10 +15,10 @@
 	import { buildReturnReport } from '$lib/printing/return-report';
 	import { buildPdfExportFilename, cancelPdfExport, createPdfExportClient, formatPdfExportError, type PdfExportProgress } from '$lib/tauri/pdf-export';
 	import { Badge, Button, ButtonLink, Dialog, Page } from '$lib/components/ui';
-	import Menu from '$lib/components/ui/pcsti/menu.svelte';
-	import MenuItem from '$lib/components/ui/pcsti/menu-item.svelte';
-	import Icon from '$lib/components/ui/pcsti/icon.svelte';
-	import { glyphs } from '$lib/components/ui/pcsti/icons';
+	import Menu from '$lib/components/ui/menu/menu.svelte';
+	import MenuItem from '$lib/components/ui/menu-item/menu-item.svelte';
+	import Icon from '$lib/components/ui/icon/icon.svelte';
+	import { glyphs } from '$lib/components/ui/icons';
 	import RecordTable from '$lib/ebirforms/record-table.svelte';
 	import { formatTinInput } from '$lib/profiles/profile';
 	import AddCircle from '@solar-icons/svelte/category/ui/Linear/AddCircle.svelte';

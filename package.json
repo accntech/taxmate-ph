@@ -7,12 +7,11 @@
     "dev": "vite dev",
     "build": "vite build",
     "preview": "vite preview",
-    "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json && bun run check:pcsti",
+    "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
     "test": "vitest",
     "test:run": "vitest run",
     "tauri": "tauri",
-    "check:pcsti": "svelte-check --workspace vendor/pcsti-ui --tsconfig ./tsconfig.json",
     "test:browser": "playwright test"
   },
   "license": "MIT",
@@ -25,8 +24,14 @@
     "@tauri-apps/plugin-dialog": "~2",
     "@tauri-apps/plugin-opener": "^2",
     "bits-ui": "2.16.2",
-    "@pcsti/ui": "workspace:*",
-    "@stylexjs/stylex": "^0.19.1"
+    "@stylexjs/stylex": "^0.19.1",
+    "@solar-icons/svelte-v2": "npm:@solar-icons/svelte@2.3.3",
+    "@tanstack/svelte-virtual": "^3.13.36",
+    "cropperjs": "^2.2.0",
+    "formsnap": "^2.1.0",
+    "fuzzysort": "^4.0.2",
+    "mode-watcher": "^1.1.0",
+    "sveltekit-superforms": "^2.30.2"
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0",
@@ -37,14 +42,11 @@
     "@tailwindcss/vite": "^4.3.0",
     "@tauri-apps/cli": "^2",
     "@types/node": "^25.9.1",
-    "svelte": "^5.0.0",
+    "svelte": "^5.55.9",
     "svelte-check": "^4.0.0",
     "tailwindcss": "^4.3.0",
     "typescript": "~5.6.2",
     "vite": "^6.0.3",
     "vitest": "^4.1.7"
-  },
-  "workspaces": [
-    "vendor/pcsti-ui"
-  ]
+  }
 }

@@ -15,16 +15,16 @@
 
 <script lang="ts">
   import { onMount, untrack, type Snippet } from "svelte";
-  import Icon from "$lib/components/ui/pcsti/icon.svelte";
-  import { glyphs } from "$lib/components/ui/pcsti/icons";
-  import Pagination from "$lib/components/ui/pcsti/pagination.svelte";
-  import ListPageSizePicker from "$lib/components/ui/pcsti/list-page-size-picker.svelte";
-  import ListToolbar from "$lib/components/ui/pcsti/list-toolbar.svelte";
-  import FilterMenu from "$lib/components/ui/pcsti/filter-menu.svelte";
-  import FilterChip from "$lib/components/ui/pcsti/filter-chip.svelte";
-  import DensityToggle from "$lib/components/ui/pcsti/density-toggle.svelte";
-  import ListColumnsMenu from "$lib/components/ui/pcsti/list-columns-menu.svelte";
-  import ListSortHeader from "$lib/components/ui/pcsti/list-sort-header.svelte";
+  import Icon from "$lib/components/ui/icon/icon.svelte";
+  import { glyphs } from "$lib/components/ui/icons";
+  import Pagination from "$lib/components/ui/pagination/pagination.svelte";
+  import ListPageSizePicker from "$lib/components/ui/list-page-size-picker/list-page-size-picker.svelte";
+  import ListToolbar from "$lib/components/ui/list-toolbar/list-toolbar.svelte";
+  import FilterMenu from "$lib/components/ui/filter-menu/filter-menu.svelte";
+  import FilterChip from "$lib/components/ui/filter-chip/filter-chip.svelte";
+  import DensityToggle from "$lib/components/ui/density-toggle/density-toggle.svelte";
+  import ListColumnsMenu from "$lib/components/ui/list-columns-menu/list-columns-menu.svelte";
+  import ListSortHeader from "$lib/components/ui/list-sort-header/list-sort-header.svelte";
   import {
     loadTableView,
     matchesRecord,

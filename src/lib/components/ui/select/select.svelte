@@ -1,6 +1,6 @@
 <script lang="ts" generics="T extends string">
 	import type { Snippet } from 'svelte';
-	import { Select as PcstiSelect } from '@pcsti/ui/select';
+	import { Select as PcstiSelect } from '$lib/components/ui/select/base';
 	import Label from '../label/label.svelte';
 	import FieldErrors from '../field-errors/field-errors.svelte';
 

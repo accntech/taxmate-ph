@@ -3,8 +3,8 @@
 	import type { FormSummary } from '$lib/forms';
 	import { Button } from '$lib/components/ui';
 	import { InputControl } from '$lib/components/ui/input';
-	import Icon from '$lib/components/ui/pcsti/icon.svelte';
-	import { glyphs } from '$lib/components/ui/pcsti/icons';
+	import Icon from '$lib/components/ui/icon/icon.svelte';
+	import { glyphs } from '$lib/components/ui/icons';
 
 	let { forms, disabled = false, taxpayerName = '', status = '', oncancel, onselect }: {
 		forms: FormSummary[];

@@ -1,11 +1,11 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { resolve } from "$app/paths";
-  import Menu from "$lib/components/ui/pcsti/menu.svelte";
-  import ActionButton from "$lib/components/ui/pcsti/button.svelte";
-  import MenuItem from "$lib/components/ui/pcsti/menu-item.svelte";
-  import Icon from "$lib/components/ui/pcsti/icon.svelte";
-  import { glyphs } from "$lib/components/ui/pcsti/icons";
+  import Menu from "$lib/components/ui/menu/menu.svelte";
+  import ActionButton from "$lib/components/ui/button/compat-button.svelte";
+  import MenuItem from "$lib/components/ui/menu-item/menu-item.svelte";
+  import Icon from "$lib/components/ui/icon/icon.svelte";
+  import { glyphs } from "$lib/components/ui/icons";
   import { buildTaxpayerRoute } from "$lib/apps/app-shell";
   import { ebirformsWorkspace as workspace } from "$lib/ebirforms/ebirforms-workspace.svelte";
   import { Badge, Button, ButtonLink, Dialog, Page } from "$lib/components/ui";
