@@ -26,8 +26,8 @@
 </div>
 
 <style>
-	.calculated-value { display: grid; min-width: 0; gap: .5rem; }
-	.value-label { color: var(--fg-muted); font-size: .875rem; font-weight: 500; line-height: 1; }
-	output { display: block; min-height: 2.25rem; padding-block: .5rem; border-bottom: 1px solid var(--border-soft); font-size: .875rem; font-weight: 600; font-variant-numeric: tabular-nums; text-align: right; overflow-wrap: anywhere; }
+	.calculated-value { display: grid; min-width: 0; gap: var(--form-label-gap); }
+	.value-label { color: var(--fg-muted); font-size: var(--form-label-size); font-weight: 500; line-height: var(--form-label-line-height); }
+	output { display: block; min-height: var(--form-control-height); padding-block: .5rem; border-bottom: 1px solid var(--border-soft); font-size: var(--form-control-size); font-weight: 600; font-variant-numeric: tabular-nums; text-align: right; overflow-wrap: anywhere; }
 	.value-source { color: var(--fg-muted); font-size: .75rem; line-height: 1.4; text-align: right; }
 </style>

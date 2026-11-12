@@ -39,7 +39,7 @@
 	const sourceOptions = $derived(options.map((option) => ({ ...option, description: option.meta })));
 </script>
 
-<div class={['grid min-w-0 gap-1.5', className]} data-slot="form-item">
+<div class={['form-select grid min-w-0 gap-2', className]} data-slot="form-item">
 	{#if label}<Label id={labelId} for={triggerId}
 			>{label}{#if required}<span class="text-danger" aria-hidden="true">*</span>{/if}</Label
 		>{/if}
@@ -71,3 +71,7 @@
 	</PcstiSelect>
 	{#if error}<FieldErrors id={errorId} errors={[error]} />{/if}
 </div>
+
+<style>
+	.form-select :global([role="combobox"]) { font-size: var(--form-control-size); }
+</style>
