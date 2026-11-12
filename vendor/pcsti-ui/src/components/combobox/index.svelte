@@ -222,7 +222,7 @@
     return options.some((o) => o.label.toLowerCase() === q);
   });
 
-  const showCreate = $derived(typeof onCreate === "function" && !exactMatch);
+  const showCreate = $derived(typeof onCreate === "function" && trimmedQuery.length > 0 && !exactMatch);
   const createIndex = $derived(showCreate ? filteredFlat.length : -1);
   const closedOpenActions: KeyboardListAction[] = ["next", "select"];
 
@@ -350,7 +350,7 @@
   }
 
   function triggerCreate() {
-    if (!onCreate) return;
+    if (!onCreate || !trimmedQuery) return;
     onCreate(trimmedQuery);
     close();
   }
@@ -711,7 +711,7 @@
             role="listbox"
             aria-multiselectable={multiple}
             class={[stylex.attrs(comboboxLayout.options).class]}
-            style:max-height="min({viewportHeight}px, calc(100dvh - 88px))"
+            style:max-height="min({viewportHeight}px, calc(100dvh - 88px - {showCreate ? Math.min(itemHeight, 36) + 2 : 0}px))"
             onscroll={onScroll}
           >
             <div
@@ -886,7 +886,7 @@
                 highlight === createIndex && comboboxLayout.highlighted,
               ).class,
             ]}
-            style:height="{itemHeight}px"
+            style:height="{Math.min(itemHeight, 36)}px"
           >
             <span
               class={[stylex.attrs(comboboxLayout.createBadge).class]}

@@ -34,8 +34,13 @@ export function getManagedTaxpayerValues(code: string, profile: TaxpayerProfile,
  if (status !== 'Draft') return {};
  const definition = getWithholdingDefinition(code);
  if (!definition) return {};
- return Object.fromEntries(definition.sections.flatMap(section => section.fields).flatMap(field => {
+ const managed = Object.fromEntries(definition.sections.flatMap(section => section.fields).flatMap(field => {
   const key = field.profileKey;
   return key ? [[field.id, profile[key] ?? '']] : [];
  }));
+ if (code === '0605' && profile.taxpayerClassification === 'I') {
+  managed[definition.prefix + 'itemYearEndMonth'] = '12';
+  managed[definition.prefix + 'itemFiscalStartMonth'] = 'Calendar';
+ }
+ return managed;
 }

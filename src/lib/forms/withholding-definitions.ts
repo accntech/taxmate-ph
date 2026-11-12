@@ -887,6 +887,10 @@ for (const code of ["1602", "1602Qv2018"]) {
     "Corporation — foreign currency",
     "Withdrawals from decedent deposit",
   ];
+  const domesticOptions = [...new Set(domesticCodes)].map(value => ({
+    value,
+    label: domesticLabels.filter((_, index) => domesticCodes[index] === value).join("; "),
+  }));
   if (revised) {
     d.schedules.push({
       id: "interest",
@@ -935,7 +939,9 @@ for (const code of ["1602", "1602Qv2018"]) {
             n === 2
               ? [
                   f(p, `txtSched2TreatyCode${i}`, "Treaty code"),
-                  f(p, `txtSched2ATC${i}`, "ATC"),
+                  f(p, `txtSched2ATC${i}`, "ATC", "text", {
+                    options: domesticOptions,
+                  }),
                   m(p, `txtSched2Interest${i}`, "Total interest"),
                   f(p, `txtSched2TaxRate${i}`, "Rate (%)", "number"),
                   m(p, `txtSched2TaxesWithheld${i}`, "Tax withheld", true),

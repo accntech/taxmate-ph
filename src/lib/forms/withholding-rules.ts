@@ -42,6 +42,19 @@ export function createWithholdingValues(
       field.profileKey && profile
         ? (profile[field.profileKey] ?? "")
         : (field.defaultValue ?? "");
+  const now = new Date();
+  if (d.yearField in values)
+    values[d.yearField] = String(Math.min(now.getFullYear(), d.maxYear ?? now.getFullYear()));
+  if (d.monthField) values[d.monthField] = String(now.getMonth() + 1).padStart(2, "0");
+  if (code.startsWith("0619")) {
+    const completedMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    values[d.yearField] = String(completedMonth.getFullYear());
+    values[d.monthField!] = String(completedMonth.getMonth() + 1).padStart(2, "0");
+  }
+  if (code === "0605") {
+    values[d.prefix + "itemYearEndMonth"] = String(now.getMonth() + 1).padStart(2, "0");
+    values[d.prefix + "itemFiscalStartMonth"] = "Calendar";
+  }
   return calculateWithholding(code, values);
 }
 export function calculateWithholding(code: string, values: Values): Values {
@@ -51,6 +64,10 @@ export function calculateWithholding(code: string, values: Values): Values {
   for (const field of withholdingFields(d, values))
     if (field.readonly && field.defaultValue !== undefined)
       r[field.id] = field.defaultValue;
+  if (code === "0605" && r[p + "txtClassification"] === "I") {
+    r[p + "itemYearEndMonth"] = "12";
+    r[p + "itemFiscalStartMonth"] = "Calendar";
+  }
   const n = (k: string) => number(r[p + k]);
   const set = (k: string, v: number) => {
     r[p + k] = money(v);

@@ -186,3 +186,43 @@ test('annual withholding exports its original layout with all monthly rows', asy
 	await printPage.screenshot({ path: testInfo.outputPath('1604c-test-print.png'), fullPage: true });
 	await printPage.close();
 });
+
+for (const width of [1440, 390]) {
+ test(`0605 autoloads period and accepts searched or typed ATCs at ${width}px`, async ({ page }, testInfo) => {
+  await page.setViewportSize({ width, height: 960 });
+  await seedWorkspace(page);
+  await create(page, '0605');
+  await expect(field(page, 'frm0605:txtYearEnded')).toHaveValue(String(new Date().getFullYear()));
+  await expect(field(page, 'frm0605:itemYearEndMonth')).toBeEnabled();
+  const atc = field(page, 'frm0605:txtATCCode');
+  await expect(atc).toHaveAttribute('role', 'combobox');
+  await atc.click();
+  const search = page.getByPlaceholder('Search code or income', { exact: true });
+  await search.fill('ZZ999');
+  await page.getByRole('button', { name: 'Use ATC "ZZ999"', exact: true }).click();
+  await expect(atc).toHaveText('ZZ999');
+  await atc.click();
+  await search.fill('FP010');
+  await expect(page.getByRole('option', { name: /FP010/ }).first()).toBeVisible();
+  await search.press('Enter');
+  await expect(atc).toHaveText('FP010');
+  await expect(page.locator('[popover="manual"]')).toBeHidden();
+  await page.screenshot({ path: testInfo.outputPath('0605-period-atc.png'), fullPage: true });
+ });
+}
+
+test('individual 0605 locks December and calendar basis', async ({ page }) => {
+ await seedWorkspace(page);
+ await page.addInitScript(() => {
+  const native = (window as any).__TAURI_INTERNALS__;
+  const invoke = native.invoke;
+  native.invoke = async (command: string, args: unknown) => {
+   const result = await invoke(command, args);
+   return command === 'list_taxpayer_profiles' ? result.map((profile: object) => ({ ...profile, taxpayerClassification: 'I' })) : result;
+  };
+ });
+ await create(page, '0605');
+ await expect(field(page, 'frm0605:itemYearEndMonth')).toHaveText('December');
+ await expect(field(page, 'frm0605:itemYearEndMonth')).toBeDisabled();
+ await expect(field(page, 'frm0605:itemFiscalStartMonth')).toBeDisabled();
+});

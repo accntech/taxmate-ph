@@ -19,7 +19,7 @@
 	let addedRows = $state<Record<string, string[]>>({});
 	const calculated = $derived(calculateWithholding(definition.code, values));
 	const schedules = $derived(withholdingSchedules(definition, values));
-	const catalogAtcIds = $derived(new Set(schedules.flatMap(schedule => schedule.id === 'atc' ? schedule.rows.map(row => row.fields[0].id) : schedule.id === 'payees' ? schedule.rows.map(row => row.fields[2].id) : [])));
+	const individualYearEnd = $derived(definition.code === '0605' && values[definition.prefix + 'txtClassification'] === 'I');
 	const fields = $derived([
 		...definition.sections.flatMap(section => section.fields),
 		...schedules.flatMap(schedule => [...schedule.rows.flatMap(row => row.fields), ...(schedule.totals ?? [])])
@@ -84,8 +84,8 @@
 	{#if visible(field)}
 		{#if field.readonly}
 			<CalculatedValue id={field.id} label={displayLabel(field.label)} value={invalidAmounts && field.type === 'money' ? '' : display(field, calculated[field.id] ?? values[field.id] ?? '')} error={displayLabel(errors[field.id] ?? '')} />
-		{:else if catalogAtcIds.has(field.id)}
-			<AtcPicker id={field.id} label={displayLabel(field.label)} formCode={definition.code} category={values[definition.prefix + 'optCategory'] ?? ''} year={Number(values[definition.yearField])} required={field.required ?? false} value={values[field.id] ?? ''} error={displayLabel(errors[field.id] ?? '')} onchange={(value) => change(field.id, value)} />
+		{:else if displayLabel(field.label) === 'ATC'}
+			<AtcPicker id={field.id} label={displayLabel(field.label)} formCode={definition.code} fieldOptions={field.options ?? []} category={values[definition.prefix + 'optCategory'] ?? ''} year={Number(values[definition.yearField])} required={field.required ?? false} value={values[field.id] ?? ''} error={displayLabel(errors[field.id] ?? '')} onchange={(value) => change(field.id, value)} />
 		{:else if field.type === 'money'}
 			<CurrencyInput id={field.id} label={displayLabel(field.label)} required={field.required ?? false} value={values[field.id] ?? ''} error={displayLabel(errors[field.id] ?? '')} onchange={(value) => change(field.id, value)} />
 		{:else if field.type === 'number'}
@@ -94,7 +94,7 @@
 			{#if field.options?.length === 2 && field.options.every(option => ['Y', 'N'].includes(option.value))}
 				<RadioGroup id={field.id} label={displayLabel(field.label)} required={field.required ?? false} options={field.options} value={values[field.id] ?? ''} error={displayLabel(errors[field.id] ?? '')} onchange={(value) => change(field.id, value)} />
 			{:else}
-				<Select id={field.id} label={displayLabel(field.label)} required={field.required ?? false} options={field.options ?? []} value={values[field.id] ?? ''} error={displayLabel(errors[field.id] ?? '')} onchange={(value) => change(field.id, value)} />
+				<Select disabled={individualYearEnd && ['itemYearEndMonth', 'itemFiscalStartMonth'].some(name => field.id === definition.prefix + name)} id={field.id} label={displayLabel(field.label)} required={field.required ?? false} options={field.options ?? []} value={values[field.id] ?? ''} error={displayLabel(errors[field.id] ?? '')} onchange={(value) => change(field.id, value)} />
 			{/if}
 		{:else if field.type === 'date'}
 			<DateInput id={field.id} label={displayLabel(field.label)} required={field.required ?? false} value={values[field.id] ?? ''} error={displayLabel(errors[field.id] ?? '')} onchange={(value) => change(field.id, value)} />
