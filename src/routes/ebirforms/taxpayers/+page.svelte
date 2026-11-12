@@ -1,4 +1,6 @@
 <script lang="ts">
+	import * as stylex from '@stylexjs/stylex';
+	import { styles } from './taxpayers.styles';
   import { onMount } from "svelte";
   import { resolve } from "$app/paths";
   import Menu from "$lib/components/ui/menu/menu.svelte";
@@ -101,14 +103,14 @@
 
 <svelte:head><title>eBIRForms</title></svelte:head>
 <Page size="full">
-  <header class="flex flex-wrap items-center justify-between gap-4 py-2">
+  <header class={stylex.attrs(styles.header).class}>
     <div>
-      <h1 class="font-sans text-2xl font-semibold tracking-tight">eBIRForms</h1>
-      <p class="mt-1 text-sm text-fg-muted">
+      <h1 class={stylex.attrs(styles.heading).class}>eBIRForms</h1>
+      <p class={stylex.attrs(styles.description).class}>
         Manage taxpayer profiles and tax returns. Select a taxpayer to open their tax returns.
       </p>
       {#if workspace.profileLoadState === "loaded"}
-        <p class="mt-1 text-xs text-fg-subtle">
+        <p class={stylex.attrs(styles.hint).class}>
           {workspace.profiles.length} saved {workspace.profiles.length === 1
             ? "taxpayer"
             : "taxpayers"}
@@ -123,26 +125,26 @@
   {#if workspace.profileLoadState === "error"}
     <section
       aria-labelledby="load-error-title"
-      class="rounded-panel border border-danger/30 bg-bg-elev p-5"
+      class={stylex.attrs(styles.loadError).class}
     >
       <div role="alert">
-        <h2 id="load-error-title" class="text-base font-semibold">
+        <h2 id="load-error-title" class={stylex.attrs(styles.errorHeading).class}>
           Could not load taxpayers
         </h2>
-        <p class="mt-2 text-sm text-fg-muted">{workspace.profileLoadError}</p>
-        <p class="mt-1 text-sm text-fg-muted">
+        <p class={stylex.attrs(styles.errorDescription).class}>{workspace.profileLoadError}</p>
+        <p class={stylex.attrs(styles.description).class}>
           {workspace.hasLoadedProfiles
             ? "Previously loaded taxpayers are hidden until their saved records can be checked."
             : "No saved taxpayer records have been loaded."}
         </p>
       </div>
-      <Button class="mt-4" onclick={() => void workspace.loadTaxpayerProfiles()}
+      <Button class={stylex.attrs(styles.retryAction).class} onclick={() => void workspace.loadTaxpayerProfiles()}
         >Retry</Button
       >
       {#if workspace.profileLoadErrorDetails}
-        <details class="mt-4 text-xs text-fg-muted">
-          <summary class="cursor-pointer">Technical details</summary>
-          <p class="mt-2 break-words font-mono">
+        <details class={stylex.attrs(styles.technicalDetails).class}>
+          <summary class={stylex.attrs(styles.technicalSummary).class}>Technical details</summary>
+          <p class={stylex.attrs(styles.technicalMessage).class}>
             {workspace.profileLoadErrorDetails}
           </p>
         </details>
@@ -151,16 +153,16 @@
   {:else if workspace.profileLoadState !== "loaded"}
     <p
       role="status"
-      class="rounded-panel border border-border bg-bg-elev p-8 text-sm text-fg-muted"
+      class={stylex.attrs(styles.emptyState).class}
     >
       Loading taxpayers…
     </p>
   {:else}
     {#if archivedNotice}
       <div
-        class="flex flex-wrap items-center justify-between gap-3 rounded-md border border-border bg-bg-elev px-4 py-3"
+        class={stylex.attrs(styles.archiveNotice).class}
       >
-        <p role="status" class="text-sm">
+        <p role="status" class={stylex.attrs(styles.status).class}>
           {archivedNotice.name} archived. Hidden from Active taxpayers; saved forms
           retained.
         </p>
@@ -183,7 +185,7 @@
       {#snippet cell(row, key)}
         {#if key === "name"}
           <a
-            class="font-medium text-fg underline-offset-4 hover:text-accent hover:underline focus-visible:underline"
+            class={stylex.attrs(styles.taxpayerLink).class}
             href={resolve("/ebirforms/taxpayers/[id]/forms", { id: row.id })}
             >{row.name}</a
           >
@@ -194,9 +196,9 @@
             >{row.status}</Badge
           >
         {:else if key === "tin"}
-          <span class="whitespace-nowrap font-mono text-xs">{row.tin}</span>
+          <span class={stylex.attrs(styles.tin).class}>{row.tin}</span>
         {:else}
-          <span class="text-fg-muted">{row[key]}</span>
+          <span class={stylex.attrs(styles.mutedCell).class}>{row[key]}</span>
         {/if}
       {/snippet}
       {#snippet actions(row)}
@@ -262,7 +264,7 @@
         </Menu>
       {/snippet}
     </RecordTable>
-    <p class="text-xs text-fg-muted" role="status" aria-live="polite">
+    <p class={stylex.attrs(styles.footerNote).class} role="status" aria-live="polite">
       {workspace.statusMessage}
     </p>
   {/if}
@@ -277,7 +279,7 @@
   closedByBackdrop={!deleting}
   closedByEscape={!deleting}
 >
-  {#if error}<p role="alert" class="text-sm text-danger">{error}</p>{/if}
+  {#if error}<p role="alert" class={stylex.attrs(styles.error).class}>{error}</p>{/if}
   {#snippet footer()}
     <Button
       variant="secondary"

@@ -1,4 +1,6 @@
 <script lang="ts">
+	import * as stylex from '@stylexjs/stylex';
+	import { wrapperStyles } from './date-input-wrapper.styles';
 	import { DateInput as PcstiDateInput } from '$lib/components/ui/date-input/base';
 	import Label from '../label/label.svelte';
 	import FieldErrors from '../field-errors/field-errors.svelte';
@@ -22,9 +24,9 @@
 	}
 </script>
 
-<div data-slot="date-input" class="grid min-w-0 gap-2">
+<div data-slot="date-input" class={stylex.attrs(wrapperStyles.root).class}>
 	{#if label}
-		<Label id={`${uid}-label`} for={id} class="text-fg-muted">{label}{#if required}<span class="text-danger" aria-hidden="true">*</span>{/if}</Label>
+		<Label id={`${uid}-label`} for={id} class={stylex.attrs(wrapperStyles.label).class}>{label}{#if required}<span class={stylex.attrs(wrapperStyles.required).class} aria-hidden="true">*</span>{/if}</Label>
 	{/if}
 	<PcstiDateInput
 		{id}

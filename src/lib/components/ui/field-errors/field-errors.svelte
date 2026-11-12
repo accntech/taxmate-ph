@@ -1,4 +1,6 @@
 <script lang="ts">
+	import * as stylex from '@stylexjs/stylex';
+	import { wrapperStyles } from './field-errors-wrapper.styles';
 	// Standalone presentation port of PCSTI's @erp/ui form-field-errors.svelte.
 	import type { HTMLAttributes } from 'svelte/elements';
 
@@ -12,7 +14,7 @@
 {#if errors.length > 0}
 	<div
 		data-slot="form-field-errors"
-		class={['grid gap-1 text-sm font-medium text-danger', className]}
+		class={[stylex.attrs(wrapperStyles.root).class, className]}
 		{...restProps}
 	>
 		{#each errors as error, index (`${index}-${error}`)}

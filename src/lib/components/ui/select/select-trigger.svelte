@@ -1,4 +1,6 @@
 <script lang="ts">
+	import * as stylex from '@stylexjs/stylex';
+	import { wrapperStyles } from './select-trigger-wrapper.styles';
 	// Adapted from PCSTI ERP's @erp/ui SelectTrigger.
 	import { Select as SelectPrimitive } from 'bits-ui';
 	import AltArrowDown from '@solar-icons/svelte/category/arrows/Linear/AltArrowDown.svelte';
@@ -14,14 +16,14 @@
 	bind:ref
 	data-slot="select-trigger"
 	class={[
-		'select-normal-size flex w-full min-w-0 items-center justify-between gap-2 rounded-md border border-border bg-bg-input px-3 py-1.5 text-left text-fg shadow-[var(--shadow-ui-sm)] outline-none transition-[color,box-shadow,border-color] disabled:cursor-not-allowed disabled:opacity-50',
+		["select-normal-size", stylex.attrs(wrapperStyles.root).class].join(' '),
 		'field-focus',
 		className
 	]}
 	{...rest}
 >
 	{@render children?.()}
-	<span class="shrink-0 text-fg-subtle" aria-hidden="true"
+	<span class={stylex.attrs(wrapperStyles.icon).class} aria-hidden="true"
 		><AltArrowDown size={16} color="currentColor" /></span
 	>
 </SelectPrimitive.Trigger>

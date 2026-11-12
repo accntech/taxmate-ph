@@ -1,4 +1,6 @@
 <script lang="ts">
+	import * as stylex from '@stylexjs/stylex';
+	import { wrapperStyles } from './tin-input-wrapper.styles';
 	// PCSTI TIN editing behavior with TaxMate's 9 + 5 digit identifier format.
 	import type { ComponentProps } from 'svelte';
 	import Input from '../input/input.svelte';
@@ -45,7 +47,7 @@
 	type="text"
 	inputmode="numeric"
 	maxlength={17}
-	class={['font-mono tabular-nums', className].filter(Boolean).join(' ')}
+	class={[stylex.attrs(wrapperStyles.control).class, className].filter(Boolean).join(' ')}
 	value={display}
 	onbeforeinput={(event) => {
 		if (event.data && /\D/.test(event.data) && event.inputType === 'insertText') event.preventDefault();

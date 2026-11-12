@@ -1,4 +1,6 @@
 <script lang="ts">
+	import * as stylex from '@stylexjs/stylex';
+	import { wrapperStyles } from './dialog-wrapper.styles';
 	import type { Snippet } from 'svelte';
 	import CloseCircle from '@solar-icons/svelte/category/ui/Linear/CloseCircle.svelte';
 
@@ -38,11 +40,11 @@
 	const titleId = `${uid}-title`;
 	const descId = `${uid}-desc`;
 	const showCloseButton = $derived(!hideCloseButton && (closedByBackdrop || closedByEscape));
-	const sizeClass: Record<Size, string> = {
-		sm: 'sm:max-w-sm',
-		md: 'sm:max-w-md',
-		lg: 'sm:max-w-lg',
-		xl: 'sm:max-w-2xl'
+	const sizeStyles: Record<Size, stylex.StyleXStyles> = {
+		sm: wrapperStyles.sm,
+		md: wrapperStyles.md,
+		lg: wrapperStyles.lg,
+		xl: wrapperStyles.xl
 	};
 
 	function setOpen(next: boolean) {
@@ -124,51 +126,42 @@
 	onclick={onDialogClick}
 	aria-labelledby={title ? titleId : undefined}
 	aria-describedby={description ? descId : undefined}
-	class={[
-		'focus:outline-none focus-visible:[box-shadow:none]',
-		'fixed inset-x-0 bottom-0 top-auto m-0 h-auto max-h-[90dvh] w-dvw max-w-none',
-		'border-0 bg-transparent p-0 text-fg',
-		'sm:inset-0 sm:m-auto sm:h-fit',
-		'sm:max-h-[calc(100dvh-2rem)] sm:w-[calc(100vw-2rem)]',
-		sizeClass[size]
-	]}
+	class={stylex.attrs(wrapperStyles.focus, wrapperStyles.root, wrapperStyles.surface, wrapperStyles.centered, wrapperStyles.desktopBounds, sizeStyles[size]).class}
 >
 	<div
 		class={[
-			'relative flex max-h-[90dvh] flex-col overflow-hidden rounded-t-xl border',
-			'border-border bg-bg-elev shadow-lg sm:max-h-[calc(100dvh-2rem)] sm:rounded-xl',
-			layout === 'command' ? 'p-0' : 'p-5',
+			stylex.attrs(wrapperStyles.panel, wrapperStyles.panelSurface, layout === 'command' ? wrapperStyles.commandPadding : wrapperStyles.defaultPadding).class,
 			className
 		]}
 	>
-		{#if layout !== 'command'}<div class="mx-auto mb-3 h-1 w-9 flex-none rounded-full bg-fg-subtle/40 sm:hidden"></div>{/if}
+		{#if layout !== 'command'}<div class={stylex.attrs(wrapperStyles.dragHandle).class}></div>{/if}
 		{#if showCloseButton}
 			<button
 				type="button"
 				aria-label="Close"
 				onclick={() => setOpen(false)}
-				class="absolute right-3 top-3 hidden size-7 place-items-center rounded-md text-fg-subtle transition hover:bg-bg-hover hover:text-fg sm:grid"
+				class={stylex.attrs(wrapperStyles.closeButton).class}
 			>
 				<CloseCircle size={17} color="currentColor" aria-hidden="true" />
 			</button>
 		{/if}
 		{#if title}
-			<h2 id={titleId} class={layout === 'command' ? 'sr-only' : 'm-0 text-[15px] font-semibold tracking-tight text-fg'}>
+			<h2 id={titleId} class={layout === 'command' ? stylex.attrs(wrapperStyles.hiddenHeading).class : stylex.attrs(wrapperStyles.title).class}>
 				{title}
 			</h2>
 		{/if}
 		{#if description}
-			<p id={descId} class={layout === 'command' ? 'sr-only' : `text-[13px] leading-snug text-fg-subtle ${title ? 'mt-1.5' : ''}`}>
+			<p id={descId} class={layout === 'command' ? stylex.attrs(wrapperStyles.hiddenHeading).class : stylex.attrs(wrapperStyles.description, !!title && wrapperStyles.descriptionSpacing).class}>
 				{description}
 			</p>
 		{/if}
 		{#if children}
-			<div class={layout === 'command' ? 'flex min-h-0 flex-col overflow-hidden' : `-mx-5 min-h-0 flex-1 overflow-y-auto px-5 ${title || description ? 'mt-4' : ''}`}>
+			<div class={layout === 'command' ? stylex.attrs(wrapperStyles.commandBody).class : stylex.attrs(wrapperStyles.body, !!(title || description) && wrapperStyles.bodySpacing).class}>
 				{@render children()}
 			</div>
 		{/if}
 		{#if footer}
-			<div class="mt-5 flex flex-wrap justify-end gap-2">
+			<div class={stylex.attrs(wrapperStyles.footer).class}>
 				{@render footer()}
 			</div>
 		{/if}

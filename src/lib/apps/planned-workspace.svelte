@@ -1,4 +1,6 @@
 <script lang="ts">
+	import * as stylex from "@stylexjs/stylex";
+	const styles = stylex.create({ container: { containerType: "inline-size" } });
 	import type { Snippet } from 'svelte';
 	import { resolve } from '$app/paths';
 	import { Badge, ButtonLink, Page } from '$lib/components/ui';
@@ -17,7 +19,7 @@
 	} = $props();
 </script>
 
-<Page size="lg" class="@container">
+<Page size="lg" class={stylex.attrs(styles.container).class}>
 	<div class="planned-workspace">
 		<header class="workspace-heading">
 			<div class="workspace-title">

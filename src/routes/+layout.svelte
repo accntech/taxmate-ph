@@ -1,4 +1,6 @@
 <script lang="ts">
+	import * as stylex from '@stylexjs/stylex';
+	import { styles } from './layout.styles';
 	import { page } from '$app/state';
 	import {
 		listSuiteNavItems,
@@ -90,7 +92,7 @@
 </script>
 
 {#snippet appIcon(id: SuiteNavItem['id'], size = 18)}
-	<span class="grid size-5 place-items-center" aria-hidden="true">
+	<span class={stylex.attrs(styles.appIcon).class} aria-hidden="true">
 		{#if id === 'home'}
 			<Home2 {size} color="currentColor" />
 		{:else if id === 'ebirforms'}
@@ -125,45 +127,30 @@
 	>
 		{#snippet content({ collapsed: sidebarCollapsed })}
 			<span
-				class={[
-					'sidebar-reveal-anim px-2.5 text-[11px] font-semibold uppercase text-fg-subtle',
-					sidebarCollapsed && 'max-w-0 opacity-0'
-				]}
+				class={["sidebar-reveal-anim", (sidebarCollapsed ? stylex.attrs(styles.workspaceLabel, styles.collapsedLabel).class : stylex.attrs(styles.workspaceLabel).class)]}
 			>
 				Workspaces
 			</span>
 			{#each navItems as item (item.id)}
 				<a
 					aria-current={isCurrent(item) ? 'page' : undefined}
-					class={[
-						'sidebar-row-anim group/nav grid items-center rounded-md border border-transparent text-fg-muted',
-						'hover:bg-bg-hover hover:text-fg active:scale-[0.98]',
-						'focus-visible:border-accent focus-visible:shadow-[0_0_0_3px_var(--ring)]',
-						sidebarCollapsed
-							? 'mx-auto size-11 grid-cols-[1.25rem_0fr] justify-center gap-0 p-0'
-							: 'grid min-h-13 grid-cols-[auto_minmax(0,1fr)] gap-3 px-3 py-2',
-						isCurrent(item) &&
-							(sidebarCollapsed
-								? 'bg-accent-soft text-accent'
-								: 'border-border bg-bg-elev text-fg shadow-[var(--shadow-ui-sm)]')
-					]}
+					class={["sidebar-row-anim", (sidebarCollapsed
+						? (isCurrent(item) ? stylex.attrs(styles.navigationRow, styles.collapsedNavigation, styles.activeCollapsedNavigation).class : stylex.attrs(styles.navigationRow, styles.collapsedNavigation).class)
+						: (isCurrent(item) ? stylex.attrs(styles.navigationRow, styles.expandedNavigation, styles.activeNavigation).class : stylex.attrs(styles.navigationRow, styles.expandedNavigation).class))]}
 					href={item.href}
 				>
 					{@render appIcon(item.id)}
 					<span
-						class={[
-							'sidebar-reveal-anim grid min-w-0',
-							sidebarCollapsed && 'max-w-0 opacity-0'
-						]}
+						class={["sidebar-reveal-anim", (sidebarCollapsed ? stylex.attrs(styles.navigationCopy, styles.collapsedLabel).class : stylex.attrs(styles.navigationCopy).class)]}
 					>
-						<span class="grid w-[11.75rem] gap-1">
-							<span class="flex min-w-0 items-center justify-between gap-2">
-								<span class="truncate">{item.name}</span>
+						<span class={stylex.attrs(styles.navigationDetails).class}>
+							<span class={stylex.attrs(styles.navigationHeading).class}>
+								<span class={stylex.attrs(styles.truncatedLabel).class}>{item.name}</span>
 								<Badge tone={item.status === 'placeholder' ? 'neutral' : 'accent'} size="sm">
 									{item.stepLabel}
 								</Badge>
 							</span>
-							<span class="text-xs leading-snug whitespace-normal text-fg-subtle">
+							<span class={stylex.attrs(styles.navigationDescription).class}>
 								{item.description}
 							</span>
 						</span>
@@ -174,31 +161,19 @@
 		{/snippet}
 
 		{#snippet footer({ collapsed: sidebarCollapsed })}
-			<div class="p-3">
+			<div class={stylex.attrs(styles.footer).class}>
 				<a
 					href="/settings"
 					aria-current={onSettings ? 'page' : undefined}
-					class={[
-						'sidebar-row-anim group/nav grid items-center rounded-md border border-transparent text-fg-muted',
-						'hover:bg-bg-hover hover:text-fg active:scale-[0.98]',
-						'focus-visible:border-accent focus-visible:shadow-[0_0_0_3px_var(--ring)]',
-						sidebarCollapsed
-							? 'mx-auto size-11 grid-cols-[1.25rem_0fr] justify-center gap-0 p-0'
-							: 'min-h-11 grid-cols-[auto_minmax(0,1fr)] gap-3 px-3 py-2',
-						onSettings &&
-							(sidebarCollapsed
-								? 'bg-accent-soft text-accent'
-								: 'border-border bg-bg-elev text-fg shadow-[var(--shadow-ui-sm)]')
-					]}
+					class={["sidebar-row-anim", (sidebarCollapsed
+						? (onSettings ? stylex.attrs(styles.navigationRow, styles.collapsedNavigation, styles.activeCollapsedNavigation).class : stylex.attrs(styles.navigationRow, styles.collapsedNavigation).class)
+						: (onSettings ? stylex.attrs(styles.navigationRow, styles.expandedSettings, styles.activeNavigation).class : stylex.attrs(styles.navigationRow, styles.expandedSettings).class))]}
 				>
-					<span class="grid size-5 shrink-0 place-items-center" aria-hidden="true">
+					<span class={stylex.attrs(styles.settingsIcon).class} aria-hidden="true">
 						<Settings size={18} color="currentColor" />
 					</span>
 					<span
-						class={[
-							'sidebar-reveal-anim min-w-0 truncate text-sm font-medium',
-							sidebarCollapsed && 'max-w-0 opacity-0'
-						]}
+						class={["sidebar-reveal-anim", (sidebarCollapsed ? stylex.attrs(styles.settingsLabel, styles.collapsedLabel).class : stylex.attrs(styles.settingsLabel).class)]}
 					>
 						Settings
 					</span>
@@ -207,7 +182,7 @@
 		{/snippet}
 	</Sidebar>
 
-	<div class="min-w-0">
+	<div class={stylex.attrs(styles.mainColumn).class}>
 		<main id="main-content" class="app-main" tabindex="-1">
 			{@render children()}
 		</main>

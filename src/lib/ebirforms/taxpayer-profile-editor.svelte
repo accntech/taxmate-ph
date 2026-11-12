@@ -1,4 +1,6 @@
 <script lang="ts">
+	import * as stylex from '@stylexjs/stylex';
+	import { profileEditor } from './taxpayer-profile-editor.styles';
 	import { onMount, tick } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
@@ -78,7 +80,7 @@
 </svelte:head>
 
 <Page size="md">
-	<ButtonLink href="/ebirforms/taxpayers" variant="ghost" size="sm" class="w-fit">
+	<ButtonLink href="/ebirforms/taxpayers" variant="ghost" size="sm" class={stylex.attrs(profileEditor.backLink).class}>
 		Back to taxpayers
 	</ButtonLink>
 	{#if !ready}
@@ -88,7 +90,7 @@
 	{:else if notFound}
 		<Card>
 			<h1>Taxpayer not found</h1>
-			<p class="mt-2 text-sm text-fg-muted">
+			<p class={stylex.attrs(profileEditor.loadError).class}>
 				This profile is unavailable. Return to the taxpayer list to select a profile.
 			</p>
 		</Card>
@@ -138,7 +140,7 @@
 								placeholder="000-000-000-00000"
 								value={tinInput}
 								onchange={updateTinParts}
-								class="font-mono" />
+								class={stylex.attrs(profileEditor.tin).class} />
 						</div>
 						<Input
 							label="RDO code"

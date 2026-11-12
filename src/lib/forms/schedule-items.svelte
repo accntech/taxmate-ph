@@ -1,4 +1,6 @@
 <script lang="ts">
+	import * as stylex from '@stylexjs/stylex';
+	import { scheduleItems } from './schedule-items.styles';
 	import { onDestroy, tick, type Snippet } from 'svelte';
 	import { flip } from 'svelte/animate';
 	import { cubicOut } from 'svelte/easing';
@@ -363,7 +365,7 @@
 			<div class="add-row"><Button id={addId} aria-label={`Add line item to ${schedule.title}`} variant="secondary" size="sm" disabled={!nextDraft} onclick={(event) => edit(undefined, undefined, event.currentTarget)}>Add line item</Button>{#if !nextDraft}<span class="help">All available lines are in use.</span>{/if}</div>
 		{/if}
 		{#if removed}<div class="eq-undo"><span>Line item removed.</span><Button variant="ghost" size="sm" onclick={undo}>Undo</Button></div>{/if}
-		<p class="sr-only" role="status">{announcement}</p>
+		<p class={stylex.attrs(scheduleItems.announcement).class} role="status">{announcement}</p>
 	</section>
 	{@render totals?.()}
 </details>
@@ -374,7 +376,7 @@
 			{#if isNew && !reorderable}<Select id={`${uid}-assigned-row`} label="Schedule row" required options={availableRows.map(row => ({ value: row.id, label: row.label }))} value={editingRowId} onchange={selectAssignedRow} />{/if}
 			{#if contextErrors.length}<div role="alert" class="error">{#each contextErrors as [id, message] (id)}<p>{message}</p>{/each}</div>{/if}
 			<fieldset class="editor-row" aria-label={`${schedule.title}: ${editorRow.label}`}>
-				<legend class="sr-only">{editorRow.label}</legend>
+				<legend class={stylex.attrs(scheduleItems.announcement).class}>{editorRow.label}</legend>
 				{#each editorRow.fields as field (field.id)}{@render control(field)}{/each}
 			</fieldset>
 		</div>

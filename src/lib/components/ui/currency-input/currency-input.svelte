@@ -1,4 +1,6 @@
 <script lang="ts">
+	import * as stylex from '@stylexjs/stylex';
+	import { wrapperStyles } from './currency-input-wrapper.styles';
 	import type { ComponentProps } from 'svelte';
 	import Input from '../input/input.svelte';
 	import { commitCurrencyInput, currencyInputError, formatCurrencyInput, normalizeCurrencyInput } from './currency';
@@ -46,7 +48,7 @@
 		error={formatError || error}
 		type="text"
 		inputmode="decimal"
-		class={['text-right tabular-nums', className].filter(Boolean).join(' ')}
+		class={[stylex.attrs(wrapperStyles.control).class, className].filter(Boolean).join(' ')}
 		onfocus={(event) => {
 			if (!readonly) {
 				// PCSTI focuses the ungrouped amount and selects it for replacement.
@@ -67,6 +69,6 @@
 		}}
 		onblur={(event) => { blur(); onblur?.(event); }}
 	>
-		{#snippet leading()}<span aria-hidden="true" class="text-fg-subtle">₱</span>{/snippet}
+		{#snippet leading()}<span aria-hidden="true" class={stylex.attrs(wrapperStyles.symbol).class}>₱</span>{/snippet}
 	</Input>
 </div>

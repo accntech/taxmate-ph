@@ -1,4 +1,6 @@
 <script lang="ts">
+	import * as stylex from '@stylexjs/stylex';
+	import { wrapperStyles } from './sidebar-wrapper.styles';
 	import { onMount, untrack, type Snippet } from 'svelte';
 	import AltArrowDown from '@solar-icons/svelte/category/arrows/Linear/AltArrowDown.svelte';
 
@@ -93,47 +95,47 @@
 </script>
 
 <aside
-	class="sidebar group/sb fixed left-0 top-0 z-50 flex h-dvh max-h-dvh w-[17.5rem] flex-col overflow-hidden border-r border-border bg-bg shadow-[12px_0_32px_-16px_rgba(0,0,0,0.4)] max-md:-translate-x-full max-md:transition-transform max-md:duration-220 max-md:data-[mobile-open=true]:translate-x-0 md:sticky md:left-auto md:z-30 md:w-auto md:shadow-none md:data-[state=collapsed]:overflow-visible"
+	class="sidebar group/sb {stylex.attrs(wrapperStyles.root).class}"
 	data-state={dataState}
 	data-mobile-open={mobileOpen ? 'true' : undefined}
 	aria-label={ariaLabel}
 >
 	{#if header}
-		<header class="sidebar-row-anim flex h-16 flex-none items-center gap-2.5 px-5 group-data-[state=collapsed]/sb:gap-0 group-data-[state=collapsed]/sb:px-3.5">
+		<header class="sidebar-row-anim {stylex.attrs(wrapperStyles.header).class}">
 			{@render header(ctx)}
 		</header>
 	{/if}
 
-	<div class="relative flex min-h-0 flex-1 flex-col">
+	<div class={stylex.attrs(wrapperStyles.scrollFrame).class}>
 		<nav
 			bind:this={navEl}
 			onscroll={updateFades}
-			class="sidebar-body flex min-h-0 flex-1 flex-col gap-1 overflow-x-hidden overflow-y-auto overscroll-contain p-[8px_14px] group-data-[state=collapsed]/sb:gap-1.5 group-data-[state=collapsed]/sb:py-3"
+			class="sidebar-body {stylex.attrs(wrapperStyles.navigation).class}"
 			onclickcapture={handleLinkClick}
 		>
 			{@render content?.(ctx)}
 		</nav>
 		<div
-			class="pointer-events-none absolute inset-x-0 top-0 z-10 flex h-6 items-start justify-center bg-linear-to-b from-bg to-transparent pt-0.5 opacity-0 transition-opacity data-show:opacity-100"
+			class={stylex.attrs(wrapperStyles.scrollUpFade).class}
 			data-show={canScrollUp || undefined}
 			aria-hidden="true"
 		>
-			<span class="rotate-180 text-fg-subtle">
+			<span class={stylex.attrs(wrapperStyles.scrollUpIcon).class}>
 				<AltArrowDown size={13} color="currentColor" />
 			</span>
 		</div>
 		<div
-			class="pointer-events-none absolute inset-x-0 bottom-0 z-10 flex h-6 items-end justify-center bg-linear-to-t from-bg to-transparent pb-0.5 opacity-0 transition-opacity data-show:opacity-100"
+			class={stylex.attrs(wrapperStyles.scrollDownFade).class}
 			data-show={canScrollDown || undefined}
 			aria-hidden="true"
 		>
-			<span class="text-fg-subtle">
+			<span class={stylex.attrs(wrapperStyles.scrollDownIcon).class}>
 				<AltArrowDown size={13} color="currentColor" />
 			</span>
 		</div>
 	</div>
 
-	<footer class="flex-none border-t border-border-soft" onclickcapture={handleLinkClick}>
+	<footer class={stylex.attrs(wrapperStyles.footer).class} onclickcapture={handleLinkClick}>
 		{@render footer?.(ctx)}
 	</footer>
 </aside>
@@ -141,7 +143,7 @@
 {#if mobileOpen && isMobile}
 	<button
 		type="button"
-		class="fixed inset-0 z-40 bg-black/45 md:hidden"
+		class={stylex.attrs(wrapperStyles.backdrop).class}
 		aria-label="Close sidebar"
 		onclick={() => (mobileOpen = false)}
 	></button>

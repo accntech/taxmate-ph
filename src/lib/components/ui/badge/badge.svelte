@@ -1,4 +1,6 @@
 <script lang="ts">
+	import * as stylex from '@stylexjs/stylex';
+	import { wrapperStyles } from './badge-wrapper.styles';
 	import type { Snippet } from 'svelte';
 
 	type Tone = 'neutral' | 'accent' | 'success' | 'warn' | 'danger' | 'info';
@@ -15,26 +17,20 @@
 		children?: Snippet;
 	} = $props();
 
-	const toneClass: Record<Tone, string> = {
-		neutral: 'border-border bg-bg-elev-2 text-fg-muted',
-		accent: 'border-accent/25 bg-accent-soft text-accent',
-		success: 'border-success/25 bg-success-soft text-success',
-		warn: 'border-warn/25 bg-warn-soft text-warn',
-		danger: 'border-danger/25 bg-danger-soft text-danger',
-		info: 'border-info/25 bg-info-soft text-info'
+	const toneStyles: Record<Tone, stylex.StyleXStyles> = {
+		neutral: wrapperStyles.neutral,
+		accent: wrapperStyles.accent,
+		success: wrapperStyles.success,
+		warn: wrapperStyles.warn,
+		danger: wrapperStyles.danger,
+		info: wrapperStyles.info
 	};
 
-	const sizeClass = $derived(size === 'sm' ? 'min-h-6 px-2 text-[11px]' : 'min-h-7 px-2.5 text-xs');
+	const sizeStyle = $derived(size === 'sm' ? wrapperStyles.small : wrapperStyles.medium);
 </script>
 
 <span
-	class={[
-		'inline-flex w-fit items-center gap-1 rounded-md border font-semibold leading-none',
-		'whitespace-nowrap',
-		toneClass[tone],
-		sizeClass,
-		className
-	]}
+	class={[stylex.attrs(toneStyles[tone], sizeStyle, wrapperStyles.root, wrapperStyles.singleLine).class, className]}
 >
 	{@render children?.()}
 </span>

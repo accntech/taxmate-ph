@@ -1,4 +1,6 @@
 <script lang="ts">
+	import * as stylex from '@stylexjs/stylex';
+	import { wrapperStyles } from './radio-group-wrapper.styles';
 	import { FieldErrors } from '../field-errors';
 
 	let {
@@ -37,7 +39,7 @@
 	{disabled}
 >
 	<legend id={`${uid}-legend`}>
-		{label}{#if required}<span class="text-danger" aria-hidden="true"> *</span>{/if}
+		{label}{#if required}<span class={stylex.attrs(wrapperStyles.required).class} aria-hidden="true"> *</span>{/if}
 	</legend>
 	<div class="choices">
 		{#each options as option, index (option.value)}

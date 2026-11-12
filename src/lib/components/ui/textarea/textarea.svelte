@@ -1,4 +1,6 @@
 <script lang="ts">
+	import * as stylex from '@stylexjs/stylex';
+	import { wrapperStyles } from './textarea-wrapper.styles';
 	import type { HTMLTextareaAttributes } from 'svelte/elements';
 	import { Textarea as PcstiTextarea } from '$lib/components/ui/textarea/base';
 	import { Label } from '../label';
@@ -30,10 +32,10 @@
 	);
 </script>
 
-<div data-slot="form-item" class="grid min-w-0 gap-2">
+<div data-slot="form-item" class={stylex.attrs(wrapperStyles.field).class}>
 	{#if label}
-		<Label for={controlId} class="text-fg-muted">
-			{label}{#if rest.required}<span class="text-danger" aria-hidden="true">*</span>{/if}
+		<Label for={controlId} class={stylex.attrs(wrapperStyles.label).class}>
+			{label}{#if rest.required}<span class={stylex.attrs(wrapperStyles.required).class} aria-hidden="true">*</span>{/if}
 		</Label>
 	{/if}
 	<PcstiTextarea
@@ -48,6 +50,6 @@
 	{#if error}
 		<FieldErrors id={helpId} errors={[error]} />
 	{:else if help}
-		<p id={helpId} class="text-xs text-fg-subtle">{help}</p>
+		<p id={helpId} class={stylex.attrs(wrapperStyles.help).class}>{help}</p>
 	{/if}
 </div>

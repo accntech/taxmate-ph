@@ -1,4 +1,6 @@
 <script lang="ts">
+	import * as stylex from '@stylexjs/stylex';
+	import { wrapperStyles } from './drawer-wrapper.styles';
 	import type { Snippet } from 'svelte';
 	import CloseCircle from '@solar-icons/svelte/category/ui/Linear/CloseCircle.svelte';
 
@@ -39,12 +41,12 @@
 	const titleId = `${uid}-title`;
 	const descId = `${uid}-desc`;
 	const showCloseButton = $derived(!hideCloseButton && (closedByBackdrop || closedByEscape));
-	const sideClass = $derived(side === 'right' ? 'right-0 left-auto' : 'left-0 right-auto');
-	const sizeClass: Record<Size, string> = {
-		sm: 'sm:max-w-sm',
-		md: 'sm:max-w-md',
-		lg: 'sm:max-w-lg',
-		xl: 'sm:max-w-2xl'
+	const sideStyle = $derived(side === 'right' ? wrapperStyles.right : wrapperStyles.left);
+	const sizeStyles: Record<Size, stylex.StyleXStyles> = {
+		sm: wrapperStyles.sm,
+		md: wrapperStyles.md,
+		lg: wrapperStyles.lg,
+		xl: wrapperStyles.xl
 	};
 
 	function setOpen(next: boolean) {
@@ -100,34 +102,27 @@
 	onclick={onDialogClick}
 	aria-labelledby={title ? titleId : undefined}
 	aria-describedby={description ? descId : undefined}
-	class={[
-		'focus:outline-none focus-visible:[box-shadow:none]',
-		'fixed inset-y-0 m-0 h-dvh max-h-none w-dvw max-w-none border-0 bg-transparent p-0',
-		'text-fg opacity-0 transition-[opacity,translate] backdrop:bg-black/45 open:opacity-100',
-		sideClass,
-		sizeClass[size]
-	]}
+	class={stylex.attrs(wrapperStyles.focus, wrapperStyles.root, wrapperStyles.visibility, sideStyle, sizeStyles[size]).class}
 >
 	<div
 		class={[
-			'relative flex h-dvh min-h-0 flex-col overflow-hidden border border-border bg-bg-elev',
-			'shadow-xl',
+			stylex.attrs(wrapperStyles.panel, wrapperStyles.panelShadow).class,
 			className
 		]}
 	>
 		{#if header}
-			<div class="flex-none border-b border-border-soft p-5 {showCloseButton ? 'pr-12' : ''}">
+			<div class={stylex.attrs(wrapperStyles.header, showCloseButton && wrapperStyles.headerWithClose).class}>
 				{@render header()}
 			</div>
 		{:else if title || description}
-			<div class="flex-none border-b border-border-soft p-5 {showCloseButton ? 'pr-12' : ''}">
+			<div class={stylex.attrs(wrapperStyles.header, showCloseButton && wrapperStyles.headerWithClose).class}>
 				{#if title}
-					<h2 id={titleId} class="m-0 text-[15px] font-semibold tracking-tight text-fg">
+					<h2 id={titleId} class={stylex.attrs(wrapperStyles.title).class}>
 						{title}
 					</h2>
 				{/if}
 				{#if description}
-					<p id={descId} class="text-[13px] leading-snug text-fg-subtle {title ? 'mt-1.5' : ''}">
+					<p id={descId} class={stylex.attrs(wrapperStyles.description, !!title && wrapperStyles.descriptionSpacing).class}>
 						{description}
 					</p>
 				{/if}
@@ -138,18 +133,18 @@
 				type="button"
 				aria-label="Close"
 				onclick={() => setOpen(false)}
-				class="absolute right-3 top-3 z-20 grid size-7 place-items-center rounded-md text-fg-subtle transition hover:bg-bg-hover hover:text-fg"
+				class={stylex.attrs(wrapperStyles.closeButton).class}
 			>
 				<CloseCircle size={17} color="currentColor" aria-hidden="true" />
 			</button>
 		{/if}
 		{#if children}
-			<div class="min-h-0 flex-1 overflow-y-auto">
+			<div class={stylex.attrs(wrapperStyles.body).class}>
 				{@render children()}
 			</div>
 		{/if}
 		{#if footer}
-			<div class="flex flex-none justify-end gap-2 border-t border-border-soft p-4">
+			<div class={stylex.attrs(wrapperStyles.footer).class}>
 				{@render footer()}
 			</div>
 		{/if}

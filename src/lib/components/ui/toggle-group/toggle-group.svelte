@@ -1,4 +1,6 @@
 <script lang="ts" generics="T extends string">
+	import * as stylex from '@stylexjs/stylex';
+	import { wrapperStyles } from './toggle-group-wrapper.styles';
 	type Option<TValue extends string> = {
 		value: TValue;
 		label: string;
@@ -35,8 +37,7 @@
 	role="group"
 	aria-label={ariaLabel}
 	class={[
-		'relative inline-flex items-stretch gap-0',
-		variant === 'outline' && 'min-h-8 rounded-md border border-border bg-bg-elev-2 p-0.5',
+		stylex.attrs(wrapperStyles.root, variant === 'outline' && wrapperStyles.outlined).class,
 		className
 	]}
 >
@@ -47,19 +48,9 @@
 			aria-label={option.label}
 			aria-pressed={pressed}
 			onclick={() => select(option.value)}
-			class={[
-				'relative z-1 grid place-items-center rounded-sm border border-transparent px-2',
-				'transition-[color,background-color,border-color,box-shadow] duration-150 outline-none',
-				'focus-visible:border-[color-mix(in_oklch,var(--accent)_60%,var(--border))]',
-				'focus-visible:shadow-[0_0_0_3px_color-mix(in_oklch,var(--accent)_18%,transparent)]',
-				variant === 'outline'
-					? pressed
-						? 'bg-bg-elev text-fg shadow-sm'
-						: 'text-fg-muted hover:text-fg'
-					: pressed
-						? 'bg-bg-hover text-fg'
-						: 'text-fg-subtle hover:bg-bg-hover hover:text-fg'
-			]}
+			class={stylex.attrs(wrapperStyles.option, wrapperStyles.motion, wrapperStyles.focusBorder, wrapperStyles.focusHalo,
+				variant === 'outline' ? pressed ? wrapperStyles.pressedOutline : wrapperStyles.idleOutline : pressed ? wrapperStyles.pressedGhost : wrapperStyles.idleGhost
+			).class}
 		>
 			{#if option.icon}
 				<span class={option.icon} aria-hidden="true"></span>

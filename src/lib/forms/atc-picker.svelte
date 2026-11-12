@@ -1,4 +1,6 @@
 <script lang="ts">
+	import * as stylex from '@stylexjs/stylex';
+	import { atcPicker } from './atc-picker.styles';
 	import { Combobox } from '$lib/components/ui/combobox';
 	import { Label, FieldErrors } from '$lib/components/ui';
 	import { get1601EQATCDescription, get1601EQRate } from './form-1601-eq/form-1601-eq-atcs';
@@ -40,9 +42,9 @@
 	const describedBy = $derived([selectedDescription && descriptionId, error && errorId].filter(Boolean).join(' ') || undefined);
 </script>
 
-<div class="grid min-w-0 gap-2" data-slot="form-item">
-	<Label for={id} class="text-fg-muted">
-		{label}{#if required}<span class="text-danger" aria-hidden="true">*</span>{/if}
+<div class={stylex.attrs(atcPicker.field).class} data-slot="form-item">
+	<Label for={id} class={stylex.attrs(atcPicker.label).class}>
+		{label}{#if required}<span class={stylex.attrs(atcPicker.required).class} aria-hidden="true">*</span>{/if}
 	</Label>
 	<Combobox
 		{id}
@@ -62,19 +64,19 @@
 		onCreate={(query) => { if (query.trim()) onchange(query.trim().toUpperCase()); }}
 		onValueChange={(code) => onchange(typeof code === 'string' ? code : '')}
 	>
-		{#snippet trigger(option)}<span class="truncate">{option.label}</span>{/snippet}
+		{#snippet trigger(option)}<span class={stylex.attrs(atcPicker.selectedLabel).class}>{option.label}</span>{/snippet}
 		{#snippet option(option, matchedText)}
-			<span class="grid min-w-0 text-left">
-				<span class="flex items-center gap-2 font-medium">
+			<span class={stylex.attrs(atcPicker.option).class}>
+				<span class={stylex.attrs(atcPicker.optionHeading).class}>
 					<span>{@render matchedText('label')}</span>
-					{#if option.badge}<span class="rounded-sm bg-accent-soft px-1.5 text-xs text-fg-muted">{@render matchedText('badge')}</span>{/if}
+					{#if option.badge}<span class={stylex.attrs(atcPicker.badge).class}>{@render matchedText('badge')}</span>{/if}
 				</span>
-				<span class="truncate text-xs text-fg-muted">{@render matchedText('secondary')}</span>
+				<span class={stylex.attrs(atcPicker.optionDescription).class}>{@render matchedText('secondary')}</span>
 			</span>
 		{/snippet}
 	</Combobox>
 	{#if selectedDescription}
-		<p id={descriptionId} class="text-xs text-fg-muted">{selectedDescription}</p>
+		<p id={descriptionId} class={stylex.attrs(atcPicker.description).class}>{selectedDescription}</p>
 	{/if}
 	{#if error}<FieldErrors id={errorId} errors={[error]} />{/if}
 </div>
