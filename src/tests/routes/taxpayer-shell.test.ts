@@ -3,6 +3,7 @@ import { createRawSnippet } from 'svelte';
 import { describe, expect, it, vi } from 'vitest';
 const { route } = vi.hoisted(() => ({ route: { url: new URL('http://localhost/ebirforms/taxpayers'), get params() { const parts = this.url.pathname.split('/'); return { id: parts[3], formCode: parts[5] }; } } }));
 vi.mock('$app/state', () => ({ page: route }));
+vi.mock('$lib/ebirforms/ebirforms-workspace.svelte', () => ({ ebirformsWorkspace: { profiles: [] } }));
 import Layout from '../../routes/+layout.svelte';
 const children = createRawSnippet(() => ({ render: () => '<div>Page content</div>' }));
 
@@ -25,7 +26,7 @@ describe('topbar breadcrumbs', () => {
  function breadcrumbs(path: string) {
   route.url = new URL(`http://localhost${path}`);
   const { body } = render(Layout, { props: { children } });
-  return [...body.matchAll(/<nav[^>]*>([\s\S]*?)<\/nav>/g)].at(-1)?.[1] ?? '';
+  return body.match(/<nav[^>]*aria-label="Breadcrumb"[^>]*>([\s\S]*?)<\/nav>/)?.[1] ?? '';
  }
  it('links the returns page to its taxpayer and directory without suite branding', () => {
   const nav = breadcrumbs('/ebirforms/taxpayers/1234567890000/forms');

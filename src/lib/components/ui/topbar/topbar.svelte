@@ -16,7 +16,9 @@
 	} = $props();
 </script>
 
-<header
+<div
+	data-app-topbar
+	data-tauri-drag-region
 	class="sticky top-0 z-20 flex min-h-14 items-center gap-3.5 border-b border-border-soft bg-bg/95 px-4 py-3 backdrop-blur lg:px-7"
 >
 	<button
@@ -28,7 +30,7 @@
 		<SidebarMinimalistic size={18} color="currentColor" aria-hidden="true" />
 	</button>
 
-	<nav aria-label="Breadcrumb" class="hidden min-w-0 flex-1 items-center gap-2 text-[13px] text-fg-muted md:flex">
+	<nav data-tauri-drag-region aria-label="Breadcrumb" class="hidden min-w-0 flex-1 items-center gap-2 text-[13px] text-fg-muted md:flex">
 		{#each crumbs as crumb, index (index)}
 			{#if index > 0}
 				<span class="text-fg-subtle" aria-hidden="true">/</span>
@@ -41,13 +43,13 @@
 					{crumb.label}
 				</a>
 			{:else}
-				<span aria-current={index === crumbs.length - 1 ? 'page' : undefined} class="truncate text-fg-subtle last:text-fg last:font-medium">{crumb.label}</span>
+				<span data-tauri-drag-region aria-current={index === crumbs.length - 1 ? 'page' : undefined} class="truncate text-fg-subtle last:text-fg last:font-medium">{crumb.label}</span>
 			{/if}
 		{/each}
 	</nav>
 
-	<div class="ml-auto flex items-center gap-2">
+	<div data-tauri-drag-region class="ml-auto flex items-center gap-2">
 		{@render shortcuts?.()}
 		{@render actions?.()}
 	</div>
-</header>
+</div>

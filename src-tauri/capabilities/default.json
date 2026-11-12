@@ -7,11 +7,17 @@
   ],
   "permissions": [
     "core:default",
+    "core:window:allow-set-theme",
+    "core:window:allow-start-dragging",
     "core:webview:allow-print",
     "opener:default",
     {
       "identifier": "opener:allow-open-path",
-      "allow": [{ "path": "**/*.[pP][dD][fF]" }]
+      "allow": [
+        {
+          "path": "**/*.[pP][dD][fF]"
+        }
+      ]
     },
     "dialog:default"
   ]

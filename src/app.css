@@ -1,3 +1,44 @@
 @import 'tailwindcss';
 @import './lib/components/ui/theme.css';
 @import './lib/components/ui/pcsti/host.css';
+
+/* Keep native caption controls outside the sidebar and page navigation. */
+html[data-tauri-platform] {
+	--desktop-titlebar-height: 64px;
+}
+
+html[data-tauri-platform='macos']:not([data-tauri-fullscreen]) {
+	--desktop-titlebar-left-inset: 88px;
+}
+
+html[data-tauri-platform='windows'][data-windows-titlebar] {
+	--desktop-titlebar-height: var(--windows-titlebar-height);
+	--desktop-titlebar-left-inset: var(--windows-titlebar-left-inset);
+	--desktop-titlebar-right-inset: var(--windows-titlebar-right-inset);
+}
+
+:root {
+	--app-shell-top: var(--desktop-titlebar-height, 64px);
+}
+
+.app-shell {
+	padding-top: var(--app-shell-top);
+}
+
+.app-shell .sidebar {
+	top: var(--app-shell-top);
+	height: calc(100dvh - var(--app-shell-top));
+	max-height: calc(100dvh - var(--app-shell-top));
+}
+
+.app-shell > .sidebar + button {
+	top: var(--app-shell-top);
+}
+
+.app-main {
+	min-height: calc(100dvh - var(--app-shell-top));
+}
+
+.skip-link:focus {
+	top: calc(var(--app-shell-top) + 0.75rem);
+}

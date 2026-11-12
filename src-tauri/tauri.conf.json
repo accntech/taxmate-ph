@@ -14,12 +14,22 @@
       {
         "title": "TaxMate PH",
         "width": 800,
-        "height": 600
+        "height": 600,
+        "visible": false,
+        "minWidth": 360,
+        "titleBarStyle": "Overlay",
+        "hiddenTitle": true,
+        "trafficLightPosition": {
+          "x": 16,
+          "y": 34
+        },
+        "backgroundColor": "#f5f7f3"
       }
     ],
     "security": {
       "csp": null
-    }
+    },
+    "macOSPrivateApi": true
   },
   "bundle": {
     "active": true,
