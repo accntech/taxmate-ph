@@ -7,6 +7,7 @@
 	import { getWithholdingDefinition } from '$lib/forms/withholding-definitions';
 	import Form1601EQ from '$lib/forms/form-1601-eq/form-1601-eq.svelte';
 	import ReturnErrors from '$lib/forms/return-errors.svelte';
+	import ReturnTaxpayerInformation from '$lib/forms/return-taxpayer-information.svelte';
 	import { ebirformsWorkspace as workspace } from '$lib/ebirforms/ebirforms-workspace.svelte';
 	import { Badge, Button, ButtonLink, Page } from '$lib/components/ui';
 
@@ -80,6 +81,7 @@
 				</div>
 			</header>
 			{#if workspace.selectedForm}
+				<ReturnTaxpayerInformation formCode={workspace.selectedForm.code} values={workspace.formValues} profile={workspace.profile} taxpayerHref={`/ebirforms/taxpayers/${params.id}/edit`} />
 				{#if Object.keys(workspace.validationErrors).length}
 					<div class="eq-errors">
 						<ReturnErrors definition={workspace.selectedForm} errors={workspace.validationErrors} taxpayerHref={`/ebirforms/taxpayers/${params.id}/edit`} />
