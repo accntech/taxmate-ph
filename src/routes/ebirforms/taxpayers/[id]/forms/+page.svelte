@@ -1,85 +1,246 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { beforeNavigate, goto } from '$app/navigation';
+	import { save } from '@tauri-apps/plugin-dialog';
+	import { openPath } from '@tauri-apps/plugin-opener';
 	import { buildTaxpayerFormsRoute } from '$lib/apps/app-shell';
 	import { ebirformsWorkspace as workspace } from '$lib/ebirforms/ebirforms-workspace.svelte';
-	import { Badge, ButtonLink, Card, Page, PageHeader } from '$lib/components/ui';
-	import CheckCircle from '@solar-icons/svelte/category/ui/Linear/CheckCircle.svelte';
-	import ClipboardList from '@solar-icons/svelte/category/notes/Linear/ClipboardList.svelte';
-	import DocumentAdd from '@solar-icons/svelte/category/notes/Linear/DocumentAdd.svelte';
-	import FileText from '@solar-icons/svelte/category/files/Linear/FileText.svelte';
+	import type { CreatedReturn } from '$lib/ebirforms/created-returns';
+	import { getFormDefinition } from '$lib/forms';
+	import FormCommand from '$lib/forms/form-command.svelte';
+	import { settings } from '$lib/settings.svelte';
+	import { buildReturnReport } from '$lib/printing/return-report';
+	import { buildPdfExportFilename, createPdfExportClient, formatPdfExportError } from '$lib/tauri/pdf-export';
+	import { Badge, Button, ButtonLink, Dialog, Page } from '$lib/components/ui';
+	import Menu from '$lib/components/ui/pcsti/menu.svelte';
+	import MenuItem from '$lib/components/ui/pcsti/menu-item.svelte';
+	import Icon from '$lib/components/ui/pcsti/icon.svelte';
+	import { glyphs } from '$lib/components/ui/pcsti/icons';
+	import RecordTable from '$lib/ebirforms/record-table.svelte';
+	import { formatTinInput } from '$lib/profiles/profile';
+	import AddCircle from '@solar-icons/svelte/category/ui/Linear/AddCircle.svelte';
 
 	let { params } = $props();
-
+	let ready = $state(false);
+	let storageReady = $state(false);
+	let createOpen = $state(false);
+	let createError = $state('');
+	let deleteId = $state('');
+	let isPrinting = $state(false);
+	let generatedPdfPath = $state('');
+	let errorRecordId = $state('');
+	let actionErrors = $state<Record<string, string>>({});
+	let archivedNotice = $state<string | null>(null);
+	const profile = $derived(workspace.profiles.find(profile => profile.id === params.id));
+	const archived = $derived(workspace.archivedTaxpayerIds.includes(params.id));
+	const busy = $derived(workspace.isSavingDraft || workspace.isSubmitting || isPrinting);
+	const deletingRecord = $derived(workspace.createdReturns.find(record => record.id === deleteId));
+	const errorRecord = $derived(workspace.createdReturns.find(record => record.id === errorRecordId));
+	const columns = [
+		{ key: 'form', label: 'BIR form', locked: true },
+		{ key: 'period', label: 'Return period' },
+		{ key: 'status', label: 'Status' },
+		{ key: 'updatedAt', label: 'Last updated', numeric: true },
+		{ key: 'amount', label: 'Amount due', numeric: true }
+	];
+	const filters = [
+		{ key: 'status', label: 'Status', options: ['Draft', 'Final', 'Submitted', 'For resubmission', 'Archived'].map(value => ({ value, label: value })) },
+		{ key: 'form', label: 'Form type', options: workspace.forms.map(form => ({ value: form.code, label: `BIR Form ${form.code}` })) }
+	];
+	const rows = $derived(workspace.createdReturns.filter(record => record.taxpayerId === params.id).map(record => ({
+		id: record.id, form: record.formCode, period: record.returnPeriod,
+		status: record.archived ? 'Archived' : record.status, updatedAt: record.updatedAt,
+		amount: Number(record.values['frm1601EQ:txtTotalAmountDue'] || '0')
+	})));
+	function route(id: string, code: string) {
+		return `${buildTaxpayerFormsRoute(params.id, code)}?return=${encodeURIComponent(id)}`;
+	}
+	function create(formCode: string) {
+		if (busy || !profile || archived || !storageReady) return;
+		const id = workspace.createReturn(params.id, formCode);
+		if (id) { createOpen = false; void goto(route(id, formCode)); }
+		else createError = workspace.statusMessage;
+	}
+	function recordForAction(id: string): CreatedReturn | undefined {
+		if (busy || !storageReady) return;
+		return workspace.createdReturns.find(record => record.id === id && record.taxpayerId === params.id);
+	}
+	function clearErrors() { errorRecordId = ''; actionErrors = {}; }
+	function captureErrors(id: string) {
+		errorRecordId = id;
+		actionErrors = { ...workspace.validationErrors };
+	}
+	function archiveForm(id: string) {
+		if (recordForAction(id) && workspace.archiveReturn(id)) { archivedNotice = id; clearErrors(); }
+	}
+	function restoreForm(id: string) {
+		if (recordForAction(id) && workspace.restoreReturn(id)) archivedNotice = null;
+	}
+	function deleteForm() {
+		if (!recordForAction(deleteId)) return;
+		if (workspace.deleteReturn(deleteId)) {
+			if (errorRecordId === deleteId) clearErrors();
+			if (archivedNotice === deleteId) archivedNotice = null;
+			deleteId = '';
+		}
+	}
+	function finalize(id: string) {
+		if (!recordForAction(id) || !workspace.openReturn(id)) return;
+		clearErrors();
+		workspace.markFinalCopy();
+		captureErrors(id);
+	}
+	async function submit(id: string) {
+		const record = recordForAction(id);
+		if (!record || !workspace.openReturn(id)) return;
+		clearErrors();
+		if (record.status === 'Submitted' || record.status === 'For resubmission') {
+			workspace.markNeedsResend();
+			if (workspace.finalFlag !== '2') return;
+		}
+		workspace.submissionMode = 'legacy_sftp';
+		await workspace.submitCurrentReturn();
+		captureErrors(id);
+	}
+	async function print(id: string) {
+		const record = recordForAction(id);
+		const definition = record && getFormDefinition(record.formCode);
+		if (!record || !definition) return;
+		isPrinting = true;
+		const values = { ...record.values };
+		const paperSize = settings.prefs.paperSize;
+		try {
+			const suggestedFilename = buildPdfExportFilename({ formCode: record.formCode,
+				year: values['frm1601EQ:txtYear'] || 'YYYY', quarter: values['frm1601EQ:optQuarter'] || 'Q' });
+			const outputPath = await save({ defaultPath: suggestedFilename, filters: [{ name: 'PDF document', extensions: ['pdf'] }] });
+			if (!outputPath) { workspace.statusMessage = 'PDF export canceled.'; return; }
+			workspace.statusMessage = 'Generating PDF…';
+			const receipt = await createPdfExportClient()({ formCode: record.formCode, paperSize,
+				html: await buildReturnReport(definition, values, record.status, paperSize), suggestedFilename, outputPath });
+			workspace.statusMessage = `PDF saved to ${receipt.path}`;
+			generatedPdfPath = receipt.path;
+		} catch (error) {
+			workspace.statusMessage = `PDF export failed: ${formatPdfExportError(error)}`;
+		} finally { isPrinting = false; }
+	}
+	async function openGeneratedPdf() {
+		if (!generatedPdfPath || busy) return;
+		const path = generatedPdfPath;
+		generatedPdfPath = '';
+		isPrinting = true;
+		try {
+			await openPath(path);
+		} catch (error) {
+			workspace.statusMessage = `PDF saved to ${path}, but could not open it: ${formatPdfExportError(error)}`;
+		} finally { isPrinting = false; }
+	}
+	function date(timestamp: number) { return new Intl.DateTimeFormat('en-PH', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Manila' }).format(timestamp); }
+	function amount(value: number) { return new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(value); }
 	onMount(() => {
-		void workspace.loadTaxpayerProfiles().then(() => workspace.selectTaxpayerProfile(params.id));
+		storageReady = workspace.loadCreatedReturns();
+		void workspace.loadTaxpayerProfiles().then(() => {
+			if (profile) workspace.selectTaxpayerProfile(params.id);
+			ready = true;
+		});
+	});
+	beforeNavigate(({ cancel }) => {
+		if (busy) { workspace.statusMessage = 'Wait for the current operation to finish before leaving.'; cancel(); }
 	});
 </script>
 
-<svelte:head>
-	<title>Forms | eBIRForms</title>
-</svelte:head>
-
-<Page size="lg">
-	<ButtonLink href="/ebirforms/taxpayers" variant="ghost" size="sm" class="w-fit">
-		Back to taxpayers
-	</ButtonLink>
-
-	<PageHeader
-		eyebrow="Step 2"
-		title="Choose a BIR form"
-		description={`Prepare a return for ${workspace.profile.taxpayerName || 'this taxpayer'}. The selected taxpayer details are attached to every draft created here.`}
-	>
-		{#snippet icon()}
-			<DocumentAdd size={22} color="currentColor" />
-		{/snippet}
-		{#snippet actions()}
-			<Card variant="muted" class="grid min-w-64 gap-2">
-				<div class="flex items-center gap-2 text-sm font-semibold text-fg">
-					<CheckCircle size={18} color="currentColor" />
-					{workspace.activeTin}
-				</div>
-				<p class="text-sm leading-6 text-fg-muted">{workspace.statusMessage}</p>
-			</Card>
-		{/snippet}
-	</PageHeader>
-
-	<Card variant="muted" class="grid gap-2 sm:grid-cols-[1fr_auto] sm:items-center">
-		<div class="flex items-center gap-2">
-			<ClipboardList size={18} color="currentColor" />
-			<p class="text-sm font-semibold text-fg">Available forms</p>
-		</div>
-		<Badge tone="neutral" class="font-mono">{workspace.returnFilename}</Badge>
-	</Card>
-
-	<div class="grid gap-3 md:grid-cols-2">
-		{#each workspace.forms as form (form.code)}
-			<a
-				class={[
-					'grid min-h-36 gap-3 rounded-panel border border-border bg-bg-elev p-4',
-					'shadow-[var(--shadow-ui-sm)] transition-[border-color,box-shadow,transform]',
-					'hover:border-accent/45 hover:shadow-[var(--shadow-ui-md)] active:scale-[0.99]'
-				]}
-				href={buildTaxpayerFormsRoute(params.id, form.code)}
-			>
-				<span class="flex items-start justify-between gap-3">
-					<span class="flex min-w-0 gap-3">
-						<span
-							class="grid size-10 shrink-0 place-items-center rounded-md bg-bg-elev-2 text-accent"
-							aria-hidden="true"
-						>
-							<FileText size={21} color="currentColor" />
-						</span>
-						<span class="min-w-0">
-							<span class="font-mono text-xs font-semibold text-accent">
-								BIR Form {form.code}
-							</span>
-							<span class="mt-1 block font-semibold text-fg">{form.title}</span>
-						</span>
-					</span>
-					<Badge tone="success">{form.status}</Badge>
-				</span>
-				<p class="text-sm text-fg-muted">{form.category}</p>
-			</a>
-		{/each}
-	</div>
+<svelte:head><title>Tax Returns | eBIRForms</title></svelte:head>
+<Page size="full">
+	<ButtonLink href="/ebirforms/taxpayers" variant="ghost" size="sm" class="w-fit">← Back to taxpayers</ButtonLink>
+	{#if !ready}
+		<p role="status" class="p-6 text-fg-muted">Loading taxpayer…</p>
+	{:else if !profile}
+		<div role="alert"><h1 class="text-xl font-semibold">Taxpayer not found</h1><p class="mt-2 text-sm text-fg-muted">Return to the taxpayers list and select a saved profile.</p></div>
+	{:else}
+		<header class="flex flex-wrap items-center justify-between gap-4 py-2">
+			<div><h1 class="font-sans text-2xl font-semibold tracking-tight">Tax Returns</h1><p class="mt-1 text-sm text-fg-muted">{profile.taxpayerName} · <span class="font-mono text-xs">{formatTinInput(profile)}</span> · {rows.length} {rows.length === 1 ? 'return' : 'returns'}</p></div>
+			<Button disabled={busy || archived || !storageReady} onclick={() => { createError = ''; createOpen = true; }}><AddCircle size={18} color="currentColor" />Create return</Button>
+		</header>
+		{#if archived}<p class="text-sm text-fg-muted">This taxpayer is archived. Restore the profile to create new returns.</p>{/if}
+		{#if archivedNotice}
+			<div class="flex flex-wrap items-center justify-between gap-3 rounded-md border border-border bg-bg-elev px-4 py-3">
+				<p class="text-sm">Return archived. Use the Archived status filter to find it later.</p>
+				<Button variant="secondary" size="sm" disabled={busy} onclick={() => archivedNotice && restoreForm(archivedNotice)}>Undo archive</Button>
+			</div>
+		{/if}
+		{#if errorRecord && Object.keys(actionErrors).length}
+			<div role="alert" class="rounded-md border border-danger/30 bg-bg-elev p-4 text-sm">
+				<p class="font-medium">Review BIR Form {errorRecord.formCode}, {errorRecord.returnPeriod} before continuing.</p>
+				<ul class="my-2 list-disc pl-5">
+					{#each Object.entries(actionErrors) as [id, message] (id)}
+						<li>{getFormDefinition(errorRecord.formCode)?.fields.find(field => field.id === id)?.label || 'Over-remittance treatment'}: {message}</li>
+					{/each}
+				</ul>
+				<ButtonLink href={route(errorRecord.id, errorRecord.formCode)} variant="secondary" size="sm">Edit return to fix errors</ButtonLink>
+			</div>
+		{/if}
+		{#if !storageReady}<p role="alert" class="text-sm text-danger">{workspace.statusMessage}</p>{/if}
+		<RecordTable {rows} {columns} {filters} label="Tax returns" stateKey={`forms-${params.id}`}
+			initialFilters={{ status: ['Draft', 'Final', 'Submitted', 'For resubmission'] }}
+			emptyMessage="No returns created yet. Choose Create return to get started.">
+			{#snippet cell(row, key)}
+				{#if key === 'form'}<span class="font-mono font-medium text-accent">BIR Form {row.form}</span>
+				{:else if key === 'status'}<Badge size="sm" tone={row.status === 'Submitted' ? 'success' : row.status === 'Final' ? 'info' : row.status === 'For resubmission' ? 'warn' : 'neutral'}>{row.status}</Badge>
+				{:else if key === 'updatedAt'}<span class="whitespace-nowrap text-xs text-fg-muted">{date(Number(row.updatedAt))}</span>
+				{:else if key === 'amount'}{amount(Number(row.amount))}
+				{:else}{row[key]}{/if}
+			{/snippet}
+			{#snippet actions(row)}
+				{#if busy || !storageReady}
+					<Button variant="secondary" size="sm" disabled><span class="action-icon"><Icon icon={glyphs.pencil} /></span>Edit</Button>
+				{:else}
+					<ButtonLink href={route(row.id, String(row.form))} variant="secondary" size="sm"><span class="action-icon"><Icon icon={glyphs.pencil} /></span>Edit</ButtonLink>
+				{/if}
+				<Menu label={`More actions for BIR Form ${row.form}, ${row.period}`} tooltip="More actions" align="right" disabled={busy || !storageReady} triggerClass="form-actions-trigger" panelClass="form-actions-panel">
+					{#snippet trigger()}<span class="action-icon"><Icon icon={glyphs.more} /></span>{/snippet}
+					{#snippet content({ close })}
+						<div class="flex flex-col">
+						<p class="action-heading">BIR Form {row.form} · {row.period}</p>
+						<MenuItem variant="ghost" size="compact" class="form-action" onSelect={() => { close(); row.status === 'Archived' ? restoreForm(row.id) : archiveForm(row.id); }}><span class="action-icon"><Icon icon={row.status === 'Archived' ? glyphs.refresh : glyphs.archive} /></span>{row.status === 'Archived' ? 'Restore' : 'Archive'}</MenuItem>
+						<MenuItem variant="ghost" size="compact" class="form-action" onSelect={() => { close(); finalize(row.id); }}><span class="action-icon"><Icon icon={glyphs.checkCircle} /></span>Mark as final</MenuItem>
+						<MenuItem variant="ghost" size="compact" class="form-action" onSelect={() => { close(); void submit(row.id); }}><span class="action-icon"><Icon icon={glyphs.send} /></span>Submit</MenuItem>
+						<MenuItem variant="ghost" size="compact" class="form-action" onSelect={() => { close(); void print(row.id); }}><span class="action-icon"><Icon icon={glyphs.printer} /></span>Generate PDF</MenuItem>
+						<div class="action-separator" role="separator"></div>
+						<MenuItem variant="destructive-ghost" size="compact" class="form-action" onSelect={() => { close(); deleteId = row.id; }}><span class="action-icon"><Icon icon={glyphs.trash} /></span>Delete…</MenuItem>
+						</div>
+					{/snippet}
+				</Menu>
+			{/snippet}
+		</RecordTable>
+		<p role="status" aria-live="polite" class="text-xs text-fg-muted">{workspace.statusMessage}</p>
+	{/if}
 </Page>
+<Dialog bind:open={createOpen} layout="command" size="xl" hideCloseButton title="Create a tax return" description={`Choose the form type for a new return for ${profile?.taxpayerName || 'this taxpayer'}.`}>
+	{#if createOpen}
+		<FormCommand forms={workspace.forms} taxpayerName={profile?.taxpayerName} status={createError} disabled={busy || !profile || archived || !storageReady} onselect={create} oncancel={() => createOpen = false} />
+	{/if}
+</Dialog>
+<Dialog open={!!deleteId} onOpenChange={(open) => { if (!open) deleteId = ''; }} title="Delete return?"
+	description={`Delete BIR Form ${deletingRecord?.formCode || ''}, ${deletingRecord?.returnPeriod || ''}? This removes the working copy permanently. Submitted return history is kept.`}>
+	<p class="text-sm text-fg-muted">{workspace.statusMessage}</p>
+	{#snippet footer()}
+		<Button variant="secondary" onclick={() => deleteId = ''}>Cancel</Button>
+		<Button variant="danger" disabled={busy || !storageReady} onclick={deleteForm}>Delete return</Button>
+	{/snippet}
+</Dialog>
+<Dialog open={!!generatedPdfPath} onOpenChange={(open) => { if (!open) generatedPdfPath = ''; }} title="Open generated PDF?"
+	description="Your PDF has been saved. Open it in your default PDF viewer?">
+	<p class="break-all text-sm text-fg-muted">{generatedPdfPath}</p>
+	{#snippet footer()}
+		<Button variant="secondary" onclick={() => generatedPdfPath = ''}>Not now</Button>
+		<Button disabled={busy} onclick={openGeneratedPdf}>Open PDF</Button>
+	{/snippet}
+</Dialog>
+
+<style>
+	:global(.form-actions-trigger) { min-width: 1.875rem; min-height: 1.875rem; padding: .375rem; background: var(--bg); color: var(--fg-muted); }
+	:global(.form-actions-panel) { min-width: 12.5rem; max-width: calc(100vw - 1rem); }
+	.action-icon { display: block; flex: none; width: 1rem; height: 1rem; }
+	.action-heading { max-width: 15rem; padding: .375rem .625rem; color: var(--fg-subtle); font-size: 10.5px; font-weight: 600; text-transform: uppercase; overflow-wrap: anywhere; }
+	:global(.form-action) { width: 100%; min-height: 2rem; justify-content: flex-start; gap: .5rem; padding: .375rem .625rem; font-size: 12.5px; font-weight: 400; }
+	.action-separator { height: 1px; margin: .25rem 0; background: var(--border-soft); }
+</style>

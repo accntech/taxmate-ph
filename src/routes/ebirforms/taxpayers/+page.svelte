@@ -1,253 +1,343 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
-	import { buildTaxpayerRoute } from '$lib/apps/app-shell';
-	import { ebirformsWorkspace as workspace } from '$lib/ebirforms/ebirforms-workspace.svelte';
-	import {
-		Badge,
-		Button,
-		ButtonLink,
-		Card,
-		Input,
-		Page,
-		PageHeader,
-		Select
-	} from '$lib/components/ui';
-	import { formatTinInput, parseTinInput } from '$lib/profiles/profile';
-	import AddCircle from '@solar-icons/svelte/category/ui/Linear/AddCircle.svelte';
-	import CheckCircle from '@solar-icons/svelte/category/ui/Linear/CheckCircle.svelte';
-	import ClipboardList from '@solar-icons/svelte/category/notes/Linear/ClipboardList.svelte';
-	import DocumentAdd from '@solar-icons/svelte/category/notes/Linear/DocumentAdd.svelte';
-	import UserCheck from '@solar-icons/svelte/category/users/Linear/UserCheck.svelte';
+  import { onMount } from "svelte";
+  import { resolve } from "$app/paths";
+  import Menu from "$lib/components/ui/pcsti/menu.svelte";
+  import ActionButton from "$lib/components/ui/pcsti/button.svelte";
+  import MenuItem from "$lib/components/ui/pcsti/menu-item.svelte";
+  import Icon from "$lib/components/ui/pcsti/icon.svelte";
+  import { glyphs } from "$lib/components/ui/pcsti/icons";
+  import { buildTaxpayerRoute } from "$lib/apps/app-shell";
+  import { ebirformsWorkspace as workspace } from "$lib/ebirforms/ebirforms-workspace.svelte";
+  import { Badge, Button, ButtonLink, Dialog, Page } from "$lib/components/ui";
+  import RecordTable from "$lib/ebirforms/record-table.svelte";
+  import { formatTinInput } from "$lib/profiles/profile";
+  import {
+    createProfileStoreClient,
+    formatProfileStoreError,
+  } from "$lib/tauri/profile-store";
+  import AddCircle from "@solar-icons/svelte/category/ui/Linear/AddCircle.svelte";
 
-	const categoryOptions = [
-		{ value: 'P', label: 'Private', meta: 'individuals, corporations, estates, trusts' },
-		{ value: 'G', label: 'Government', meta: 'national agencies and LGUs' }
-	];
+  let deleteId = $state("");
+  let deleting = $state(false);
+  let error = $state("");
+  let archivedNotice = $state<{ id: string; name: string } | null>(null);
+  const columns = [
+    { key: "name", label: "Taxpayer", locked: true },
+    { key: "tin", label: "TIN / branch" },
+    { key: "rdo", label: "RDO" },
+    { key: "category", label: "Category" },
+    { key: "email", label: "Email" },
+    { key: "status", label: "Status" },
+  ];
+  const filters = [
+    {
+      key: "status",
+      label: "Status",
+      options: [
+        { value: "Active", label: "Active" },
+        { value: "Archived", label: "Archived" },
+      ],
+    },
+    {
+      key: "category",
+      label: "Category",
+      options: [
+        { value: "Private", label: "Private" },
+        { value: "Government", label: "Government" },
+      ],
+    },
+  ];
+  const rows = $derived(
+    workspace.profiles.map((profile) => ({
+      id: profile.id,
+      name: profile.taxpayerName || "Unnamed taxpayer",
+      tin: formatTinInput(profile),
+      rdo: profile.rdoCode || "—",
+      category: profile.category === "G" ? "Government" : "Private",
+      email: profile.email || "—",
+      status: workspace.archivedTaxpayerIds.includes(profile.id)
+        ? "Archived"
+        : "Active",
+    })),
+  );
+  const deletingProfile = $derived(
+    workspace.profiles.find((profile) => profile.id === deleteId),
+  );
 
-	let tinInput = $state(formatTinInput(workspace.profile));
-	let tinHelp = $derived(
-		tinInput.replace(/\D/g, '').length === 13
-			? 'Ready as a 13-digit taxpayer id.'
-			: 'Enter 9 TIN digits plus 4 branch digits.'
-	);
-	let activeProfile = $derived(
-		workspace.profiles.find((profile) => profile.id === workspace.selectedProfileId)
-	);
-	let activeProfileRoute = $derived(
-		workspace.selectedProfileId ? `${buildTaxpayerRoute(workspace.selectedProfileId)}/forms` : ''
-	);
+  onMount(() => {
+    workspace.loadCreatedReturns();
+    void workspace.loadTaxpayerProfiles();
+  });
 
-	onMount(() => {
-		void workspace.loadTaxpayerProfiles().then(() => {
-			tinInput = formatTinInput(workspace.profile);
-		});
-	});
+  function archiveProfile(id: string, name: string) {
+    if (workspace.archiveTaxpayerProfile(id)) archivedNotice = { id, name };
+  }
 
-	function updateTinParts(value: string) {
-		tinInput = value;
-		const parts = parseTinInput(value);
+  function undoArchive() {
+    if (archivedNotice && workspace.restoreTaxpayerProfile(archivedNotice.id))
+      archivedNotice = null;
+  }
 
-		workspace.profile.tin1 = parts.tin1;
-		workspace.profile.tin2 = parts.tin2;
-		workspace.profile.tin3 = parts.tin3;
-		workspace.profile.branchCode = parts.branchCode;
-	}
-
-	function startNewProfile() {
-		workspace.startNewTaxpayerProfile();
-		tinInput = '';
-	}
-
-	function selectProfile(id: string) {
-		workspace.selectTaxpayerProfile(id);
-		tinInput = formatTinInput(workspace.profile);
-	}
-
-	async function saveProfile() {
-		await workspace.saveTaxpayerProfile();
-		tinInput = formatTinInput(workspace.profile);
-	}
+  async function deleteProfile() {
+    if (deleting || !deleteId) return;
+    deleting = true;
+    error = "";
+    try {
+      await createProfileStoreClient().delete(deleteId);
+      workspace.profiles = workspace.profiles.filter(
+        (profile) => profile.id !== deleteId,
+      );
+      if (archivedNotice?.id === deleteId) archivedNotice = null;
+      workspace.statusMessage =
+        "Taxpayer profile deleted. Saved returns have been kept.";
+      deleteId = "";
+    } catch (cause) {
+      error = formatProfileStoreError(cause);
+    } finally {
+      deleting = false;
+    }
+  }
 </script>
 
-<svelte:head>
-	<title>Taxpayers | eBIRForms</title>
-</svelte:head>
+<svelte:head><title>eBIRForms</title></svelte:head>
+<Page size="full">
+  <header class="flex flex-wrap items-center justify-between gap-4 py-2">
+    <div>
+      <h1 class="font-sans text-2xl font-semibold tracking-tight">eBIRForms</h1>
+      <p class="mt-1 text-sm text-fg-muted">
+        Manage taxpayer profiles and tax returns. Select a taxpayer to open their tax returns.
+      </p>
+      {#if workspace.profileLoadState === "loaded"}
+        <p class="mt-1 text-xs text-fg-subtle">
+          {workspace.profiles.length} saved {workspace.profiles.length === 1
+            ? "taxpayer"
+            : "taxpayers"}
+        </p>
+      {/if}
+    </div>
+    <ButtonLink href="/ebirforms/taxpayers/new"
+      ><AddCircle size={18} color="currentColor" />New taxpayer</ButtonLink
+    >
+  </header>
 
-<Page size="xl">
-	<PageHeader
-		eyebrow="Guided filing"
-		title="Start with the taxpayer"
-		description="Choose an existing profile or set up a clean taxpayer record before preparing a return. The TIN, RDO, and contact details stay attached to the filing path."
-	>
-		{#snippet icon()}
-			<ClipboardList size={22} color="currentColor" />
-		{/snippet}
-		{#snippet actions()}
-			<Button variant="secondary" size="touch" class="w-full sm:w-auto" onclick={startNewProfile}>
-				<AddCircle size={18} color="currentColor" />
-				New profile
-			</Button>
-			{#if activeProfileRoute}
-				<ButtonLink href={activeProfileRoute} size="touch" class="w-full sm:w-auto">
-					<DocumentAdd size={18} color="currentColor" />
-					Open forms
-				</ButtonLink>
-			{/if}
-		{/snippet}
-	</PageHeader>
-
-	<div class="grid gap-3 md:grid-cols-3">
-		<Card variant="muted" class="flex items-center gap-3">
-			<span
-				class="grid size-9 shrink-0 place-items-center rounded-md bg-bg-elev text-accent"
-				aria-hidden="true"
-			>
-				<UserCheck size={20} color="currentColor" />
-			</span>
-			<div class="min-w-0">
-				<p class="text-sm font-semibold text-fg">1. taxpayer</p>
-				<p class="truncate text-xs text-fg-muted">{activeProfile?.taxpayerName || 'new profile'}</p>
-			</div>
-		</Card>
-		<Card variant="muted" class="flex items-center gap-3">
-			<span
-				class="grid size-9 shrink-0 place-items-center rounded-md bg-bg-elev text-accent"
-				aria-hidden="true"
-			>
-				<CheckCircle size={20} color="currentColor" />
-			</span>
-			<div class="min-w-0">
-				<p class="text-sm font-semibold text-fg">2. verify</p>
-				<p class="truncate font-mono text-xs text-fg-muted">{workspace.activeTin}</p>
-			</div>
-		</Card>
-		<Card variant="muted" class="flex items-center gap-3">
-			<span
-				class="grid size-9 shrink-0 place-items-center rounded-md bg-bg-elev text-accent"
-				aria-hidden="true"
-			>
-				<DocumentAdd size={20} color="currentColor" />
-			</span>
-			<div class="min-w-0">
-				<p class="text-sm font-semibold text-fg">3. create forms</p>
-				<p class="truncate text-xs text-fg-muted">{workspace.statusMessage}</p>
-			</div>
-		</Card>
-	</div>
-
-	<div class="grid gap-4 xl:grid-cols-[24rem_minmax(0,1fr)]">
-		<Card class="grid content-start gap-4">
-			<div class="grid gap-1">
-				<p class="font-mono text-xs font-semibold uppercase text-accent">Step 1</p>
-				<h2 class="text-lg font-semibold text-fg">Choose taxpayer</h2>
-				<p class="text-sm text-fg-muted">{workspace.profiles.length} saved profiles available</p>
-			</div>
-
-			<div class="grid max-h-[32rem] gap-2 overflow-auto pr-1">
-				{#if workspace.profiles.length === 0}
-					<Card variant="muted" class="text-sm leading-6 text-fg-muted">
-						No saved taxpayers yet. Fill out the identity details and save the profile.
-					</Card>
-				{/if}
-				{#each workspace.profiles as savedProfile (savedProfile.id)}
-					<button
-						type="button"
-						class={[
-							'grid min-h-28 gap-3 rounded-panel border bg-bg-elev p-3 text-left transition',
-							'hover:border-accent/45 hover:shadow-[var(--shadow-ui-sm)]',
-							'focus-visible:border-accent focus-visible:shadow-[0_0_0_3px_var(--ring)]',
-							'active:scale-[0.99]',
-							workspace.selectedProfileId === savedProfile.id
-								? 'border-accent shadow-[var(--shadow-ui-sm)]'
-								: 'border-border'
-						]}
-						onclick={() => selectProfile(savedProfile.id)}
-					>
-						<span class="flex items-start justify-between gap-3">
-							<span class="min-w-0">
-								<span class="block truncate font-semibold text-fg">
-									{savedProfile.taxpayerName || 'Unnamed taxpayer'}
-								</span>
-								<span class="mt-1 block font-mono text-xs text-fg-muted">
-									{formatTinInput(savedProfile)}
-								</span>
-							</span>
-							<Badge tone={savedProfile.category === 'G' ? 'info' : 'neutral'} size="sm">
-								{savedProfile.category === 'G' ? 'Gov' : 'Private'}
-							</Badge>
-						</span>
-						<span class="grid gap-1 text-sm text-fg-muted">
-							<span>RDO {savedProfile.rdoCode || 'not set'}</span>
-							<span class="truncate">{savedProfile.email || 'No email on file'}</span>
-						</span>
-					</button>
-				{/each}
-			</div>
-		</Card>
-
-		<Card class="grid gap-5">
-			<div class="grid gap-3 md:flex md:items-start md:justify-between">
-				<div>
-					<p class="font-mono text-xs font-semibold uppercase text-accent">Step 2</p>
-					<h2 class="mt-1 text-lg font-semibold text-fg">Verify identity details</h2>
-					<p class="text-sm text-fg-muted">
-						One TIN field updates the three legacy TIN parts and branch code together.
-					</p>
-				</div>
-				{#if activeProfileRoute}
-					<ButtonLink href={activeProfileRoute} size="touch" class="w-full md:w-auto">
-						<DocumentAdd size={18} color="currentColor" />
-						Open forms
-					</ButtonLink>
-				{/if}
-			</div>
-
-			<Card variant="muted" class="grid gap-3 md:grid-cols-4">
-				<div class="md:col-span-2">
-					<Input
-						label="TIN and branch code"
-						help={tinHelp}
-						inputmode="numeric"
-						placeholder="000-000-000-0000"
-						value={tinInput}
-						oninput={(event) => updateTinParts(event.currentTarget.value)}
-						class="font-mono"
-					/>
-				</div>
-				<Input label="RDO Code" inputmode="numeric" bind:value={workspace.profile.rdoCode} />
-				<Select
-					label="Category"
-					options={categoryOptions}
-					bind:value={workspace.profile.category}
-				/>
-			</Card>
-
-			<div class="grid gap-3 md:grid-cols-2">
-				<div class="md:col-span-2">
-					<Input label="Taxpayer Name" bind:value={workspace.profile.taxpayerName} />
-				</div>
-				<Input label="Registered Address" bind:value={workspace.profile.address} />
-				<Input label="Registered Address Line 2" bind:value={workspace.profile.address2} />
-				<Input label="ZIP Code" inputmode="numeric" bind:value={workspace.profile.zipCode} />
-				<Input label="Contact Number" inputmode="tel" bind:value={workspace.profile.contactNumber} />
-				<div class="md:col-span-2">
-					<Input label="Email" type="email" bind:value={workspace.profile.email} />
-				</div>
-			</div>
-
-			<Card variant="muted" class="grid gap-2 sm:flex sm:justify-end">
-				<Button variant="warn" size="touch" class="w-full sm:w-auto" onclick={saveProfile}>
-					Save profile
-				</Button>
-				<Button
-					variant="primary"
-					size="touch"
-					class="w-full sm:w-auto"
-					onclick={() => workspace.syncProfileToForm()}
-				>
-					Apply to active return
-				</Button>
-			</Card>
-		</Card>
-	</div>
+  {#if workspace.profileLoadState === "error"}
+    <section
+      aria-labelledby="load-error-title"
+      class="rounded-panel border border-danger/30 bg-bg-elev p-5"
+    >
+      <div role="alert">
+        <h2 id="load-error-title" class="text-base font-semibold">
+          Could not load taxpayers
+        </h2>
+        <p class="mt-2 text-sm text-fg-muted">{workspace.profileLoadError}</p>
+        <p class="mt-1 text-sm text-fg-muted">
+          {workspace.hasLoadedProfiles
+            ? "Previously loaded taxpayers are hidden until their saved records can be checked."
+            : "No saved taxpayer records have been loaded."}
+        </p>
+      </div>
+      <Button class="mt-4" onclick={() => void workspace.loadTaxpayerProfiles()}
+        >Retry</Button
+      >
+      {#if workspace.profileLoadErrorDetails}
+        <details class="mt-4 text-xs text-fg-muted">
+          <summary class="cursor-pointer">Technical details</summary>
+          <p class="mt-2 break-words font-mono">
+            {workspace.profileLoadErrorDetails}
+          </p>
+        </details>
+      {/if}
+    </section>
+  {:else if workspace.profileLoadState !== "loaded"}
+    <p
+      role="status"
+      class="rounded-panel border border-border bg-bg-elev p-8 text-sm text-fg-muted"
+    >
+      Loading taxpayers…
+    </p>
+  {:else}
+    {#if archivedNotice}
+      <div
+        class="flex flex-wrap items-center justify-between gap-3 rounded-md border border-border bg-bg-elev px-4 py-3"
+      >
+        <p role="status" class="text-sm">
+          {archivedNotice.name} archived. Hidden from Active taxpayers; saved forms
+          retained.
+        </p>
+        <Button variant="secondary" size="sm" onclick={undoArchive}
+          >Undo archive</Button
+        >
+      </div>
+    {/if}
+    <RecordTable
+      {rows}
+      {columns}
+      {filters}
+      label="Taxpayers"
+      stateKey="taxpayers"
+      identifierKeys={["tin"]}
+      searchPlaceholder="Search name or TIN"
+      initialFilters={{ status: ["Active"] }}
+      emptyMessage="No saved taxpayers yet. Choose New taxpayer to begin."
+    >
+      {#snippet cell(row, key)}
+        {#if key === "name"}
+          <a
+            class="font-medium text-fg underline-offset-4 hover:text-accent hover:underline focus-visible:underline"
+            href={resolve("/ebirforms/taxpayers/[id]/forms", { id: row.id })}
+            >{row.name}</a
+          >
+        {:else if key === "status"}
+          <Badge
+            size="sm"
+            tone={row.status === "Active" ? "success" : "neutral"}
+            >{row.status}</Badge
+          >
+        {:else if key === "tin"}
+          <span class="whitespace-nowrap font-mono text-xs">{row.tin}</span>
+        {:else}
+          <span class="text-fg-muted">{row[key]}</span>
+        {/if}
+      {/snippet}
+      {#snippet actions(row)}
+        <ActionButton
+          href={`${buildTaxpayerRoute(row.id)}/edit`}
+          size="compact"
+          variant="outlined"
+          aria-label={`Edit profile for ${row.name}`}
+        >
+          <span class="action-icon"><Icon icon={glyphs.pencil} /></span>Edit
+        </ActionButton>
+        <Menu
+          label={`More actions for ${row.name}`}
+          tooltip="More actions"
+          align="right"
+          triggerClass="taxpayer-actions-trigger"
+          panelClass="taxpayer-actions-panel"
+        >
+          {#snippet trigger()}<span class="action-icon"
+              ><Icon icon={glyphs.more} /></span
+            >{/snippet}
+          {#snippet content({ close })}
+            <p class="action-heading">{row.name}</p>
+            {#if row.status === "Archived"}
+              <MenuItem
+                variant="ghost"
+                size="compact"
+                class="taxpayer-action"
+                onSelect={() => {
+                  close();
+                  workspace.restoreTaxpayerProfile(row.id);
+                }}
+                ><span class="action-icon"><Icon icon={glyphs.refresh} /></span
+                >Restore taxpayer</MenuItem
+              >
+            {:else}
+              <MenuItem
+                variant="ghost"
+                size="compact"
+                class="taxpayer-action"
+                onSelect={() => {
+                  close();
+                  archiveProfile(row.id, String(row.name));
+                }}
+                ><span class="action-icon"><Icon icon={glyphs.folder} /></span
+                >Archive taxpayer</MenuItem
+              >
+            {/if}
+            <div class="action-separator" role="separator"></div>
+            <MenuItem
+              variant="destructive-ghost"
+              size="compact"
+              class="taxpayer-action"
+              onSelect={() => {
+                close();
+                deleteId = row.id;
+                error = "";
+              }}
+              ><span class="action-icon"><Icon icon={glyphs.trash} /></span
+              >Delete taxpayer…</MenuItem
+            >
+          {/snippet}
+        </Menu>
+      {/snippet}
+    </RecordTable>
+    <p class="text-xs text-fg-muted" role="status" aria-live="polite">
+      {workspace.statusMessage}
+    </p>
+  {/if}
 </Page>
+<Dialog
+  open={!!deleteId}
+  onOpenChange={(open) => {
+    if (!open && !deleting) deleteId = "";
+  }}
+  title="Delete taxpayer?"
+  description={`Delete the saved profile for ${deletingProfile?.taxpayerName || "this taxpayer"}? This cannot be undone. Saved returns will be kept.`}
+  closedByBackdrop={!deleting}
+  closedByEscape={!deleting}
+>
+  {#if error}<p role="alert" class="text-sm text-danger">{error}</p>{/if}
+  {#snippet footer()}
+    <Button
+      variant="secondary"
+      disabled={deleting}
+      onclick={() => (deleteId = "")}>Cancel</Button
+    >
+    <Button
+      variant="danger"
+      disabled={deleting}
+      onclick={() => void deleteProfile()}
+      >{deleting ? "Deleting…" : "Delete taxpayer"}</Button
+    >
+  {/snippet}
+</Dialog>
+
+<style>
+  /* Menu item dimensions follow PCSTI list-columns-menu/index.styles.ts. */
+  :global(.taxpayer-actions-trigger) {
+    min-width: 1.875rem;
+    min-height: 1.875rem;
+    padding: 0.375rem;
+    background: var(--bg);
+    color: var(--fg-muted);
+  }
+  :global(.taxpayer-actions-panel) {
+    min-width: 12.5rem;
+    max-width: calc(100vw - 1rem);
+  }
+  .action-icon {
+    display: block;
+    flex: none;
+    width: 1rem;
+    height: 1rem;
+  }
+  .action-heading {
+    max-width: 15rem;
+    padding: 0.375rem 0.625rem;
+    color: var(--fg-subtle);
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    overflow-wrap: anywhere;
+  }
+  :global(.taxpayer-action) {
+    width: 100%;
+    min-height: 2rem;
+    justify-content: flex-start;
+    gap: 0.5rem;
+    border-radius: 0.25rem;
+    padding: 0.375rem 0.625rem;
+    font-size: 12.5px;
+    font-weight: 400;
+  }
+  :global(.taxpayer-action.destructive) {
+    color: var(--danger);
+  }
+  .action-separator {
+    height: 1px;
+    margin: 0.25rem 0;
+    background: var(--border-soft);
+  }
+</style>

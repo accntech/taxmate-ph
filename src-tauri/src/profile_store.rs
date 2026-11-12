@@ -74,6 +74,39 @@ pub async fn list_taxpayer_profiles(
         .map_err(|error| ProfileStoreError::new(format!("Profile load task failed: {error}")))?
 }
 
+#[tauri::command]
+pub async fn delete_taxpayer_profile(
+    app: tauri::AppHandle,
+    id: String,
+) -> Result<(), ProfileStoreError> {
+    let root = app
+        .path()
+        .app_data_dir()
+        .map_err(|error| ProfileStoreError::new(format!("Could not resolve app data: {error}")))?;
+
+    tauri::async_runtime::spawn_blocking(move || delete_taxpayer_profile_from_root(&root, &id))
+        .await
+        .map_err(|error| ProfileStoreError::new(format!("Profile delete task failed: {error}")))?
+}
+
+/// Delete only the taxpayer profile. Saved returns and submission history are retained.
+pub fn delete_taxpayer_profile_from_root(
+    root: &Path,
+    id: &str,
+) -> Result<(), ProfileStoreError> {
+    // Legacy profiles may have shorter or longer branch codes. Keep their exact
+    // numeric filename instead of padding or truncating it to the current format.
+    if id.is_empty() || !id.bytes().all(|byte| byte.is_ascii_digit()) {
+        return Err(ProfileStoreError::new(
+            "Taxpayer profile id must contain only digits.",
+        ));
+    }
+
+    fs::remove_file(root.join("profile").join(format!("{id}.xml"))).map_err(|error| {
+        ProfileStoreError::new(format!("Could not delete taxpayer profile: {error}"))
+    })
+}
+
 pub fn save_taxpayer_profile_to_root(
     root: &Path,
     profile: TaxpayerProfile,
@@ -111,8 +144,16 @@ pub fn list_taxpayer_profiles_from_root(
             continue;
         }
 
-        let xml = fs::read_to_string(path)?;
-        profiles.push(parse_profile_xml(&xml)?);
+        let id = path
+            .file_stem()
+            .and_then(|value| value.to_str())
+            .ok_or_else(|| ProfileStoreError::new("Invalid taxpayer profile filename."))?;
+        let xml = fs::read_to_string(&path)?;
+        let mut profile = parse_profile_xml(&xml)?;
+        // Stored TIN fields can be incomplete or differ from the filename.
+        // Use the file's identity so actions target the profile that was loaded.
+        profile.id = id.to_string();
+        profiles.push(profile);
     }
 
     profiles.sort_by(|left, right| left.id.cmp(&right.id));

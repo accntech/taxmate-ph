@@ -16,6 +16,7 @@ export type ProfileStoreError = {
 export type ProfileStoreClient = {
 	save: (profile: SavedTaxpayerProfile) => Promise<TaxpayerProfileSaveReceipt>;
 	load: () => Promise<SavedTaxpayerProfile[]>;
+	delete: (id: string) => Promise<void>;
 };
 
 export function createProfileStoreClient(
@@ -23,7 +24,8 @@ export function createProfileStoreClient(
 ): ProfileStoreClient {
 	return {
 		save: (profile) => call<TaxpayerProfileSaveReceipt>('save_taxpayer_profile', { profile }),
-		load: () => call<SavedTaxpayerProfile[]>('list_taxpayer_profiles')
+		load: () => call<SavedTaxpayerProfile[]>('list_taxpayer_profiles'),
+		delete: (id) => call<void>('delete_taxpayer_profile', { id })
 	};
 }
 

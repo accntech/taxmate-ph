@@ -9,6 +9,10 @@
     "core:default",
     "core:webview:allow-print",
     "opener:default",
+    {
+      "identifier": "opener:allow-open-path",
+      "allow": [{ "path": "**/*.[pP][dD][fF]" }]
+    },
     "dialog:default"
   ]
 }
