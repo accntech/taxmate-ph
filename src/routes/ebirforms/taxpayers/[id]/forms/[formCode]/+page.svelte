@@ -1,4 +1,6 @@
 <script lang="ts">
+	import * as stylex from '@stylexjs/stylex';
+	import { styles } from './return.styles';
 	import { onMount } from 'svelte';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
@@ -57,13 +59,13 @@
 </svelte:head>
 
 <Page size="xl">
-	<ButtonLink href={`/ebirforms/taxpayers/${params.id}/forms`} variant="ghost" size="sm" class="w-fit">
+	<ButtonLink href={`/ebirforms/taxpayers/${params.id}/forms`} variant="ghost" size="sm" class={stylex.attrs(styles.backLink).class}>
 		← Back to forms
 	</ButtonLink>
 	{#if !ready}
 		<p role="status">Loading saved form…</p>
 	{:else if recordError}
-		<p role="alert" class="text-sm text-danger">{recordError}</p>
+		<p role="alert" class={stylex.attrs(styles.error).class}>{recordError}</p>
 	{:else}
 		<section class="eq-workspace" aria-label={`BIR Form ${params.formCode} workspace`}>
 			<header class="eq-header">
@@ -88,7 +90,7 @@
 					</div>
 				{/if}
 				<fieldset disabled={busy} class="eq-form-controls">
-					<legend class="sr-only">BIR form details</legend>
+					<legend class={stylex.attrs(styles.visuallyHidden).class}>BIR form details</legend>
 					{#if workspace.selectedForm.code === '1601EQ'}
 						<Form1601EQ definition={workspace.selectedForm} bind:values={workspace.formValues} errors={workspace.validationErrors} onvaluechange={(patch) => workspace.updateFormValues(patch)} />
 					{:else if getWithholdingDefinition(workspace.selectedForm.code)}

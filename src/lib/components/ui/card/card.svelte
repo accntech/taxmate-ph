@@ -1,4 +1,6 @@
 <script lang="ts">
+	import * as stylex from '@stylexjs/stylex';
+	import { wrapperStyles } from './card-wrapper.styles';
 	import type { Snippet } from 'svelte';
 
 	let {
@@ -15,27 +17,23 @@
 		children?: Snippet;
 	} = $props();
 
-	const variantClass = {
-		panel: 'border-border bg-bg-elev shadow-[var(--shadow-ui-sm)]',
-		muted: 'border-border-soft bg-bg-elev-2',
-		flat: 'border-border-soft bg-transparent'
+	const variantStyles = {
+		panel: wrapperStyles.panel,
+		muted: wrapperStyles.muted,
+		flat: wrapperStyles.flat
 	};
 
-	const paddingClass = {
-		none: '',
-		sm: 'p-3',
-		md: 'p-4',
-		lg: 'p-5'
+	const paddingStyles = {
+		none: undefined,
+		sm: wrapperStyles.sm,
+		md: wrapperStyles.md,
+		lg: wrapperStyles.lg
 	};
 </script>
 
 <section
 	class={[
-		'rounded-panel border',
-		variantClass[variant],
-		paddingClass[padding],
-		interactive &&
-			'transition-[border-color,box-shadow,transform] duration-150 hover:border-accent/40 hover:shadow-[var(--shadow-ui-md)] active:scale-[0.99]',
+		stylex.attrs(wrapperStyles.root, variantStyles[variant], paddingStyles[padding], interactive && wrapperStyles.interactive).class,
 		className
 	]}
 >

@@ -33,7 +33,7 @@
 	{...rest}
 	variant={variant === 'primary' ? 'accent' : variant === 'secondary' ? 'outlined' : variant === 'danger' ? 'destructive' : variant === 'warn' ? 'primary-soft' : 'ghost'}
 	size={size === 'sm' ? 'compact' : size === 'icon' ? 'icon' : 'normal'}
-	class={[size === 'touch' ? 'min-h-12 px-4 text-base' : '', variant === 'warn' ? 'ui-warning-action' : '', className].filter(Boolean).join(' ')}
+	class={[variant === 'warn' ? 'ui-warning-action' : '', className].filter(Boolean).join(' ')}
 >
 	{@render children?.()}
 </SourceButton>

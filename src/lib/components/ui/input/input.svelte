@@ -1,4 +1,6 @@
 <script lang="ts">
+	import * as stylex from '@stylexjs/stylex';
+	import { wrapperStyles } from './input-wrapper.styles';
 	import type { Snippet } from 'svelte';
 	import { Input as PcstiInput, type InputProps } from '$lib/components/ui/input/base';
 	import type { HTMLInputAttributes } from 'svelte/elements';
@@ -54,7 +56,8 @@
 			{leading}
 			{trailing}
 			invalid={hasError}
-			class={[size === 'touch' ? 'min-h-12 text-base' : '', className].filter(Boolean).join(' ')}
+			sx={size === 'touch' ? wrapperStyles.touch : undefined}
+			class={className}
 			data-slot={grouped ? 'input-group-control' : 'input'}
 			aria-invalid={hasError || rest['aria-invalid'] || undefined}
 			aria-describedby={describedBy}
@@ -75,16 +78,16 @@
 	{/if}
 {/snippet}
 
-<div data-slot="form-item" class="grid min-w-0 gap-2">
+<div data-slot="form-item" class={stylex.attrs(wrapperStyles.field).class}>
 	{#if label}
-		<Label for={controlId} class="text-fg-muted">
-			{label}{#if rest.required}<span class="text-danger" aria-hidden="true">*</span>{/if}
+		<Label for={controlId} class={stylex.attrs(wrapperStyles.label).class}>
+			{label}{#if rest.required}<span class={stylex.attrs(wrapperStyles.required).class} aria-hidden="true">*</span>{/if}
 		</Label>
 	{/if}
 	{@render field()}
 	{#if error}
 		<FieldErrors id={helpId} errors={[error]} />
 	{:else if help}
-		<p id={helpId} data-slot="form-description" class="text-xs text-fg-subtle">{help}</p>
+		<p id={helpId} data-slot="form-description" class={stylex.attrs(wrapperStyles.help).class}>{help}</p>
 	{/if}
 </div>

@@ -1,4 +1,6 @@
 <script lang="ts">
+	import * as stylex from "@stylexjs/stylex";
+	import { designSystem } from "./design-system.styles";
 	import { Badge, Button, Card, Dialog, Drawer, Input, TinInput, CurrencyInput, NumberInput, Page, PageHeader, Select, Textarea, ToggleGroup } from '$lib/components/ui';
 	import ArrowRight from '@solar-icons/svelte/category/arrows/Linear/ArrowRight.svelte';
 	import CheckCircle from '@solar-icons/svelte/category/ui/Linear/CheckCircle.svelte';
@@ -73,11 +75,11 @@
 	}
 
 	const typeScale = [
-		{ cls: 'text-3xl font-semibold tracking-tight', label: 'Display', spec: '30 / 1.1' },
-		{ cls: 'text-2xl font-semibold tracking-tight', label: 'Title', spec: '24 / 1.2' },
-		{ cls: 'text-lg font-semibold', label: 'Section', spec: '18 / 1.4' },
-		{ cls: 'text-sm leading-6', label: 'Body', spec: '14 / 1.7' },
-		{ cls: 'text-xs font-medium uppercase tracking-wide text-fg-muted', label: 'Label', spec: '12 / caps' }
+		{ style: designSystem.displayType, label: 'Display', spec: '30 / 1.1' },
+		{ style: designSystem.headingType, label: 'Title', spec: '24 / 1.2' },
+		{ style: designSystem.sectionType, label: 'Section', spec: '18 / 1.4' },
+		{ style: designSystem.bodyType, label: 'Body', spec: '14 / 1.7' },
+		{ style: designSystem.labelType, label: 'Label', spec: '12 / caps' }
 	];
 
 	const ledger = [
@@ -119,11 +121,11 @@
 </script>
 
 {#snippet sectionHead(index: string, title: string, desc: string)}
-	<div class="flex items-baseline gap-4 border-b border-border-soft pb-3">
-		<span class="font-mono text-sm tabular-nums text-fg-subtle">{index}</span>
-		<div class="min-w-0">
-			<h2 class="text-lg font-semibold tracking-tight text-fg">{title}</h2>
-			<p class="mt-0.5 text-sm text-fg-muted">{desc}</p>
+	<div class={stylex.attrs(designSystem.sectionHeading).class}>
+		<span class={stylex.attrs(designSystem.sectionIndex).class}>{index}</span>
+		<div class={stylex.attrs(designSystem.shrinkable).class}>
+			<h2 class={stylex.attrs(designSystem.sectionTitle).class}>{title}</h2>
+			<p class={stylex.attrs(designSystem.sectionDescription).class}>{desc}</p>
 		</div>
 	</div>
 {/snippet}
@@ -132,28 +134,28 @@
 	<button
 		type="button"
 		onclick={() => copyToken(row.token)}
-		class="ds-swatch group grid grid-cols-[auto_minmax(0,1fr)] items-center gap-3 rounded-field px-2 py-2 text-left outline-none hover:bg-bg-hover focus-visible:shadow-[0_0_0_3px_var(--ring)]"
+		class={['ds-swatch', stylex.attrs(designSystem.swatch).class]}
 	>
 		<span
-			class="size-9 shrink-0 rounded-field border border-border-soft"
+			class={stylex.attrs(designSystem.swatchColor).class}
 			style="background: var({row.token})"
 			aria-hidden="true"
 		></span>
-		<span class="min-w-0">
-			<span class="flex items-center gap-1.5">
-				<span class="truncate font-mono text-[13px] text-fg">{row.token}</span>
+		<span class={stylex.attrs(designSystem.shrinkable).class}>
+			<span class={stylex.attrs(designSystem.tokenHeading).class}>
+				<span class={stylex.attrs(designSystem.tokenName).class}>{row.token}</span>
 				{#if copied === row.token}
-					<span class="font-mono text-[11px] text-accent">copied</span>
+					<span class={stylex.attrs(designSystem.copyConfirmation).class}>copied</span>
 				{:else}
-					<span class="text-fg-subtle opacity-0 transition-opacity group-hover:opacity-100" aria-hidden="true">
+					<span class={["copy-icon", stylex.attrs(designSystem.copyIcon).class]} aria-hidden="true">
 						<Copy size={13} color="currentColor" />
 					</span>
 				{/if}
 			</span>
-			<span class="flex items-center justify-between gap-2">
-				<span class="shrink-0 text-xs text-fg-muted">{row.note}</span>
+			<span class={stylex.attrs(designSystem.tokenDetails).class}>
+				<span class={stylex.attrs(designSystem.tokenNote).class}>{row.note}</span>
 				<span
-					class="max-w-[9.5rem] truncate font-mono text-[11px] tabular-nums text-fg-subtle"
+					class={stylex.attrs(designSystem.tokenValue).class}
 					title={values[row.token] ?? ''}
 				>
 					{values[row.token] ?? ''}
@@ -178,44 +180,44 @@
 			<CheckCircle size={22} color="currentColor" />
 		{/snippet}
 		{#snippet actions()}
-			<Badge tone="neutral" class="font-mono">
+			<Badge tone="neutral" class={stylex.attrs(designSystem.monospace).class}>
 				{scheme === 'dark' ? 'dark scheme' : 'light scheme'}
 			</Badge>
 		{/snippet}
 	</PageHeader>
 
 	<!-- 01 · Color -->
-	<section class="grid gap-5">
+	<section class={stylex.attrs(designSystem.section).class}>
 		{@render sectionHead('01', 'Color', 'Surfaces stay quiet so a single accent and the status hues carry meaning. Values are live — click any token to copy.')}
-		<div class="grid gap-4 lg:grid-cols-2">
-			<Card variant="panel" padding="md" class="grid gap-1">
-				<p class="px-2 pb-1 font-mono text-[11px] uppercase tracking-wide text-fg-subtle">Surfaces &amp; lines</p>
+		<div class={stylex.attrs(designSystem.colorGrid).class}>
+			<Card variant="panel" padding="md" class={stylex.attrs(designSystem.tokenPanel).class}>
+				<p class={stylex.attrs(designSystem.panelLabel).class}>Surfaces &amp; lines</p>
 				{#each surfaces as row (row.token)}
 					{@render swatch(row)}
 				{/each}
 			</Card>
-			<Card variant="panel" padding="md" class="grid gap-1">
-				<p class="px-2 pb-1 font-mono text-[11px] uppercase tracking-wide text-fg-subtle">Content</p>
+			<Card variant="panel" padding="md" class={stylex.attrs(designSystem.tokenPanel).class}>
+				<p class={stylex.attrs(designSystem.panelLabel).class}>Content</p>
 				{#each content as row (row.token)}
 					{@render swatch(row)}
 				{/each}
 			</Card>
-			<Card variant="panel" padding="md" class="grid gap-1">
-				<p class="px-2 pb-1 font-mono text-[11px] uppercase tracking-wide text-fg-subtle">Accent</p>
+			<Card variant="panel" padding="md" class={stylex.attrs(designSystem.tokenPanel).class}>
+				<p class={stylex.attrs(designSystem.panelLabel).class}>Accent</p>
 				{#each accent as row (row.token)}
 					{@render swatch(row)}
 				{/each}
 			</Card>
-			<Card variant="panel" padding="md" class="grid content-start gap-2">
-				<p class="px-2 font-mono text-[11px] uppercase tracking-wide text-fg-subtle">Status</p>
-				<div class="grid gap-2">
+			<Card variant="panel" padding="md" class={stylex.attrs(designSystem.statusPanel).class}>
+				<p class={stylex.attrs(designSystem.statusHeading).class}>Status</p>
+				<div class={stylex.attrs(designSystem.statusList).class}>
 					{#each semantic as row (row.token)}
-						<div class="flex items-center justify-between gap-3 rounded-field px-2 py-1.5">
-							<span class="flex items-center gap-2.5">
-								<span class="size-3.5 rounded-full" style="background: var({row.token})" aria-hidden="true"></span>
-								<span class="font-mono text-[13px] text-fg">{row.token}</span>
+						<div class={stylex.attrs(designSystem.statusRow).class}>
+							<span class={stylex.attrs(designSystem.inlineLabel).class}>
+								<span class={stylex.attrs(designSystem.statusDot).class} style="background: var({row.token})" aria-hidden="true"></span>
+								<span class={stylex.attrs(designSystem.statusToken).class}>{row.token}</span>
 							</span>
-							<span class="text-xs text-fg-muted">{row.note}</span>
+							<span class={stylex.attrs(designSystem.hint).class}>{row.note}</span>
 						</div>
 					{/each}
 				</div>
@@ -224,33 +226,31 @@
 	</section>
 
 	<!-- 02 · Typography & figures -->
-	<section class="grid gap-5">
+	<section class={stylex.attrs(designSystem.section).class}>
 		{@render sectionHead('02', 'Type & figures', 'Geist for prose, a monospaced face for every number. Amounts use tabular figures so columns stay aligned to the centavo.')}
-		<div class="grid gap-4 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
-			<Card variant="panel" padding="lg" class="grid gap-5">
+		<div class={stylex.attrs(designSystem.typeGrid).class}>
+			<Card variant="panel" padding="lg" class={stylex.attrs(designSystem.section).class}>
 				{#each typeScale as step (step.label)}
-					<div class="grid grid-cols-[6.5rem_minmax(0,1fr)] items-baseline gap-4">
-						<span class="font-mono text-[11px] uppercase tracking-wide text-fg-subtle">
-							{step.label}<br /><span class="tabular-nums normal-case text-fg-subtle/70">{step.spec}</span>
+					<div class={stylex.attrs(designSystem.typeRow).class}>
+						<span class={stylex.attrs(designSystem.specimenLabel).class}>
+							{step.label}<br /><span class={stylex.attrs(designSystem.typeSpec).class}>{step.spec}</span>
 						</span>
-						<span class={['truncate text-fg', step.cls]}>Quarterly VAT return</span>
+						<span class={stylex.attrs(designSystem.specimenText, step.style).class}>Quarterly VAT return</span>
 					</div>
 				{/each}
 			</Card>
-			<Card variant="muted" padding="lg" class="grid content-start gap-3">
-				<div class="flex items-center justify-between">
-					<span class="font-mono text-[11px] uppercase tracking-wide text-fg-subtle">Tabular figures</span>
+			<Card variant="muted" padding="lg" class={stylex.attrs(designSystem.ledgerPanel).class}>
+				<div class={stylex.attrs(designSystem.ledgerHeading).class}>
+					<span class={stylex.attrs(designSystem.specimenLabel).class}>Tabular figures</span>
 					<Badge tone="info" size="sm">2550Q</Badge>
 				</div>
-				<dl class="grid gap-2">
+				<dl class={stylex.attrs(designSystem.statusList).class}>
 					{#each ledger as line (line.label)}
-						<div class="flex items-baseline justify-between gap-4 {line.label === 'VAT payable' ? 'mt-1 border-t border-border pt-2.5' : ''}">
-							<dt class="text-sm text-fg-muted">{line.label}</dt>
+						<div class={stylex.attrs(designSystem.ledgerRow, line.label === 'VAT payable' && designSystem.ledgerTotal).class}>
+							<dt class={stylex.attrs(designSystem.bodyMuted).class}>{line.label}</dt>
 							<dd
 								class={[
-									'font-mono text-sm tabular-nums',
-									line.label === 'VAT payable' ? 'font-semibold text-fg' : 'text-fg',
-									line.amount < 0 && 'text-danger'
+									stylex.attrs(designSystem.ledgerAmount, line.label === 'VAT payable' && designSystem.emphasized, line.amount < 0 && designSystem.negative).class
 								]}
 							>
 								{line.amount < 0 ? '(' : ''}₱{peso.format(Math.abs(line.amount))}{line.amount < 0 ? ')' : ''}
@@ -263,42 +263,42 @@
 	</section>
 
 	<!-- 03 · Form, radius, motion -->
-	<section class="grid gap-5">
+	<section class={stylex.attrs(designSystem.section).class}>
 		{@render sectionHead('03', 'Shape & motion', 'Two radii, three elevations, and one easing curve. Restraint keeps the interface feeling engineered, not decorated.')}
-		<div class="grid gap-4 md:grid-cols-3">
-			<Card variant="panel" padding="lg" class="grid content-start gap-4">
-				<p class="font-mono text-[11px] uppercase tracking-wide text-fg-subtle">Radius</p>
+		<div class={stylex.attrs(designSystem.shapeGrid).class}>
+			<Card variant="panel" padding="lg" class={stylex.attrs(designSystem.specimenPanel).class}>
+				<p class={stylex.attrs(designSystem.specimenLabel).class}>Radius</p>
 				{#each radii as r (r.token)}
-					<div class="flex items-center gap-3">
-						<span class="size-12 border border-border bg-bg-elev-2" style="border-radius: var({r.token})" aria-hidden="true"></span>
-						<span class="grid">
-							<span class="text-sm text-fg">{r.label}</span>
-							<span class="font-mono text-[11px] tabular-nums text-fg-subtle">{r.token} · {r.px}</span>
+					<div class={stylex.attrs(designSystem.shapeRow).class}>
+						<span class={stylex.attrs(designSystem.radiusSample).class} style="border-radius: var({r.token})" aria-hidden="true"></span>
+						<span class={stylex.attrs(designSystem.shapeDetails).class}>
+							<span class={stylex.attrs(designSystem.body).class}>{r.label}</span>
+							<span class={stylex.attrs(designSystem.radiusSpec).class}>{r.token} · {r.px}</span>
 						</span>
 					</div>
 				{/each}
 			</Card>
-			<Card variant="panel" padding="lg" class="grid content-start gap-4">
-				<p class="font-mono text-[11px] uppercase tracking-wide text-fg-subtle">Elevation</p>
+			<Card variant="panel" padding="lg" class={stylex.attrs(designSystem.specimenPanel).class}>
+				<p class={stylex.attrs(designSystem.specimenLabel).class}>Elevation</p>
 				{#each shadows as s (s.token)}
-					<div class="flex items-center gap-3">
-						<span class="size-12 rounded-field bg-bg-elev" style="box-shadow: var({s.token})" aria-hidden="true"></span>
-						<span class="grid">
-							<span class="text-sm text-fg">{s.label}</span>
-							<span class="font-mono text-[11px] text-fg-subtle">{s.token}</span>
+					<div class={stylex.attrs(designSystem.shapeRow).class}>
+						<span class={stylex.attrs(designSystem.elevationSample).class} style="box-shadow: var({s.token})" aria-hidden="true"></span>
+						<span class={stylex.attrs(designSystem.shapeDetails).class}>
+							<span class={stylex.attrs(designSystem.body).class}>{s.label}</span>
+							<span class={stylex.attrs(designSystem.elevationSpec).class}>{s.token}</span>
 						</span>
 					</div>
 				{/each}
 			</Card>
-			<Card variant="panel" padding="lg" class="grid content-start gap-4">
-				<p class="font-mono text-[11px] uppercase tracking-wide text-fg-subtle">Motion</p>
-				<div class="ds-motion grid gap-1.5">
-					<span class="h-2.5 w-full rounded-full bg-bg-elev-2">
-						<span class="ds-motion-fill block h-full rounded-full bg-accent"></span>
+			<Card variant="panel" padding="lg" class={stylex.attrs(designSystem.specimenPanel).class}>
+				<p class={stylex.attrs(designSystem.specimenLabel).class}>Motion</p>
+				<div class={['ds-motion', stylex.attrs(designSystem.motionSample).class]}>
+					<span class={stylex.attrs(designSystem.motionTrack).class}>
+						<span class={['ds-motion-fill', stylex.attrs(designSystem.motionFill).class]}></span>
 					</span>
-					<span class="text-xs text-fg-muted">Hover the card — 150ms entrance.</span>
+					<span class={stylex.attrs(designSystem.hint).class}>Hover the card — 150ms entrance.</span>
 				</div>
-				<p class="font-mono text-[11px] leading-5 text-fg-subtle">
+				<p class={stylex.attrs(designSystem.motionSpec).class}>
 					--ease-ui<br />cubic-bezier(0.2, 0, 0, 1)
 				</p>
 			</Card>
@@ -306,12 +306,12 @@
 	</section>
 
 	<!-- 04 · Components -->
-	<section class="grid gap-5">
+	<section class={stylex.attrs(designSystem.section).class}>
 		{@render sectionHead('04', 'Components', 'Buttons, badges, fields, and overlays — the building blocks every workspace shares.')}
 
-		<Card variant="panel" padding="lg" class="grid gap-4">
-			<p class="font-mono text-[11px] uppercase tracking-wide text-fg-subtle">Buttons</p>
-			<div class="flex flex-wrap items-center gap-2.5">
+		<Card variant="panel" padding="lg" class={stylex.attrs(designSystem.componentPanel).class}>
+			<p class={stylex.attrs(designSystem.specimenLabel).class}>Buttons</p>
+			<div class={stylex.attrs(designSystem.buttonSamples).class}>
 				<Button>Save return</Button>
 				<Button variant="secondary">Cancel</Button>
 				<Button variant="ghost">Discard draft</Button>
@@ -326,10 +326,10 @@
 			</div>
 		</Card>
 
-		<div class="grid gap-4 lg:grid-cols-2">
-			<Card variant="panel" padding="lg" class="grid content-start gap-4">
-				<p class="font-mono text-[11px] uppercase tracking-wide text-fg-subtle">Badges</p>
-				<div class="flex flex-wrap gap-2">
+		<div class={stylex.attrs(designSystem.colorGrid).class}>
+			<Card variant="panel" padding="lg" class={stylex.attrs(designSystem.specimenPanel).class}>
+				<p class={stylex.attrs(designSystem.specimenLabel).class}>Badges</p>
+				<div class={stylex.attrs(designSystem.badgeSamples).class}>
 					<Badge tone="success"><CheckCircle size={13} color="currentColor" />Filed</Badge>
 					<Badge tone="warn"><DangerTriangle size={13} color="currentColor" />Needs review</Badge>
 					<Badge tone="danger">Rejected</Badge>
@@ -338,16 +338,16 @@
 					<Badge tone="neutral">Saved locally</Badge>
 				</div>
 			</Card>
-			<Card variant="panel" padding="lg" class="grid content-start gap-4">
-				<p class="font-mono text-[11px] uppercase tracking-wide text-fg-subtle">Toggle &amp; select</p>
+			<Card variant="panel" padding="lg" class={stylex.attrs(designSystem.specimenPanel).class}>
+				<p class={stylex.attrs(designSystem.specimenLabel).class}>Toggle &amp; select</p>
 				<ToggleGroup bind:value={density} options={densities} ariaLabel="Row density" />
 				<Select bind:value={period} options={periods} label="Filing period" />
 			</Card>
 		</div>
 
-		<Card variant="panel" padding="lg" class="grid gap-4">
-			<p class="font-mono text-[11px] uppercase tracking-wide text-fg-subtle">Fields</p>
-			<div class="grid gap-4 md:grid-cols-2">
+		<Card variant="panel" padding="lg" class={stylex.attrs(designSystem.componentPanel).class}>
+			<p class={stylex.attrs(designSystem.specimenLabel).class}>Fields</p>
+			<div class={stylex.attrs(designSystem.fieldSamples).class}>
 				<TinInput bind:value={tin} label="TIN and branch code" help="9 TIN digits and a 5-digit branch code." />
 				<CurrencyInput value="0.00" label="Amount due" help="Pesos and centavos." />
 				<CurrencyInput value="1234.56" label="Calculated withholding" readonly help="Calculated amounts remain read-only." />
@@ -357,12 +357,12 @@
 			</div>
 		</Card>
 
-		<Card variant="muted" padding="lg" class="flex flex-wrap items-center justify-between gap-4">
-			<div class="grid gap-1">
-				<p class="font-mono text-[11px] uppercase tracking-wide text-fg-subtle">Overlays</p>
-				<p class="text-sm text-fg-muted">Dialogs confirm; drawers hold context beside the work.</p>
+		<Card variant="muted" padding="lg" class={stylex.attrs(designSystem.overlayPanel).class}>
+			<div class={stylex.attrs(designSystem.tokenPanel).class}>
+				<p class={stylex.attrs(designSystem.specimenLabel).class}>Overlays</p>
+				<p class={stylex.attrs(designSystem.bodyMuted).class}>Dialogs confirm; drawers hold context beside the work.</p>
 			</div>
-			<div class="flex gap-2.5">
+			<div class={stylex.attrs(designSystem.overlayActions).class}>
 				<Button variant="secondary" onclick={() => (dialogOpen = true)}>Open dialog</Button>
 				<Button variant="secondary" onclick={() => (drawerOpen = true)}>Open drawer</Button>
 			</div>
@@ -375,7 +375,7 @@
 	title="Submit 2550Q for filing?"
 	description="This generates the savefile and marks the return as filed. You can still export a printout afterward."
 >
-	<p class="text-sm leading-6 text-fg-muted">
+	<p class={stylex.attrs(designSystem.dialogBody).class}>
 		The taxpayer record and validation status will be locked to this period once submitted.
 	</p>
 	{#snippet footer()}
@@ -385,17 +385,17 @@
 </Dialog>
 
 <Drawer bind:open={drawerOpen} title="Validation log" description="Checks run against the active return.">
-	<div class="grid gap-3 p-5">
-		<div class="flex items-center gap-2.5 text-sm text-fg">
-			<span class="text-success"><CheckCircle size={16} color="currentColor" /></span>
+	<div class={stylex.attrs(designSystem.validationLog).class}>
+		<div class={stylex.attrs(designSystem.validationRow).class}>
+			<span class={stylex.attrs(designSystem.valid).class}><CheckCircle size={16} color="currentColor" /></span>
 			TIN format valid
 		</div>
-		<div class="flex items-center gap-2.5 text-sm text-fg">
-			<span class="text-success"><CheckCircle size={16} color="currentColor" /></span>
+		<div class={stylex.attrs(designSystem.validationRow).class}>
+			<span class={stylex.attrs(designSystem.valid).class}><CheckCircle size={16} color="currentColor" /></span>
 			Output VAT recomputed
 		</div>
-		<div class="flex items-center gap-2.5 text-sm text-fg">
-			<span class="text-warn"><DangerTriangle size={16} color="currentColor" /></span>
+		<div class={stylex.attrs(designSystem.validationRow).class}>
+			<span class={stylex.attrs(designSystem.warning).class}><DangerTriangle size={16} color="currentColor" /></span>
 			Input VAT exceeds 70% cap — review
 		</div>
 	</div>
@@ -407,6 +407,10 @@
 <style>
 	.ds-swatch {
 		transition: background-color 150ms var(--ease-ui);
+	}
+
+	@media (hover: hover) {
+		.ds-swatch:hover .copy-icon { opacity: 1; }
 	}
 
 	.ds-motion-fill {

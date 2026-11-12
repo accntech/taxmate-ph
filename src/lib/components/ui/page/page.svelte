@@ -1,4 +1,6 @@
 <script lang="ts">
+	import * as stylex from '@stylexjs/stylex';
+	import { wrapperStyles } from './page-wrapper.styles';
 	import type { Snippet } from 'svelte';
 
 	let {
@@ -11,18 +13,17 @@
 		children?: Snippet;
 	} = $props();
 
-	const sizeClass = {
-		md: 'max-w-4xl',
-		lg: 'max-w-6xl',
-		xl: 'max-w-7xl',
-		full: 'max-w-none'
+	const sizeStyles = {
+		md: wrapperStyles.md,
+		lg: wrapperStyles.lg,
+		xl: wrapperStyles.xl,
+		full: wrapperStyles.full
 	};
 </script>
 
 <section
 	class={[
-		'mx-auto grid w-full min-w-0 grid-cols-[minmax(0,1fr)] gap-4 px-1 pb-8 sm:px-2 lg:gap-5',
-		sizeClass[size],
+		stylex.attrs(wrapperStyles.root, sizeStyles[size]).class,
 		className
 	]}
 >

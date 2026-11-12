@@ -1,4 +1,6 @@
 <script lang="ts">
+	import * as stylex from '@stylexjs/stylex';
+	import { lineItems } from './line-items.styles';
 	import { onDestroy, tick } from 'svelte';
 	import { flip } from 'svelte/animate';
 	import { cubicOut } from 'svelte/easing';
@@ -319,7 +321,7 @@
 	{:else}
 		<p class="eq-muted">Choose whether taxes were withheld.</p>
 	{/if}
-	<p class="sr-only" role="status">{announcement}</p>
+	<p class={stylex.attrs(lineItems.announcement).class} role="status">{announcement}</p>
 </section>
 
 <Sheet {open} onOpenChange={(next) => { if (!next) close(); }} {title} description="Choose an ATC and enter its tax base. Add or update to apply this line to the return." size="md">

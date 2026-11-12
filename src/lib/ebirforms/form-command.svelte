@@ -1,4 +1,6 @@
 <script lang="ts">
+	import * as stylex from '@stylexjs/stylex';
+	import { formCommand } from './form-command.styles';
 	import { tick } from 'svelte';
 	import type { FormSummary } from '$lib/forms';
 	import { Button } from '$lib/components/ui';
@@ -45,10 +47,10 @@
 	}
 </script>
 
-<div class="flex min-h-0 flex-col">
-	<div class="shrink-0 border-b border-border-soft p-3">
-		<div class="relative">
-			<span class="pointer-events-none absolute inset-y-0 left-3 flex w-5 items-center text-fg-muted"><Icon icon={glyphs.search} /></span>
+<div class={stylex.attrs(formCommand.root).class}>
+	<div class={stylex.attrs(formCommand.searchHeader).class}>
+		<div class={stylex.attrs(formCommand.searchField).class}>
+			<span class={stylex.attrs(formCommand.searchIcon).class}><Icon icon={glyphs.search} /></span>
 			<InputControl
 				{@attach focusSearch}
 				bind:value={query}
@@ -60,19 +62,19 @@
 				aria-activedescendant={active ? `${uid}-${active.code}` : undefined}
 				placeholder="Search BIR forms…"
 				autocomplete="off"
-				class="h-11 border-transparent bg-transparent pl-10 pr-14 shadow-none"
+				class={stylex.attrs(formCommand.searchInput).class}
 				{disabled}
 				oninput={() => activeCode = ''}
 				{onkeydown}
 			/>
-			<button type="button" aria-label="Close" onclick={oncancel} class="absolute right-3 top-1/2 -translate-y-1/2 rounded border border-border px-1.5 py-0.5 text-[11px] text-fg-muted hover:bg-bg-hover">esc</button>
+			<button type="button" aria-label="Close" onclick={oncancel} class={stylex.attrs(formCommand.close).class}>esc</button>
 		</div>
 	</div>
-	<div class="flex min-w-0 shrink-0 items-center justify-between gap-4 px-5 pb-2 pt-4 text-xs text-fg-muted">
-		<span class="shrink-0 font-medium">Forms</span>
-		<span class="truncate" title={taxpayerName}>{taxpayerName}</span>
+	<div class={stylex.attrs(formCommand.resultHeading).class}>
+		<span class={stylex.attrs(formCommand.heading).class}>Forms</span>
+		<span class={stylex.attrs(formCommand.taxpayer).class} title={taxpayerName}>{taxpayerName}</span>
 	</div>
-	<div id={`${uid}-results`} role="listbox" aria-label="BIR forms" class="h-40 min-h-0 max-h-[45dvh] overflow-y-auto px-2 pb-2 sm:h-56">
+	<div id={`${uid}-results`} role="listbox" aria-label="BIR forms" class={stylex.attrs(formCommand.results).class}>
 		{#each matches as form (form.code)}
 			<button
 				id={`${uid}-${form.code}`}
@@ -83,31 +85,31 @@
 				tabindex="-1"
 				onpointermove={() => { if (form.status === 'ready') activeCode = form.code; }}
 				onclick={() => select(form.code)}
-				class="flex w-full items-center gap-3 rounded-md px-3 py-3 text-left transition-colors hover:bg-bg-hover aria-selected:bg-bg-hover focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-50"
+				class={stylex.attrs(formCommand.result).class}
 			>
-				<span class="grid size-9 shrink-0 place-items-center rounded-md border border-border bg-bg-elev text-accent"><span class="size-5"><Icon icon={glyphs.layers} /></span></span>
-				<span class="grid min-w-0 flex-1 gap-1">
-					<span class="text-sm font-medium">BIR Form {form.code}</span>
-					<span class="text-xs leading-relaxed text-fg-muted">{form.title}</span>
+				<span class={stylex.attrs(formCommand.resultIcon).class}><span class={stylex.attrs(formCommand.icon).class}><Icon icon={glyphs.layers} /></span></span>
+				<span class={stylex.attrs(formCommand.resultText).class}>
+					<span class={stylex.attrs(formCommand.resultTitle).class}>BIR Form {form.code}</span>
+					<span class={stylex.attrs(formCommand.resultDescription).class}>{form.title}</span>
 				</span>
-				<span class="hidden max-w-28 shrink-0 text-right text-xs text-fg-muted sm:block">{form.status !== 'ready' ? 'Coming soon' : form.category}</span>
+				<span class={stylex.attrs(formCommand.category).class}>{form.status !== 'ready' ? 'Coming soon' : form.category}</span>
 			</button>
 		{/each}
 		{#if matches.length === 0}
-			<div class="grid min-h-40 content-center gap-2 p-4 text-center sm:min-h-56">
-				<p class="text-sm font-medium">No matching forms</p>
-				<p class="text-xs text-fg-muted">Try another form number, title, or category.</p>
+			<div class={stylex.attrs(formCommand.empty).class}>
+				<p class={stylex.attrs(formCommand.resultTitle).class}>No matching forms</p>
+				<p class={stylex.attrs(formCommand.hint).class}>Try another form number, title, or category.</p>
 			</div>
 		{/if}
 	</div>
-	{#if status}<p role="alert" class="shrink-0 px-5 pb-3 text-xs text-danger">{status}</p>{/if}
-	<div class="flex shrink-0 items-center justify-between gap-3 border-t border-border-soft bg-bg px-3 py-2">
-		<div class="flex min-w-0 items-center gap-3">
+	{#if status}<p role="alert" class={stylex.attrs(formCommand.status).class}>{status}</p>{/if}
+	<div class={stylex.attrs(formCommand.footer).class}>
+		<div class={stylex.attrs(formCommand.footerStatus).class}>
 			<Button variant="ghost" size="sm" onclick={oncancel}>Cancel</Button>
-			<p role="status" class="text-xs text-fg-muted">{matches.length} {matches.length === 1 ? 'form' : 'forms'} found</p>
+			<p role="status" class={stylex.attrs(formCommand.hint).class}>{matches.length} {matches.length === 1 ? 'form' : 'forms'} found</p>
 		</div>
-		<div class="flex shrink-0 items-center gap-3">
-			<span class="hidden items-center gap-1 text-xs text-fg-muted sm:flex"><kbd>↑</kbd><kbd>↓</kbd><span class="ml-1">Navigate</span></span>
+		<div class={stylex.attrs(formCommand.footerActions).class}>
+			<span class={stylex.attrs(formCommand.navigationHint).class}><kbd>↑</kbd><kbd>↓</kbd><span class={stylex.attrs(formCommand.navigationLabel).class}>Navigate</span></span>
 			<Button variant="secondary" size="sm" disabled={disabled || !active} onclick={() => { if (active) select(active.code); }}>Create return <kbd aria-hidden="true">↵</kbd></Button>
 		</div>
 	</div>

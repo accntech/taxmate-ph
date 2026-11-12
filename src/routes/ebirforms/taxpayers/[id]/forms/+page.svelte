@@ -1,4 +1,6 @@
 <script lang="ts">
+	import * as stylex from '@stylexjs/stylex';
+	import { styles } from './tax-returns.styles';
 	import { onMount } from 'svelte';
 	import { toast, Toaster } from '$lib/components/ui/toaster';
 	import { resolve } from '$app/paths';
@@ -189,27 +191,27 @@
 
 <svelte:head><title>Tax Returns | eBIRForms</title></svelte:head>
 <Page size="full">
-	<ButtonLink href="/ebirforms/taxpayers" variant="ghost" size="sm" class="w-fit">← Back to taxpayers</ButtonLink>
+	<ButtonLink href="/ebirforms/taxpayers" variant="ghost" size="sm" class={stylex.attrs(styles.backLink).class}>← Back to taxpayers</ButtonLink>
 	{#if !ready}
-		<p role="status" class="p-6 text-fg-muted">Loading taxpayer…</p>
+		<p role="status" class={stylex.attrs(styles.loading).class}>Loading taxpayer…</p>
 	{:else if !profile}
-		<div role="alert"><h1 class="text-xl font-semibold">Taxpayer not found</h1><p class="mt-2 text-sm text-fg-muted">Return to the taxpayers list and select a saved profile.</p></div>
+		<div role="alert"><h1 class={stylex.attrs(styles.notFoundHeading).class}>Taxpayer not found</h1><p class={stylex.attrs(styles.notFoundDescription).class}>Return to the taxpayers list and select a saved profile.</p></div>
 	{:else}
-		<header class="flex flex-wrap items-center justify-between gap-4 py-2">
-			<div><h1 class="font-sans text-2xl font-semibold tracking-tight">Tax Returns</h1><p class="mt-1 text-sm text-fg-muted">{profile.taxpayerName} · <span class="font-mono text-xs">{formatTinInput(profile)}</span> · {rows.length} {rows.length === 1 ? 'return' : 'returns'}</p></div>
+		<header class={stylex.attrs(styles.header).class}>
+			<div><h1 class={stylex.attrs(styles.heading).class}>Tax Returns</h1><p class={stylex.attrs(styles.description).class}>{profile.taxpayerName} · <span class={stylex.attrs(styles.tin).class}>{formatTinInput(profile)}</span> · {rows.length} {rows.length === 1 ? 'return' : 'returns'}</p></div>
 			<Button disabled={busy || archived || !storageReady} onclick={() => { createError = ''; createOpen = true; }}><AddCircle size={18} color="currentColor" />Create return</Button>
 		</header>
-		{#if archived}<p class="text-sm text-fg-muted">This taxpayer is archived. Restore the profile to create new returns.</p>{/if}
+		{#if archived}<p class={stylex.attrs(styles.status).class}>This taxpayer is archived. Restore the profile to create new returns.</p>{/if}
 		{#if archivedNotice}
-			<div class="flex flex-wrap items-center justify-between gap-3 rounded-md border border-border bg-bg-elev px-4 py-3">
-				<p class="text-sm">Return archived. Use the Archived status filter to find it later.</p>
+			<div class={stylex.attrs(styles.archiveNotice).class}>
+				<p class={stylex.attrs(styles.statusMessage).class}>Return archived. Use the Archived status filter to find it later.</p>
 				<Button variant="secondary" size="sm" disabled={busy} onclick={() => archivedNotice && restoreForm(archivedNotice)}>Undo archive</Button>
 			</div>
 		{/if}
 		{#if errorRecord && Object.keys(actionErrors).length}
-			<div role="alert" class="rounded-md border border-danger/30 bg-bg-elev p-4 text-sm">
-				<p class="font-medium">Review BIR Form {errorRecord.formCode}, {errorRecord.returnPeriod} before continuing.</p>
-				<ul class="my-2 list-disc pl-5">
+			<div role="alert" class={stylex.attrs(styles.validationNotice).class}>
+				<p class={stylex.attrs(styles.validationHeading).class}>Review BIR Form {errorRecord.formCode}, {errorRecord.returnPeriod} before continuing.</p>
+				<ul class={stylex.attrs(styles.validationList).class}>
 					{#each Object.entries(actionErrors) as [id, message] (id)}
 						<li>{getFormDefinition(errorRecord.formCode)?.fields.find(field => field.id === id)?.label.replace(/^\d+[A-Z]?\s+/, '') || (id.endsWith(':overpaymentOption') ? 'Over-remittance treatment' : 'Return details')}: {message}</li>
 					{/each}
@@ -218,18 +220,18 @@
 			</div>
 		{/if}
 		{#if submissionNotice}
-			<p role={submissionNotice.error ? 'alert' : 'status'} class={['rounded-md border border-border bg-bg-elev p-4 text-sm break-words', submissionNotice.error ? 'text-danger' : 'text-fg']}>
+			<p role={submissionNotice.error ? 'alert' : 'status'} class={(submissionNotice.error ? stylex.attrs(styles.submissionNotice, styles.errorTone).class : stylex.attrs(styles.submissionNotice, styles.normalTone).class)}>
 				{submissionNotice.message}
 			</p>
 		{/if}
-		{#if !storageReady}<p role="alert" class="text-sm text-danger">{workspace.statusMessage}</p>{/if}
+		{#if !storageReady}<p role="alert" class={stylex.attrs(styles.error).class}>{workspace.statusMessage}</p>{/if}
 		<RecordTable {rows} {columns} {filters} label="Tax returns" stateKey={`forms-${params.id}`}
 			initialFilters={{ status: ['Draft', 'Final', 'Submitted', 'Simulated', 'For resubmission'] }}
 			emptyMessage="No returns created yet. Choose Create return to get started.">
 			{#snippet cell(row, key)}
-				{#if key === 'form'}<span class="font-mono font-medium text-accent">BIR Form {row.form}</span>
+				{#if key === 'form'}<span class={stylex.attrs(styles.formCode).class}>BIR Form {row.form}</span>
 				{:else if key === 'status'}<Badge size="sm" tone={row.status === 'Submitted' ? 'success' : row.status === 'Final' ? 'info' : row.status === 'For resubmission' ? 'warn' : 'neutral'}>{row.status}</Badge>
-				{:else if key === 'updatedAt'}<span class="whitespace-nowrap text-xs text-fg-muted">{date(Number(row.updatedAt))}</span>
+				{:else if key === 'updatedAt'}<span class={stylex.attrs(styles.updatedAt).class}>{date(Number(row.updatedAt))}</span>
 				{:else if key === 'amount'}{row.amount === '—' ? '—' : amount(Number(row.amount))}
 				{:else}{row[key]}{/if}
 			{/snippet}
@@ -242,7 +244,7 @@
 				<Menu label={`More actions for BIR Form ${row.form}, ${row.period}`} tooltip="More actions" align="right" disabled={busy || !storageReady} triggerClass="form-actions-trigger" panelClass="form-actions-panel">
 					{#snippet trigger()}<span class="action-icon"><Icon icon={glyphs.more} /></span>{/snippet}
 					{#snippet content({ close })}
-						<div class="flex flex-col">
+						<div class={stylex.attrs(styles.menuContent).class}>
 						<p class="action-heading">BIR Form {row.form} · {row.period}</p>
 						<MenuItem variant="ghost" size="compact" class="form-action" onSelect={() => { close(); row.status === 'Archived' ? restoreForm(row.id) : archiveForm(row.id); }}><span class="action-icon"><Icon icon={row.status === 'Archived' ? glyphs.refresh : glyphs.archive} /></span>{row.status === 'Archived' ? 'Restore' : 'Archive'}</MenuItem>
 						<MenuItem variant="ghost" size="compact" class="form-action" onSelect={() => { close(); finalize(row.id); }}><span class="action-icon"><Icon icon={glyphs.checkCircle} /></span>Mark as final</MenuItem>
@@ -264,7 +266,7 @@
 </Dialog>
 <Dialog open={!!deleteId} onOpenChange={(open) => { if (!open) deleteId = ''; }} title="Delete return?"
 	description={`Delete BIR Form ${deletingRecord?.formCode || ''}, ${deletingRecord?.returnPeriod || ''}? This removes the working copy permanently. Submitted return history is kept.`}>
-	<p class="text-sm text-fg-muted">{workspace.statusMessage}</p>
+	<p class={stylex.attrs(styles.status).class}>{workspace.statusMessage}</p>
 	{#snippet footer()}
 		<Button variant="secondary" onclick={() => deleteId = ''}>Cancel</Button>
 		<Button variant="danger" disabled={busy || !storageReady} onclick={deleteForm}>Delete return</Button>
@@ -274,18 +276,18 @@
 <Dialog open={isGenerating} title="Generating PDF" description={isCanceling ? 'Canceling PDF generation…' : 'Please wait while your tax return is prepared.'}
 	closedByBackdrop={false} closedByEscape={false} hideCloseButton>
 	{#if isGenerating}
-		<div role="progressbar" aria-label="PDF generation progress" aria-valuetext={isCanceling ? 'Stopping the export…' : pdfProgress.stage} class="pdf-progress mt-1 h-1.5 overflow-hidden rounded-full bg-bg-hover">
-			<span class="pdf-progress-indicator block h-full rounded-full bg-accent"></span>
+		<div role="progressbar" aria-label="PDF generation progress" aria-valuetext={isCanceling ? 'Stopping the export…' : pdfProgress.stage} class={["pdf-progress", stylex.attrs(styles.pdfProgress).class]}>
+			<span class={["pdf-progress-indicator", stylex.attrs(styles.pdfProgressIndicator).class]}></span>
 		</div>
 	{/if}
-	<p role="status" class="mt-3 text-sm text-fg-muted">{isCanceling ? 'Stopping the export…' : pdfProgress.stage}</p>
+	<p role="status" class={stylex.attrs(styles.pdfStatus).class}>{isCanceling ? 'Stopping the export…' : pdfProgress.stage}</p>
 	{#snippet footer()}
 		<Button variant="secondary" disabled={isCanceling} onclick={cancelGeneration}>{isCanceling ? 'Canceling…' : 'Cancel'}</Button>
 	{/snippet}
 </Dialog>
 <Dialog open={!!generatedPdfPath} onOpenChange={(open) => { if (!open) generatedPdfPath = ''; }} title="Open generated PDF?"
 	description="Your PDF has been saved. Open it in your default PDF viewer?">
-	<p class="break-all text-sm text-fg-muted">{generatedPdfPath}</p>
+	<p class={stylex.attrs(styles.pdfPath).class}>{generatedPdfPath}</p>
 	{#snippet footer()}
 		<Button variant="secondary" onclick={() => generatedPdfPath = ''}>Not now</Button>
 		<Button disabled={busy} onclick={openGeneratedPdf}>Open PDF</Button>

@@ -55,8 +55,8 @@ SOFTWARE.
     line-height: 1.5; /* 1 */
     -webkit-text-size-adjust: 100%; /* 2 */
     tab-size: 4; /* 3 */
-    font-family: --theme(
-      --default-font-family,
+    font-family: var(
+      --font-sans,
       -apple-system,
       BlinkMacSystemFont,
       "Segoe UI",
@@ -70,11 +70,11 @@ SOFTWARE.
       "Segoe UI Symbol",
       "Noto Color Emoji"
     ); /* 4 */
-    font-feature-settings: --theme(
+    font-feature-settings: var(
       --default-font-feature-settings,
       normal
     ); /* 5 */
-    font-variation-settings: --theme(
+    font-variation-settings: var(
       --default-font-variation-settings,
       normal
     ); /* 6 */
@@ -146,8 +146,8 @@ SOFTWARE.
   kbd,
   samp,
   pre {
-    font-family: --theme(
-      --default-mono-font-family,
+    font-family: var(
+      --font-mono,
       ui-monospace,
       SFMono-Regular,
       Menlo,
@@ -157,11 +157,11 @@ SOFTWARE.
       "Courier New",
       monospace
     ); /* 1 */
-    font-feature-settings: --theme(
+    font-feature-settings: var(
       --default-mono-font-feature-settings,
       normal
     ); /* 2 */
-    font-variation-settings: --theme(
+    font-variation-settings: var(
       --default-mono-font-variation-settings,
       normal
     ); /* 3 */
@@ -432,191 +432,5 @@ SOFTWARE.
 
   [hidden]:where(:not([hidden="until-found"])) {
     display: none !important;
-  }
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-@keyframes ping {
-  75%,
-  100% {
-    transform: scale(2);
-    opacity: 0;
-  }
-}
-@keyframes pulse {
-  50% {
-    opacity: 0.5;
-  }
-}
-
-/* Intrinsic glyph sizing stays below per-component StyleX overrides. */
-@layer components {
-  [data-icon] {
-    display: inline-block;
-    width: 1em;
-    height: 1em;
-  }
-}
-
-@keyframes origin-shimmer {
-  0% {
-    background-position: -180% 0;
-  }
-  100% {
-    background-position: 180% 0;
-  }
-}
-
-@keyframes origin-pulse-soft {
-  0%,
-  100% {
-    opacity: 1;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 0.7;
-    transform: scale(1.06);
-  }
-}
-
-@keyframes origin-breathe {
-  0% {
-    box-shadow: 0 0 0 0 color-mix(in oklch, var(--primary) 45%, transparent);
-    animation-timing-function: cubic-bezier(0.23, 1, 0.32, 1);
-  }
-  70% {
-    box-shadow: 0 0 0 6px color-mix(in oklch, var(--primary) 0%, transparent);
-    animation-timing-function: cubic-bezier(0.4, 0, 1, 1);
-  }
-  100% {
-    box-shadow: 0 0 0 0 color-mix(in oklch, var(--primary) 45%, transparent);
-  }
-}
-
-@keyframes origin-float-y {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-3px);
-  }
-}
-
-@keyframes origin-row-in {
-  from {
-    opacity: 0;
-    transform: translateY(6px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes origin-bulk-bar-in {
-  from {
-    opacity: 0;
-    transform: translateY(-6px) scale(0.98);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-@keyframes origin-chip-in {
-  from {
-    opacity: 0;
-    transform: translateX(-6px) scale(0.94);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0) scale(1);
-  }
-}
-
-@keyframes origin-empty-in {
-  from {
-    opacity: 0;
-    transform: translateY(6px) scale(0.98);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-@keyframes origin-caret-blink {
-  0%,
-  49% {
-    opacity: 1;
-  }
-  50%,
-  100% {
-    opacity: 0;
-  }
-}
-
-@keyframes origin-rubber {
-  0% {
-    transform: scale(1);
-  }
-  35% {
-    transform: scale(0.88);
-  }
-  70% {
-    transform: scale(1.05);
-  }
-  100% {
-    transform: scale(1);
-  }
-}
-
-@keyframes origin-pending-reveal {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-@keyframes origin-step-in {
-  from {
-    opacity: 0;
-    transform: translateY(6px) scale(0.98);
-    filter: blur(2px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-    filter: blur(0);
-  }
-}
-
-@keyframes origin-tab-in {
-  from {
-    opacity: 0;
-    transform: translateY(4px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes origin-nav-sub-in {
-  from {
-    opacity: 0;
-    transform: translateX(-2px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
   }
 }

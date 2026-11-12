@@ -1,4 +1,6 @@
 <script lang="ts">
+	import * as stylex from '@stylexjs/stylex';
+	import { styles } from './settings.styles';
 	import { Badge, Button, Card, Dialog, Input, Page, PageHeader, Select } from '$lib/components/ui';
 	import { settings, type FilingPeriod, type PaperSize } from '$lib/settings.svelte';
 	import { createSubmissionLogClient, formatSubmissionError, formatSubmissionLog, type SubmissionLog } from '$lib/tauri/submission';
@@ -106,32 +108,29 @@
 </script>
 
 {#snippet sectionTitle(label: string, desc: string, Icon: Component<{ size?: number; color?: string }>)}
-	<div class="flex items-start gap-3 border-b border-border-soft pb-3">
+	<div class={stylex.attrs(styles.sectionHeading).class}>
 		<span
-			class="grid size-8 shrink-0 place-items-center rounded-md bg-accent-soft text-accent"
+			class={stylex.attrs(styles.sectionIcon).class}
 			aria-hidden="true"
 		>
 			<Icon size={17} color="currentColor" />
 		</span>
-		<div class="min-w-0">
-			<h2 class="text-base font-semibold tracking-tight text-fg">{label}</h2>
-			<p class="mt-0.5 text-sm text-fg-muted">{desc}</p>
+		<div class={stylex.attrs(styles.copy).class}>
+			<h2 class={stylex.attrs(styles.sectionTitle).class}>{label}</h2>
+			<p class={stylex.attrs(styles.sectionDescription).class}>{desc}</p>
 		</div>
 	</div>
 {/snippet}
 
 {#snippet row(label: string, desc: string, control: Snippet, last = false)}
 	<div
-		class={[
-			'grid gap-3 py-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:gap-6',
-			!last && 'border-b border-border-soft'
-		]}
+		class={(last ? stylex.attrs(styles.settingRow).class : stylex.attrs(styles.settingRow, styles.rowSeparator).class)}
 	>
-		<div class="min-w-0">
-			<p class="text-sm font-medium text-fg">{label}</p>
-			<p class="mt-0.5 text-[13px] leading-5 text-fg-muted">{desc}</p>
+		<div class={stylex.attrs(styles.copy).class}>
+			<p class={stylex.attrs(styles.settingLabel).class}>{label}</p>
+			<p class={stylex.attrs(styles.settingDescription).class}>{desc}</p>
 		</div>
-		<div class="sm:justify-self-end">
+		<div class={stylex.attrs(styles.settingControl).class}>
 			{@render control()}
 		</div>
 	</div>
@@ -142,22 +141,18 @@
 		type="button"
 		aria-pressed={active}
 		{onclick}
-		class={[
-			'min-h-8 rounded-sm px-3 text-sm font-medium outline-none',
-			'transition-[color,background-color,box-shadow] duration-150 focus-visible:shadow-[0_0_0_3px_var(--ring)]',
-			active ? 'bg-bg-elev text-fg shadow-sm' : 'text-fg-muted hover:text-fg'
-		]}
+		class={(active ? stylex.attrs(styles.segment, styles.segmentInteraction, styles.selectedSegment).class : stylex.attrs(styles.segment, styles.segmentInteraction, styles.unselectedSegment).class)}
 	>
 		{label}
 	</button>
 {/snippet}
 
 {#snippet themeControl()}
-	<div class="grid gap-1.5 sm:justify-items-end">
+	<div class={stylex.attrs(styles.themeControl).class}>
 		<div
 			role="group"
 			aria-label="Theme mode"
-			class="inline-flex rounded-md border border-border bg-bg-elev-2 p-0.5"
+			class={stylex.attrs(styles.segmentGroup).class}
 		>
 			{#each themeOptions as option (option.value)}
 				{@render segmented(
@@ -167,7 +162,7 @@
 				)}
 			{/each}
 		</div>
-		<p class="text-xs text-fg-subtle">{themeNote}</p>
+		<p class={stylex.attrs(styles.themeNote).class}>{themeNote}</p>
 	</div>
 {/snippet}
 
@@ -175,7 +170,7 @@
 	<div
 		role="group"
 		aria-label="Sidebar default"
-		class="inline-flex rounded-md border border-border bg-bg-elev-2 p-0.5"
+		class={stylex.attrs(styles.segmentGroup).class}
 	>
 		{#each sidebarOptions as option (option.value)}
 			{@render segmented(
@@ -192,7 +187,7 @@
 		value={settings.prefs.paperSize}
 		options={paperOptions}
 		onchange={(value) => settings.updatePrefs({ paperSize: value })}
-		class="w-56"
+		class={stylex.attrs(styles.select).class}
 	/>
 {/snippet}
 
@@ -201,7 +196,7 @@
 		value={settings.prefs.filingPeriod}
 		options={periodOptions}
 		onchange={(value) => settings.updatePrefs({ filingPeriod: value })}
-		class="w-56"
+		class={stylex.attrs(styles.select).class}
 	/>
 {/snippet}
 
@@ -209,13 +204,13 @@
 	<Input
 		bind:value={taxpayerName}
 		placeholder="None"
-		class="w-56"
+		class={stylex.attrs(styles.select).class}
 		onblur={() => settings.updatePrefs({ defaultTaxpayer: taxpayerName.trim() })}
 	/>
 {/snippet}
 
 {#snippet sendingControl()}
-	<div role="group" aria-label="Sending mode" class="inline-flex rounded-md border border-border bg-bg-elev-2 p-0.5">
+	<div role="group" aria-label="Sending mode" class={stylex.attrs(styles.segmentGroup).class}>
 		{@render segmented(settings.prefs.submissionMode === 'legacy_sftp', () => settings.updatePrefs({ submissionMode: 'legacy_sftp' }), 'Send to BIR')}
 		{@render segmented(settings.prefs.submissionMode === 'dry_run', () => settings.updatePrefs({ submissionMode: 'dry_run' }), 'Prepare locally')}
 	</div>
@@ -254,65 +249,65 @@
 		{/snippet}
 	</PageHeader>
 
-	<Card variant="panel" padding="lg" class="grid gap-1">
+	<Card variant="panel" padding="lg" class={stylex.attrs(styles.card).class}>
 		{@render sectionTitle('Appearance', 'Theme and layout of the workspace.', Palette)}
 		{@render row('Theme', 'Light, dark, or match your system appearance.', themeControl)}
 		{@render row('Sidebar', 'Show the full navigation rail or a compact icon rail.', sidebarControl, true)}
 	</Card>
 
-	<Card variant="panel" padding="lg" class="grid gap-1">
+	<Card variant="panel" padding="lg" class={stylex.attrs(styles.card).class}>
 		{@render sectionTitle('Defaults', 'Pre-filled values when you start new work.', Printer)}
 		{@render row('Paper size', 'Default page size for printouts and PDF exports.', paperControl)}
 		{@render row('Filing period', 'Suggested period when preparing a new return.', periodControl)}
 		{@render row('Default taxpayer', 'Selected first when you open a workspace.', taxpayerControl, true)}
 	</Card>
 
-	<Card variant="panel" padding="lg" class="grid gap-1">
+	<Card variant="panel" padding="lg" class={stylex.attrs(styles.card).class}>
 		{@render sectionTitle('Sending', 'BIR submission is available for Form 1601-EQ first.', Settings)}
 		{@render row('Sending mode', 'Send to BIR uploads the return. Prepare locally saves a package on this device without sending it.', sendingControl, true)}
-		<p class="pb-2 text-[13px] leading-5 text-fg-muted">Server settings are retrieved automatically from the BIR dispatcher when sending.</p>
+		<p class={stylex.attrs(styles.dispatcherDescription).class}>Server settings are retrieved automatically from the BIR dispatcher when sending.</p>
 		{@render row('Submission log', 'Review saved preparation, connection, and upload results on this device.', submissionLogControl, true)}
 		{#if logOpen}
-			<section id="submission-log" aria-labelledby="submission-log-title" class="min-w-0 border-t border-border-soft py-4">
-				<div class="flex flex-wrap items-center justify-between gap-3">
-					<h3 id="submission-log-title" class="text-sm font-semibold text-fg">Submission log</h3>
+			<section id="submission-log" aria-labelledby="submission-log-title" class={stylex.attrs(styles.submissionLog).class}>
+				<div class={stylex.attrs(styles.logHeading).class}>
+					<h3 id="submission-log-title" class={stylex.attrs(styles.logTitle).class}>Submission log</h3>
 					<Button variant="secondary" size="sm" disabled={logLoading} onclick={() => void loadSubmissionLog()}>Refresh log</Button>
 				</div>
-				<p class="mt-2 text-[13px] leading-5 text-fg-muted">Upload success does not confirm BIR receipt or acceptance.</p>
+				<p class={stylex.attrs(styles.logDescription).class}>Upload success does not confirm BIR receipt or acceptance.</p>
 				{#if logLoading}
-					<p role="status" class="mt-3 text-sm text-fg-muted">Loading submission log…</p>
+					<p role="status" class={stylex.attrs(styles.logStatus).class}>Loading submission log…</p>
 				{:else if logError}
-					<p role="alert" class="mt-3 text-sm text-danger">{logError}</p>
+					<p role="alert" class={stylex.attrs(styles.logError).class}>{logError}</p>
 				{:else if submissionLog}
-					<p class="mt-3 break-all text-xs leading-5 text-fg-subtle">{submissionLog.path}</p>
+					<p class={stylex.attrs(styles.logPath).class}>{submissionLog.path}</p>
 					{#if submissionLog.truncated}
-						<p class="mt-2 text-xs text-fg-muted">Showing the latest 128 KiB. Earlier entries remain in the log file.</p>
+						<p class={stylex.attrs(styles.logTruncatedNote).class}>Showing the latest 128 KiB. Earlier entries remain in the log file.</p>
 					{/if}
 					{#if submissionLog.content}
-						<div class="relative mt-3">
-							<div class="absolute right-2 top-2">
+						<div class={stylex.attrs(styles.logField).class}>
+							<div class={stylex.attrs(styles.logActions).class}>
 								<Button variant="secondary" size="sm" aria-label="Copy log" disabled={logCopying} onclick={() => void copySubmissionLog()}>
 									<Copy size={14} color="currentColor" aria-hidden="true" />
 									{logCopying ? 'Copying…' : logCopied ? 'Copied' : 'Copy log'}
 								</Button>
 							</div>
-							<textarea readonly rows="12" aria-label="Log entries" value={logContent} class="block w-full resize-y rounded-md border border-border bg-bg-elev-2 p-3 pt-14 font-mono text-xs leading-5 text-fg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"></textarea>
+							<textarea readonly rows="12" aria-label="Log entries" value={logContent} class={stylex.attrs(styles.logEntries).class}></textarea>
 						</div>
 						{#if logCopied}
-							<p role="status" class="sr-only">Log copied to clipboard.</p>
+							<p role="status" class={stylex.attrs(styles.visuallyHidden).class}>Log copied to clipboard.</p>
 						{/if}
 						{#if logCopyError}
-							<p role="alert" class="mt-2 text-sm text-danger">{logCopyError}</p>
+							<p role="alert" class={stylex.attrs(styles.copyError).class}>{logCopyError}</p>
 						{/if}
 					{:else}
-						<p role="status" class="mt-3 text-sm text-fg-muted">No submission log entries yet. Prepare or submit a return to create an entry.</p>
+						<p role="status" class={stylex.attrs(styles.logStatus).class}>No submission log entries yet. Prepare or submit a return to create an entry.</p>
 					{/if}
 				{/if}
 			</section>
 		{/if}
 	</Card>
 
-	<Card variant="panel" padding="lg" class="grid gap-1">
+	<Card variant="panel" padding="lg" class={stylex.attrs(styles.card).class}>
 		{@render sectionTitle('Data & storage', 'Where your information lives.', Database)}
 		{@render row(
 			'Local-first',
@@ -327,32 +322,32 @@
 		)}
 	</Card>
 
-	<Card variant="panel" padding="lg" class="grid gap-1">
+	<Card variant="panel" padding="lg" class={stylex.attrs(styles.card).class}>
 		{@render sectionTitle('About', 'App information and references.', InfoCircle)}
 
-		<div class="grid gap-3 py-4 sm:grid-cols-2">
-			<div class="flex items-center justify-between gap-3 sm:block">
-				<span class="text-[13px] text-fg-muted">Application</span>
-				<p class="font-medium text-fg sm:mt-0.5">TaxMate PH</p>
+		<div class={stylex.attrs(styles.aboutGrid).class}>
+			<div class={stylex.attrs(styles.aboutRow).class}>
+				<span class={stylex.attrs(styles.aboutLabel).class}>Application</span>
+				<p class={stylex.attrs(styles.applicationValue).class}>TaxMate PH</p>
 			</div>
-			<div class="flex items-center justify-between gap-3 sm:block">
-				<span class="text-[13px] text-fg-muted">Version</span>
-				<p class="font-mono text-sm tabular-nums text-fg sm:mt-0.5">v{appVersion}</p>
+			<div class={stylex.attrs(styles.aboutRow).class}>
+				<span class={stylex.attrs(styles.aboutLabel).class}>Version</span>
+				<p class={stylex.attrs(styles.versionValue).class}>v{appVersion}</p>
 			</div>
 		</div>
 
-		<p class="border-t border-border-soft pt-4 text-[13px] leading-6 text-fg-muted">
+		<p class={stylex.attrs(styles.aboutDescription).class}>
 			Proof-of-concept cross-platform app for Philippine BIR tools. Not an official BIR application
 			and not intended for production tax filing or regulatory compliance.
 		</p>
 
-		<div class="mt-3 flex flex-wrap gap-x-5 gap-y-2">
+		<div class={stylex.attrs(styles.links).class}>
 			{#each birLinks as link (link.href)}
 				<a
 					href={link.href}
 					target="_blank"
 					rel="noreferrer"
-					class="text-sm font-medium text-accent underline-offset-4 hover:underline"
+					class={stylex.attrs(styles.externalLink).class}
 				>
 					{link.label}
 				</a>

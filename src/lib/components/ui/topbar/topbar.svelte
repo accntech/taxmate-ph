@@ -1,4 +1,6 @@
 <script lang="ts">
+	import * as stylex from '@stylexjs/stylex';
+	import { wrapperStyles } from './topbar-wrapper.styles';
 	import type { Snippet } from 'svelte';
 	import type { Crumb } from '../types';
 	import SidebarMinimalistic from '@solar-icons/svelte/category/it/Linear/SidebarMinimalistic.svelte';
@@ -19,36 +21,36 @@
 <div
 	data-app-topbar
 	data-tauri-drag-region
-	class="sticky top-0 z-20 flex min-h-14 items-center gap-3.5 border-b border-border-soft bg-bg/95 px-4 py-3 backdrop-blur lg:px-7"
+	class={stylex.attrs(wrapperStyles.root).class}
 >
 	<button
 		type="button"
-		class="grid size-8 place-items-center rounded-md border border-transparent bg-transparent text-fg outline-none transition hover:bg-bg-hover focus-visible:border-[color-mix(in_oklch,var(--accent)_60%,var(--border))] focus-visible:shadow-[0_0_0_3px_color-mix(in_oklch,var(--accent)_18%,transparent)] active:scale-95"
+		class={stylex.attrs(wrapperStyles.menuButton).class}
 		onclick={onMenu}
 		aria-label="Toggle sidebar"
 	>
 		<SidebarMinimalistic size={18} color="currentColor" aria-hidden="true" />
 	</button>
 
-	<nav data-tauri-drag-region aria-label="Breadcrumb" class="hidden min-w-0 flex-1 items-center gap-2 text-[13px] text-fg-muted md:flex">
+	<nav data-tauri-drag-region aria-label="Breadcrumb" class={stylex.attrs(wrapperStyles.breadcrumbs).class}>
 		{#each crumbs as crumb, index (index)}
 			{#if index > 0}
-				<span class="text-fg-subtle" aria-hidden="true">/</span>
+				<span class={stylex.attrs(wrapperStyles.separator).class} aria-hidden="true">/</span>
 			{/if}
 			{#if crumb.href}
 				<a
 					href={crumb.href}
-					class="truncate rounded-sm border border-transparent text-fg-subtle transition hover:text-fg last:text-fg last:font-medium"
+					class={stylex.attrs(wrapperStyles.link).class}
 				>
 					{crumb.label}
 				</a>
 			{:else}
-				<span data-tauri-drag-region aria-current={index === crumbs.length - 1 ? 'page' : undefined} class="truncate text-fg-subtle last:text-fg last:font-medium">{crumb.label}</span>
+				<span data-tauri-drag-region aria-current={index === crumbs.length - 1 ? 'page' : undefined} class={stylex.attrs(wrapperStyles.currentPage).class}>{crumb.label}</span>
 			{/if}
 		{/each}
 	</nav>
 
-	<div data-tauri-drag-region class="ml-auto flex items-center gap-2">
+	<div data-tauri-drag-region class={stylex.attrs(wrapperStyles.actions).class}>
 		{@render shortcuts?.()}
 		{@render actions?.()}
 	</div>

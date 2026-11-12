@@ -1,4 +1,6 @@
 <script lang="ts">
+	import * as stylex from "@stylexjs/stylex";
+	const fixture = stylex.create({ root: { display: "grid", maxWidth: "36rem", gap: "1rem", padding: "1rem" } });
 	import { Input, NumberInput, CurrencyInput, TinInput, Select, SelectTrigger, Textarea, RadioGroup, ToggleGroup } from '$lib/components/ui';
 	import { Select as SelectPrimitive } from 'bits-ui';
 	import AtcPicker from '$lib/forms/atc-picker.svelte';
@@ -10,7 +12,7 @@
 	const error = $derived(invalid ? 'Check this value.' : '');
 </script>
 
-<section aria-label="Form focus fixture" class="grid max-w-xl gap-4 p-4">
+<section aria-label="Form focus fixture" class={stylex.attrs(fixture.root).class}>
 	<button type="button" onclick={() => invalid = !invalid}>Toggle field errors</button>
 	<Input label="Reference input" {error} />
 	<Input label="Password input" type="password" {error} />

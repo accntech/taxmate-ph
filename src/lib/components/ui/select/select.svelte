@@ -1,4 +1,6 @@
 <script lang="ts" generics="T extends string">
+	import * as stylex from '@stylexjs/stylex';
+	import { wrapperStyles } from './select-wrapper.styles';
 	import type { Snippet } from 'svelte';
 	import { Select as PcstiSelect } from '$lib/components/ui/select/base';
 	import Label from '../label/label.svelte';
@@ -39,9 +41,9 @@
 	const sourceOptions = $derived(options.map((option) => ({ ...option, description: option.meta })));
 </script>
 
-<div class={['form-select grid min-w-0 gap-2', className]} data-slot="form-item">
+<div class={[["form-select", stylex.attrs(wrapperStyles.field).class].join(' '), className]} data-slot="form-item">
 	{#if label}<Label id={labelId} for={triggerId}
-			>{label}{#if required}<span class="text-danger" aria-hidden="true">*</span>{/if}</Label
+			>{label}{#if required}<span class={stylex.attrs(wrapperStyles.required).class} aria-hidden="true">*</span>{/if}</Label
 		>{/if}
 	<PcstiSelect
 		id={triggerId}
@@ -60,11 +62,11 @@
 		}}
 	>
 		{#snippet optionContent(option, selected)}
-			<span class="flex min-w-0 items-center gap-2">
+			<span class={stylex.attrs(wrapperStyles.option).class}>
 				{#if selected}{@render leading?.()}{/if}
-				<span class="grid min-w-0 gap-0.5">
-					<span class="truncate font-medium">{option.label}</span>
-					{#if !selected && option.description}<span class="text-xs text-fg-muted">{option.description}</span>{/if}
+				<span class={stylex.attrs(wrapperStyles.optionDetails).class}>
+					<span class={stylex.attrs(wrapperStyles.optionLabel).class}>{option.label}</span>
+					{#if !selected && option.description}<span class={stylex.attrs(wrapperStyles.optionDescription).class}>{option.description}</span>{/if}
 				</span>
 			</span>
 		{/snippet}

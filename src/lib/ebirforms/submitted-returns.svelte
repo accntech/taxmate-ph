@@ -1,4 +1,6 @@
 <script lang="ts">
+	import * as stylex from '@stylexjs/stylex';
+	import { submittedReturns } from './submitted-returns.styles';
  import { isTauri } from '@tauri-apps/api/core';
  import { createReturnHistoryClient, type SubmittedReturn } from '$lib/tauri/return-history';
  import { Button, Input } from '$lib/components/ui';
@@ -33,50 +35,50 @@
  }
 </script>
 
-<section aria-label="Submitted returns" class="grid min-w-0 gap-4">
- <div class="flex flex-wrap items-end justify-between gap-3">
+<section aria-label="Submitted returns" class={stylex.attrs(submittedReturns.root).class}>
+ <div class={stylex.attrs(submittedReturns.header).class}>
   <div>
-   <h2 class="text-base font-semibold text-fg">Submitted returns</h2>
-   <p class="mt-1 text-xs text-fg-muted">{taxpayerId ? 'Selected taxpayer' : 'All taxpayers'} · successful uploads saved on this device. Drafts and dry runs are excluded.</p>
+   <h2 class={stylex.attrs(submittedReturns.heading).class}>Submitted returns</h2>
+   <p class={stylex.attrs(submittedReturns.description).class}>{taxpayerId ? 'Selected taxpayer' : 'All taxpayers'} · successful uploads saved on this device. Drafts and dry runs are excluded.</p>
   </div>
-  <div class="flex items-end gap-2">
+  <div class={stylex.attrs(submittedReturns.search).class}>
    <Input label="Search returns" placeholder="Taxpayer, TIN, form or period" bind:value={query} />
    <Button variant="secondary" disabled={loading} onclick={() => void load()}>Refresh</Button>
   </div>
  </div>
  {#if error}
-  <div role="alert" class="rounded-md border border-danger/30 bg-danger-soft p-4 text-sm text-fg">
+  <div role="alert" class={stylex.attrs(submittedReturns.error).class}>
    <p>Could not load submitted returns: {error}</p>
-   <Button class="mt-2" variant="secondary" onclick={() => void load()}>Try again</Button>
+   <Button class={stylex.attrs(submittedReturns.retry).class} variant="secondary" onclick={() => void load()}>Try again</Button>
   </div>
  {:else if loading}
-  <p role="status" class="p-6 text-center text-sm text-fg-muted">Loading submitted returns…</p>
+  <p role="status" class={stylex.attrs(submittedReturns.loading).class}>Loading submitted returns…</p>
  {:else if !filtered.length}
-  <div class="rounded-md border border-dashed border-border px-4 py-10 text-center">
-   <p class="text-sm font-medium text-fg">{query ? 'No matching returns' : 'No submitted returns yet'}</p>
-   <p class="mt-1 text-xs text-fg-muted">{query ? 'Try another taxpayer, TIN or period.' : 'A return appears here after a successful upload to BIR.'}</p>
+  <div class={stylex.attrs(submittedReturns.empty).class}>
+   <p class={stylex.attrs(submittedReturns.emptyHeading).class}>{query ? 'No matching returns' : 'No submitted returns yet'}</p>
+   <p class={stylex.attrs(submittedReturns.description).class}>{query ? 'Try another taxpayer, TIN or period.' : 'A return appears here after a successful upload to BIR.'}</p>
   </div>
  {:else}
-  <div class="min-w-0 overflow-hidden rounded-md border border-border">
-   <table class="history-table w-full text-left text-sm">
-    <caption class="sr-only">All successfully uploaded returns saved on this device</caption>
-    <thead class="border-b border-border bg-bg-elev-2 text-xs text-fg-muted">
-     <tr><th scope="col">Submitted (PHT)</th><th scope="col">Taxpayer</th><th scope="col">Form / period</th><th scope="col">Return type</th><th scope="col" class="text-right">Amount due</th></tr>
+  <div class={stylex.attrs(submittedReturns.tableFrame).class}>
+   <table class={['history-table', stylex.attrs(submittedReturns.table).class]}>
+    <caption class={stylex.attrs(submittedReturns.caption).class}>All successfully uploaded returns saved on this device</caption>
+    <thead class={stylex.attrs(submittedReturns.tableHeading).class}>
+     <tr><th scope="col">Submitted (PHT)</th><th scope="col">Taxpayer</th><th scope="col">Form / period</th><th scope="col">Return type</th><th scope="col" class={stylex.attrs(submittedReturns.amountHeading).class}>Amount due</th></tr>
     </thead>
     <tbody>
      {#each filtered as row (row.id)}
-      <tr class="border-b border-border-soft last:border-0 hover:bg-bg-hover">
-       <td data-label="Submitted (PHT)" class="text-xs text-fg-muted">{date(row.submittedAt)}</td>
-       <td data-label="Taxpayer"><div><span class="block font-medium text-fg">{row.taxpayerName || 'Unnamed taxpayer'}</span><span class="font-mono text-xs text-fg-muted">{row.tin}</span></div></td>
-       <td data-label="Form / period"><div><span class="font-medium text-fg">{row.formCode}</span><span class="ml-2 text-fg-muted">{row.returnPeriod}</span></div></td>
-       <td data-label="Return type" class="text-fg-muted">{row.amended ? 'Amended' : 'Original'}</td>
-       <td data-label="Amount due" class="text-right font-medium tabular-nums text-fg">{amount(row.amountDue)}</td>
+      <tr class={stylex.attrs(submittedReturns.row).class}>
+       <td data-label="Submitted (PHT)" class={stylex.attrs(submittedReturns.date).class}>{date(row.submittedAt)}</td>
+       <td data-label="Taxpayer"><div><span class={stylex.attrs(submittedReturns.taxpayer).class}>{row.taxpayerName || 'Unnamed taxpayer'}</span><span class={stylex.attrs(submittedReturns.tin).class}>{row.tin}</span></div></td>
+       <td data-label="Form / period"><div><span class={stylex.attrs(submittedReturns.formCode).class}>{row.formCode}</span><span class={stylex.attrs(submittedReturns.period).class}>{row.returnPeriod}</span></div></td>
+       <td data-label="Return type" class={stylex.attrs(submittedReturns.returnType).class}>{row.amended ? 'Amended' : 'Original'}</td>
+       <td data-label="Amount due" class={stylex.attrs(submittedReturns.amount).class}>{amount(row.amountDue)}</td>
       </tr>
      {/each}
     </tbody>
    </table>
   </div>
-  <p class="text-xs text-fg-subtle">{filtered.length} of {rows.length} submitted returns. Upload success does not replace a BIR acknowledgment. Imported legacy dates reflect the saved file’s modification time.</p>
+  <p class={stylex.attrs(submittedReturns.disclaimer).class}>{filtered.length} of {rows.length} submitted returns. Upload success does not replace a BIR acknowledgment. Imported legacy dates reflect the saved file’s modification time.</p>
  {/if}
 </section>
 

@@ -14,6 +14,8 @@
 </script>
 
 <script lang="ts">
+	import * as stylex from '@stylexjs/stylex';
+	import { recordTable } from './record-table.styles';
   import { onMount, untrack, type Snippet } from "svelte";
   import Icon from "$lib/components/ui/icon/icon.svelte";
   import { glyphs } from "$lib/components/ui/icons";
@@ -238,7 +240,7 @@
     aria-label={`${label} table`}
   >
     <table class:compact>
-      <caption class="sr-only">{label}</caption>
+      <caption class={stylex.attrs(recordTable.announcement).class}>{label}</caption>
       <thead
         ><tr>
           {#each visibleColumns as column (column.key)}

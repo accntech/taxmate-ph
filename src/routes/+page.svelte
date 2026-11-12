@@ -1,4 +1,6 @@
 <script lang="ts">
+	import * as stylex from '@stylexjs/stylex';
+	import { styles } from './home.styles';
 	import { getFieldKitSteps, listSuiteApps } from '$lib/apps/app-shell';
 	import { Badge, ButtonLink, Page } from '$lib/components/ui';
 	import ArrowRight from '@solar-icons/svelte/category/arrows/Linear/ArrowRight.svelte';
@@ -32,7 +34,7 @@
 	/>
 </svelte:head>
 
-<Page size="lg" class="@container">
+<Page size="lg" class={stylex.attrs(styles.container).class}>
 	<div class="suite-home">
 		<header class="suite-heading">
 			<h1>Tax workspaces</h1>
@@ -79,7 +81,7 @@
 							<span class="planned-description">{app.description}</span>
 						</span>
 						<span class="preview-action">
-							Preview <span class="sr-only">{app.name}</span>
+							Preview <span class={stylex.attrs(styles.visuallyHidden).class}>{app.name}</span>
 							<ArrowRight size={17} color="currentColor" />
 						</span>
 					</a>

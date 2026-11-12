@@ -1,4 +1,6 @@
 <script lang="ts">
+	import * as stylex from '@stylexjs/stylex';
+	import { returnErrors } from './return-errors.styles';
 	import type { FormDefinition } from '$lib/forms';
 	let { definition, errors, taxpayerHref = '' }: { definition: FormDefinition; errors: Record<string, string>; taxpayerHref?: string } = $props();
 	function isTaxpayerField(id: string) {
@@ -25,11 +27,11 @@
 </script>
 
 {#if Object.keys(errors).length}
-	<div role="alert" class="rounded-md border border-danger/30 bg-danger-soft p-3 text-sm text-fg">
-		<p class="font-medium">Correct these fields</p>
-		<ul class="mt-2 list-disc space-y-1 pl-5">
+	<div role="alert" class={stylex.attrs(returnErrors.summary).class}>
+		<p class={stylex.attrs(returnErrors.heading).class}>Correct these fields</p>
+		<ul class={stylex.attrs(returnErrors.list).class}>
 			{#each Object.entries(errors) as [id, message] (id)}
-				<li><a class="rounded-sm underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent" href={taxpayerHref && isTaxpayerField(id) ? taxpayerHref : `#${encodeURIComponent(id)}`} onclick={(event) => { if (!taxpayerHref || !isTaxpayerField(id)) focusField(event, id); }}>{label(id)}: {message}</a></li>
+				<li><a class={stylex.attrs(returnErrors.link).class} href={taxpayerHref && isTaxpayerField(id) ? taxpayerHref : `#${encodeURIComponent(id)}`} onclick={(event) => { if (!taxpayerHref || !isTaxpayerField(id)) focusField(event, id); }}>{label(id)}: {message}</a></li>
 			{/each}
 		</ul>
 	</div>

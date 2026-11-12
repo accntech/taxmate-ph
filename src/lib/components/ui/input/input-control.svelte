@@ -1,4 +1,6 @@
 <script lang="ts">
+	import * as stylex from '@stylexjs/stylex';
+	import { wrapperStyles } from './input-control-wrapper.styles';
 	// Adapted from PCSTI's @erp/ui/components/input/input.svelte.
 	import type { HTMLInputAttributes } from 'svelte/elements';
 
@@ -25,13 +27,9 @@
 	bind:value
 	data-slot={dataSlot}
 	class={[
-		'flex w-full min-w-0 py-1 text-fg outline-none',
-		'placeholder:text-fg-subtle selection:bg-accent selection:text-accent-fg',
-		'disabled:cursor-not-allowed disabled:opacity-50 transition-[color,box-shadow,border-color]',
-		grouped
-			? 'flex-1 border-0 bg-transparent px-0 focus-visible:shadow-none'
-			: 'rounded-md border border-border px-3 bg-bg-input shadow-[var(--shadow-ui-sm)] field-focus',
-		size === 'touch' ? 'min-h-12 text-base' : 'normal-size',
+		stylex.attrs(wrapperStyles.root, wrapperStyles.textStates, wrapperStyles.disabledStates, grouped ? wrapperStyles.grouped : wrapperStyles.standalone, size === 'touch' && wrapperStyles.touch).class,
+		!grouped && 'field-focus',
+		size !== 'touch' && 'normal-size',
 		className
 	]}
 	{...restProps}
