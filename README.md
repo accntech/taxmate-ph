@@ -138,7 +138,10 @@ period. Annual information returns reconcile remittances and have no amount paya
 ## Sending and filing status
 
 The desktop app provides **Send to BIR** and **Prepare locally** modes. Live sending
-requires configured submission credentials and available BIR services. Other
+is currently limited to **1601-EQ** and requires configured submission credentials,
+available BIR services, and a verified OpenSSH server key in
+`settings/bir-known-hosts` under the app data directory. Unknown or changed keys
+are rejected before authentication; the app never trusts a presented key automatically. Other
 supported forms can be prepared locally but cannot currently be uploaded through
 the app.
 
@@ -146,6 +149,12 @@ A **Submitted** status records a successful upload. It does not establish BIR
 acceptance or replace an acknowledgment. The app does not retrieve BIR confirmation
 emails, acknowledgment reference numbers, or subsequent processing status. Marking
 a return **Final** or exporting its PDF is also a local action, not proof of filing.
+
+Submission compatibility fixtures come from the supplied installer serializer and
+original cipher instructions. Local tests cover payload mapping, encryption,
+dispatcher fallback, and loopback SFTP completion without contacting BIR. See
+[the compatibility fixtures](src-tauri/tests/fixtures/submission/README.md) and
+[local SFTP test instructions](src-tauri/tests/fixtures/submission/sftp-tests.md).
 
 ## Planned workspaces
 

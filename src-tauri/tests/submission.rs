@@ -45,6 +45,12 @@ fn update_final_flag_rewrites_existing_legacy_record() {
 }
 
 #[test]
+fn update_final_flag_does_not_rewrite_marker_text_inside_taxpayer_values() {
+    let xml = "<div>name=ACME txtFinalFlag=0txtFinalFlag= INCname=</div> <div>txtFinalFlag=0txtFinalFlag=</div>";
+    assert_eq!(update_final_flag(xml, "2"), "<div>name=ACME txtFinalFlag=0txtFinalFlag= INCname=</div> <div>txtFinalFlag=2txtFinalFlag=</div>");
+}
+
+#[test]
 fn build_dispatcher_url_uses_legacy_query_shape() {
     let url = build_dispatcher_url(
         "https://dispatcher.example.invalid/",
@@ -185,10 +191,47 @@ fn sftp_upload_plan_decrypts_dispatcher_and_uses_legacy_remote_folder() {
 }
 
 #[test]
+fn manual_upload_settings_cannot_bypass_closed_mode_or_zero_port_checks() {
+    let settings = DispatcherSettings {
+        mode: "".into(),
+        server: "invalid".into(),
+        ssl_port: "".into(),
+        port: "22".into(),
+        username: "invalid".into(),
+        password: "invalid".into(),
+    };
+    let error = build_sftp_upload_plan(&settings, "1601EQ", "return.xml".into()).unwrap_err();
+    assert!(
+        error.message.contains("disabled"),
+        "empty mode must close filing, got {}",
+        error.message
+    );
+}
+
+#[test]
+fn manual_upload_settings_reject_zero_port_before_secret_decryption() {
+    let settings = DispatcherSettings {
+        mode: "2".into(),
+        server: "invalid".into(),
+        ssl_port: "".into(),
+        port: "0".into(),
+        username: "invalid".into(),
+        password: "invalid".into(),
+    };
+    let error = build_sftp_upload_plan(&settings, "1601EQ", "return.xml".into()).unwrap_err();
+    assert!(
+        error.message.contains("port"),
+        "zero port must fail before decryption, got {}",
+        error.message
+    );
+}
+
+#[test]
 fn dry_run_writes_savefile_and_email_copy_without_uploading() {
     let root = tempfile::tempdir().expect("temp dir");
     let request = SubmissionRequest {
         xml: "<?xml version='1.0'?><div>txtFinalFlag=0txtFinalFlag=</div>".into(),
+        rdo_xml: None,
         return_filename: "1234567890000-1601EQ-2026Q1.xml".into(),
         form_code: "1601EQ".into(),
         tin: "123456789".into(),
@@ -225,6 +268,7 @@ fn live_1601eq_prepares_encrypted_copy_and_rejects_invalid_dispatcher() {
             let root = tempfile::tempdir().expect("root temp dir");
             let request = SubmissionRequest {
                 xml: "<?xml version='1.0'?><div>txtFinalFlag=0txtFinalFlag=</div>".into(),
+                rdo_xml: Some("<?xml version='1.0'?><div>txtFinalFlag=0txtFinalFlag=</div>".into()),
                 return_filename: "1234567890000-1601EQ-2026Q1.xml".into(),
                 form_code: "1601EQ".into(),
                 tin: "123456789".into(),
@@ -359,6 +403,7 @@ fn live_1601eq_requires_sending_settings_when_fetching_is_disabled() {
     let root = tempfile::tempdir().unwrap();
     let request: SubmissionRequest = serde_json::from_value(serde_json::json!({
         "xml":"<div>txtFinalFlag=0txtFinalFlag=</div>",
+        "rdoXml":"<div>txtFinalFlag=0txtFinalFlag=</div>",
         "returnFilename":"return.xml", "formCode":"1601EQ",
         "tin":"123456789", "email":"payer@example.com",
         "mode":"legacy_sftp", "fetchDispatcher":false
@@ -367,4 +412,45 @@ fn live_1601eq_requires_sending_settings_when_fetching_is_disabled() {
     let error = run_submission(root.path(), request).unwrap_err();
     assert!(error.message.contains("Dispatcher settings are required"));
     assert!(error.log_path.is_some());
+}
+
+#[test]
+fn local_preparation_keeps_saved_values_separate_from_the_original_rdo_payload() {
+    let root = tempfile::tempdir().unwrap();
+    let request: SubmissionRequest = serde_json::from_value(serde_json::json!({
+        "xml":"<div>name=ACME &amp; COname=</div><div>txtFinalFlag=0txtFinalFlag=</div>",
+        "rdoXml":"<?xml version='1.0'?> <div>name=ACME & COname=</div> <div>txtFinalFlag=0txtFinalFlag=</div> All Rights Reserved BIR 2012.0",
+        "returnFilename":"return.xml", "formCode":"1601EQ", "tin":"123456789",
+        "email":"payer@example.com", "mode":"dry_run", "fetchDispatcher":false
+    })).unwrap();
+    let receipt = run_submission(root.path(), request).unwrap();
+    assert_eq!(receipt.status, SubmissionStatus::Drafted);
+    assert!(fs::read_to_string(receipt.save_path)
+        .unwrap()
+        .contains("ACME &amp; CO"));
+    let rdo = fs::read_to_string(receipt.send_path).unwrap();
+    assert!(
+        rdo.contains("ACME & CO"),
+        "RDO payload must keep the installer serializer's raw value"
+    );
+    assert!(rdo.contains("txtFinalFlag=2txtFinalFlag="));
+    assert!(receipt.dispatcher_url.is_none());
+}
+
+#[test]
+fn live_submission_requires_an_explicit_compatible_rdo_payload_before_any_network() {
+    let root = tempfile::tempdir().unwrap();
+    let request: SubmissionRequest = serde_json::from_value(serde_json::json!({
+        "xml":"<div>txtFinalFlag=0txtFinalFlag=</div>",
+        "returnFilename":"return.xml", "formCode":"1601EQ", "tin":"123456789",
+        "email":"payer@example.com", "mode":"legacy_sftp", "fetchDispatcher":false
+    }))
+    .unwrap();
+    let error = run_submission(root.path(), request).unwrap_err();
+    assert!(
+        error.message.contains("RDO payload"),
+        "unexpected preflight error: {}",
+        error.message
+    );
+    assert!(!root.path().join("savefile").exists());
 }

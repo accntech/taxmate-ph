@@ -13,6 +13,7 @@ export type DispatcherSettings = {
 
 export type SubmissionRequest = {
 	xml: string
+	rdoXml?: string
 	returnFilename: string
 	formCode: string
 	tin: string

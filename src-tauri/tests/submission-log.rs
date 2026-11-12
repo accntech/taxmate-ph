@@ -12,6 +12,7 @@ fn every_submission_log_entry_has_a_readable_local_datetime_with_offset() {
         root.path(),
         SubmissionRequest {
             xml: "<div>txtFinalFlag=0txtFinalFlag=</div>".into(),
+            rdo_xml: None,
             return_filename: "1234567890000-1601EQ-2026Q1.xml".into(),
             form_code: "1601EQ".into(),
             tin: "123456789".into(),

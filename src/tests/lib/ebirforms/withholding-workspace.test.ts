@@ -108,3 +108,33 @@ it('uses the saved form email consistently instead of a subsequently changed pro
  expect(getReturnEmail('1601EQ', { txtEmail: '' }, changedProfile)).toBe('');
  expect(getReturnEmail('unsupported-legacy', {}, changedProfile)).toBe('new@example.com');
 });
+
+it('keeps escaped saved XML and sends a separate installer-compatible 1601EQ RDO payload', async () => {
+ workspace.createReturn(initialProfile.id, '1601EQ');
+ workspace.updateFormValues({ 'frm1601EQ:txtYear': '2025', 'frm1601EQ:optTaxesWithheld': 'N',
+  'frm1601EQ:optQuarter': 'Q2', 'frm1601EQ:txtTaxpayerName': 'SANTOS & CO' });
+ submit.mockResolvedValue({ status: 'submitted', finalFlag: '1', message: 'Uploaded' });
+ await workspace.submitCurrentReturn();
+ expect(submit).toHaveBeenCalledOnce();
+ const request = submit.mock.calls[0][0];
+ expect(request.xml).toContain('SANTOS &amp; CO');
+ expect(request.rdoXml).toContain('<div>frm1601EQ:txtTaxpayerName=SANTOS & COfrm1601EQ:txtTaxpayerName=</div>');
+ expect(request.rdoXml).toContain('<div>frm1601EQ:optWithheld:N=truefrm1601EQ:optWithheld:N=</div>');
+ expect(request.rdoXml).toContain('<div>frm1601EQ:optQuarter:2=truefrm1601EQ:optQuarter:2=</div>');
+ expect(request.rdoXml).not.toContain('frm1601EQ:optTaxesWithheld=');
+});
+
+it('does not replace saved draft or local preparation XML with the RDO wire format', async () => {
+ workspace.createReturn(initialProfile.id, '1601EQ');
+ workspace.updateFormValues({ 'frm1601EQ:txtYear': '2025', 'frm1601EQ:optTaxesWithheld': 'N',
+  'frm1601EQ:txtTaxpayerName': 'SANTOS & CO' });
+ submit.mockResolvedValue({ status: 'drafted', finalFlag: '2', message: 'Prepared' });
+ await workspace.saveDraft();
+ expect(submit.mock.calls[0][0].rdoXml).toBeUndefined();
+ expect(submit.mock.calls[0][0].xml).toContain('SANTOS &amp; CO');
+ submit.mockClear();
+ settings.updatePrefs({ submissionMode: 'dry_run' });
+ await workspace.submitCurrentReturn();
+ expect(submit.mock.calls[0][0].rdoXml).toBeUndefined();
+ expect(submit.mock.calls[0][0].xml).toContain('SANTOS &amp; CO');
+});

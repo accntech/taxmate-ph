@@ -1,0 +1,7 @@
+{
+  "artifact_sha256": "429337f44f84b93cd1095df48c8f3265e5ede7c646d1b48d9b80f4f92de74d2c",
+  "synthetic_passphrase": "public synthetic compatibility test",
+  "plaintext": "<?xml version='1.0'?> <div>frm1601EQ:txtTaxpayerName=ACME & COfrm1601EQ:txtTaxpayerName=</div> <div>txtFinalFlag=2txtFinalFlag=</div> All Rights Reserved BIR 2012.0",
+  "ciphertext_hex": "b5d83ba1f799c8e7f2e5edcc1db928e08d62c89507ec9729bf570a41a9e0d9bac7087f5e64ae93c60139495e173d87ec673479764c4c755f1fbc85336e5c8877f3d528b6d46f9f392617cf57c09943f4ba8e4c6daa6a8bc4a500cf74a3b3f30674630d60fd84917b1d843ef06da27ee516b4f920784ad9d27d20ab7147",
+  "compression": "Python zlib level 9; original x86 cipher replay"
+}
