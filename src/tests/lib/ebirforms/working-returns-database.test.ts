@@ -1,0 +1,67 @@
+import { beforeEach, expect, it, vi } from 'vitest';
+const { load, save } = vi.hoisted(() => ({ load: vi.fn(), save: vi.fn() }));
+vi.mock('@tauri-apps/api/core', () => ({ isTauri: () => true }));
+vi.mock('$lib/tauri/working-returns', () => ({ createWorkingReturnsClient: () => ({ load, save }) }));
+import { ebirformsWorkspace as workspace, initialProfile } from '$lib/ebirforms/ebirforms-workspace.svelte';
+const empty = {version: 1, returns: [], archivedTaxpayerIds: []};
+let original: string;
+beforeEach(() => {
+ original = JSON.stringify(empty);
+ vi.stubGlobal('localStorage', { getItem: () => original, setItem: () => { throw new Error('Migration backup must remain unchanged'); } });
+ load.mockReset().mockResolvedValue(null);
+ save.mockReset().mockResolvedValue(undefined);
+ workspace.profiles = [{...initialProfile}];
+ workspace.profile = {...initialProfile};
+ workspace.selectedProfileId = initialProfile.id;
+ workspace.isSavingDraft = false;
+ workspace.isSubmitting = false;
+});
+it('migrates only an uninitialized database and retains legacy storage', async () => {
+ expect(await workspace.loadCreatedReturns()).toBe(true);
+ expect(save).toHaveBeenCalledWith(empty);
+ expect(original).toBe(JSON.stringify(empty));
+ load.mockResolvedValue(empty);
+ save.mockClear();
+ expect(await workspace.loadCreatedReturns()).toBe(true);
+ expect(save).not.toHaveBeenCalled();
+});
+it('keeps the dirty draft and previous saved records on database failure', async () => {
+ await workspace.loadCreatedReturns();
+ workspace.createReturn(initialProfile.id, '1601EQ');
+ workspace.updateFormValues({'frm1601EQ:txtYear': '2025'});
+ save.mockRejectedValue(new Error('Database unavailable'));
+ expect(await workspace.saveActiveReturn()).toBe(false);
+ expect(workspace.createdReturns).toHaveLength(0);
+ expect(workspace.hasUnsavedChanges).toBe(true);
+ expect(workspace.statusMessage).toContain('Database unavailable');
+});
+it('blocks a second snapshot mutation while the first write is pending', async () => {
+ await workspace.loadCreatedReturns();
+ const id = workspace.createReturn(initialProfile.id, '1601EQ');
+ let finish!: () => void;
+ save.mockReturnValue(new Promise<void>(resolve => { finish = resolve; }));
+ const pending = workspace.saveActiveReturn();
+ expect(workspace.createReturn(initialProfile.id, '1601EQ')).toBeNull();
+ workspace.discardReturnChanges();
+ expect(workspace.activeReturnId).toBe(id);
+ workspace.startNewTaxpayerProfile();
+ expect(workspace.selectedProfileId).toBe(initialProfile.id);
+ expect(await workspace.deleteReturn(id!)).toBe(false);
+ finish();
+ expect(await pending).toBe(true);
+ expect(workspace.createdReturns).toHaveLength(1);
+});
+it('deduplicates a pending load and blocks snapshot mutations until it completes', async () => {
+ await workspace.loadCreatedReturns();
+ workspace.createReturn(initialProfile.id, '1601EQ');
+ await workspace.saveActiveReturn();
+ let finish!: (value: typeof empty) => void;
+ load.mockReturnValue(new Promise(resolve => { finish = resolve; }));
+ const first = workspace.loadCreatedReturns();
+ const second = workspace.loadCreatedReturns();
+ expect(first).toBe(second);
+ expect(await workspace.saveActiveReturn()).toBe(false);
+ expect(workspace.createReturn(initialProfile.id, '1601EQ')).toBeNull();
+ finish(empty);
+ expect(await first).toBe(true);
+});

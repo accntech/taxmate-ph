@@ -65,16 +65,16 @@
   );
 
   onMount(() => {
-    workspace.loadCreatedReturns();
+    void workspace.loadCreatedReturns();
     void workspace.loadTaxpayerProfiles();
   });
 
-  function archiveProfile(id: string, name: string) {
-    if (workspace.archiveTaxpayerProfile(id)) archivedNotice = { id, name };
+  async function archiveProfile(id: string, name: string) {
+    if (await workspace.archiveTaxpayerProfile(id)) archivedNotice = { id, name };
   }
 
-  function undoArchive() {
-    if (archivedNotice && workspace.restoreTaxpayerProfile(archivedNotice.id))
+  async function undoArchive() {
+    if (archivedNotice && await workspace.restoreTaxpayerProfile(archivedNotice.id))
       archivedNotice = null;
   }
 
@@ -227,7 +227,7 @@
                 class="taxpayer-action"
                 onSelect={() => {
                   close();
-                  workspace.restoreTaxpayerProfile(row.id);
+                  void workspace.restoreTaxpayerProfile(row.id);
                 }}
                 ><span class="action-icon"><Icon icon={glyphs.refresh} /></span
                 >Restore taxpayer</MenuItem

@@ -7,14 +7,14 @@ vi.mock('$lib/tauri/submission', () => ({
 import { ebirformsWorkspace as workspace, createInitialFormValues, initialProfile } from '$lib/ebirforms/ebirforms-workspace.svelte';
 
 describe('return validation at filing boundaries', () => {
- beforeEach(() => {
+ beforeEach(async () => {
   submit.mockReset();
   workspace.formValues = createInitialFormValues(initialProfile);
   workspace.finalFlag = '0';
  });
- it('does not mark an incomplete return final', () => {
+ it('does not mark an incomplete return final', async () => {
   workspace.formValues['frm1601EQ:txtYear'] = '';
-  workspace.markFinalCopy();
+  await workspace.markFinalCopy();
   expect(workspace.finalFlag).toBe('0');
  });
  it('does not send an incomplete return to the submission client', async () => {
@@ -29,7 +29,7 @@ describe('return validation at filing boundaries', () => {
   });
   workspace.formValues['frm1601EQ:txtYear'] = '2025';
   expect(workspace.formValues['frm1601EQ:txtTotalTaxesWithheld']).toBe('0.00');
-  workspace.markFinalCopy();
+  await workspace.markFinalCopy();
   expect(workspace.finalFlag).toBe('0');
   expect(workspace.validationErrors).toEqual({
    'frm1601EQ:txtATC13': 'Add at least one ATC for taxes withheld.'
@@ -44,7 +44,7 @@ describe('return validation at filing boundaries', () => {
   await workspace.saveDraft();
   expect(submit.mock.calls[0][0].xml).toContain('txtRemittanceFirstMonth=12.');
  });
- it('can validate for Save without clearing ATC draft entries when taxes withheld is No', () => {
+ it('can validate for Save without clearing ATC draft entries when taxes withheld is No', async () => {
   workspace.formValues = createInitialFormValues({
    ...initialProfile, address: '123 Example Street', zipCode: '0123', contactNumber: '09171234567'
   });

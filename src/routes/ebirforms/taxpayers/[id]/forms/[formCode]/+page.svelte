@@ -14,10 +14,9 @@
 	let ready = $state(false);
 	let recordError = $state('');
 	const recordId = $derived(page.url.searchParams.get('return'));
-	const busy = $derived(workspace.isSavingDraft || workspace.isSubmitting);
+	const busy = $derived(workspace.isSavingDraft || workspace.isSubmitting || workspace.isPersisting);
 	onMount(() => {
-		workspace.loadCreatedReturns();
-		void workspace.loadTaxpayerProfiles().then(() => { ready = true; openRequestedReturn(); });
+		void Promise.all([workspace.loadCreatedReturns(), workspace.loadTaxpayerProfiles()]).then(() => { ready = true; openRequestedReturn(); });
 	});
 	afterNavigate(() => { if (ready) openRequestedReturn(); });
 	beforeNavigate(({ cancel }) => {
@@ -41,8 +40,8 @@
 			if (!recordError && page.url.searchParams.get('validate') === 'true') workspace.validateReturn({ applyCalculations: false });
 		}
 	}
-	function save() {
-		if (!busy && workspace.saveActiveReturn()) {
+	async function save() {
+		if (!busy && await workspace.saveActiveReturn()) {
 			void goto(resolve('/ebirforms/taxpayers/[id]/forms', { id: params.id }));
 		}
 	}
