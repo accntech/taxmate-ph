@@ -22,6 +22,8 @@ export type TaxpayerProfileInput = TinParts & {
 	contactNumber: string;
 	category: string;
 	email: string;
+	lineOfBusiness?: string;
+	taxpayerClassification?: 'I' | 'N' | '';
 };
 
 export type TaxpayerProfile = TaxpayerProfileInput & {
@@ -29,7 +31,7 @@ export type TaxpayerProfile = TaxpayerProfileInput & {
 };
 
 export type ProfileValidationErrors = Partial<
-	Record<'taxpayerName' | 'tin' | 'rdoCode' | 'category' | 'zipCode' | 'email', string>
+	Record<'taxpayerName' | 'tin' | 'rdoCode' | 'category' | 'zipCode' | 'email' | 'taxpayerClassification', string>
 >;
 
 export function validateTaxpayerProfile(
@@ -61,6 +63,9 @@ export function validateTaxpayerProfile(
 	}
 	if (profile.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(profile.email.trim())) {
 		errors.email = 'Enter a valid email address, such as name@example.com.';
+	}
+	if (profile.taxpayerClassification && !['I', 'N'].includes(profile.taxpayerClassification)) {
+		errors.taxpayerClassification = 'Choose Individual or Non-individual.';
 	}
 	return errors;
 }

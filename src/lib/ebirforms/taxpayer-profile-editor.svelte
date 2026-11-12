@@ -156,6 +156,22 @@
 				</fieldset>
 
 				<fieldset>
+					<legend>Taxpayer information</legend>
+					<div class="field-grid">
+						<Input
+							label="Line of business / occupation"
+							value={workspace.profile.lineOfBusiness ?? ''}
+							oninput={(event) => workspace.profile.lineOfBusiness = event.currentTarget.value} />
+						<Select
+							label="Tax classification"
+							error={validationErrors.taxpayerClassification}
+							options={[{ value: 'I', label: 'Individual' }, { value: 'N', label: 'Non-individual' }]}
+							value={workspace.profile.taxpayerClassification ?? ''}
+							onchange={(value) => workspace.profile.taxpayerClassification = value as 'I' | 'N' | ''} />
+					</div>
+				</fieldset>
+
+				<fieldset>
 					<legend>Registered address</legend>
 					<div class="field-grid">
 						<div class="full-width">

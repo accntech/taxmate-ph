@@ -22,6 +22,10 @@ pub struct TaxpayerProfile {
     pub contact_number: String,
     pub category: String,
     pub email: String,
+    #[serde(default)]
+    pub line_of_business: String,
+    #[serde(default)]
+    pub taxpayer_classification: String,
 }
 
 #[derive(Clone, Debug, Serialize, PartialEq, Eq)]
@@ -172,6 +176,10 @@ fn validate_profile(profile: &TaxpayerProfile) -> Result<(), ProfileStoreError> 
         ));
     }
 
+    if !["", "I", "N"].contains(&profile.taxpayer_classification.as_str()) {
+        return Err(ProfileStoreError::new("Choose Individual or Non-individual."));
+    }
+
     Ok(())
 }
 
@@ -191,6 +199,8 @@ fn serialize_profile_xml(profile: &TaxpayerProfile) -> String {
         field_xml("tel", &profile.contact_number),
         field_xml("category", &profile.category),
         field_xml("email", &profile.email),
+        field_xml("lineOfBusiness", &escape_legacy_value(&profile.line_of_business)),
+        field_xml("taxpayerClassification", &profile.taxpayer_classification),
         "</div>".to_string(),
     ]
     .join("\n")
@@ -220,6 +230,8 @@ fn parse_profile_xml(xml: &str) -> Result<TaxpayerProfile, ProfileStoreError> {
         contact_number: read_field(xml, "tel"),
         category: read_field(xml, "category"),
         email: read_field(xml, "email"),
+        line_of_business: unescape_legacy_value(&read_field(xml, "lineOfBusiness"))?,
+        taxpayer_classification: read_field(xml, "taxpayerClassification"),
     })
 }
 

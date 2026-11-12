@@ -122,3 +122,16 @@ describe('taxpayer profile save validation', () => {
 		expect(save).toHaveBeenCalledWith(expect.objectContaining({ id: initialProfile.id }));
 	});
 });
+
+describe('taxpayer information for withholding forms', () => {
+ it('rejects an unsupported tax classification before saving', async () => {
+  Object.assign(workspace.profile, { taxpayerClassification: 'X' });
+  expect(await workspace.saveTaxpayerProfile()).toBe(false);
+  expect(save).not.toHaveBeenCalled();
+ });
+ it('saves the business and tax classification with the taxpayer', async () => {
+  Object.assign(workspace.profile, { lineOfBusiness: 'Accounting services', taxpayerClassification: 'N' });
+  expect(await workspace.saveTaxpayerProfile()).toBe(true);
+  expect(save).toHaveBeenCalledWith(expect.objectContaining({ lineOfBusiness: 'Accounting services', taxpayerClassification: 'N' }));
+ });
+});
