@@ -46,7 +46,7 @@
 		{ key: 'amount', label: 'Amount due', numeric: true }
 	];
 	const filters = [
-		{ key: 'status', label: 'Status', options: ['Draft', 'Final', 'Submitted', 'For resubmission', 'Archived'].map(value => ({ value, label: value })) },
+		{ key: 'status', label: 'Status', options: ['Draft', 'Final', 'Submitted', 'Simulated', 'For resubmission', 'Archived'].map(value => ({ value, label: value })) },
 		{ key: 'form', label: 'Form type', options: workspace.forms.map(form => ({ value: form.code, label: `BIR Form ${form.code}` })) }
 	];
 	const rows = $derived(workspace.createdReturns.filter(record => record.taxpayerId === params.id).map(record => ({
@@ -99,7 +99,7 @@
 			workspace.markNeedsResend();
 			if (workspace.finalFlag !== '2') return;
 		}
-		workspace.submissionMode = 'legacy_sftp';
+		workspace.submissionMode = 'mock';
 		await workspace.submitCurrentReturn();
 		captureErrors(id);
 	}
@@ -181,7 +181,7 @@
 		{/if}
 		{#if !storageReady}<p role="alert" class="text-sm text-danger">{workspace.statusMessage}</p>{/if}
 		<RecordTable {rows} {columns} {filters} label="Tax returns" stateKey={`forms-${params.id}`}
-			initialFilters={{ status: ['Draft', 'Final', 'Submitted', 'For resubmission'] }}
+			initialFilters={{ status: ['Draft', 'Final', 'Submitted', 'Simulated', 'For resubmission'] }}
 			emptyMessage="No returns created yet. Choose Create return to get started.">
 			{#snippet cell(row, key)}
 				{#if key === 'form'}<span class="font-mono font-medium text-accent">BIR Form {row.form}</span>
@@ -203,7 +203,7 @@
 						<p class="action-heading">BIR Form {row.form} · {row.period}</p>
 						<MenuItem variant="ghost" size="compact" class="form-action" onSelect={() => { close(); row.status === 'Archived' ? restoreForm(row.id) : archiveForm(row.id); }}><span class="action-icon"><Icon icon={row.status === 'Archived' ? glyphs.refresh : glyphs.archive} /></span>{row.status === 'Archived' ? 'Restore' : 'Archive'}</MenuItem>
 						<MenuItem variant="ghost" size="compact" class="form-action" onSelect={() => { close(); finalize(row.id); }}><span class="action-icon"><Icon icon={glyphs.checkCircle} /></span>Mark as final</MenuItem>
-						<MenuItem variant="ghost" size="compact" class="form-action" onSelect={() => { close(); void submit(row.id); }}><span class="action-icon"><Icon icon={glyphs.send} /></span>Submit</MenuItem>
+						<MenuItem variant="ghost" size="compact" class="form-action" onSelect={() => { close(); void submit(row.id); }}><span class="action-icon"><Icon icon={glyphs.send} /></span>Mock submit</MenuItem>
 						<MenuItem variant="ghost" size="compact" class="form-action" onSelect={() => { close(); void print(row.id); }}><span class="action-icon"><Icon icon={glyphs.printer} /></span>Generate PDF</MenuItem>
 						<div class="action-separator" role="separator"></div>
 						<MenuItem variant="destructive-ghost" size="compact" class="form-action" onSelect={() => { close(); deleteId = row.id; }}><span class="action-icon"><Icon icon={glyphs.trash} /></span>Delete…</MenuItem>

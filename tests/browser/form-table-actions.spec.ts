@@ -10,7 +10,7 @@ test('table owns all six actions and editor saves back to the table', async ({ p
 	await page.goto(tablePath);
 	await expect(page.getByRole('link', { name: 'Edit', exact: true })).toBeVisible();
 	await menu(page);
-	for (const name of ['Archive', 'Delete…', 'Mark as final', 'Submit', 'Generate PDF']) {
+	for (const name of ['Archive', 'Delete…', 'Mark as final', 'Mock submit', 'Generate PDF']) {
 		await expect(page.getByRole('menuitem', { name, exact: true })).toBeVisible();
 	}
 	await page.keyboard.press('Escape');
@@ -20,7 +20,7 @@ test('table owns all six actions and editor saves back to the table', async ({ p
 		await expect(page.getByRole('button', { name, exact: true })).toHaveCount(0);
 	}
 	await page.getByRole('textbox', { name: 'Year', exact: true }).fill('2025');
-	await page.getByRole('button', { name: 'Save', exact: true }).click();
+	await page.getByRole('button', { name: 'Save draft', exact: true }).click();
 	await expect(page).toHaveURL(tablePath);
 	await expect(page.getByRole('cell', { name: '2025Q2', exact: true })).toBeVisible();
 	await page.getByRole('link', { name: 'Edit', exact: true }).click();
@@ -63,7 +63,7 @@ test('mark final and submit update the selected table row without entering the e
 		native.invoke = async (command: string, args: any) => {
 			if (command === 'submit_return') {
 				(window as any).submittedRequest = args.request;
-				return { status: 'submitted', finalFlag: '1', savePath: '', sendPath: '', message: 'Return submitted.' };
+				return { status: 'simulated', finalFlag: '2', savePath: '', sendPath: '', message: 'Mock submission saved. Nothing sent to BIR.' };
 			}
 			return previous(command, args);
 		};
@@ -73,10 +73,10 @@ test('mark final and submit update the selected table row without entering the e
 	await expect(page.getByRole('cell', { name: 'Final', exact: true })).toBeVisible();
 	await expect(page).toHaveURL(tablePath);
 	await menu(page);
-	await page.getByRole('menuitem', { name: 'Submit', exact: true }).click();
-	await expect(page.getByRole('cell', { name: 'Submitted', exact: true })).toBeVisible();
+	await page.getByRole('menuitem', { name: 'Mock submit', exact: true }).click();
+	await expect(page.getByRole('cell', { name: 'Simulated', exact: true })).toBeVisible();
 	await expect(page).toHaveURL(tablePath);
-	expect(await page.evaluate(() => (window as any).submittedRequest.mode)).toBe('legacy_sftp');
+	expect(await page.evaluate(() => (window as any).submittedRequest.mode)).toBe('mock');
 });
 
 test('invalid finalization stays in table with a link to fix the selected form', async ({ page }) => {
@@ -108,7 +108,7 @@ for (const theme of ['light', 'dark']) {
 			await trigger.focus();
 			await trigger.press('ArrowDown');
 			await expect(page.getByRole('menuitem', { name: 'Archive', exact: true })).toBeFocused();
-			for (const name of ['Mark as final', 'Submit', 'Generate PDF', 'Delete…']) {
+			for (const name of ['Mark as final', 'Mock submit', 'Generate PDF', 'Delete…']) {
 				await expect(page.getByRole('menuitem', { name, exact: true })).toBeInViewport();
 			}
 			await page.screenshot({ path: testInfo.outputPath(`form-menu-${theme}-${width}.png`), fullPage: true, animations: 'disabled' });

@@ -1,5 +1,5 @@
 /** App-managed working copies. Successful BIR uploads remain in return history. */
-export type CreatedReturnStatus = 'Draft' | 'Final' | 'Submitted' | 'For resubmission';
+export type CreatedReturnStatus = 'Draft' | 'Final' | 'Submitted' | 'For resubmission' | 'Simulated';
 export type CreatedReturn = {
  id: string;
  taxpayerId: string;
@@ -13,7 +13,7 @@ export type CreatedReturn = {
 };
 export type CreatedReturnsData = { version: 1; returns: CreatedReturn[]; archivedTaxpayerIds: string[] };
 const storageKey = 'ebirforms-created-returns-v1';
-const statuses: CreatedReturnStatus[] = ['Draft', 'Final', 'Submitted', 'For resubmission'];
+const statuses: CreatedReturnStatus[] = ['Draft', 'Final', 'Submitted', 'For resubmission', 'Simulated'];
 function isObject(value: unknown): value is Record<string, unknown> {
  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
