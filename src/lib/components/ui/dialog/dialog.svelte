@@ -58,7 +58,10 @@
 		$effect(() => {
 			if (open) {
 				delete el.dataset.closing;
-				if (!el.open) el.showModal();
+				if (!el.open) {
+					el.showModal();
+					el.focus();
+				}
 				present = true;
 			} else if (el.open) {
 				// WebKit removes the top layer immediately on close(), so finish motion first.
@@ -122,6 +125,7 @@
 	aria-labelledby={title ? titleId : undefined}
 	aria-describedby={description ? descId : undefined}
 	class={[
+		'focus:outline-none focus-visible:[box-shadow:none]',
 		'fixed inset-x-0 bottom-0 top-auto m-0 h-auto max-h-[90dvh] w-dvw max-w-none',
 		'border-0 bg-transparent p-0 text-fg',
 		'sm:inset-0 sm:m-auto sm:h-fit',

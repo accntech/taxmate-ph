@@ -6,9 +6,11 @@ for (const width of [1440, 390]) {
   await page.setViewportSize({ width, height: 960 });
   await seedWorkspace(page);
   await page.goto(formPath);
+  await page.getByRole('button', { name: 'Edit line item 1', exact: true }).click();
   const row = page.getByRole('group', { name: 'ATC row 1', exact: true });
   const atc = row.getByRole('combobox', { name: 'ATC', exact: true });
   await expect(atc).toHaveText('WI120');
+  await expect(atc).toBeFocused();
   await atc.press('Enter');
   const search = page.getByPlaceholder('Search code or income', { exact: true });
   await expect(search).toBeFocused();
@@ -63,6 +65,7 @@ for (const width of [1440, 390]) {
   await page.setViewportSize({ width: 390, height: 400 });
   await seedWorkspace(page);
   await page.goto(formPath);
+  await page.getByRole('button', { name: 'Edit line item 1', exact: true }).click();
   await page.getByRole('combobox', { name: 'ATC', exact: true }).click();
   const popup = page.locator('[popover="manual"]');
   await expect(popup).toBeVisible();
@@ -78,6 +81,7 @@ for (const width of [1440, 390]) {
  test('ATC fuzzy matches highlight the matched description characters', async ({ page }) => {
   await seedWorkspace(page);
   await page.goto(formPath);
+  await page.getByRole('button', { name: 'Edit line item 1', exact: true }).click();
   await page.getByRole('combobox', { name: 'ATC', exact: true }).click();
   await page.getByPlaceholder('Search code or income', { exact: true }).fill('cntrctrs');
   const contractor = page.getByRole('option', { name: /WI120/ });
@@ -92,12 +96,15 @@ for (const width of [1440, 390]) {
   const atc = page.getByRole('combobox', { name: 'ATC', exact: true });
   const search = page.getByPlaceholder('Search code or income', { exact: true });
   await year.fill('2018');
+  await page.getByRole('button', { name: 'Edit line item 1', exact: true }).click();
   await atc.click();
   await search.fill('WI650');
   await expect(page.getByRole('option', { name: /WI650/ })).toContainText('25%');
   await search.press('Enter');
   await expect(page.getByLabel('Rate (%)', { exact: true })).toHaveText('25.00%');
+  await page.getByRole('dialog').getByRole('button', { name: 'Update', exact: true }).click();
   await year.fill('2026');
+  await page.getByRole('button', { name: 'Edit line item 1', exact: true }).click();
   await atc.click();
   await search.fill('WI650');
   await expect(page.getByRole('option', { name: /WI650/ })).toContainText('15%');
@@ -108,6 +115,7 @@ for (const width of [1440, 390]) {
  test('ATC creation is unavailable for empty or whitespace-only searches', async ({ page }) => {
   await seedWorkspace(page);
   await page.goto(formPath);
+  await page.getByRole('button', { name: 'Edit line item 1', exact: true }).click();
   const atc = page.getByRole('combobox', { name: 'ATC', exact: true });
   await atc.click();
   const search = page.getByPlaceholder('Search code or income', { exact: true });

@@ -36,7 +36,7 @@ test('Yes/No radios reveal applicable fields and preserve withheld entries acros
 	const withheld = page.getByRole('radiogroup', { name: 'Any taxes withheld?' });
 	await expect(withheld.getByRole('radio', { name: 'Yes', exact: true })).toBeChecked();
 	await withheld.getByRole('radio', { name: 'No', exact: true }).check();
-	await expect(page.getByRole('group', { name: 'ATC row 1', exact: true })).toHaveCount(0);
+	await expect(page.getByRole('list', { name: 'ATC line items', exact: true })).toHaveCount(0);
 	await page.getByRole('combobox', { name: 'Apply over-remittance as', exact: true }).click();
 	await page.getByRole('option', { name: 'Carry over to next quarter', exact: true }).click();
 	await page.getByRole('button', { name: 'Save draft', exact: true }).click();
@@ -48,12 +48,14 @@ test('Yes/No radios reveal applicable fields and preserve withheld entries acros
 	await page.getByRole('link', { name: 'Edit', exact: true }).click();
 	await expect(withheld.getByRole('radio', { name: 'No', exact: true })).toBeChecked();
 	await withheld.getByRole('radio', { name: 'Yes', exact: true }).check();
+	await page.getByRole('button', { name: 'Edit line item 1', exact: true }).click();
 	const row = page.getByRole('group', { name: 'ATC row 1', exact: true });
 	await expect(row.getByRole('combobox', { name: 'ATC', exact: true })).toHaveText('WI120');
 	await expect(row.getByRole('textbox', { name: 'Tax Base', exact: true })).toHaveValue('100,000.00');
 });
 
 test('calculated outputs are separate from editable inputs and update from the tax base', async ({ page }) => {
+	await page.getByRole('button', { name: 'Edit line item 1', exact: true }).click();
 	const row = page.getByRole('group', { name: 'ATC row 1', exact: true });
 	const rate = row.getByLabel('Rate (%)', { exact: true });
 	const tax = row.getByLabel('Tax withheld', { exact: true });
@@ -71,7 +73,12 @@ test('calculated outputs are separate from editable inputs and update from the t
 	await base.fill('oops');
 	await base.blur();
 	await expect(tax).toHaveText('—');
-	await expect(page.getByText('Correct the amounts to calculate the total.')).toBeVisible();
+	await expect(page.getByRole('complementary', { name: 'Summary', exact: true })).toContainText('₱765.44');
+	await page.getByRole('dialog').getByRole('button', { name: 'Update', exact: true }).click();
+	await expect(row.getByText('Enter an amount such as 1,234.56, zero or greater.', { exact: true })).toBeVisible();
+	await expect(page.getByRole('dialog')).toBeVisible();
+	await page.getByRole('dialog').getByRole('button', { name: 'Cancel', exact: true }).click();
+	await expect(page.getByRole('button', { name: 'Edit line item 1', exact: true })).toContainText('₱100,000.00');
 });
 
 test('unfinished quarter is saved as a draft and rejected at finalization', async ({ page }) => {

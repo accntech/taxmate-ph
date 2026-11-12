@@ -1,11 +1,11 @@
 <script lang="ts">
-	import { tick } from 'svelte';
 	import AltArrowRight from '@solar-icons/svelte/category/arrows/Linear/AltArrowRight.svelte';
 	import AtcPicker from './atc-picker.svelte';
-	import { Button, CalculatedValue, CurrencyInput, DateInput, Input, NumberInput, RadioGroup, Select } from '$lib/components/ui';
+	import { CalculatedValue, CurrencyInput, DateInput, Input, NumberInput, RadioGroup, Select } from '$lib/components/ui';
 	import { normalizeCurrencyInput } from '$lib/components/ui/currency-input/currency';
-	import { withholdingSchedules, withholdingRowCountKey, type WithholdingDefinition, type WithholdingField, type WithholdingSchedule } from './withholding-definitions';
+	import { withholdingSchedules, type WithholdingDefinition, type WithholdingField } from './withholding-definitions';
 	import { calculateWithholding } from './withholding-rules';
+	import ScheduleItems from './schedule-items.svelte';
 	import './withholding-layout.css';
 	import './form-editor-layout.css';
 
@@ -16,7 +16,6 @@
 		onvaluechange?: (patch: Record<string, string>) => void;
 		taxpayerHref?: string;
 	} = $props();
-	let addedRows = $state<Record<string, string[]>>({});
 	const calculated = $derived(calculateWithholding(definition.code, values));
 	const schedules = $derived(withholdingSchedules(definition, values));
 	const individualYearEnd = $derived(definition.code === '0605' && values[definition.prefix + 'txtClassification'] === 'I');
@@ -24,7 +23,7 @@
 		...definition.sections.flatMap(section => section.fields),
 		...schedules.flatMap(schedule => [...schedule.rows.flatMap(row => row.fields), ...(schedule.totals ?? [])])
 	]);
-	const invalidAmounts = $derived(fields.some(field => field.type === 'money' && !field.readonly && visible(field) && normalizeCurrencyInput(values[field.id] ?? '') === null));
+	const invalidAmounts = $derived(fields.some(field => field.type === 'money' && !field.readonly && visible(field) && normalizeMoney(values[field.id] ?? '', !!field.allowNegative) === null));
 	const totalField = $derived(fields.find(field => field.id === definition.totalField));
 	const summaryFields = $derived(definition.sections.flatMap(section => section.fields).filter(field => field.readonly && field.type === 'money' && field.id !== definition.totalField));
 	const disclosureGroups = [
@@ -42,10 +41,18 @@
 	function change(id: string, value: string) {
 		if (onvaluechange) onvaluechange({ [id]: value });
 	}
+	function normalizeMoney(value: string, allowNegative = false) {
+		const trimmed = value.trim();
+		if (allowNegative && trimmed.startsWith('-')) {
+			const magnitude = normalizeCurrencyInput(trimmed.slice(1));
+			return magnitude === null || magnitude === '' ? null : `-${magnitude}`;
+		}
+		return normalizeCurrencyInput(value);
+	}
 	function display(field: WithholdingField, value: string) {
 		if (!value) return '—';
 		if (field.type === 'money') {
-			const normalized = normalizeCurrencyInput(value);
+			const normalized = normalizeMoney(value, !!field.allowNegative || !!field.readonly);
 			return normalized === null ? '—' : currency.format(Number(normalized));
 		}
 		return field.options?.find(option => option.value === value)?.label ?? value;
@@ -56,28 +63,7 @@
 	function groupFields(group: WithholdingField['group']) {
 		return definition.sections.flatMap(section => section.fields).filter(field => field.group === group && !field.profileKey && !field.readonly && visible(field));
 	}
-	function visibleRows(schedule: WithholdingSchedule) {
-		const initialCount = definition.schedules.find(item => item.id === schedule.id)?.rows.length ?? 0;
-		const rows = schedule.rows.filter((row, index) => rowHasValues(row.fields) || addedRows[schedule.id]?.includes(row.id) || index >= initialCount);
-		return rows.length ? rows : schedule.rows.slice(0, 1);
-	}
-	function canAddRow(schedule: WithholdingSchedule) {
-		return visibleRows(schedule).length < schedule.rows.length || (schedule.repeatable && schedule.rows.length < 1000);
-	}
-	async function addRow(schedule: WithholdingSchedule) {
-		const visibleIds = new Set(visibleRows(schedule).map(row => row.id));
-		let row = schedule.rows.find(item => !visibleIds.has(item.id));
-		if (!row && schedule.repeatable && schedule.rows.length < 1000) {
-			change(withholdingRowCountKey(definition, schedule.id), String(schedule.rows.length + 1));
-			await tick();
-			row = schedules.find(item => item.id === schedule.id)?.rows.at(-1);
-		}
-		if (row) {
-			addedRows = { ...addedRows, [schedule.id]: [...visibleIds, row.id] };
-			await tick();
-			document.getElementById(row.fields.find(field => !field.readonly)?.id ?? '')?.focus();
-		}
-	}
+
 </script>
 
 {#snippet control(field: WithholdingField)}
@@ -118,26 +104,16 @@
      </section>
     {/if}
    {/each}
-   {#each schedules as schedule (schedule.id)}
-    <details class="eq-section eq-disclosure wh-schedule" open={schedule.id === 'atc' || schedule.rows.some(row => rowHasValues(row.fields)) || !!addedRows[schedule.id]?.length}>
-     <summary><span class="eq-disclosure-icon" aria-hidden="true"><AltArrowRight size={16} color="currentColor" /></span>{schedule.title}</summary>
-     {#each visibleRows(schedule) as row (row.id)}
-      <fieldset aria-label={`${schedule.title}: ${row.label}`} class="wh-schedule-entry">
-       <legend class="wh-row-label">{row.label}</legend>
-       <div class="eq-field-grid">
-        {#each row.fields as field (field.id)}{@render control(field)}{/each}
+   {#each schedules as schedule (`${definition.code}:${schedule.id}`)}
+    <ScheduleItems {definition} {schedule} {values} {errors} onchange={(patch) => onvaluechange?.(patch)}>
+     {#snippet totals()}
+      {#if definition.period !== 'year' && schedule.totals?.length}
+       <div class="eq-field-grid wh-schedule-totals">
+        {#each schedule.totals as field (field.id)}{@render control(field)}{/each}
        </div>
-      </fieldset>
-     {/each}
-     {#if canAddRow(schedule)}
-      <div class="wh-schedule-actions"><Button type="button" variant="secondary" size="sm" aria-label={`Add row to ${schedule.title}`} onclick={() => void addRow(schedule)}>Add row</Button></div>
-     {/if}
-     {#if definition.period !== 'year' && schedule.totals?.length}
-      <div class="eq-field-grid wh-schedule-totals">
-       {#each schedule.totals as field (field.id)}{@render control(field)}{/each}
-      </div>
-     {/if}
-    </details>
+      {/if}
+     {/snippet}
+    </ScheduleItems>
    {/each}
    {#each disclosureGroups as group (group.id)}
     {@const grouped = groupFields(group.id)}
