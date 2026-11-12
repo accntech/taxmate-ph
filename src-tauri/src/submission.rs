@@ -2,10 +2,10 @@ use std::{
     env, fs,
     fs::OpenOptions,
     io,
-    io::{Read, Write},
+    io::{Read, Seek, SeekFrom, Write},
     net::TcpStream,
     path::{Path, PathBuf},
-    time::{Duration, SystemTime, UNIX_EPOCH},
+    time::Duration,
 };
 
 use aes::{
@@ -26,6 +26,65 @@ const PRIMARY_DISPATCHER_BASE: &str = "http://birgovph.com/";
 const BACKUP_DISPATCHER_BASE: &str = "http://ws1.birgovph.com/";
 const DISPATCHER_SECRET_PASSWORD_ENV: &str = "EBIRFORMS_DISPATCHER_SECRET_PASSWORD";
 const RETURN_COPY_PASSWORD_ENV: &str = "EBIRFORMS_RETURN_COPY_PASSWORD";
+const SUBMISSION_LOG_TAIL_BYTES: u64 = 128 * 1024;
+
+#[derive(Clone, Debug, Serialize)]
+pub struct SubmissionLog {
+    pub path: String,
+    pub content: String,
+    pub truncated: bool,
+}
+
+#[tauri::command]
+pub async fn read_submission_log(app: tauri::AppHandle) -> Result<SubmissionLog, String> {
+    let root = app
+        .path()
+        .app_data_dir()
+        .map_err(|error| error.to_string())?;
+    tauri::async_runtime::spawn_blocking(move || read_submission_log_at(&root))
+        .await
+        .map_err(|error| error.to_string())?
+        .map_err(|error| error.to_string())
+}
+
+pub fn read_submission_log_at(root: &Path) -> io::Result<SubmissionLog> {
+    let path = root.join("logfile").join("submission.log");
+    let mut log = SubmissionLog {
+        path: path_to_string(&path),
+        content: String::new(),
+        truncated: false,
+    };
+    let mut file = match fs::File::open(&path) {
+        Ok(file) => file,
+        Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(log),
+        Err(error) => return Err(error),
+    };
+    let length = file.metadata()?.len();
+    log.truncated = length > SUBMISSION_LOG_TAIL_BYTES;
+    file.seek(SeekFrom::Start(
+        length.saturating_sub(SUBMISSION_LOG_TAIL_BYTES),
+    ))?;
+    let mut bytes = Vec::new();
+    // A concurrent submission can append while this snapshot is being read.
+    file.take(SUBMISSION_LOG_TAIL_BYTES)
+        .read_to_end(&mut bytes)?;
+    let start = if log.truncated {
+        bytes
+            .iter()
+            .position(|byte| byte & 0xc0 != 0x80)
+            .unwrap_or(bytes.len())
+    } else {
+        0
+    };
+    let bytes = &bytes[start..];
+    // Avoid showing a broken character if an append is observed mid-codepoint.
+    let end = match std::str::from_utf8(bytes) {
+        Err(error) if error.error_len().is_none() => error.valid_up_to(),
+        _ => bytes.len(),
+    };
+    log.content = String::from_utf8_lossy(&bytes[..end]).into_owned();
+    Ok(log)
+}
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
@@ -712,12 +771,10 @@ impl SubmissionLogger {
 }
 
 fn log_timestamp() -> String {
-    let seconds = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map(|duration| duration.as_secs())
-        .unwrap_or(0);
-
-    format!("ts={seconds}")
+    format!(
+        "[{}]",
+        chrono::Local::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, false)
+    )
 }
 
 impl SubmissionError {

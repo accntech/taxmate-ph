@@ -40,6 +40,33 @@ export type SubmissionError = {
 
 export type SubmitReturn = (request: SubmissionRequest) => Promise<SubmissionReceipt>
 
+export type SubmissionLog = {
+	path: string
+	content: string
+	truncated: boolean
+}
+
+export function createSubmissionLogClient(
+	call: typeof invoke<SubmissionLog> = invoke<SubmissionLog>
+): () => Promise<SubmissionLog> {
+	return () => call('read_submission_log')
+}
+
+export function formatSubmissionLog(content: string, timeZone?: string): string {
+	const formatter = new Intl.DateTimeFormat('en-GB', {
+		timeZone,
+		year: 'numeric', month: '2-digit', day: '2-digit',
+		hour: '2-digit', minute: '2-digit', second: '2-digit',
+		hourCycle: 'h23', timeZoneName: 'shortOffset'
+	})
+	return content.replace(/^ts=(\d+)(?=\s|$)/gm, (timestamp, seconds: string) => {
+		const date = new Date(Number(seconds) * 1000)
+		if (!Number.isFinite(date.getTime())) return timestamp
+		const parts = new Map(formatter.formatToParts(date).map(part => [part.type, part.value]))
+		return `[${parts.get('year')}-${parts.get('month')}-${parts.get('day')} ${parts.get('hour')}:${parts.get('minute')}:${parts.get('second')} ${parts.get('timeZoneName')}]`
+	})
+}
+
 export function createSubmissionClient(
 	call: typeof invoke<SubmissionReceipt> = invoke<SubmissionReceipt>
 ): SubmitReturn {

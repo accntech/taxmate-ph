@@ -1,12 +1,15 @@
 <script lang="ts">
 	import { Badge, Button, Card, Dialog, Input, Page, PageHeader, Select } from '$lib/components/ui';
 	import { settings, type FilingPeriod, type PaperSize } from '$lib/settings.svelte';
+	import { createSubmissionLogClient, formatSubmissionError, formatSubmissionLog, type SubmissionLog } from '$lib/tauri/submission';
+	import { isTauri } from '@tauri-apps/api/core';
 	import Settings from '@solar-icons/svelte/category/settings/Linear/Settings.svelte';
 	import Palette from '@solar-icons/svelte/category/tools/Linear/Palette.svelte';
 	import Printer from '@solar-icons/svelte/category/devices/Linear/Printer.svelte';
 	import Database from '@solar-icons/svelte/category/ui/Linear/Database.svelte';
 	import InfoCircle from '@solar-icons/svelte/category/ui/Linear/InfoCircle.svelte';
 	import TrashBin from '@solar-icons/svelte/category/ui/Linear/TrashBinMinimalistic.svelte';
+	import Copy from '@solar-icons/svelte/category/ui/Linear/Copy.svelte';
 	import type { Snippet, Component } from 'svelte';
 
 	const appVersion = '0.1.0';
@@ -41,6 +44,53 @@
 
 	let taxpayerName = $state(settings.prefs.defaultTaxpayer);
 	let resetOpen = $state(false);
+	let logOpen = $state(false);
+	let logLoading = $state(false);
+	let submissionLog = $state<SubmissionLog | null>(null);
+	let logError = $state('');
+	let logCopied = $state(false);
+	let logCopying = $state(false);
+	let logCopyError = $state('');
+	const logContent = $derived(formatSubmissionLog(submissionLog?.content ?? ''));
+
+	async function copySubmissionLog() {
+		logCopied = false;
+		logCopyError = '';
+		logCopying = true;
+		try {
+			await navigator.clipboard.writeText(logContent);
+			logCopied = true;
+		} catch {
+			logCopyError = 'Could not copy the log. Select the text and copy it manually.';
+		} finally {
+			logCopying = false;
+		}
+	}
+
+	async function loadSubmissionLog() {
+		if (logLoading) return;
+		logError = '';
+		logCopied = false;
+		logCopyError = '';
+		submissionLog = null;
+		if (!isTauri()) {
+			logError = 'Submission logs are available in the desktop app.';
+			return;
+		}
+		logLoading = true;
+		try {
+			submissionLog = await createSubmissionLogClient()();
+		} catch (error) {
+			logError = `Could not read the submission log: ${formatSubmissionError(error)}`;
+		} finally {
+			logLoading = false;
+		}
+	}
+
+	function toggleSubmissionLog() {
+		logOpen = !logOpen;
+		if (logOpen) void loadSubmissionLog();
+	}
 
 	const themeNote = $derived(
 		settings.themeMode === 'system'
@@ -175,6 +225,12 @@
 	<Badge tone="success"><InfoCircle size={13} color="currentColor" />On this device only</Badge>
 {/snippet}
 
+{#snippet submissionLogControl()}
+	<Button variant="secondary" aria-expanded={logOpen} aria-controls="submission-log" onclick={toggleSubmissionLog}>
+		{logOpen ? 'Hide submission log' : 'View submission log'}
+	</Button>
+{/snippet}
+
 {#snippet resetControl()}
 	<Button variant="secondary" onclick={() => (resetOpen = true)}>
 		<TrashBin size={16} color="currentColor" />
@@ -215,6 +271,45 @@
 		{@render sectionTitle('Sending', 'BIR submission is available for Form 1601-EQ first.', Settings)}
 		{@render row('Sending mode', 'Send to BIR uploads the return. Prepare locally saves a package on this device without sending it.', sendingControl, true)}
 		<p class="pb-2 text-[13px] leading-5 text-fg-muted">Server settings are retrieved automatically from the BIR dispatcher when sending.</p>
+		{@render row('Submission log', 'Review saved preparation, connection, and upload results on this device.', submissionLogControl, true)}
+		{#if logOpen}
+			<section id="submission-log" aria-labelledby="submission-log-title" class="min-w-0 border-t border-border-soft py-4">
+				<div class="flex flex-wrap items-center justify-between gap-3">
+					<h3 id="submission-log-title" class="text-sm font-semibold text-fg">Submission log</h3>
+					<Button variant="secondary" size="sm" disabled={logLoading} onclick={() => void loadSubmissionLog()}>Refresh log</Button>
+				</div>
+				<p class="mt-2 text-[13px] leading-5 text-fg-muted">Upload success does not confirm BIR receipt or acceptance.</p>
+				{#if logLoading}
+					<p role="status" class="mt-3 text-sm text-fg-muted">Loading submission log…</p>
+				{:else if logError}
+					<p role="alert" class="mt-3 text-sm text-danger">{logError}</p>
+				{:else if submissionLog}
+					<p class="mt-3 break-all text-xs leading-5 text-fg-subtle">{submissionLog.path}</p>
+					{#if submissionLog.truncated}
+						<p class="mt-2 text-xs text-fg-muted">Showing the latest 128 KiB. Earlier entries remain in the log file.</p>
+					{/if}
+					{#if submissionLog.content}
+						<div class="relative mt-3">
+							<div class="absolute right-2 top-2">
+								<Button variant="secondary" size="sm" aria-label="Copy log" disabled={logCopying} onclick={() => void copySubmissionLog()}>
+									<Copy size={14} color="currentColor" aria-hidden="true" />
+									{logCopying ? 'Copying…' : logCopied ? 'Copied' : 'Copy log'}
+								</Button>
+							</div>
+							<textarea readonly rows="12" aria-label="Log entries" value={logContent} class="block w-full resize-y rounded-md border border-border bg-bg-elev-2 p-3 pt-14 font-mono text-xs leading-5 text-fg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"></textarea>
+						</div>
+						{#if logCopied}
+							<p role="status" class="sr-only">Log copied to clipboard.</p>
+						{/if}
+						{#if logCopyError}
+							<p role="alert" class="mt-2 text-sm text-danger">{logCopyError}</p>
+						{/if}
+					{:else}
+						<p role="status" class="mt-3 text-sm text-fg-muted">No submission log entries yet. Prepare or submit a return to create an entry.</p>
+					{/if}
+				{/if}
+			</section>
+		{/if}
 	</Card>
 
 	<Card variant="panel" padding="lg" class="grid gap-1">
