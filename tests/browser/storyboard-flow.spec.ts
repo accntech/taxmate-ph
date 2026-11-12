@@ -4,16 +4,16 @@ import { seedWorkspace, taxpayerId } from './fixtures';
 test('forms storyboard supports cancel, create, open, and back navigation', async ({ page }) => {
 	await seedWorkspace(page);
 	await page.goto(`/ebirforms/taxpayers/${taxpayerId}/forms`);
-	await page.getByRole('button', { name: 'Create form', exact: true }).click();
+	await page.getByRole('button', { name: 'Create return', exact: true }).click();
 	await page.getByRole('button', { name: 'Cancel', exact: true }).click();
 	await expect(page.getByRole('dialog')).toBeHidden();
 	await expect(page.getByRole('row')).toHaveCount(2);
-	await page.getByRole('button', { name: 'Create form', exact: true }).click();
+	await page.getByRole('button', { name: 'Create return', exact: true }).click();
 	await page.getByRole('combobox', { name: 'Search BIR forms' }).fill('1601EQ');
 	await page.getByRole('option').click();
 	await expect(page.getByRole('heading', { name: 'BIR Form 1601EQ', exact: true })).toBeVisible();
 	await page.getByRole('link', { name: '← Back to forms', exact: true }).click();
-	await expect(page.getByRole('row')).toHaveCount(3);
+	await expect(page.getByRole('row')).toHaveCount(2);
 	await page.locator('a[href*="review-return"]').filter({ hasText: 'Edit' }).click();
 	await expect(page.getByRole('textbox', { name: 'Year', exact: true })).toHaveValue('2026');
 	await page.getByRole('link', { name: '← Back to forms', exact: true }).click();
@@ -50,10 +50,10 @@ for (const outcome of ['success', 'cancel', 'error'] as const) {
 			const request = await page.evaluate(() => (window as any).pdfRequest);
 			expect(request.paperSize).toBe('long');
 			expect(request.html).toContain('Example Services Corporation');
-			expect(request.html).toContain('100000.00');
+			expect(request.html).toContain('value="100000"');
 			expect(request.html).toContain('WI120');
 			expect(request.html).toContain('1234.56');
-			expect(request.html).toContain('Status: Draft');
+			expect(request.html).toContain('<div class="pdf-draft-watermark" aria-hidden="true">DRAFT</div>');
 			if (outcome === 'success') {
 				const preview = await page.context().newPage();
 				await preview.setContent(request.html);

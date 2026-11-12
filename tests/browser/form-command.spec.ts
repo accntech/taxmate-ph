@@ -6,7 +6,7 @@ const tablePath = `/ebirforms/taxpayers/${taxpayerId}/forms`;
 test('form command filters, handles no matches, and creates with the keyboard', async ({ page }) => {
 	await seedWorkspace(page);
 	await page.goto(tablePath);
-	await page.getByRole('button', { name: 'Create form', exact: true }).click();
+	await page.getByRole('button', { name: 'Create return', exact: true }).click();
 	const search = page.getByRole('combobox', { name: 'Search BIR forms' });
 	await expect(search).toBeFocused();
 	for (const query of ['1601eq', 'quarterly remittance', 'withholding tax']) {
@@ -22,7 +22,7 @@ test('form command filters, handles no matches, and creates with the keyboard', 
 	await search.press('Enter');
 	await expect(page.getByRole('heading', { name: 'BIR Form 1601EQ', exact: true })).toBeVisible();
 	await page.getByRole('link', { name: '← Back to forms', exact: true }).click();
-	await expect(page.getByRole('row')).toHaveCount(3);
+	await expect(page.getByRole('row')).toHaveCount(2);
 });
 
 for (const theme of ['light', 'dark']) {
@@ -31,16 +31,19 @@ for (const theme of ['light', 'dark']) {
 			await page.setViewportSize({ width, height: 900 });
 			await seedWorkspace(page, theme);
 			await page.goto(tablePath);
-			const trigger = page.getByRole('button', { name: 'Create form', exact: true });
+			const trigger = page.getByRole('button', { name: 'Create return', exact: true });
 			await trigger.click();
 			const search = page.getByRole('combobox', { name: 'Search BIR forms' });
 			await expect(search).toBeFocused();
 			await expect(page.getByRole('option')).toBeInViewport();
 			const dialog = page.getByRole('dialog');
+			await dialog.evaluate(async element => {
+				await Promise.all(element.getAnimations().map(animation => animation.finished));
+			});
 			const searchBox = await search.boundingBox();
 			const dialogBox = await dialog.boundingBox();
 			expect(searchBox!.y - dialogBox!.y).toBeLessThanOrEqual(24);
-			await expect(dialog.getByRole('button', { name: 'Create form', exact: true })).toBeVisible();
+			await expect(dialog.getByRole('button', { name: 'Create return', exact: true })).toBeVisible();
 			// The entire 3px soft focus ring must fit every clipping ancestor.
 			expect(await search.evaluate(input => {
 				const rect = input.getBoundingClientRect();
@@ -71,9 +74,9 @@ for (const viewport of [{ width: 800, height: 360 }, { width: 600, height: 320 }
 		await page.setViewportSize(viewport);
 		await seedWorkspace(page);
 		await page.goto(tablePath);
-		await page.getByRole('button', { name: 'Create form', exact: true }).click();
+		await page.getByRole('button', { name: 'Create return', exact: true }).click();
 		const dialog = page.getByRole('dialog');
-		const footer = dialog.getByRole('button', { name: 'Create form', exact: true });
+		const footer = dialog.getByRole('button', { name: 'Create return', exact: true });
 		await expect(footer).toBeInViewport({ ratio: 1 });
 		const footerBox = await footer.boundingBox();
 		const dialogBox = await dialog.boundingBox();

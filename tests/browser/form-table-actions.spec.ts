@@ -49,7 +49,7 @@ test('archive is reversible and delete requires confirmation from the table', as
 	await expect(page.getByRole('link', { name: 'Edit', exact: true })).toBeVisible();
 	await menu(page);
 	await page.getByRole('menuitem', { name: 'Delete…', exact: true }).click();
-	await page.getByRole('dialog').getByRole('button', { name: 'Delete form', exact: true }).click();
+	await page.getByRole('dialog').getByRole('button', { name: 'Delete return', exact: true }).click();
 	await expect(page.getByRole('link', { name: 'Edit', exact: true })).toHaveCount(0);
 	expect(await page.evaluate(() => JSON.parse(localStorage.getItem('ebirforms-created-returns-v1')!).returns)).toEqual([]);
 });

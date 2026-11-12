@@ -60,6 +60,7 @@ export function createInitialFormValues(profile: TaxpayerProfile): Record<string
 }
 
 class EbirformsWorkspace {
+	#pendingReturn = $state<CreatedReturn | null>(null);
 	#profileLoad: Promise<void> | null = null;
 	#workingCopiesLoaded = false;
 	#workingCopiesLoadFailed = false;
@@ -89,7 +90,7 @@ class EbirformsWorkspace {
 
 	get hasUnsavedChanges(): boolean {
 		const active = this.createdReturns.find(item => item.id === this.activeReturnId);
-		return !!active && JSON.stringify(active.values) !== JSON.stringify(this.formValues);
+		return this.#pendingReturn?.id === this.activeReturnId || !!active && JSON.stringify(active.values) !== JSON.stringify(this.formValues);
 	}
 
 	get currentReturnStatus(): CreatedReturnStatus {
@@ -112,13 +113,17 @@ class EbirformsWorkspace {
 		}
 	}
 
-	saveBeforeLeaving(): boolean {
-		if (!this.hasUnsavedChanges) return true;
-		if (this.isSavingDraft || this.isSubmitting) {
-			this.statusMessage = 'Wait for the current operation to finish before leaving.';
-			return false;
-		}
-		return this.saveActiveReturn();
+	discardReturnChanges(): void {
+		this.#pendingReturn = null;
+		if (this.activeReturnId && this.createdReturns.some(item => item.id === this.activeReturnId)
+			&& this.openReturn(this.activeReturnId)) return;
+		this.activeReturnId = null;
+		this.formValues = createInitialFormValues(this.profile);
+		this.finalFlag = '0';
+		this.validationErrors = {};
+		this.submissionReceipt = null;
+		this.importBuffer = '';
+		this.statusMessage = 'Unsaved form discarded.';
 	}
 
 	returnPeriod = $derived(
@@ -204,16 +209,16 @@ class EbirformsWorkspace {
 			id, taxpayerId, formCode, values, returnPeriod: `${values['frm1601EQ:txtYear']}${values['frm1601EQ:optQuarter']}`,
 			status: 'Draft', finalFlag: '0', updatedAt: Date.now()
 		};
-		if (!this.#persistWorkingCopies([...this.createdReturns, record])) return null;
+		this.#pendingReturn = record;
 		this.openReturn(id);
-		this.statusMessage = 'New draft created for the selected taxpayer.';
+		this.statusMessage = 'New form. Choose Save to create it on this device.';
 		return id;
 	}
 
 	openReturn(id: string): boolean {
 		if (this.isSavingDraft || this.isSubmitting) return false;
 		if ((!this.#workingCopiesLoaded && !this.loadCreatedReturns()) || this.#workingCopiesLoadFailed) return false;
-		const record = this.createdReturns.find(item => item.id === id);
+		const record = this.createdReturns.find(item => item.id === id) ?? (this.#pendingReturn?.id === id ? this.#pendingReturn : undefined);
 		const form = record && getFormDefinition(record.formCode);
 		if (!record || !form || !this.profiles.some(item => item.id === record.taxpayerId)) {
 			this.statusMessage = 'The saved form or its taxpayer could not be found.';
@@ -232,7 +237,8 @@ class EbirformsWorkspace {
 	}
 
 	saveActiveReturn(status?: CreatedReturnStatus): boolean {
-		const active = this.createdReturns.find(item => item.id === this.activeReturnId);
+		const active = this.createdReturns.find(item => item.id === this.activeReturnId)
+			?? (this.#pendingReturn?.id === this.activeReturnId ? this.#pendingReturn : undefined);
 		if (!active || active.taxpayerId !== this.selectedProfileId) {
 			this.statusMessage = 'Open or create a saved form before saving changes.';
 			return false;
@@ -252,7 +258,11 @@ class EbirformsWorkspace {
 		}
 		const record: CreatedReturn = { ...active, values, returnPeriod: this.returnPeriod,
 			status: nextStatus, finalFlag: nextStatus === 'Draft' ? '0' : this.finalFlag, updatedAt: Date.now() };
-		if (!this.#persistWorkingCopies(this.createdReturns.map(item => item.id === active.id ? record : item))) return false;
+		const returns = this.createdReturns.some(item => item.id === active.id)
+			? this.createdReturns.map(item => item.id === active.id ? record : item)
+			: [...this.createdReturns, record];
+		if (!this.#persistWorkingCopies(returns)) return false;
+		this.#pendingReturn = null;
 		this.formValues = { ...values };
 		this.finalFlag = record.finalFlag;
 		this.statusMessage = 'Form changes saved on this device.';
@@ -358,6 +368,7 @@ class EbirformsWorkspace {
 	}
 
 	startNewTaxpayerProfile() {
+		this.#pendingReturn = null;
 		this.profile = {
 			id: '',
 			tin1: '',

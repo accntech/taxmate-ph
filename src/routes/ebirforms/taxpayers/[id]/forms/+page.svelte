@@ -57,9 +57,8 @@
 	}
 	function create(formCode: string) {
 		if (busy || !profile || archived || !storageReady) return;
-		const id = workspace.createReturn(params.id, formCode);
-		if (id) { createOpen = false; void goto(route(id, formCode)); }
-		else createError = workspace.statusMessage;
+		createOpen = false;
+		void goto(`${buildTaxpayerFormsRoute(params.id, formCode)}?new=true`);
 	}
 	function recordForAction(id: string): CreatedReturn | undefined {
 		if (busy || !storageReady) return;
