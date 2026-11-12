@@ -32,7 +32,6 @@
 	let isPrinting = $state(false);
 	let isGenerating = $state(false);
 	let pdfProgress = $state<PdfExportProgress>({ completedSteps: 0, totalSteps: 7, stage: 'Loading print template' });
-	const pdfPercent = $derived(Math.round(pdfProgress.completedSteps / pdfProgress.totalSteps * 100));
 	let isCanceling = $state(false);
 	let pdfJob: { id: string; submitted: boolean; canceled: boolean } | undefined;
 	let generatedPdfPath = $state('');
@@ -265,12 +264,11 @@
 <Dialog open={isGenerating} title="Generating PDF" description={isCanceling ? 'Canceling PDF generation…' : 'Please wait while your tax return is prepared.'}
 	closedByBackdrop={false} closedByEscape={false} hideCloseButton>
 	{#if isGenerating}
-		<div role="progressbar" aria-label="PDF generation progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow={pdfPercent} aria-valuetext={`${pdfPercent}% — ${pdfProgress.completedSteps} of ${pdfProgress.totalSteps} export steps completed`} class="pdf-progress mt-1 h-1.5 overflow-hidden rounded-full bg-bg-hover">
-			<span class="pdf-progress-indicator block h-full rounded-full bg-accent" style:width={`${pdfPercent}%`}></span>
+		<div role="progressbar" aria-label="PDF generation progress" aria-valuetext={isCanceling ? 'Stopping the export…' : pdfProgress.stage} class="pdf-progress mt-1 h-1.5 overflow-hidden rounded-full bg-bg-hover">
+			<span class="pdf-progress-indicator block h-full rounded-full bg-accent"></span>
 		</div>
 	{/if}
 	<p role="status" class="mt-3 text-sm text-fg-muted">{isCanceling ? 'Stopping the export…' : pdfProgress.stage}</p>
-	<p class="mt-1 text-xs text-fg-muted"><span class="font-medium tabular-nums text-fg">{pdfPercent}%</span> · {pdfProgress.completedSteps} of {pdfProgress.totalSteps} export steps completed</p>
 	{#snippet footer()}
 		<Button variant="secondary" disabled={isCanceling} onclick={cancelGeneration}>{isCanceling ? 'Canceling…' : 'Cancel'}</Button>
 	{/snippet}
@@ -285,9 +283,13 @@
 </Dialog>
 
 <style>
-	.pdf-progress-indicator { transition: width 180ms ease-out; }
+	.pdf-progress-indicator { width: 40%; animation: pdf-activity 1.4s ease-in-out infinite; }
+	@keyframes pdf-activity {
+		from { transform: translateX(-100%); }
+		to { transform: translateX(350%); }
+	}
 	@media (prefers-reduced-motion: reduce) {
-		.pdf-progress-indicator { transition: none; }
+		.pdf-progress-indicator { animation: none; margin-inline: auto; }
 	}
 
 	:global(.form-actions-trigger) { min-width: 1.875rem; min-height: 1.875rem; padding: .375rem; background: var(--bg); color: var(--fg-muted); }
