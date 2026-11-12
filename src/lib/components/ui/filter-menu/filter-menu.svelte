@@ -240,6 +240,7 @@
     max-width: 18rem;
   }
   :global(.pcsti-filter-trigger) {
+    height: 1.875rem;
     min-height: 1.875rem;
     gap: 0.375rem;
     padding-inline: 0.625rem;
@@ -439,6 +440,7 @@
       padding: 0.5rem;
     }
     :global(.pcsti-filter-trigger) {
+      height: 2rem;
       min-width: 2.125rem;
       justify-content: center;
       padding-inline: 0.5rem;

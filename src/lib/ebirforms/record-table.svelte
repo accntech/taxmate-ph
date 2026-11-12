@@ -340,10 +340,20 @@
     font-size: 0.8125rem;
     color: var(--fg);
     outline: none;
+    box-shadow: none;
   }
   .search:focus-within {
     border-color: color-mix(in oklch, var(--accent) 60%, var(--border));
     box-shadow: 0 0 0 3px var(--ring);
+  }
+  @media (forced-colors: active) {
+    .search:focus-within {
+      outline: 2px solid Highlight;
+      outline-offset: 2px;
+    }
+    .search input:focus-visible {
+      outline: none;
+    }
   }
   .table-scroll {
     overflow-x: auto;
