@@ -237,6 +237,17 @@ export function startWindowChrome(): () => void {
       const platform = await invoke<string>("desktop_platform");
       if (!active || !["macos", "windows", "linux"].includes(platform)) return;
       root.dataset.tauriPlatform = platform;
+      // Allow the mounted shell and platform insets to reach layout before reveal.
+      // A hidden native window need not deliver animation frames, so do not wait
+      // for requestAnimationFrame here.
+      await new Promise<void>((resolve) => window.setTimeout(resolve, 0));
+      if (!active) return;
+      void root.offsetHeight;
+      await invoke("window_ready", {
+        dark: root.dataset.theme === "dark",
+        color: getComputedStyle(root).getPropertyValue("--bg").trim(),
+      });
+      if (!active) return;
       if (platform === "windows") {
         stopWindows = startWindowsChrome();
         return;
@@ -259,8 +270,8 @@ export function startWindowChrome(): () => void {
       });
       if (active) unlisten = stop;
       else stop();
-    } catch {
-      // A standard native frame remains usable on unsupported hosts.
+    } catch (error) {
+      console.error("Unable to initialize native window appearance", error);
     }
   })();
 

@@ -1,8 +1,8 @@
 import { expect, test, type Page } from '@playwright/test';
 import { seedWorkspace } from './fixtures';
 
-async function configure(page: Page, platform: string, extended = true) {
-	await seedWorkspace(page);
+async function configure(page: Page, platform: string, extended = true, theme = 'light') {
+	await seedWorkspace(page, theme);
 	await page.addInitScript(({ platform, extended }) => {
 		const state = { fullscreen: false, calls: [] as { command: string; args: Record<string, unknown> }[] };
 		const callbacks = new Map<number, (payload: unknown) => void>();
@@ -26,6 +26,18 @@ async function configure(page: Page, platform: string, extended = true) {
 			}
 		});
 	}, { platform, extended });
+}
+
+for (const platform of ['macos', 'windows', 'linux']) {
+	test(`${platform} reveals the window with the saved dark appearance`, async ({ page }) => {
+		await configure(page, platform, true, 'dark');
+		await page.goto('/');
+		await expect.poll(() => page.evaluate(() => {
+			const state = (window as unknown as { __chromeTest: { calls: { command: string; args: Record<string, unknown> }[] } }).__chromeTest;
+			return state.calls.find(call => call.command === 'window_ready')?.args;
+		})).toEqual({ dark: true, color: '#151715' });
+		await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+	});
 }
 
 for (const platform of ['macos', 'windows', 'linux']) {

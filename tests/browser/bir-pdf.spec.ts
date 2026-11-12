@@ -24,6 +24,8 @@ for (const { status, paperSize } of cases) {
 		await expect(page.getByRole('link', { name: 'Edit', exact: true })).toBeVisible();
 		await page.evaluate(() => {
 			const native = (window as any).__TAURI_INTERNALS__;
+			native.transformCallback = () => 1;
+			native.unregisterCallback = () => {};
 			const previous = native.invoke;
 			native.invoke = async (command: string, args: any) => {
 				if (command === 'plugin:dialog|save') return '/tmp/1601eq.pdf';

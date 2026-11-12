@@ -60,11 +60,9 @@ pub fn shutdown() {
 /// Called on the UI thread before native startup shows the main window.
 /// Failure keeps the standard frame and must never prevent presentation.
 #[cfg(target_os = "windows")]
-pub fn prepare(window: &tauri::WebviewWindow) {
+pub fn prepare(window: &tauri::WebviewWindow, dark: bool) {
     if let Ok(hwnd) = window.hwnd() {
-        // Match the shell's initial light appearance. Frontend syncing takes over
-        // persisted theme, resize and fullscreen changes after mounting.
-        native::sync(hwnd.0, false, window.is_fullscreen().unwrap_or(false));
+        native::sync(hwnd.0, dark, window.is_fullscreen().unwrap_or(false));
     }
 }
 

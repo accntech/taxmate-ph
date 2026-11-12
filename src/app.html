@@ -2,6 +2,29 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
+    <script>
+      // Resolve appearance before loading the app or painting its light defaults.
+      (() => {
+        let mode = 'system';
+        try {
+          const stored = localStorage.getItem('taxmate-ph-theme');
+          if (stored === 'light' || stored === 'dark') mode = stored;
+        } catch {
+          // System appearance remains available when storage is blocked.
+        }
+        const theme = mode === 'system'
+          ? (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+          : mode;
+        const root = document.documentElement;
+        root.dataset.theme = theme;
+        root.dataset.themeMode = mode;
+        root.style.colorScheme = theme;
+      })();
+    </script>
+    <style>
+      html { background: var(--bg, #f5f7f3); }
+      html[data-theme='dark'] { background: var(--bg, #151715); }
+    </style>
     <link rel="icon" href="%sveltekit.assets%/favicon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>TaxMate PH</title>
