@@ -11,6 +11,7 @@ import {
 	buildTaxpayerProfileFormValues,
 	normalizeTinNumber,
 	normalizeTinParts,
+	findMatchingTaxpayerProfile,
 	upsertTaxpayerProfile,
 	validateTaxpayerProfile,
 	type TaxpayerProfile
@@ -28,7 +29,7 @@ export const initialProfile: TaxpayerProfile = {
 	tin1: '123',
 	tin2: '456',
 	tin3: '789',
-	branchCode: '0000',
+	branchCode: '00000',
 	rdoCode: '040',
 	taxpayerName: 'Sample Taxpayer',
 	address: '',
@@ -371,7 +372,7 @@ class EbirformsWorkspace {
 			tin1: '',
 			tin2: '',
 			tin3: '',
-			branchCode: '0000',
+			branchCode: '00000',
 			rdoCode: '',
 			taxpayerName: '',
 			address: '',
@@ -397,8 +398,8 @@ class EbirformsWorkspace {
 			return false;
 		}
 		const profiles = upsertTaxpayerProfile(this.profiles, this.profile);
-		const id = normalizeTinParts(this.profile);
-		const profile = { ...profiles.find((item) => item.id === id)! };
+		const profile = { ...findMatchingTaxpayerProfile(profiles, this.profile)! };
+		const id = profile.id;
 		try {
 			const store = createProfileStoreClient();
 			const receipt = await store.save(profile);
@@ -429,7 +430,7 @@ class EbirformsWorkspace {
 			this.activeReturnId = null;
 			this.importBuffer = '';
 		}
-		this.profile = { ...foundProfile };
+		this.profile = { ...foundProfile, branchCode: foundProfile.branchCode.padStart(5, '0') };
 		this.selectedProfileId = id;
 		if (!this.activeReturnId) {
 			this.formValues = { ...this.formValues, ...buildTaxpayerProfileFormValues(foundProfile) };

@@ -32,12 +32,12 @@ test('TIN accepts a formatted paste without losing branch digits or leading zero
 	await tin.focus();
 	await tin.fill('');
 	await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
-	await page.evaluate(() => navigator.clipboard.writeText('001-234-567-0008'));
+	await page.evaluate(() => navigator.clipboard.writeText('001-234-567-12345'));
 	await tin.press('ControlOrMeta+V');
 	await tin.blur();
-	await expect(tin).toHaveValue('001-234-567-0008');
+	await expect(tin).toHaveValue('001-234-567-12345');
 	await tin.focus();
-	await expect(tin).toHaveValue('0012345670008');
+	await expect(tin).toHaveValue('00123456712345');
 	await tin.fill('001234567');
 	await tin.blur();
 	await expect(tin).toHaveValue('001-234-567');

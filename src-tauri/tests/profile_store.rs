@@ -21,6 +21,8 @@ fn sample_profile() -> TaxpayerProfile {
         email: "taxpayer@example.com".into(),
         line_of_business: String::new(),
         taxpayer_classification: String::new(),
+        psic_code: String::new(),
+        taxpayer_size: String::new(),
     }
 }
 
@@ -60,12 +62,16 @@ fn retains_business_and_tax_classification_in_profile_xml() {
     let mut data = serde_json::to_value(sample_profile()).expect("profile JSON");
     data["lineOfBusiness"] = serde_json::json!("Accounting & advisory / services");
     data["taxpayerClassification"] = serde_json::json!("N");
+    data["psicCode"] = serde_json::json!("0123");
+    data["taxpayerSize"] = serde_json::json!("small");
     let profile: TaxpayerProfile = serde_json::from_value(data).expect("new profile");
     save_taxpayer_profile_to_root(root.path(), profile).expect("save profile");
     let loaded = list_taxpayer_profiles_from_root(root.path()).expect("load profile");
     let result = serde_json::to_value(&loaded[0]).expect("loaded JSON");
     assert_eq!(result["lineOfBusiness"], "Accounting & advisory / services");
     assert_eq!(result["taxpayerClassification"], "N");
+    assert_eq!(result["psicCode"], "0123");
+    assert_eq!(result["taxpayerSize"], "small");
 }
 
 #[test]
@@ -77,4 +83,6 @@ fn loads_legacy_profiles_without_business_or_classification() {
     let data = serde_json::to_value(&loaded[0]).unwrap();
     assert_eq!(data["lineOfBusiness"], "");
     assert_eq!(data["taxpayerClassification"], "");
+    assert_eq!(data["psicCode"], "");
+    assert_eq!(data["taxpayerSize"], "");
 }

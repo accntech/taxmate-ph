@@ -6,6 +6,7 @@
 	import { ebirformsWorkspace as workspace } from '$lib/ebirforms/ebirforms-workspace.svelte';
 	import { Button, ButtonLink, Card, Input, Page, Select, Textarea, TinInput } from '$lib/components/ui';
 	import { formatTinInput, parseTinInput, validateTaxpayerProfile } from '$lib/profiles/profile';
+	import type { TaxpayerSize } from '$lib/profiles/profile';
 
 	let { profileId }: { profileId?: string } = $props();
 	let ready = $state(false);
@@ -134,7 +135,7 @@
 								required
 								error={validationErrors.tin}
 								inputmode="numeric"
-								placeholder="000-000-000-0000"
+								placeholder="000-000-000-00000"
 								value={tinInput}
 								onchange={updateTinParts}
 								class="font-mono" />
@@ -162,12 +163,30 @@
 							label="Line of business / occupation"
 							value={workspace.profile.lineOfBusiness ?? ''}
 							oninput={(event) => workspace.profile.lineOfBusiness = event.currentTarget.value} />
+							<Input
+								label="PSIC code"
+								inputmode="numeric"
+								error={validationErrors.psicCode}
+								value={workspace.profile.psicCode ?? ''}
+								oninput={(event) => workspace.profile.psicCode = event.currentTarget.value} />
 						<Select
 							label="Tax classification"
 							error={validationErrors.taxpayerClassification}
 							options={[{ value: 'I', label: 'Individual' }, { value: 'N', label: 'Non-individual' }]}
 							value={workspace.profile.taxpayerClassification ?? ''}
 							onchange={(value) => workspace.profile.taxpayerClassification = value as 'I' | 'N' | ''} />
+							<Select
+								label="Taxpayer size classification"
+								error={validationErrors.taxpayerSize}
+								options={[
+									{ value: '', label: 'Not specified' },
+									{ value: 'micro', label: 'Micro' },
+									{ value: 'small', label: 'Small' },
+									{ value: 'medium', label: 'Medium' },
+									{ value: 'large', label: 'Large' }
+								]}
+								value={workspace.profile.taxpayerSize ?? ''}
+								onchange={(value) => workspace.profile.taxpayerSize = value as TaxpayerSize} />
 					</div>
 				</fieldset>
 

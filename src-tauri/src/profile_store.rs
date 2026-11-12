@@ -26,6 +26,10 @@ pub struct TaxpayerProfile {
     pub line_of_business: String,
     #[serde(default)]
     pub taxpayer_classification: String,
+    #[serde(default)]
+    pub psic_code: String,
+    #[serde(default)]
+    pub taxpayer_size: String,
 }
 
 #[derive(Clone, Debug, Serialize, PartialEq, Eq)]
@@ -201,6 +205,8 @@ fn serialize_profile_xml(profile: &TaxpayerProfile) -> String {
         field_xml("email", &profile.email),
         field_xml("lineOfBusiness", &escape_legacy_value(&profile.line_of_business)),
         field_xml("taxpayerClassification", &profile.taxpayer_classification),
+        field_xml("psicCode", &escape_legacy_value(&profile.psic_code)),
+        field_xml("taxpayerSize", &escape_legacy_value(&profile.taxpayer_size)),
         "</div>".to_string(),
     ]
     .join("\n")
@@ -232,6 +238,8 @@ fn parse_profile_xml(xml: &str) -> Result<TaxpayerProfile, ProfileStoreError> {
         email: read_field(xml, "email"),
         line_of_business: unescape_legacy_value(&read_field(xml, "lineOfBusiness"))?,
         taxpayer_classification: read_field(xml, "taxpayerClassification"),
+        psic_code: unescape_legacy_value(&read_field(xml, "psicCode"))?,
+        taxpayer_size: unescape_legacy_value(&read_field(xml, "taxpayerSize"))?,
     })
 }
 

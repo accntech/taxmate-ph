@@ -1,5 +1,5 @@
 <script lang="ts">
-	// PCSTI TIN editing behavior with TaxMate's 9 + 4 digit identifier format.
+	// PCSTI TIN editing behavior with TaxMate's 9 + 5 digit identifier format.
 	import type { ComponentProps } from 'svelte';
 	import Input from '../input/input.svelte';
 	import { formatTinValue, getTinDigits } from './tin';
@@ -13,7 +13,7 @@
 		onblur,
 		onkeydown,
 		readonly = false,
-		placeholder = '000-000-000-0000',
+		placeholder = '000-000-000-00000',
 		class: className = '',
 		...rest
 	}: Omit<ComponentProps<typeof Input>, 'value' | 'type' | 'maxlength' | 'onchange'> & {
@@ -44,7 +44,7 @@
 	{readonly}
 	type="text"
 	inputmode="numeric"
-	maxlength={16}
+	maxlength={17}
 	class={['font-mono tabular-nums', className].filter(Boolean).join(' ')}
 	value={display}
 	onbeforeinput={(event) => {

@@ -348,7 +348,7 @@
 		<Card variant="panel" padding="lg" class="grid gap-4">
 			<p class="font-mono text-[11px] uppercase tracking-wide text-fg-subtle">Fields</p>
 			<div class="grid gap-4 md:grid-cols-2">
-				<TinInput bind:value={tin} label="TIN and branch code" help="9 TIN digits and a 4-digit branch code." />
+				<TinInput bind:value={tin} label="TIN and branch code" help="9 TIN digits and a 5-digit branch code." />
 				<CurrencyInput value="0.00" label="Amount due" help="Pesos and centavos." />
 				<CurrencyInput value="1234.56" label="Calculated withholding" readonly help="Calculated amounts remain read-only." />
 				<NumberInput value="0" label="Sheets attached" min={0} help="Whole numbers only." />
