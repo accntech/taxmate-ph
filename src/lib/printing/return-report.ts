@@ -182,8 +182,9 @@ function fitPages(surface: HTMLElement, paperSize: PrintPaperSize, status: strin
 }
 
 /** Export every return through its compiled Svelte print component and external CSS. */
-export async function buildReturnReport(definition: FormDefinition, values: Record<string, string>, status: string, paperSize: PrintPaperSize): Promise<string> {
+export async function buildReturnReport(definition: FormDefinition, values: Record<string, string>, status: string, paperSize: PrintPaperSize, onProgress?: (completedSteps: number, stage: string) => void): Promise<string> {
 	const [PrintComponent, styles] = await Promise.all([getWithholdingPrintComponent(definition.code), getWithholdingPrintStyles(definition.code)]);
+	onProgress?.(1, 'Embedding print assets');
 	const fontStyle = document.createElement('style');
 	fontStyle.textContent = arimoFontFaceCss;
 	document.head.append(fontStyle);
@@ -204,9 +205,11 @@ export async function buildReturnReport(definition: FormDefinition, values: Reco
 		component = mount(PrintComponent, { target: surface, props: { values: calculateReturn(definition.code, values) } });
 		await tick();
 		const embedded = await embedAssets(surface, styles);
+		onProgress?.(2, 'Laying out pages');
 		sheetStyle.textContent = `.print-measure-surface { all: initial; display: block; font: 12px Arial, Helvetica, sans-serif; line-height: normal; letter-spacing: normal; }\n${arimoFontFaceCss}\n${embedded.styles}`;
 		await document.fonts.load('12px Arimo');
 		await waitForLayout(surface);
+		onProgress?.(3, 'Preparing document');
 		snapshotControls(surface);
 		fitSourceFrames(surface);
 		fitValues(surface);
