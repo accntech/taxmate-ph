@@ -10,7 +10,7 @@
 	import { buildTaxpayerFormsRoute } from '$lib/apps/app-shell';
 	import { ebirformsWorkspace as workspace } from '$lib/ebirforms/ebirforms-workspace.svelte';
 	import type { CreatedReturn } from '$lib/ebirforms/created-returns';
-	import { getReturnAmount, getReturnPeriod, getManagedTaxpayerValues } from '$lib/forms/form-runtime';
+	import { getReturnAmount, getReturnPeriod, getReturnTin, getManagedTaxpayerValues } from '$lib/forms/form-runtime';
 	import { getFormDefinition } from '$lib/forms';
 	import FormCommand from '$lib/ebirforms/form-command.svelte';
 	import { settings } from '$lib/settings.svelte';
@@ -22,7 +22,7 @@
 	import Icon from '$lib/components/ui/icon/icon.svelte';
 	import { glyphs } from '$lib/components/ui/icons';
 	import RecordTable from '$lib/ebirforms/record-table.svelte';
-	import { formatTinInput } from '$lib/profiles/profile';
+	import { formatTinInput, normalizeTinParts } from '$lib/profiles/profile';
 	import AddCircle from '@solar-icons/svelte/category/ui/Linear/AddCircle.svelte';
 
 	let { params } = $props();
@@ -118,14 +118,14 @@
 	async function print(id: string) {
 		const record = recordForAction(id);
 		const definition = record && getFormDefinition(record.formCode);
-		if (!record || !definition) return;
+		if (!record || !definition || !profile) return;
 		isPrinting = true;
 		const job = { id: crypto.randomUUID(), submitted: false, canceled: false };
 		pdfJob = job;
 		const values = { ...record.values, ...(profile ? getManagedTaxpayerValues(record.formCode, profile, record.status) : {}) };
 		const paperSize = settings.prefs.paperSize;
 		try {
-			const suggestedFilename = buildPdfExportFilename({ formCode: record.formCode,
+			const suggestedFilename = buildPdfExportFilename({ tin: normalizeTinParts(getReturnTin(record.formCode, values, profile)), formCode: record.formCode,
 				period: getReturnPeriod(record.formCode, values) });
 			const outputPath = await save({ defaultPath: suggestedFilename, filters: [{ name: 'PDF document', extensions: ['pdf'] }] });
 			if (!outputPath) { toast.info('PDF export canceled.'); return; }
