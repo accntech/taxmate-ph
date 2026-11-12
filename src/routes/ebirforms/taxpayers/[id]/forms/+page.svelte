@@ -35,7 +35,7 @@
 	let archivedNotice = $state<string | null>(null);
 	const profile = $derived(workspace.profiles.find(profile => profile.id === params.id));
 	const archived = $derived(workspace.archivedTaxpayerIds.includes(params.id));
-	const busy = $derived(workspace.isSavingDraft || workspace.isSubmitting || isPrinting);
+	const busy = $derived(workspace.isSavingDraft || workspace.isSubmitting || workspace.isPersisting || isPrinting);
 	const deletingRecord = $derived(workspace.createdReturns.find(record => record.id === deleteId));
 	const errorRecord = $derived(workspace.createdReturns.find(record => record.id === errorRecordId));
 	const columns = [
@@ -71,24 +71,24 @@
 		errorRecordId = id;
 		actionErrors = { ...workspace.validationErrors };
 	}
-	function archiveForm(id: string) {
-		if (recordForAction(id) && workspace.archiveReturn(id)) { archivedNotice = id; clearErrors(); }
+	async function archiveForm(id: string) {
+		if (recordForAction(id) && await workspace.archiveReturn(id)) { archivedNotice = id; clearErrors(); }
 	}
-	function restoreForm(id: string) {
-		if (recordForAction(id) && workspace.restoreReturn(id)) archivedNotice = null;
+	async function restoreForm(id: string) {
+		if (recordForAction(id) && await workspace.restoreReturn(id)) archivedNotice = null;
 	}
-	function deleteForm() {
+	async function deleteForm() {
 		if (!recordForAction(deleteId)) return;
-		if (workspace.deleteReturn(deleteId)) {
+		if (await workspace.deleteReturn(deleteId)) {
 			if (errorRecordId === deleteId) clearErrors();
 			if (archivedNotice === deleteId) archivedNotice = null;
 			deleteId = '';
 		}
 	}
-	function finalize(id: string) {
+	async function finalize(id: string) {
 		if (!recordForAction(id) || !workspace.openReturn(id)) return;
 		clearErrors();
-		workspace.markFinalCopy();
+		await workspace.markFinalCopy();
 		captureErrors(id);
 	}
 	async function submit(id: string) {
@@ -96,7 +96,7 @@
 		if (!record || !workspace.openReturn(id)) return;
 		clearErrors();
 		if (record.status === 'Submitted' || record.status === 'For resubmission') {
-			workspace.markNeedsResend();
+			await workspace.markNeedsResend();
 			if (workspace.finalFlag !== '2') return;
 		}
 		workspace.submissionMode = 'mock';
@@ -138,8 +138,7 @@
 	function date(timestamp: number) { return new Intl.DateTimeFormat('en-PH', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Manila' }).format(timestamp); }
 	function amount(value: number) { return new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(value); }
 	onMount(() => {
-		storageReady = workspace.loadCreatedReturns();
-		void workspace.loadTaxpayerProfiles().then(() => {
+		void Promise.all([workspace.loadCreatedReturns().then(loaded => { storageReady = loaded; }), workspace.loadTaxpayerProfiles()]).then(() => {
 			if (profile) workspace.selectTaxpayerProfile(params.id);
 			ready = true;
 		});

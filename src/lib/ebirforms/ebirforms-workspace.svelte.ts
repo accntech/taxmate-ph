@@ -2,6 +2,8 @@ import { loadCreatedReturnsData, saveCreatedReturnsData, type CreatedReturn, typ
 import { getFormDefinition, listForms } from '$lib/forms';
 import { calculateReturn, validateReturnValues, getReturnPeriod, getReturnTin, getManagedTaxpayerValues, getReturnEmail } from '$lib/forms/form-runtime';
 import { createWithholdingValues } from '$lib/forms/withholding-rules';
+import { createWorkingReturnsClient } from '$lib/tauri/working-returns';
+import { isTauri } from '@tauri-apps/api/core';
 import { parseLegacyXml, serializeLegacyXml } from '$lib/legacy/xml';
 import {
 	buildProfileFilename,
@@ -66,6 +68,7 @@ class EbirformsWorkspace {
 	#profileLoad: Promise<void> | null = null;
 	#workingCopiesLoaded = false;
 	#workingCopiesLoadFailed = false;
+	#workingCopiesLoad: Promise<boolean> | null = null;
 	createdReturns = $state<CreatedReturn[]>([]);
 	archivedTaxpayerIds = $state<string[]>([]);
 	activeReturnId = $state<string | null>(null);
@@ -76,6 +79,7 @@ class EbirformsWorkspace {
 	validationErrors = $state<Record<string, string>>({});
 	historyRevision = $state(0);
 	isSavingDraft = $state(false);
+	isPersisting = $state(false);
 	isSubmitting = $state(false);
 	isLoadingProfiles = $state(false);
 	profileLoadState = $state<'idle' | 'loading' | 'loaded' | 'error'>('idle');
@@ -105,6 +109,7 @@ class EbirformsWorkspace {
 	}
 
 	updateFormValues(patch: Record<string, string>): void {
+		if (this.isPersisting) return;
 		if (!Object.entries(patch).some(([id, value]) => this.formValues[id] !== value)) return;
 		Object.assign(this.formValues, patch);
 		this.finalFlag = '0';
@@ -116,6 +121,7 @@ class EbirformsWorkspace {
 	}
 
 	discardReturnChanges(): void {
+		if (this.isPersisting) return;
 		this.#pendingReturn = null;
 		if (this.activeReturnId && this.createdReturns.some(item => item.id === this.activeReturnId)
 			&& this.openReturn(this.activeReturnId)) return;
@@ -143,9 +149,21 @@ class EbirformsWorkspace {
 	);
 
 
-	loadCreatedReturns(): boolean {
+	loadCreatedReturns(): Promise<boolean> {
+		if (this.isPersisting) return Promise.resolve(this.#workingCopiesLoaded && !this.#workingCopiesLoadFailed);
+		if (this.#workingCopiesLoad) return this.#workingCopiesLoad;
+		this.#workingCopiesLoad = this.#loadCreatedReturns().finally(() => { this.#workingCopiesLoad = null; });
+		return this.#workingCopiesLoad;
+	}
+
+	async #loadCreatedReturns(): Promise<boolean> {
 		try {
-			const data = loadCreatedReturnsData();
+			const store = isTauri() ? createWorkingReturnsClient() : null;
+			let data = store ? await store.load() : loadCreatedReturnsData();
+			if (data === null) {
+				data = loadCreatedReturnsData();
+				await store!.save(data);
+			}
 			this.createdReturns = data.returns;
 			this.archivedTaxpayerIds = data.archivedTaxpayerIds;
 			this.#workingCopiesLoaded = true;
@@ -158,22 +176,25 @@ class EbirformsWorkspace {
 		}
 	}
 
-	#persistWorkingCopies(returns: CreatedReturn[], archivedTaxpayerIds = this.archivedTaxpayerIds): boolean {
-		if (this.#workingCopiesLoadFailed || (!this.#workingCopiesLoaded && !this.loadCreatedReturns())) return false;
+	async #persistWorkingCopies(returns: CreatedReturn[], archivedTaxpayerIds = this.archivedTaxpayerIds): Promise<boolean> {
+		if (this.isPersisting || this.#workingCopiesLoad || this.#workingCopiesLoadFailed || (!this.#workingCopiesLoaded && !await this.loadCreatedReturns())) return false;
+		this.isPersisting = true;
 		try {
-			saveCreatedReturnsData({ version: 1, returns, archivedTaxpayerIds });
+			const data = { version: 1 as const, returns: JSON.parse(JSON.stringify(returns)) as CreatedReturn[], archivedTaxpayerIds: [...archivedTaxpayerIds] };
+			if (isTauri()) await createWorkingReturnsClient().save(data);
+			else saveCreatedReturnsData(data);
 			this.createdReturns = returns;
 			this.archivedTaxpayerIds = archivedTaxpayerIds;
 			return true;
 		} catch (error) {
 			this.statusMessage = `Changes were not saved: ${formatSubmissionError(error)}`;
 			return false;
-		}
+		} finally { this.isPersisting = false; }
 	}
 
 	createReturn(taxpayerId: string, formCode: string): string | null {
-		if (this.isSavingDraft || this.isSubmitting) return null;
-		if ((!this.#workingCopiesLoaded && !this.loadCreatedReturns()) || this.#workingCopiesLoadFailed) return null;
+		if (this.isSavingDraft || this.isSubmitting || this.isPersisting) return null;
+		if (this.#workingCopiesLoad || !this.#workingCopiesLoaded || this.#workingCopiesLoadFailed) return null;
 		const profile = this.profiles.find(item => item.id === taxpayerId);
 		const form = getFormDefinition(formCode);
 		if (!profile || !form || form.status !== 'ready' || this.archivedTaxpayerIds.includes(taxpayerId)) {
@@ -193,8 +214,8 @@ class EbirformsWorkspace {
 	}
 
 	openReturn(id: string): boolean {
-		if (this.isSavingDraft || this.isSubmitting) return false;
-		if ((!this.#workingCopiesLoaded && !this.loadCreatedReturns()) || this.#workingCopiesLoadFailed) return false;
+		if (this.isSavingDraft || this.isSubmitting || this.isPersisting) return false;
+		if (this.#workingCopiesLoad || !this.#workingCopiesLoaded || this.#workingCopiesLoadFailed) return false;
 		const record = this.createdReturns.find(item => item.id === id) ?? (this.#pendingReturn?.id === id ? this.#pendingReturn : undefined);
 		const form = record && getFormDefinition(record.formCode);
 		if (!record || !form || !this.profiles.some(item => item.id === record.taxpayerId)) {
@@ -213,7 +234,8 @@ class EbirformsWorkspace {
 		return true;
 	}
 
-	saveActiveReturn(status?: CreatedReturnStatus): boolean {
+	async saveActiveReturn(status?: CreatedReturnStatus): Promise<boolean> {
+		if (this.isPersisting || this.#workingCopiesLoad) return false;
 		const active = this.createdReturns.find(item => item.id === this.activeReturnId)
 			?? (this.#pendingReturn?.id === this.activeReturnId ? this.#pendingReturn : undefined);
 		if (!active || active.taxpayerId !== this.selectedProfileId) {
@@ -235,7 +257,7 @@ class EbirformsWorkspace {
 		const returns = this.createdReturns.some(item => item.id === active.id)
 			? this.createdReturns.map(item => item.id === active.id ? record : item)
 			: [...this.createdReturns, record];
-		if (!this.#persistWorkingCopies(returns)) return false;
+		if (!await this.#persistWorkingCopies(returns)) return false;
 		this.#pendingReturn = null;
 		this.formValues = { ...values };
 		this.finalFlag = record.finalFlag;
@@ -244,37 +266,37 @@ class EbirformsWorkspace {
 	}
 
 	#returnForLifecycleChange(id: string): CreatedReturn | undefined {
-		if (this.isSavingDraft || this.isSubmitting) {
+		if (this.isSavingDraft || this.isSubmitting || this.isPersisting) {
 			this.statusMessage = 'Wait for the current operation to finish before changing saved forms.';
 			return;
 		}
-		if ((!this.#workingCopiesLoaded && !this.loadCreatedReturns()) || this.#workingCopiesLoadFailed) return;
+		if (this.#workingCopiesLoad || !this.#workingCopiesLoaded || this.#workingCopiesLoadFailed) return;
 		const record = this.createdReturns.find(item => item.id === id);
 		if (!record) this.statusMessage = 'The saved form could not be found.';
 		return record;
 	}
 
-	archiveReturn(id: string): boolean {
+	async archiveReturn(id: string): Promise<boolean> {
 		const record = this.#returnForLifecycleChange(id);
 		if (!record) return false;
 		const archived = { ...record, archived: true, updatedAt: Date.now() };
-		if (!this.#persistWorkingCopies(this.createdReturns.map(item => item.id === id ? archived : item))) return false;
+		if (!await this.#persistWorkingCopies(this.createdReturns.map(item => item.id === id ? archived : item))) return false;
 		this.statusMessage = 'Form archived. The saved return has been retained.';
 		return true;
 	}
 
-	restoreReturn(id: string): boolean {
+	async restoreReturn(id: string): Promise<boolean> {
 		const record = this.#returnForLifecycleChange(id);
 		if (!record) return false;
 		const restored = { ...record, archived: false, updatedAt: Date.now() };
-		if (!this.#persistWorkingCopies(this.createdReturns.map(item => item.id === id ? restored : item))) return false;
+		if (!await this.#persistWorkingCopies(this.createdReturns.map(item => item.id === id ? restored : item))) return false;
 		this.statusMessage = 'Form restored.';
 		return true;
 	}
 
-	deleteReturn(id: string): boolean {
+	async deleteReturn(id: string): Promise<boolean> {
 		if (!this.#returnForLifecycleChange(id)) return false;
-		if (!this.#persistWorkingCopies(this.createdReturns.filter(item => item.id !== id))) return false;
+		if (!await this.#persistWorkingCopies(this.createdReturns.filter(item => item.id !== id))) return false;
 		if (this.activeReturnId === id) {
 			this.activeReturnId = null;
 			this.formValues = createInitialFormValues(this.profile);
@@ -287,17 +309,17 @@ class EbirformsWorkspace {
 		return true;
 	}
 
-	archiveTaxpayerProfile(id: string): boolean {
-		if (!this.#workingCopiesLoaded && !this.loadCreatedReturns()) return false;
+	async archiveTaxpayerProfile(id: string): Promise<boolean> {
+		if (!this.#workingCopiesLoaded && !await this.loadCreatedReturns()) return false;
 		if (!this.profiles.some(item => item.id === id)) return false;
-		if (!this.#persistWorkingCopies(this.createdReturns, [...new Set([...this.archivedTaxpayerIds, id])])) return false;
+		if (!await this.#persistWorkingCopies(this.createdReturns, [...new Set([...this.archivedTaxpayerIds, id])])) return false;
 		this.statusMessage = 'Taxpayer archived. Their saved forms are retained.';
 		return true;
 	}
 
-	restoreTaxpayerProfile(id: string): boolean {
-		if (!this.#workingCopiesLoaded && !this.loadCreatedReturns()) return false;
-		if (!this.#persistWorkingCopies(this.createdReturns, this.archivedTaxpayerIds.filter(item => item !== id))) return false;
+	async restoreTaxpayerProfile(id: string): Promise<boolean> {
+		if (!this.#workingCopiesLoaded && !await this.loadCreatedReturns()) return false;
+		if (!await this.#persistWorkingCopies(this.createdReturns, this.archivedTaxpayerIds.filter(item => item !== id))) return false;
 		this.statusMessage = 'Taxpayer restored.';
 		return true;
 	}
@@ -342,6 +364,7 @@ class EbirformsWorkspace {
 	}
 
 	startNewTaxpayerProfile() {
+		if (this.isPersisting) return;
 		this.#pendingReturn = null;
 		this.profile = {
 			id: '',
@@ -391,6 +414,7 @@ class EbirformsWorkspace {
 	}
 
 	selectTaxpayerProfile(id: string) {
+		if (this.isPersisting) return;
 		const foundProfile = this.profiles.find((item) => item.id === id);
 
 		if (!foundProfile) {
@@ -414,8 +438,8 @@ class EbirformsWorkspace {
 	}
 
 	async saveDraft() {
-		if (this.isSavingDraft || this.isSubmitting) return;
-		if (this.activeReturnId && !this.saveActiveReturn('Draft')) return;
+		if (this.isSavingDraft || this.isSubmitting || this.isPersisting) return;
+		if (this.activeReturnId && !await this.saveActiveReturn('Draft')) return;
 		const draftId = this.activeReturnId;
 		const taxpayerId = this.selectedProfileId;
 		const draftValues = { ...this.formValues };
@@ -466,18 +490,20 @@ class EbirformsWorkspace {
 		return true;
 	}
 
-	markFinalCopy() {
+	async markFinalCopy() {
+		if (this.isPersisting || this.isSubmitting || this.isSavingDraft) return;
 		if (!this.validateReturn()) return;
 		const previousFlag = this.finalFlag;
 		this.finalFlag = '1';
-		if (this.activeReturnId && !this.saveActiveReturn('Final')) { this.finalFlag = previousFlag; return; }
+		if (this.activeReturnId && !await this.saveActiveReturn('Final')) { this.finalFlag = previousFlag; return; }
 		this.statusMessage = 'Return validated and marked final locally. Mock submit tests the workflow without sending to BIR.';
 	}
 
-	markNeedsResend() {
+	async markNeedsResend() {
+		if (this.isPersisting || this.isSubmitting || this.isSavingDraft) return;
 		const previousFlag = this.finalFlag;
 		this.finalFlag = '2';
-		if (this.activeReturnId && !this.saveActiveReturn('For resubmission')) { this.finalFlag = previousFlag; return; }
+		if (this.activeReturnId && !await this.saveActiveReturn('For resubmission')) { this.finalFlag = previousFlag; return; }
 		this.statusMessage = 'Return marked for resend, matching the legacy txtFinalFlag=2 state.';
 	}
 
@@ -489,7 +515,7 @@ class EbirformsWorkspace {
 	}
 
 	async submitCurrentReturn() {
-		if (this.isSubmitting || this.isSavingDraft || !this.validateReturn()) return;
+		if (this.isSubmitting || this.isSavingDraft || this.isPersisting || !this.validateReturn()) return;
 		// Capture the exact return being transmitted before yielding to the client.
 		// Navigation and edits while the upload runs must not alter its saved identity.
 		const returnId = this.activeReturnId;
@@ -510,7 +536,7 @@ class EbirformsWorkspace {
 				email: getReturnEmail(this.selectedForm?.code ?? '1601EQ', this.formValues, this.profile),
 				mode: 'mock',
 				dispatcher: undefined,
-				fetchDispatcher: this.submissionMode === 'legacy_sftp'
+				fetchDispatcher: false
 			});
 			const current = this.activeReturnId === returnId && this.selectedProfileId === taxpayerId;
 			const unchanged = current && JSON.stringify(this.formValues) === JSON.stringify(submittedValues);
@@ -526,7 +552,7 @@ class EbirformsWorkspace {
 					const status: CreatedReturnStatus = receipt.status === 'simulated' ? 'Simulated' : receipt.status === 'submitted' ? 'Submitted' : receipt.finalFlag === '1' ? 'Final' : 'Draft';
 					const record: CreatedReturn = { ...active, values: submittedValues, returnPeriod: submittedPeriod,
 						status, finalFlag: receipt.finalFlag, updatedAt: Date.now() };
-					if (!this.#persistWorkingCopies(this.createdReturns.map(item => item.id === returnId ? record : item))) {
+					if (!await this.#persistWorkingCopies(this.createdReturns.map(item => item.id === returnId ? record : item))) {
 						this.statusMessage = `${receipt.message} The working copy could not be updated on this device.`;
 					}
 				}
