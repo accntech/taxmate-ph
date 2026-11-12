@@ -23,20 +23,22 @@
 	color-scheme: light;
 	color: var(--fg);
 	background: var(--bg);
-	--bg: #f5f7f3;
+	--bg: #f1f8fc;
+	--workspace-background: linear-gradient(180deg, #a6c8ee 0%, #e0f6fc 32%, #ffffff 50%, #fde1e5 68%, #f2aeba 100%);
+	--workspace-background-attachment: fixed;
 	--bg-elev: #ffffff;
-	--bg-elev-2: #edf2ea;
-	--bg-hover: #e5ece1;
+	--bg-elev-2: #e7f1fa;
+	--bg-hover: #dfedf7;
 	--bg-input: #ffffff;
-	--border: #d7e0d1;
+	--border: #bfd2e5;
 	--border-soft: color-mix(in oklch, var(--border) 68%, transparent);
-	--fg: #202123;
-	--fg-muted: #607064;
-	--fg-subtle: #829086;
+	--fg: #152c45;
+	--fg-muted: #40576f;
+	--fg-subtle: #4b6077;
 	--fg-inverse: #ffffff;
-	--accent: #00796b;
-	--accent-hover: #00675d;
-	--accent-soft: #dff3eb;
+	--accent: #2269b5;
+	--accent-hover: #18548f;
+	--accent-soft: #dff5ff;
 	--accent-fg: #ffffff;
 	--success: #08735d;
 	--success-soft: #e4f5ed;
@@ -74,21 +76,22 @@
 
 :root[data-theme='dark'] {
 	color-scheme: dark;
-	--bg: #151715;
-	--bg-elev: #20231f;
-	--bg-elev-2: #2a2e29;
-	--bg-hover: #31372f;
-	--bg-input: #191c19;
-	--border: #3c443c;
+	--bg: #0c1422;
+	--workspace-background: linear-gradient(180deg, #14283f 0%, #10202d 32%, #0c1422 50%, #211b29 72%, #302030 100%);
+	--bg-elev: #121e31;
+	--bg-elev-2: #192840;
+	--bg-hover: #21324a;
+	--bg-input: #0f192a;
+	--border: #374c66;
 	--border-soft: color-mix(in oklch, var(--border) 70%, transparent);
-	--fg: #f2f4ef;
-	--fg-muted: #bac5bb;
-	--fg-subtle: #8d988f;
-	--fg-inverse: #121411;
-	--accent: #42d6bd;
-	--accent-hover: #71e3ce;
-	--accent-soft: #173f38;
-	--accent-fg: #071916;
+	--fg: #f4f6fc;
+	--fg-muted: #c0cbe0;
+	--fg-subtle: #aabbd4;
+	--fg-inverse: #0c1422;
+	--accent: #83c9ff;
+	--accent-hover: #b1dfff;
+	--accent-soft: #163a54;
+	--accent-fg: #10243b;
 	--success: #8ee3c5;
 	--success-soft: #12362e;
 	--warn: #e0ac47;
@@ -98,6 +101,106 @@
 	--info: #9cc8ff;
 	--info-soft: #1a2c43;
 	--ring: color-mix(in oklch, var(--accent) 28%, transparent);
+}
+
+/* Palette and color mode are independent. eBIRForms follows the classic blue/cyan/white/red application background.
+ * Teal preserves the original app palette.
+ * Catppuccin colors: https://catppuccin.com/palette/ (Latte / Mocha).
+ * Status colors remain shared across all palettes. */
+:root {
+	--chart-1: var(--accent);
+	--chart-2: #cc1737;
+	--chart-3: #087c86;
+	--chart-4: #1d4ed8;
+	--chart-5: #be123c;
+}
+:root[data-theme='dark'] {
+	--chart-2: #8ba7ed;
+	--chart-3: #ff8696;
+	--chart-4: #60a5fa;
+	--chart-5: #fb7185;
+}
+:root[data-palette='teal'] {
+	--bg: #f5f7f3;
+	--bg-elev: #ffffff;
+	--bg-elev-2: #edf2ea;
+	--bg-hover: #e5ece1;
+	--bg-input: #ffffff;
+	--border: #d7e0d1;
+	--fg: #202123;
+	--fg-muted: #607064;
+	--fg-subtle: #829086;
+	--fg-inverse: #ffffff;
+	--accent: #00796b;
+	--accent-hover: #00675d;
+	--accent-soft: #dff3eb;
+	--accent-fg: #ffffff;
+	--chart-2: #6d28d9;
+	--chart-3: #c2410c;
+}
+:root[data-theme='dark'][data-palette='teal'] {
+	--bg: #111511;
+	--bg-elev: #181e18;
+	--bg-elev-2: #212a21;
+	--bg-hover: #293329;
+	--bg-input: #131a13;
+	--border: #354235;
+	--fg: #f2f4ef;
+	--fg-muted: #bac5bb;
+	--fg-subtle: #8d988f;
+	--fg-inverse: #121411;
+	--accent: #42d6bd;
+	--accent-hover: #71e3ce;
+	--accent-soft: #173f38;
+	--accent-fg: #071916;
+	--chart-2: #a78bfa;
+	--chart-3: #fb923c;
+}
+:root[data-palette='catppuccin'] {
+	--bg: #eff1f5;
+	--bg-elev: #ffffff;
+	--bg-elev-2: #e6e9ef;
+	--bg-hover: #dce0e8;
+	--bg-input: #ffffff;
+	--border: #bcc0cc;
+	--fg: #4c4f69;
+	--fg-muted: #5c5f77;
+	--fg-subtle: #5c5f77;
+	--accent: #8839ef;
+	--accent-hover: #6d28d9;
+	--accent-soft: #e6ddf5;
+	--accent-fg: #ffffff;
+	--chart-2: #1e66f5;
+	--chart-3: #a34d00;
+	--chart-4: #146c72;
+	--chart-5: #ac267e;
+}
+:root[data-theme='dark'][data-palette='catppuccin'] {
+	--bg: #171722;
+	--bg-elev: #222332;
+	--bg-elev-2: #2c2e40;
+	--bg-hover: #37394d;
+	--bg-input: #13131d;
+	--border: #4a4d63;
+	--fg: #cdd6f4;
+	--fg-muted: #bac2de;
+	--fg-subtle: #bac2de;
+	--fg-inverse: #171722;
+	--accent: #cba6f7;
+	--accent-hover: #b4befe;
+	--accent-soft: #35304b;
+	--accent-fg: #171722;
+	--chart-2: #89b4fa;
+	--chart-3: #fab387;
+	--chart-4: #94e2d5;
+	--chart-5: #f5c2e7;
+}
+
+
+/* Other palettes retain their original, quiet workspace background. */
+:root:is([data-palette='teal'], [data-palette='catppuccin']) {
+	--workspace-background: linear-gradient(180deg, color-mix(in oklch, var(--accent-soft) 30%, transparent), transparent 17rem);
+	--workspace-background-attachment: scroll;
 }
 
 :root {
@@ -126,6 +229,14 @@
 	--color-info-soft: var(--info-soft);
 }
 
+/* Paint palette changes together; normal interaction transitions resume after paint. */
+:root[data-theme-switching],
+:root[data-theme-switching] *,
+:root[data-theme-switching] *::before,
+:root[data-theme-switching] *::after {
+	transition: none !important;
+}
+
 @layer base {
 	*,
 	*::before,
@@ -141,13 +252,10 @@
 		min-width: 320px;
 		min-height: 100vh;
 		margin: 0;
-		background:
-			linear-gradient(
-				180deg,
-				color-mix(in oklch, var(--accent-soft) 30%, transparent),
-				transparent 17rem
-			),
-			var(--bg);
+		background: var(--workspace-background), var(--bg);
+		background-attachment: var(--workspace-background-attachment);
+		background-size: 100% 100vh;
+		background-repeat: no-repeat;
 		color: var(--fg);
 	}
 

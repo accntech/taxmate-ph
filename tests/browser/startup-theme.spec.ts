@@ -20,6 +20,6 @@ for (const scenario of [
 		await expect(page.locator('html')).toHaveAttribute('data-theme', scenario.expected);
 		await expect(page.locator('html')).toHaveCSS('color-scheme', scenario.expected);
 		await expect(page.locator('html')).toHaveCSS('background-color', scenario.expected === 'dark'
-			? 'rgb(21, 23, 21)' : 'rgb(245, 247, 243)');
+			? 'rgb(12, 20, 34)' : 'rgb(241, 248, 252)');
 	});
 }

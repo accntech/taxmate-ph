@@ -6,7 +6,10 @@
       // Resolve appearance before loading the app or painting its light defaults.
       (() => {
         let mode = 'system';
+        let palette = 'ebirforms';
         try {
+          const savedPalette = localStorage.getItem('taxmate-ph-palette');
+          if (savedPalette === 'teal' || savedPalette === 'catppuccin') palette = savedPalette;
           const stored = localStorage.getItem('taxmate-ph-theme');
           if (stored === 'light' || stored === 'dark') mode = stored;
         } catch {
@@ -16,14 +19,19 @@
           ? (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
           : mode;
         const root = document.documentElement;
+        root.dataset.palette = palette;
         root.dataset.theme = theme;
         root.dataset.themeMode = mode;
         root.style.colorScheme = theme;
       })();
     </script>
     <style>
-      html { background: var(--bg, #f5f7f3); }
-      html[data-theme='dark'] { background: var(--bg, #151715); }
+      html { background: var(--bg, #f1f8fc); }
+      html[data-theme='dark'] { background: var(--bg, #0c1422); }
+      html[data-palette='teal'] { background: var(--bg, #f5f7f3); }
+      html[data-palette='teal'][data-theme='dark'] { background: var(--bg, #111511); }
+      html[data-palette='catppuccin'] { background: var(--bg, #eff1f5); }
+      html[data-palette='catppuccin'][data-theme='dark'] { background: var(--bg, #171722); }
     </style>
     <link rel="icon" href="%sveltekit.assets%/favicon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
