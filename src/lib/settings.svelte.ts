@@ -7,13 +7,10 @@ export type ThemeMode = 'light' | 'dark' | 'system';
 type ResolvedTheme = 'light' | 'dark';
 
 export type PaperSize = 'a4' | 'letter' | 'long';
-export type FilingPeriod = 'monthly' | 'quarterly' | 'annual';
 
 export type Prefs = {
 	submissionMode: SubmissionMode;
 	paperSize: PaperSize;
-	filingPeriod: FilingPeriod;
-	defaultTaxpayer: string;
 };
 
 const PALETTE_KEY = 'taxmate-ph-palette';
@@ -24,9 +21,7 @@ const LEGACY_SIDEBAR_KEY = 'taxmate-ph-sidebar';
 
 const defaultPrefs: Prefs = {
 	submissionMode: 'legacy_sftp',
-	paperSize: 'long',
-	filingPeriod: 'quarterly',
-	defaultTaxpayer: ''
+	paperSize: 'long'
 };
 
 function isThemeMode(value: unknown): value is ThemeMode {
