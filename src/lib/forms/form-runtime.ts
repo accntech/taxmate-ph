@@ -5,7 +5,8 @@ import { getWithholdingDefinition } from './withholding-definitions';
 import { calculateWithholding, validateWithholding, withholdingReturnPeriod } from './withholding-rules';
 
 export function calculateReturn(code: string, values: Record<string, string>): Record<string, string> {
- return code === '1601EQ' ? calculate1601EQ(values) : calculateWithholding(code, values);
+ const normalized = Object.fromEntries(Object.entries(values).map(([id, value]) => [id, /email/i.test(id) ? value.toLowerCase() : value]));
+ return code === '1601EQ' ? calculate1601EQ(normalized) : calculateWithholding(code, normalized);
 }
 export function validateReturnValues(code: string, values: Record<string, string>): Record<string, string> {
  return code === '1601EQ' ? validate1601EQ(values) : validateWithholding(code, values);
@@ -24,9 +25,9 @@ export function getReturnTin(code: string, values: Record<string, string>, profi
   tin3: values[`${prefix}txtTIN3`] || profile.tin3, branchCode: values[`${prefix}txtBranchCode`] || profile.branchCode };
 }
 export function getReturnEmail(code: string, values: Record<string, string>, profile: TaxpayerProfile): string {
- if (code === '1601EQ') return values.txtEmail ?? profile.email;
+ if (code === '1601EQ') return (values.txtEmail ?? profile.email).toLowerCase();
  const emailField = getWithholdingDefinition(code)?.sections.flatMap(section => section.fields).find(field => field.profileKey === 'email');
- return emailField ? values[emailField.id] ?? '' : profile.email;
+ return (emailField ? values[emailField.id] ?? '' : profile.email).toLowerCase();
 }
 
 /** Editable drafts follow profile corrections; finalized copies retain their saved identity. */
@@ -36,7 +37,7 @@ export function getManagedTaxpayerValues(code: string, profile: TaxpayerProfile,
  if (!definition) return {};
  const managed = Object.fromEntries(definition.sections.flatMap(section => section.fields).flatMap(field => {
   const key = field.profileKey;
-  return key ? [[field.id, profile[key] ?? '']] : [];
+  return key ? [[field.id, key === 'email' ? (profile.email ?? '').toLowerCase() : profile[key] ?? '']] : [];
  }));
  if (code === '0605' && profile.taxpayerClassification === 'I') {
   managed[definition.prefix + 'itemYearEndMonth'] = '12';

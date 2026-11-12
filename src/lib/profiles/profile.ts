@@ -151,6 +151,7 @@ export function upsertTaxpayerProfile(
 	const profileIndex = existing ? profiles.indexOf(existing) : -1;
 	const profile = {
 		...input,
+		email: (input.email ?? '').toLowerCase(),
 		// Keep legacy filenames and saved-return links when only branch padding changes.
 		id: profileIndex === -1 ? normalizedId : profiles[profileIndex].id
 	};
@@ -175,6 +176,6 @@ export function buildTaxpayerProfileFormValues(profile: TaxpayerProfile): Record
 		'frm1601EQ:txtZipCode': profile.zipCode,
 		'frm1601EQ:txtTelNum': profile.contactNumber,
 		'frm1601EQ:optCategory': profile.category,
-		txtEmail: profile.email
+		txtEmail: (profile.email ?? '').toLowerCase()
 	};
 }
