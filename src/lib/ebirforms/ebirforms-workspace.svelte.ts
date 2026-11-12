@@ -247,6 +247,7 @@ class EbirformsWorkspace {
 		const calculated = calculateReturn(active.formCode, this.formValues);
 		const values = { ...this.formValues };
 		if (active.formCode === '1601EQ') {
+			if ('txtEmail' in calculated) values.txtEmail = calculated.txtEmail;
 			for (const name of ['txtTotalTaxesWithheld', 'txtTotalRemittances', 'txtTaxStillDue', 'txtTotalPenalties', 'txtTotalAmountDue',
 				...[13, 14, 15, 16, 17, 18].flatMap(row => [`txtTaxRate${row}`, `txtTaxWithheld${row}`])]) {
 				const id = `frm1601EQ:${name}`;

@@ -261,3 +261,11 @@ describe('editing saved return state', () => {
   expect(workspace.statusMessage).toContain('Disk full');
  });
 });
+
+it('saves an existing mixed-case return email in lowercase', async () => {
+ await workspace.loadCreatedReturns();
+ const id = workspace.createReturn(initialProfile.id, '1601EQ')!;
+ workspace.formValues.txtEmail = 'Saved.Return@Example.COM';
+ expect(await workspace.saveActiveReturn()).toBe(true);
+ expect(workspace.createdReturns.find(record => record.id === id)?.values.txtEmail).toBe('saved.return@example.com');
+});

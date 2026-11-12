@@ -48,7 +48,8 @@
 		<PcstiInput
 			{...sourceAttributes}
 			id={controlId}
-			bind:value
+			autocapitalize={type === 'email' ? 'none' : rest.autocapitalize}
+			bind:value={() => type === 'email' ? value.toLowerCase() : value, (next) => { value = type === 'email' ? next.toLowerCase() : next; }}
 			type={textType}
 			{leading}
 			{trailing}
@@ -64,7 +65,8 @@
 			{type}
 			{list}
 			id={controlId}
-			bind:value
+			autocapitalize={type === 'email' ? 'none' : rest.autocapitalize}
+			bind:value={() => type === 'email' ? value.toLowerCase() : value, (next) => { value = type === 'email' ? next.toLowerCase() : next; }}
 			{size}
 			class={className}
 			aria-invalid={hasError || rest['aria-invalid'] || undefined}

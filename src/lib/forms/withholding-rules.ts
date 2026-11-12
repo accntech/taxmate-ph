@@ -40,7 +40,7 @@ export function createWithholdingValues(
   for (const field of withholdingFields(d))
     values[field.id] =
       field.profileKey && profile
-        ? (profile[field.profileKey] ?? "")
+        ? (field.profileKey === "email" ? (profile.email ?? '').toLowerCase() : profile[field.profileKey] ?? "")
         : (field.defaultValue ?? "");
   const now = new Date();
   if (d.yearField in values)
