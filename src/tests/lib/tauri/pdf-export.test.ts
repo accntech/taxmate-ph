@@ -8,14 +8,19 @@ import {
 } from '$lib/tauri/pdf-export'
 
 describe('buildPdfExportFilename', () => {
-	test('adds the year and quarter while omitting the paper size suffix', () => {
+	test('prefixes the taxpayer TIN before the form, year and quarter', () => {
 		expect(
 			buildPdfExportFilename({
+				tin: '00123456700008',
 				formCode: '1601EQ',
 				year: '2026',
 				quarter: 'Q1'
 			})
-		).toBe('1601EQ-2026-Q1.pdf')
+		).toBe('00123456700008-1601EQ-2026-Q1.pdf')
+	})
+	test('prefixes the taxpayer TIN for an explicit return period', () => {
+		expect(buildPdfExportFilename({ tin: '00987654300012', formCode: '2550M', period: '2026-02' }))
+			.toBe('00987654300012-2550M-2026-02.pdf')
 	})
 })
 

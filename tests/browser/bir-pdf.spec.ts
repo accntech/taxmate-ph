@@ -21,7 +21,8 @@ for (const { status, paperSize } of cases) {
 			localStorage.setItem('taxmate-ph-prefs', JSON.stringify({ paperSize }));
 		}, { status, paperSize });
 		await page.goto(`/ebirforms/taxpayers/${taxpayerId}/forms`);
-		await expect(page.getByRole('link', { name: 'Edit', exact: true })).toBeVisible();
+		// A cold Vite server compiles the UI modules before the page can hydrate.
+		await expect(page.getByRole('link', { name: 'Edit', exact: true })).toBeVisible({ timeout: 15_000 });
 		await page.evaluate(() => {
 			const native = (window as any).__TAURI_INTERNALS__;
 			native.transformCallback = () => 1;
@@ -47,7 +48,7 @@ for (const { status, paperSize } of cases) {
 		expect(request.html).toContain('765.44');
 		expect(request.html).toContain('data:image/png;base64,');
 		expect(request.html).not.toContain('Return details');
-		expect(request.suggestedFilename).toContain('2026');
+		expect(request.suggestedFilename).toBe('00123456700008-1601EQ-2026Q2.pdf');
 		expect(request.paperSize).toBe(paperSize);
 		await page.setContent(request.html);
 		await page.emulateMedia({ media: 'print' });
