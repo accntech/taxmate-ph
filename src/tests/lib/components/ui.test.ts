@@ -77,7 +77,7 @@ describe('ui component primitives', () => {
 			'src/routes/ebirforms/taxpayers/[id]/+page.svelte',
 			'src/routes/ebirforms/taxpayers/[id]/forms/+page.svelte',
 			'src/routes/ebirforms/taxpayers/[id]/forms/[formCode]/+page.svelte',
-			'src/lib/forms/form-1601-eq.svelte'
+			'src/lib/forms/form-1601-eq/form-1601-eq.svelte'
 		];
 		const bannedPatterns = [
 			/codex-/,

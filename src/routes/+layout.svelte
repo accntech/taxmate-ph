@@ -15,6 +15,7 @@
 		'@solar-icons/svelte/category/users/Linear/UsersGroupRounded.svelte';
 	import Settings from '@solar-icons/svelte/category/settings/Linear/Settings.svelte';
 	import { onMount } from 'svelte';
+	import WindowTitlebar from '$lib/window-titlebar.svelte';
 	import { Badge, Sidebar, Topbar, type Crumb } from '$lib/components/ui';
 	import '@fontsource-variable/inter';
 	import '@fontsource-variable/source-serif-4';
@@ -27,7 +28,6 @@
 		if (import.meta.env.DEV) void import('virtual:stylex:runtime');
 	});
 
-	const appLogoPath = '/brand/taxmate-logo.svg';
 	let { children } = $props();
 	let mobileOpen = $state(false);
 	let isMobile = $state(false);
@@ -112,6 +112,10 @@
 
 <a class="skip-link" href="#main-content">Skip to content</a>
 
+<WindowTitlebar>
+	<Topbar {crumbs} onMenu={handleMenu} />
+</WindowTitlebar>
+
 <div class="app-shell" data-collapsed={settings.sidebarCollapsed && !isMobile ? 'true' : undefined}>
 	<Sidebar
 		collapsed={settings.sidebarCollapsed}
@@ -119,31 +123,6 @@
 		bind:isMobile
 		storageKey="taxmate-ph-sidebar"
 	>
-		{#snippet header({ collapsed: sidebarCollapsed })}
-			<a
-				class={[
-					'sidebar-row-anim text-fg hover:bg-bg-hover',
-					sidebarCollapsed
-						? 'grid size-11 grid-cols-[2rem_0fr] items-center justify-center gap-0 overflow-hidden rounded-md p-1.5'
-						: 'grid min-w-0 grid-cols-[2rem_minmax(0,1fr)] items-center gap-2 rounded-md p-1.5'
-				]}
-				href="/"
-				aria-label="TaxMate PH suite"
-			>
-				<span
-					class="size-8 shrink-0 bg-accent"
-					style="-webkit-mask: url('{appLogoPath}') center / contain no-repeat; mask: url('{appLogoPath}') center / contain no-repeat;"
-					aria-hidden="true"
-				></span>
-				<span class={['sidebar-reveal-anim min-w-0', sidebarCollapsed && 'max-w-0 opacity-0']}>
-					<span class="block text-sm font-semibold leading-tight">TaxMate PH</span>
-					<span class="block text-xs leading-tight text-fg-subtle">
-						Local compliance workspace
-					</span>
-				</span>
-			</a>
-		{/snippet}
-
 		{#snippet content({ collapsed: sidebarCollapsed })}
 			<span
 				class={[
@@ -229,8 +208,6 @@
 	</Sidebar>
 
 	<div class="min-w-0">
-		<Topbar {crumbs} onMenu={handleMenu} />
-
 		<main id="main-content" class="app-main" tabindex="-1">
 			{@render children()}
 		</main>

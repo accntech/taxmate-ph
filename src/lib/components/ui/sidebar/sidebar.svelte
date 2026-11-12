@@ -98,9 +98,11 @@
 	data-mobile-open={mobileOpen ? 'true' : undefined}
 	aria-label={ariaLabel}
 >
-	<header class="sidebar-row-anim flex h-16 flex-none items-center gap-2.5 px-5 group-data-[state=collapsed]/sb:gap-0 group-data-[state=collapsed]/sb:px-3.5">
-		{@render header?.(ctx)}
-	</header>
+	{#if header}
+		<header class="sidebar-row-anim flex h-16 flex-none items-center gap-2.5 px-5 group-data-[state=collapsed]/sb:gap-0 group-data-[state=collapsed]/sb:px-3.5">
+			{@render header(ctx)}
+		</header>
+	{/if}
 
 	<div class="relative flex min-h-0 flex-1 flex-col">
 		<nav
