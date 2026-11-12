@@ -1,0 +1,296 @@
+/* Original 1604Ev2018 embedded/print rules and source inline declarations. */
+@layer withholding-original-source {
+
+
+.withholding-print[data-form-code="1604Ev2018"] .printButtonClass{ display : none !important; }
+.withholding-print[data-form-code="1604Ev2018"],.withholding-print[data-form-code="1604Ev2018"] { background:none; padding:0;}
+.withholding-print[data-form-code="1604Ev2018"] .printSignFooterClass { display:block !important; position:relative !important; overflow:visible !important; page-break-before:avoid !important; }
+.withholding-print[data-form-code="1604Ev2018"] .imgClass { display:block !important; position:relative !important; overflow:visible !important; page-break-before:avoid !important; }
+.withholding-print[data-form-code="1604Ev2018"] .printSignFooterClass table { width:98% !important; max-width:98% !important;}
+.withholding-print[data-form-code="1604Ev2018"] .printSignFooterClass td, .withholding-print[data-form-code="1604Ev2018"] .printSignFooterClass tr { border:1px !important; }
+.withholding-print[data-form-code="1604Ev2018"] .printSignFooterClass input, .withholding-print[data-form-code="1604Ev2018"] .printSignFooterClass select .printSignFooterClass label{ border:0 !important; font-family: Arial, Helvetica, sans-serif !important; font-size: 7px !important; padding: 1px !important;}
+.withholding-print[data-form-code="1604Ev2018"] .printSignFooterClass_2550Q { display:block !important; position:relative !important; overflow:visible !important; page-break-before:avoid !important; }
+.withholding-print[data-form-code="1604Ev2018"] .imgClass { display:block !important; position:relative !important; overflow:visible !important; page-break-before:avoid !important; }
+.withholding-print[data-form-code="1604Ev2018"] .printSignFooterClass_2550Q table { width:98% !important; max-width:98% !important; padding: 0px !important;}
+.withholding-print[data-form-code="1604Ev2018"] .printSignFooterClass_2550Q td, .withholding-print[data-form-code="1604Ev2018"] .printSignFooterClass_2550Q tr { border:1px solid !important; padding: 0px !important;}
+.withholding-print[data-form-code="1604Ev2018"] .printSignFooterClass_2550Q input, .withholding-print[data-form-code="1604Ev2018"] .printSignFooterClass_2550Q select .printSignFooterClass_2550Q label{ border:0 !important; font-family: Arial, Helvetica, sans-serif !important; font-size: 7px !important; padding: 0px !important;}
+.withholding-print[data-form-code="1604Ev2018"] .printSignFooterClass_2552 { display:block !important; position:relative !important; overflow:visible !important; page-break-before:avoid !important; }
+.withholding-print[data-form-code="1604Ev2018"] .printSignFooterClass_2552 table { width:98% !important; max-width:98% !important;}
+.withholding-print[data-form-code="1604Ev2018"] .printSignFooterClass_2552 td, .withholding-print[data-form-code="1604Ev2018"] .printSignFooterClass_2552 tr { border:1px !important; padding:0px; }
+.withholding-print[data-form-code="1604Ev2018"] .printSignFooterClass_2552 input, .withholding-print[data-form-code="1604Ev2018"] .printSignFooterClass_2552 select .printSignFooterClass_2552 label{ border:0 !important; font-family: Arial, Helvetica, sans-serif !important; font-size: 11px !important; padding: 1px !important;}
+.withholding-print[data-form-code="1604Ev2018"] .printSignFooterClass_1707 { display:block !important; position:relative !important; overflow:visible !important; page-break-before:avoid !important; }
+.withholding-print[data-form-code="1604Ev2018"] .printSignFooterClass_1707 table { width:98% !important; max-width:98% !important;}
+.withholding-print[data-form-code="1604Ev2018"] .printSignFooterClass_1707 td, .withholding-print[data-form-code="1604Ev2018"] .printSignFooterClass_1707 tr { padding:0px !important; }
+.withholding-print[data-form-code="1604Ev2018"] .printSignFooterClass_1707 input, .withholding-print[data-form-code="1604Ev2018"] .printSignFooterClass_1707 select .printSignFooterClass_1707 label{ border:0 !important; font-family: Arial, Helvetica, sans-serif !important; font-size: 11px !important; padding: 1px !important;}
+.withholding-print[data-form-code="1604Ev2018"] .printSignFooterClass_1702Q { display:block !important; position:relative !important; overflow:visible !important; page-break-before:avoid !important; }
+.withholding-print[data-form-code="1604Ev2018"] .printSignFooterClass_1702Q table { width:98% !important; max-width:98% !important;}
+.withholding-print[data-form-code="1604Ev2018"] .printSignFooterClass_1702Q td, .withholding-print[data-form-code="1604Ev2018"] .printSignFooterClass_1702Q tr { padding:0px !important; }
+.withholding-print[data-form-code="1604Ev2018"] .printSignFooterClass_1702Q input, .withholding-print[data-form-code="1604Ev2018"] .printSignFooterClass_1702Q select .printSignFooterClass_1702Q label{ border:0 !important; font-family: Arial, Helvetica, sans-serif !important; font-size: 11px !important; padding: 1px !important;}
+.withholding-print[data-form-code="1604Ev2018"] .printSignFooterClass_1801 { display:block !important; position:relative !important; overflow:visible !important; page-break-before:avoid !important; }
+.withholding-print[data-form-code="1604Ev2018"] .printSignFooterClass_1801 table { width:98% !important; max-width:98% !important;}
+.withholding-print[data-form-code="1604Ev2018"] .printSignFooterClass_1801 td, .withholding-print[data-form-code="1604Ev2018"] .printSignFooterClass_1801 tr { padding:0px !important; }
+.withholding-print[data-form-code="1604Ev2018"] .printSignFooterClass_1801 input, .withholding-print[data-form-code="1604Ev2018"] .printSignFooterClass_1801 select .printSignFooterClass_1801 label{ border:0 !important; font-family: Arial, Helvetica, sans-serif !important; font-size: 10px !important; padding: 1px !important;}
+.withholding-print[data-form-code="1604Ev2018"] .printSignFooterClass_1704  { display:block !important; position:relative !important; overflow:visible !important; page-break-before:avoid !important; }
+.withholding-print[data-form-code="1604Ev2018"] .printSignFooterClass_1704  table { width:98% !important; max-width:98% !important;}
+.withholding-print[data-form-code="1604Ev2018"] .printSignFooterClass_1704  td, .withholding-print[data-form-code="1604Ev2018"] .printSignFooterClass_1704  tr { border:1px !important; }
+.withholding-print[data-form-code="1604Ev2018"] .printSignFooterClass_1704 input, .withholding-print[data-form-code="1604Ev2018"] .printSignFooterClass_1704 select .printSignFooterClass_1704 label{ border:0 !important; font-family: Arial, Helvetica, sans-serif !important; padding: 1px !important;}
+.withholding-print[data-form-code="1604Ev2018"] .printSignFooterClass_1704 td { padding:0px; }
+.withholding-print[data-form-code="1604Ev2018"] .printSignFooterClass_1800  { display:block !important; position:relative !important; overflow:visible !important; page-break-before:avoid !important; }
+.withholding-print[data-form-code="1604Ev2018"] .printSignFooterClass_1800  table { width:98% !important; max-width:98% !important;}
+.withholding-print[data-form-code="1604Ev2018"] .printSignFooterClass_1800  td, .withholding-print[data-form-code="1604Ev2018"] .printSignFooterClass_1800  tr { border:1px !important; }
+.withholding-print[data-form-code="1604Ev2018"] .printSignFooterClass_1800 input, .withholding-print[data-form-code="1604Ev2018"] .printSignFooterClass_1800 select .printSignFooterClass_1800 label{ border:0 !important; font-family: Arial, Helvetica, sans-serif !important; font-size: 11px !important; padding: 1px !important;}
+.withholding-print[data-form-code="1604Ev2018"] .printSignFooterClass_1800 td { padding:0px; }
+.withholding-print[data-form-code="1604Ev2018"] .printSignFooterClass_1706  { display:block !important; position:relative !important; overflow:visible !important; page-break-before:avoid !important; }
+.withholding-print[data-form-code="1604Ev2018"] .printSignFooterClass_1706  table { width:98% !important; max-width:98% !important;}
+.withholding-print[data-form-code="1604Ev2018"] .printSignFooterClass_1706  td, .withholding-print[data-form-code="1604Ev2018"] .printSignFooterClass_1706  tr { border:1px !important; }
+.withholding-print[data-form-code="1604Ev2018"] .printSignFooterClass_1706 input, .withholding-print[data-form-code="1604Ev2018"] .printSignFooterClass_1706 select .printSignFooterClass_1706 label{ border:0 !important; font-family: Arial, Helvetica, sans-serif !important; font-size: 11px !important; padding: 0px !important;}
+.withholding-print[data-form-code="1604Ev2018"] .printSignFooterClass_1706 td { padding:0px; }
+.withholding-print[data-form-code="1604Ev2018"] .printSignFooterClass_2200M  { display:block !important; position:relative !important; overflow:visible !important; page-break-before:avoid !important; }
+.withholding-print[data-form-code="1604Ev2018"] .printSignFooterClass_2200M table { width:98% !important; max-width:98% !important;}
+.withholding-print[data-form-code="1604Ev2018"] .printSignFooterClass_2200M  td, .withholding-print[data-form-code="1604Ev2018"] .printSignFooterClass_2200M  tr { border:1px !important; }
+.withholding-print[data-form-code="1604Ev2018"] .printSignFooterClass_2200M input, .withholding-print[data-form-code="1604Ev2018"] .printSignFooterClass_2200M select .printSignFooterClass_2200M label{ border:0 !important; font-family: Arial, Helvetica, sans-serif !important; font-size: 11px !important; padding: 1px !important;}
+.withholding-print[data-form-code="1604Ev2018"] .printSignFooterClass_2200M td { padding:0px; }
+.withholding-print[data-form-code="1604Ev2018"] .printSignFooterClass td { padding:0px; }
+.withholding-print[data-form-code="1604Ev2018"] .printBodyClass table { width:8.3in !important; max-width:8.3in !important; height:12.5in !important;}
+.withholding-print[data-form-code="1604Ev2018"] input, .withholding-print[data-form-code="1604Ev2018"] select, .withholding-print[data-form-code="1604Ev2018"] label { color:#000 !important;   }
+.withholding-print[data-form-code="1604Ev2018"] #container { margin-top:0 !important; }
+.withholding-print[data-form-code="1604Ev2018"] #frmMain { width: 100% !important; height: 100% !important; }
+.withholding-print[data-form-code="1604Ev2018"] .landscape { 
+    width: 100%; 
+    height: 100%; 
+    margin: 0% 0% 0% 0%; 
+	 
+	 
+
+	
+}
+.withholding-print[data-form-code="1604Ev2018"] .modalContent {
+font-weight:normal;
+font-family:Arial, sans-serif, Helvetica;
+font-size:7px;
+}
+.withholding-print[data-form-code="1604Ev2018"] .modalColumnHeader {
+font-weight:bold !important;
+font-family:Arial, sans-serif, Helvetica;
+font-size:10px !important;
+color:#000 !important;
+}
+.withholding-print[data-form-code="1604Ev2018"] .modalHeader {
+font-weight:bold !important;
+font-family:Arial, sans-serif, Helvetica;
+font-size:9.5px !important;
+color:#000 !important;
+}
+.withholding-print[data-form-code="1604Ev2018"] .modalContent_1800 { 
+font-weight:normal;
+font-family:Arial, sans-serif, Helvetica;
+font-size:9px;
+}
+.withholding-print[data-form-code="1604Ev2018"] .modalColumnHeader_1800 {
+font-weight:bold !important;
+font-family:Arial, sans-serif, Helvetica;
+font-size:10px !important;
+color:#000 !important;
+}
+.withholding-print[data-form-code="1604Ev2018"] .modalHeader_1800 {
+font-weight:bold !important;
+font-family:Arial, sans-serif, Helvetica;
+font-size:12px !important;
+color:#000 !important;
+}
+.withholding-print[data-form-code="1604Ev2018"] .modalContent_1707 { 
+font-weight:normal;
+font-family:Arial, sans-serif, Helvetica;
+font-size:9px;
+}
+.withholding-print[data-form-code="1604Ev2018"] .modalColumnHeader_1707 {
+font-weight:bold !important;
+font-family:Arial, sans-serif, Helvetica;
+font-size:10px !important;
+color:#000 !important;
+}
+.withholding-print[data-form-code="1604Ev2018"] .modalHeader_1707 {
+font-weight:bold !important;
+font-family:Arial, sans-serif, Helvetica;
+font-size:12px !important;
+color:#000 !important;
+}
+.withholding-print[data-form-code="1604Ev2018"] .modalContent_2200M { 
+font-weight:normal;
+font-family:Arial, sans-serif, Helvetica;
+font-size:10px;
+}
+.withholding-print[data-form-code="1604Ev2018"] .modalColumnHeader_2200M {
+font-weight:bold !important;
+font-family:Arial, sans-serif, Helvetica;
+font-size:11px !important;
+color:#000 !important;
+}
+.withholding-print[data-form-code="1604Ev2018"] .modalHeader_2200M {
+font-weight:bold !important;
+font-family:Arial, sans-serif, Helvetica;
+font-size:12px !important;
+color:#000 !important;
+}
+.withholding-print[data-form-code="1604Ev2018"] #printer { display:inline !important; }
+.withholding-print[data-form-code="1604Ev2018"] .asubnav { text-indent:20px; list-style-type:none }
+.withholding-print[data-form-code="1604Ev2018"] #loader,.withholding-print[data-form-code="1604Ev2018"] #text {width:100%; height:100%; top:0;left:0; position:fixed; background:#FFF; z-index:5000; }
+.withholding-print[data-form-code="1604Ev2018"] #text { background:none; top:50%; left:50%; right:68%; left:32%; width:440px; overflow:hidden;}
+.withholding-print[data-form-code="1604Ev2018"] .atcNames { font-weight:bold; }
+.withholding-print[data-form-code="1604Ev2018"] tr.atc td { border-bottom: 1px #e1e1e1 solid; }
+.withholding-print[data-form-code="1604Ev2018"] tr.atc:hover td { background:#FFC; }
+.withholding-print[data-form-code="1604Ev2018"] td.atc { padding:4px; }
+.withholding-print[data-form-code="1604Ev2018"] .labels { background: #FFF; font-size:14px; width:auto !important; display:inline; height:10px; border:2px inset #FFF; padding:0 2px 0 2px; }
+.withholding-print[data-form-code="1604Ev2018"] #container {
+        margin-top:40px;
+    }
+.withholding-print[data-form-code="1604Ev2018"] .modalShow{
+        position: fixed;
+        
+        overflow-y : auto;
+        overflow-x: hidden;
+        background: #e2e2e2;
+        
+        max-height: 50%;
+        top: 10%;  
+
+        width: 60%;  
+        left: 50%;
+        margin-left: -30%;
+        right: auto;  
+
+        border: 5px solid #3B3131;
+
+        text-align:center;
+    }
+}
+.withholding-print[data-form-code="1604Ev2018"] .wh-inline-d2fe8e8a7302{;display: block; margin: 0px; overflow: visible; font-size: 12px; font-family: Arial, Helvetica, sans-serif;}
+.withholding-print[data-form-code="1604Ev2018"] .wh-inline-5b58462227a5{;width:800px;}
+.withholding-print[data-form-code="1604Ev2018"] .wh-inline-b2017271a05e{;vertical-align:bottom;width:300px}
+.withholding-print[data-form-code="1604Ev2018"] .wh-inline-e797b9c9ddc0{;vertical-align:middle;width:120px;text-align: center;}
+.withholding-print[data-form-code="1604Ev2018"] .wh-inline-429482632af7{;font-size:10px;font-family:Arial}
+.withholding-print[data-form-code="1604Ev2018"] .wh-inline-8e2526521e8c{;font-size:32px;font-weight:bold;}
+.withholding-print[data-form-code="1604Ev2018"] .wh-inline-ccf4a15a8876{;font-size:10px;font-family:Arial;font-weight:bold;}
+.withholding-print[data-form-code="1604Ev2018"] .wh-inline-62471ef2f05a{;vertical-align:center;text-align: center;}
+.withholding-print[data-form-code="1604Ev2018"] .wh-inline-1b29e9eb50ae{;font-size:18px;font-weight:bold;}
+.withholding-print[data-form-code="1604Ev2018"] .wh-inline-bef36932d3a7{;vertical-align:center;width:200px}
+.withholding-print[data-form-code="1604Ev2018"] .wh-inline-da0ceb3d95b7{;vertical-align:top;width:265px}
+.withholding-print[data-form-code="1604Ev2018"] .wh-inline-ec12ace9f4bf{;width:300px;}
+.withholding-print[data-form-code="1604Ev2018"] .wh-inline-6f7ee51f83d0{;width:23px}
+.withholding-print[data-form-code="1604Ev2018"] .wh-inline-4cf6c17959a7{;font-size:13px;font-weight:bold;}
+.withholding-print[data-form-code="1604Ev2018"] .wh-inline-2e3ce3500fda{;width:150px}
+.withholding-print[data-form-code="1604Ev2018"] .wh-inline-cb3a2164388b{;font-size:10px}
+.withholding-print[data-form-code="1604Ev2018"] .wh-inline-0961c77489a6{;text-align:left;width:82px}
+.withholding-print[data-form-code="1604Ev2018"] .wh-inline-9f262eec8c33{;width:61px}
+.withholding-print[data-form-code="1604Ev2018"] .wh-inline-91c922552d14{;width:250px;}
+.withholding-print[data-form-code="1604Ev2018"] .wh-inline-5c688d438f95{;width:127px}
+.withholding-print[data-form-code="1604Ev2018"] .wh-inline-534e2278e92c{;font-size:10px;}
+.withholding-print[data-form-code="1604Ev2018"] .wh-inline-59d29db7b7e7{;width:250px;}
+.withholding-print[data-form-code="1604Ev2018"] .wh-inline-386bb5d6139a{;text-align: right;}
+.withholding-print[data-form-code="1604Ev2018"] .wh-inline-261df5a44a38{;border-bottom: #000000 2px solid; border-top: #000000 2px solid;}
+.withholding-print[data-form-code="1604Ev2018"] .wh-inline-e8b876838349{;width:;}
+.withholding-print[data-form-code="1604Ev2018"] .wh-inline-afe9c6ec456f{;width:100%}
+.withholding-print[data-form-code="1604Ev2018"] .wh-inline-a30033456d9a{;text-align:center}
+.withholding-print[data-form-code="1604Ev2018"] .wh-inline-5391bca72388{;vertical-align:top;width:550px}
+.withholding-print[data-form-code="1604Ev2018"] .wh-inline-6e606d24db7d{;width:11px}
+.withholding-print[data-form-code="1604Ev2018"] .wh-inline-15663751d502{;font-size:13px;font-weight:bold}
+.withholding-print[data-form-code="1604Ev2018"] .wh-inline-649b1ec8a1ed{;font-size:13px;font-family:Arial}
+.withholding-print[data-form-code="1604Ev2018"] .wh-inline-dbb17c3c8c91{;vertical-align:top;width:150px}
+.withholding-print[data-form-code="1604Ev2018"] .wh-inline-d5086c4e2b16{;width:80px}
+.withholding-print[data-form-code="1604Ev2018"] .wh-inline-b5bfcb1cc47d{;vertical-align:top;width:80%}
+.withholding-print[data-form-code="1604Ev2018"] .wh-inline-6b6ee2d44756{;width:25px}
+.withholding-print[data-form-code="1604Ev2018"] .wh-inline-3115fb736f6a{;font-size:8px}
+.withholding-print[data-form-code="1604Ev2018"] .wh-inline-83f54f89ef65{;vertical-align:top;width:580px}
+.withholding-print[data-form-code="1604Ev2018"] .wh-inline-06edca0e8248{;width:140px;min-width: 70px; width: 70px;}
+.withholding-print[data-form-code="1604Ev2018"] .wh-inline-212e7bbc2a99{;vertical-align:top;width:400px}
+.withholding-print[data-form-code="1604Ev2018"] .wh-inline-3101472a3484{;width:200px;}
+.withholding-print[data-form-code="1604Ev2018"] .wh-inline-73799af99d36{;width:200px;}
+.withholding-print[data-form-code="1604Ev2018"] .wh-inline-42854b233a00{;width:30%}
+.withholding-print[data-form-code="1604Ev2018"] .wh-inline-a3a638f5d724{;width:200px;}
+.withholding-print[data-form-code="1604Ev2018"] .wh-inline-d228c04551e8{;width:170px}
+.withholding-print[data-form-code="1604Ev2018"] .wh-inline-296702298558{;width:70%}
+.withholding-print[data-form-code="1604Ev2018"] .wh-inline-d208a91d4d2c{;width:550px;}
+.withholding-print[data-form-code="1604Ev2018"] .wh-inline-57becd9072ec{;width:200px}
+.withholding-print[data-form-code="1604Ev2018"] .wh-inline-6b8e46f64412{;width:800px;}
+.withholding-print[data-form-code="1604Ev2018"] .wh-inline-dae250ad5c6b{;width:730px;}
+.withholding-print[data-form-code="1604Ev2018"] .wh-inline-eb9f896c6842{;width:110px}
+.withholding-print[data-form-code="1604Ev2018"] .wh-inline-d9841be1c690{;font-size:13px;font-family:Arial, Helvetica, sans-serif;text-align: right;}
+.withholding-print[data-form-code="1604Ev2018"] .wh-inline-5eb92f2a45b7{;width:112px}
+.withholding-print[data-form-code="1604Ev2018"] .wh-inline-97f71f169000{;font-size:10px;font-family:Arial, Helvetica, sans-serif}
+.withholding-print[data-form-code="1604Ev2018"] .wh-inline-80ec55322565{;color: black; text-align: right;}
+.withholding-print[data-form-code="1604Ev2018"] .wh-inline-6354cb7131a7{;font-size:13px;font-family:Arial, Helvetica, sans-serif;font-weight:bold}
+.withholding-print[data-form-code="1604Ev2018"] .wh-inline-be7b986aabdd{;color: black; text-align:right;}
+.withholding-print[data-form-code="1604Ev2018"] .wh-inline-fcc59ed50ef8{;width:730px;border-bottom: 2px solid rgb(0, 0, 0); border-top: 2px solid rgb(0, 0, 0);}
+.withholding-print[data-form-code="1604Ev2018"] .wh-inline-232ced7b40ab{;font-size:13px;font-family:Arial, Helvetica, sans-serif}
+.withholding-print[data-form-code="1604Ev2018"] .wh-inline-618531a49326{;display: block; margin: 0px; overflow: visible; font-size: 15px; font-family: Arial, Helvetica, sans-serif;}
+.withholding-print[data-form-code="1604Ev2018"] .wh-inline-b0f12b8a4668{;width:800px;}
+.withholding-print[data-form-code="1604Ev2018"] .wh-inline-e40b23c7aa3d{;width:800px;}
+.withholding-print[data-form-code="1604Ev2018"] .wh-inline-69652284d042{;width:40%}
+.withholding-print[data-form-code="1604Ev2018"] .wh-inline-abbd0a6c6086{;font-size:10px;font-family:Arial, Helvetica, sans-serif;font-weight:bold;}
+.withholding-print[data-form-code="1604Ev2018"] .wh-inline-21f315789b7b{;width:60%}
+.withholding-print[data-form-code="1604Ev2018"] .wh-inline-20704450ef5b{;width:;}
+.withholding-print[data-form-code="1604Ev2018"] .wh-inline-c4108ed7c7b2{;width:800px;}
+.withholding-print[data-form-code="1604Ev2018"] .wh-inline-41061bbc17ac{;border: 1px solid black;}
+.withholding-print[data-form-code="1604Ev2018"] .wh-inline-76fe47511cca{;vertical-align:middle;border:1px solid black;}
+.withholding-print[data-form-code="1604Ev2018"] .wh-inline-1df8837affd5{;font-size:10px;vertical-align: text-middle;}
+.withholding-print[data-form-code="1604Ev2018"] .wh-inline-7ae6f89077b3{;vertical-align:center;height:20px}
+.withholding-print[data-form-code="1604Ev2018"] .wh-inline-75b7803ec210{;border:1px solid black;}
+.withholding-print[data-form-code="1604Ev2018"] .wh-inline-8d4e7e3effd4{;border: 1px solid black;}
+.withholding-print[data-form-code="1604Ev2018"] .wh-inline-b4d488d004fc{;font-size:73%;}
+.withholding-print[data-form-code="1604Ev2018"] .wh-inline-70a45bcf825c{;display:block;font-weight:bold;margin:10px 0 5px;font-size:73%;}
+.withholding-print[data-form-code="1604Ev2018"] .wh-inline-b5f79d38e688{;font-size:100%;}
+.withholding-print[data-form-code="1604Ev2018"] .wh-inline-d9fa88365308{;text-indent:-30px;}
+.withholding-print[data-form-code="1604Ev2018"] .wh-inline-ee2decef4dc8{;font-weight:bold}
+.withholding-print[data-form-code="1604Ev2018"] .wh-inline-473fbdbc85f2{;display:block;margin:2.5px 0 2.5px 10px}
+.withholding-print[data-form-code="1604Ev2018"] .wh-inline-39997ba1ea12{;text-indent:-120px;}
+/* Legacy IE size-only intrinsic widths, calibrated from original0605 outer inset-border curves. Other sizes are interpolated. Explicit source widths take precedence. */
+.withholding-print[data-form-code="1604Ev2018"] .wh-source-size-2{box-sizing:border-box;width:3.45em}
+.withholding-print[data-form-code="1604Ev2018"] .wh-source-size-3{box-sizing:border-box;width:3.825em}
+.withholding-print[data-form-code="1604Ev2018"] .wh-source-size-4{box-sizing:border-box;width:4.275em}
+.withholding-print[data-form-code="1604Ev2018"] .wh-source-size-5{box-sizing:border-box;width:4.725em}
+.withholding-print[data-form-code="1604Ev2018"] .wh-source-size-13{box-sizing:border-box;width:8.25em}
+.withholding-print[data-form-code="1604Ev2018"] .wh-source-size-20{box-sizing:border-box;width:11.325em}
+.withholding-print[data-form-code="1604Ev2018"] .wh-source-size-78{box-sizing:border-box;width:36.928125em}
+.withholding-print[data-form-code="1604Ev2018"] .wh-source-size-80{box-sizing:border-box;width:37.809375em}
+.withholding-print[data-form-code="1604Ev2018"] .wh-source-size-85{box-sizing:border-box;width:40.0125em}
+.withholding-print[data-form-code="1604Ev2018"] .wh-source-size-120{box-sizing:border-box;width:55.434375em}
+@layer withholding-inline-important {
+
+.withholding-print[data-form-code="1604Ev2018"] .wh-inline-5b58462227a5{width: 849.344px !important;}
+.withholding-print[data-form-code="1604Ev2018"] .wh-inline-5dfba9815e30{;overflow: visible !important;}
+.withholding-print[data-form-code="1604Ev2018"] .wh-inline-ec12ace9f4bf{width: 282.078px !important;}
+.withholding-print[data-form-code="1604Ev2018"] .wh-inline-91c922552d14{width: 282.125px !important;}
+.withholding-print[data-form-code="1604Ev2018"] .wh-inline-bea131ee28b0{;width: 127px !important;}
+.withholding-print[data-form-code="1604Ev2018"] .wh-inline-59d29db7b7e7{width: 282.141px !important;}
+.withholding-print[data-form-code="1604Ev2018"] .wh-inline-e8b876838349{width: 848.344px !important;}
+.withholding-print[data-form-code="1604Ev2018"] .wh-inline-a0e48ae44494{;width: 665.625px !important;}
+.withholding-print[data-form-code="1604Ev2018"] .wh-inline-8c0f3bb17e92{;width: 181.719px !important;}
+.withholding-print[data-form-code="1604Ev2018"] .wh-inline-43d473076878{;width: 848.344px !important;}
+.withholding-print[data-form-code="1604Ev2018"] .wh-inline-70c0b1b33a96{;width: 759.031px !important;}
+.withholding-print[data-form-code="1604Ev2018"] .wh-inline-05bb4cbd4f02{;width: 88.3125px !important;}
+.withholding-print[data-form-code="1604Ev2018"] .wh-inline-3101472a3484{width: 423.656px !important;}
+.withholding-print[data-form-code="1604Ev2018"] .wh-inline-d29d13ed8dc5{;width: 179.969px !important;}
+.withholding-print[data-form-code="1604Ev2018"] .wh-inline-73799af99d36{width: 423.688px !important;}
+.withholding-print[data-form-code="1604Ev2018"] .wh-inline-a3a638f5d724{width: 254.141px !important;}
+.withholding-print[data-form-code="1604Ev2018"] .wh-inline-d208a91d4d2c{width: 593.203px !important;}
+.withholding-print[data-form-code="1604Ev2018"] .wh-inline-6b8e46f64412{width: 848.844px !important;}
+.withholding-print[data-form-code="1604Ev2018"] .wh-inline-dae250ad5c6b{width: 847.844px !important;}
+.withholding-print[data-form-code="1604Ev2018"] .wh-inline-fcc59ed50ef8{ width: 848.344px !important;}
+.withholding-print[data-form-code="1604Ev2018"] .wh-inline-b0f12b8a4668{width: 804px !important;}
+.withholding-print[data-form-code="1604Ev2018"] .wh-inline-e40b23c7aa3d{width: 800px !important;}
+.withholding-print[data-form-code="1604Ev2018"] .wh-inline-20704450ef5b{width: 324.969px !important;}
+.withholding-print[data-form-code="1604Ev2018"] .wh-inline-c4108ed7c7b2{width: 801px !important;}
+.withholding-print[data-form-code="1604Ev2018"] .wh-inline-41061bbc17ac{ width: 752.969px !important;}
+.withholding-print[data-form-code="1604Ev2018"] .wh-inline-8d4e7e3effd4{ width: 726.016px !important;}
+}
+.withholding-print[data-form-code="1604Ev2018"] .wh-page-1604ev2018-1 { width: 849.34375px; }
+.withholding-print[data-form-code="1604Ev2018"] .wh-page-1604ev2018-2 { width: 804px; }
+
+/* Source hanging paragraphs pair these margins with their negative indents.
+   The HTA split each declaration across duplicate style attributes. */
+.withholding-print[data-form-code="1604Ev2018"] #inserted p.wh-inline-d9fa88365308 {
+ margin-left: 30px;
+}
+.withholding-print[data-form-code="1604Ev2018"] #inserted p.wh-inline-39997ba1ea12 {
+ margin-left: 120px;
+}

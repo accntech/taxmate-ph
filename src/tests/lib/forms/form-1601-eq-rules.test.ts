@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { calculate1601EQ, validate1601EQ } from '$lib/forms/form-1601-eq-rules';
-import { get1601EQRate } from '$lib/forms/form-1601-eq-atcs';
+import { calculate1601EQ, validate1601EQ } from '$lib/forms/form-1601-eq/form-1601-eq-rules';
+import { get1601EQRate } from '$lib/forms/form-1601-eq/form-1601-eq-atcs';
 
 const prefix = 'frm1601EQ:';
 const field = (name: string) => `${prefix}${name}`;

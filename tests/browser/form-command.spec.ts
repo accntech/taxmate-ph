@@ -11,7 +11,8 @@ test('form command filters, handles no matches, and creates with the keyboard', 
 	await expect(search).toBeFocused();
 	for (const query of ['1601eq', 'quarterly remittance', 'withholding tax']) {
 		await search.fill(query);
-		await expect(page.getByRole('option')).toHaveCount(1);
+		if (query === '1601eq') await expect(page.getByRole('option')).toHaveCount(1);
+		else expect(await page.getByRole('option').count()).toBeGreaterThan(1);
 	}
 	await search.fill('nonexistent');
 	await expect(page.getByText('No matching forms')).toBeVisible();
@@ -19,6 +20,7 @@ test('form command filters, handles no matches, and creates with the keyboard', 
 	await expect(page.getByRole('dialog')).toBeVisible();
 	await search.fill('1601');
 	await search.press('ArrowDown');
+	await search.press('ArrowUp');
 	await search.press('Enter');
 	await expect(page.getByRole('heading', { name: 'BIR Form 1601EQ', exact: true })).toBeVisible();
 	await page.getByRole('link', { name: '← Back to forms', exact: true }).click();
@@ -35,7 +37,7 @@ for (const theme of ['light', 'dark']) {
 			await trigger.click();
 			const search = page.getByRole('combobox', { name: 'Search BIR forms' });
 			await expect(search).toBeFocused();
-			await expect(page.getByRole('option')).toBeInViewport();
+			await expect(page.getByRole('option').first()).toBeInViewport();
 			const dialog = page.getByRole('dialog');
 			await dialog.evaluate(async element => {
 				await Promise.all(element.getAnimations().map(animation => animation.finished));
@@ -63,7 +65,7 @@ for (const theme of ['light', 'dark']) {
 			await expect(trigger).toBeFocused();
 			await trigger.click();
 			await expect(search).toHaveValue('');
-			await page.getByRole('option').click();
+			await page.getByRole('option').first().click();
 			await expect(page.getByRole('heading', { name: 'BIR Form 1601EQ', exact: true })).toBeVisible();
 		});
 	}

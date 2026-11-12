@@ -2,6 +2,7 @@ import { describe, expect, test } from 'vitest'
 
 import {
 	buildPrintHtml,
+	formatReportFormNumber,
 	escapeHtml,
 	markStylesAsPrintOnly,
 	replaceLegacyAssetUrls
@@ -169,4 +170,11 @@ describe('print HTML export', () => {
 
 		expect(html).toContain('<div class="print-preview-active s-abc123" data-paper-size="long">')
 	})
+})
+
+test('formats official form numbers without internal version suffixes', () => {
+ expect(formatReportFormNumber('BIR Form 1600PTv2018')).toBe('BIR Form No. 1600-PT')
+ expect(formatReportFormNumber('BIR Form 1604Ev2018')).toBe('BIR Form No. 1604-E')
+ expect(formatReportFormNumber('BIR Form 0619E')).toBe('BIR Form No. 0619-E')
+ expect(formatReportFormNumber('BIR Form 0605')).toBe('BIR Form No. 0605')
 })

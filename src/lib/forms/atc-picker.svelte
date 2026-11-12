@@ -1,27 +1,33 @@
 <script lang="ts">
 	import { Combobox } from '@pcsti/ui/combobox';
 	import { Label, FieldErrors } from '$lib/components/ui';
-	import { get1601EQATCDescription, get1601EQRate } from './form-1601-eq-atcs';
+	import { get1601EQATCDescription, get1601EQRate } from './form-1601-eq/form-1601-eq-atcs';
 	import { filterATCOptions } from './atc-picker';
+	import { getWithholdingAtcs } from './withholding-definitions';
 
-	let { id, label = 'ATC', value, category, year = NaN, error = '', required = true, onchange }: {
+	let { id, label = 'ATC', value, category, year = NaN, formCode = '1601EQ', error = '', required = true, onchange }: {
 		id: string;
 		label?: string;
 		value: string;
 		category: string;
 		year?: number;
+		formCode?: string;
 		error?: string;
 		required?: boolean;
 		onchange: (code: string) => void;
 	} = $props();
-	const options = $derived(filterATCOptions(category, '', value).map(option => {
-		const rate = get1601EQRate(option.value, category, year);
-		return {
-			value: option.value, label: option.value, secondary: option.description,
-			badge: rate === undefined ? undefined : `${Number(rate)}%`
-		};
-	}));
+	const options = $derived.by(() => {
+		if (formCode === '1601EQ') return filterATCOptions(category, '', value).map(option => {
+			const rate = get1601EQRate(option.value, category, year);
+			return { value: option.value, label: option.value, secondary: option.description, badge: rate === undefined ? undefined : `${Number(rate)}%` };
+		});
+		const records = getWithholdingAtcs(formCode, category);
+		const result = records.filter((record, index) => records.findIndex(item => item.code === record.code) === index).map(record => ({ value: record.code, label: record.code, secondary: record.description, badge: record.rate ? `${Number(record.rate)}%` : undefined }));
+		if (value && !result.some(option => option.value === value)) result.unshift({ value, label: value, secondary: '', badge: undefined });
+		return result;
+	});
 	const selectedDescription = $derived.by(() => {
+		if (formCode !== '1601EQ') return options.find(option => option.value === value)?.secondary ?? '';
 		const description = value ? get1601EQATCDescription(value, category) : '';
 		return description === value ? '' : description;
 	});

@@ -1,7 +1,7 @@
 import { render } from 'svelte/server';
 import { describe, expect, it } from 'vitest';
-import Form1601EQPrint from '$lib/forms/form-1601-eq-print.svelte';
-import { calculate1601EQ } from '$lib/forms/form-1601-eq-rules';
+import Form1601EQPrint from '$lib/forms/printing/form-1601-eq-print.svelte';
+import { calculate1601EQ } from '$lib/forms/form-1601-eq/form-1601-eq-rules';
 
 describe('BIR 1601EQ print layout', () => {
 	it('restores the BIR sections with escaped values and calculated totals', () => {

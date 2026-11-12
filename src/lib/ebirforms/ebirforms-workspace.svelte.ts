@@ -1,6 +1,7 @@
 import { loadCreatedReturnsData, saveCreatedReturnsData, type CreatedReturn, type CreatedReturnStatus } from './created-returns';
 import { getFormDefinition, listForms } from '$lib/forms';
-import { calculate1601EQ, validate1601EQ } from '$lib/forms/form-1601-eq-rules';
+import { calculateReturn, validateReturnValues, getReturnPeriod, getReturnTin, getManagedTaxpayerValues, getReturnEmail } from '$lib/forms/form-runtime';
+import { createWithholdingValues } from '$lib/forms/withholding-rules';
 import { parseLegacyXml, serializeLegacyXml } from '$lib/legacy/xml';
 import {
 	buildProfileFilename,
@@ -36,7 +37,8 @@ export const initialProfile: TaxpayerProfile = {
 	email: 'taxpayer@example.com'
 };
 
-export function createInitialFormValues(profile: TaxpayerProfile): Record<string, string> {
+export function createInitialFormValues(profile: TaxpayerProfile, code = '1601EQ'): Record<string, string> {
+	if (code !== '1601EQ') return createWithholdingValues(code, profile);
 	return {
 		...buildTaxpayerProfileFormValues(profile),
 		'frm1601EQ:txtYear': '2026',
@@ -109,7 +111,7 @@ class EbirformsWorkspace {
 		this.submissionReceipt = null;
 		this.statusMessage = 'Unsaved changes.';
 		if (Object.keys(this.validationErrors).length) {
-			this.validationErrors = validate1601EQ(this.formValues);
+			this.validationErrors = validateReturnValues(this.selectedForm?.code ?? '1601EQ', this.formValues);
 		}
 	}
 
@@ -126,41 +128,16 @@ class EbirformsWorkspace {
 		this.statusMessage = 'Unsaved form discarded.';
 	}
 
-	returnPeriod = $derived(
-		`${this.formValues['frm1601EQ:txtYear'] || 'YYYY'}${
-			this.formValues['frm1601EQ:optQuarter'] || 'Q'
-		}`
-	);
+	returnPeriod = $derived(getReturnPeriod(this.selectedForm?.code ?? '1601EQ', this.formValues));
 	profileFilename = $derived(buildProfileFilename(this.profile));
-	returnFilename = $derived(
-		buildReturnFilename({
-			tin1: this.formValues['frm1601EQ:txtTIN1'] || this.profile.tin1,
-			tin2: this.formValues['frm1601EQ:txtTIN2'] || this.profile.tin2,
-			tin3: this.formValues['frm1601EQ:txtTIN3'] || this.profile.tin3,
-			branchCode: this.formValues['frm1601EQ:txtBranchCode'] || this.profile.branchCode,
-			formCode: '1601EQ',
-			returnPeriod: this.returnPeriod
-		})
-	);
-	activeTin = $derived(
-		normalizeTinParts({
-			tin1: this.formValues['frm1601EQ:txtTIN1'] || this.profile.tin1,
-			tin2: this.formValues['frm1601EQ:txtTIN2'] || this.profile.tin2,
-			tin3: this.formValues['frm1601EQ:txtTIN3'] || this.profile.tin3,
-			branchCode: this.formValues['frm1601EQ:txtBranchCode'] || this.profile.branchCode
-		})
-	);
-	dispatcherTin = $derived(
-		normalizeTinNumber({
-			tin1: this.formValues['frm1601EQ:txtTIN1'] || this.profile.tin1,
-			tin2: this.formValues['frm1601EQ:txtTIN2'] || this.profile.tin2,
-			tin3: this.formValues['frm1601EQ:txtTIN3'] || this.profile.tin3
-		})
-	);
+	returnTin = $derived(getReturnTin(this.selectedForm?.code ?? '1601EQ', this.formValues, this.profile));
+	returnFilename = $derived(buildReturnFilename({ ...this.returnTin, formCode: this.selectedForm?.code ?? '1601EQ', returnPeriod: this.returnPeriod }));
+	activeTin = $derived(normalizeTinParts(this.returnTin));
+	dispatcherTin = $derived(normalizeTinNumber(this.returnTin));
 	generatedXml = $derived(
 		serializeLegacyXml({
-			...calculate1601EQ(this.formValues),
-			txtEmail: this.formValues.txtEmail || this.profile.email,
+			...calculateReturn(this.selectedForm?.code ?? '1601EQ', this.formValues),
+			txtEmail: getReturnEmail(this.selectedForm?.code ?? '1601EQ', this.formValues, this.profile),
 			txtFinalFlag: this.finalFlag
 		})
 	);
@@ -203,10 +180,10 @@ class EbirformsWorkspace {
 			this.statusMessage = 'Choose an active taxpayer and an available form.';
 			return null;
 		}
-		const values = createInitialFormValues(profile);
+		const values = createInitialFormValues(profile, formCode);
 		const id = crypto.randomUUID();
 		const record: CreatedReturn = {
-			id, taxpayerId, formCode, values, returnPeriod: `${values['frm1601EQ:txtYear']}${values['frm1601EQ:optQuarter']}`,
+			id, taxpayerId, formCode, values, returnPeriod: getReturnPeriod(formCode, values),
 			status: 'Draft', finalFlag: '0', updatedAt: Date.now()
 		};
 		this.#pendingReturn = record;
@@ -227,7 +204,7 @@ class EbirformsWorkspace {
 		this.selectTaxpayerProfile(record.taxpayerId);
 		this.activeReturnId = id;
 		this.selectedForm = form;
-		this.formValues = { ...record.values };
+		this.formValues = { ...record.values, ...getManagedTaxpayerValues(form.code, this.profile, record.status) };
 		this.finalFlag = record.finalFlag;
 		this.validationErrors = {};
 		this.submissionReceipt = null;
@@ -244,18 +221,15 @@ class EbirformsWorkspace {
 			return false;
 		}
 		const nextStatus = status ?? (this.hasUnsavedChanges ? 'Draft' : active.status);
-		const calculated = calculate1601EQ(this.formValues);
+		const calculated = calculateReturn(active.formCode, this.formValues);
 		const values = { ...this.formValues };
-		// Keep raw draft inputs intact; only refresh fields the form calculates.
-		for (const name of ['txtTotalTaxesWithheld', 'txtTotalRemittances', 'txtTaxStillDue', 'txtTotalPenalties', 'txtTotalAmountDue']) {
-			values[`frm1601EQ:${name}`] = calculated[`frm1601EQ:${name}`];
-		}
-		for (const row of [13, 14, 15, 16, 17, 18]) {
-			for (const part of ['txtTaxRate', 'txtTaxWithheld']) {
-				const id = `frm1601EQ:${part}${row}`;
+		if (active.formCode === '1601EQ') {
+			for (const name of ['txtTotalTaxesWithheld', 'txtTotalRemittances', 'txtTaxStillDue', 'txtTotalPenalties', 'txtTotalAmountDue',
+				...[13, 14, 15, 16, 17, 18].flatMap(row => [`txtTaxRate${row}`, `txtTaxWithheld${row}`])]) {
+				const id = `frm1601EQ:${name}`;
 				if (id in calculated) values[id] = calculated[id];
 			}
-		}
+		} else Object.assign(values, calculated);
 		const record: CreatedReturn = { ...active, values, returnPeriod: this.returnPeriod,
 			status: nextStatus, finalFlag: nextStatus === 'Draft' ? '0' : this.finalFlag, updatedAt: Date.now() };
 		const returns = this.createdReturns.some(item => item.id === active.id)
@@ -454,13 +428,13 @@ class EbirformsWorkspace {
 			const receipt = await submitReturn({
 				xml: serializeLegacyXml({
 					...this.formValues,
-					txtEmail: this.formValues.txtEmail || this.profile.email,
+					txtEmail: getReturnEmail(this.selectedForm?.code ?? '1601EQ', this.formValues, this.profile),
 					txtFinalFlag: '2'
 				}),
 				returnFilename: this.returnFilename,
-				formCode: '1601EQ',
+				formCode: this.selectedForm?.code ?? '1601EQ',
 				tin: this.dispatcherTin,
-				email: this.formValues.txtEmail || this.profile.email,
+				email: getReturnEmail(this.selectedForm?.code ?? '1601EQ', this.formValues, this.profile),
 				mode: 'dry_run',
 				dispatcher: undefined,
 				fetchDispatcher: false
@@ -482,13 +456,13 @@ class EbirformsWorkspace {
 	}
 
 	validateReturn({ applyCalculations = true }: { applyCalculations?: boolean } = {}) {
-		this.validationErrors = validate1601EQ(this.formValues);
+		this.validationErrors = validateReturnValues(this.selectedForm?.code ?? '1601EQ', this.formValues);
 		if (Object.keys(this.validationErrors).length) {
 			this.statusMessage =
 				'Correct the highlighted return details before saving, finalizing or submitting.';
 			return false;
 		}
-		if (applyCalculations) this.formValues = calculate1601EQ(this.formValues);
+		if (applyCalculations) this.formValues = calculateReturn(this.selectedForm?.code ?? '1601EQ', this.formValues);
 		return true;
 	}
 
@@ -531,9 +505,9 @@ class EbirformsWorkspace {
 			const receipt = await submitReturn({
 				xml: this.generatedXml,
 				returnFilename: this.returnFilename,
-				formCode: '1601EQ',
+				formCode: this.selectedForm?.code ?? '1601EQ',
 				tin: this.dispatcherTin,
-				email: this.formValues.txtEmail || this.profile.email,
+				email: getReturnEmail(this.selectedForm?.code ?? '1601EQ', this.formValues, this.profile),
 				mode: this.submissionMode,
 				dispatcher: undefined,
 				fetchDispatcher: this.submissionMode === 'legacy_sftp'

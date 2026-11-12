@@ -20,3 +20,4 @@ export * from './tin-input';
 export * from './number-input';
 export * from './radio-group';
 export * from './calculated-value';
+export * from './date-input';

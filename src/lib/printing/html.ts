@@ -36,7 +36,7 @@ export function findSvelteScopeClass(html: string): string {
 }
 
 export function formatReportFormNumber(title: string): string {
-	const formNumber = title.replace(/\b1601EQ\b/, '1601-EQ')
+	const formNumber = title.replace(/\b(\d{4})([A-Z]+)(?:v\d{4})?\b/g, '$1-$2')
 
 	return formNumber.replace(/^BIR Form\s+/, 'BIR Form No. ')
 }
@@ -188,6 +188,10 @@ ${arimoFontFaceCss}
 
 		.pdf-print-rendered .legacy-radio-dot {
 			background: #000 !important;
+		}
+
+		.pdf-print-rendered .legacy-text-mark {
+			visibility: hidden !important;
 		}
 
 		.pdf-report-header,

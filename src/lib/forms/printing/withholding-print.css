@@ -1,0 +1,675 @@
+/* Shared source primitives and export mechanics. Original per-form geometry stays in overrides. */
+@layer withholding-inline-important, withholding-normalization, withholding-original-source;
+.legacy-container,
+.legacy-container * {
+	box-sizing: border-box;
+}
+
+	.legacy-root-table,
+	.legacy-top-header,
+	.legacy-form-header,
+	.tblForm {
+		width: 100%;
+		border-collapse: collapse;
+		border-spacing: 0;
+	}
+.legacy-container, .withholding-print { color: #000; font-family: var(--withholding-print-font, Arial, Helvetica, sans-serif); }
+.legacy-input, .original-frozen-value, .wh-treaty-value { color: #000; background: transparent; }
+.legacy-radio, .wh-print-check { display: inline-block; position: relative; border: 1px solid #000; background: #fff; }
+.withholding-render-host { position: fixed; left: -100000px; top: 0; width: 1200px; visibility: hidden; pointer-events: none; }
+.withholding-print, .withholding-print * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+.withholding-print-page-content { position: relative; transform-origin: top left; }
+.withholding-print-page { position: relative; width: var(--withholding-page-width); height: var(--withholding-page-height); break-after: page; overflow: hidden; }
+.withholding-print-page:last-child { break-after: auto; }
+.withholding-print-page > .withholding-print-page-content { position: absolute; top: calc(var(--withholding-chrome-band) / var(--withholding-page-scale, 1)); left: calc((var(--withholding-page-width) / var(--withholding-page-scale, 1) - var(--withholding-source-width)) / 2); width: var(--withholding-source-width); zoom: var(--withholding-page-scale, 1); break-inside: avoid; }
+.withholding-print [data-fitted-print-value] { font-size: var(--withholding-value-font-size) !important; }
+.wh-print-check { box-sizing: border-box; width: 12px; height: 12px; padding: 0; vertical-align: middle; border-radius: 0; font: 13px/10px Arial, Helvetica, sans-serif; text-align: center; }
+.wh-atc-code, .wh-atc-rate, .wh-atc-amount { display: inline-block; box-sizing: border-box; min-height: 15px; padding: 0 1px; color: #000; font: 13.3333px/15px Arial, Helvetica, sans-serif; white-space: nowrap; vertical-align: middle; }
+.wh-atc-code { width: 70px; text-align: center; }
+.wh-atc-rate { width: 60px; text-align: right; }
+.wh-atc-amount { width: 140px; text-align: right; }
+.wh-atc-description { font: 11px Arial, Helvetica, sans-serif; }
+.wh-reference-description { font: 10px Arial, Helvetica, sans-serif; }
+.wh-text-center { text-align: center; }
+.wh-treaty-value { display: block; box-sizing: border-box; width: 100%; min-height: 15px; padding: 0 1px; font: 13.3333px/15px Arial, Helvetica, sans-serif; text-align: right; }
+.wh-continuation-page, .original-continuation { width: 800px; color: #000; background: #fff; font: 12px Arial, Helvetica, sans-serif; }
+.original-continuation table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+.original-continuation td, .original-continuation th { border: 1px solid #000; padding: 5px; overflow-wrap: anywhere; text-align: left; }
+.original-continuation h2 { font-size: 16px; }
+@media print {
+.pdf-draft-watermark, .withholding-print-draft {
+			position: fixed;
+			top: 50%;
+			left: 50%;
+			z-index: 10;
+			transform: translate(-50%, -50%) rotate(-35deg);
+			color: rgb(0 0 0 / 14%);
+			font-family: 'Arimo', Arial, Helvetica, sans-serif;
+			font-size: 100pt;
+			font-weight: 700;
+			letter-spacing: 0.12em;
+			line-height: 1;
+			white-space: nowrap;
+			pointer-events: none;
+		}
+ .withholding-print-draft { position: absolute; }
+ .withholding-print-page > .pdf-report-header, .withholding-print-page > .pdf-report-footer { position: absolute; left: 0.45in; right: 0.45in; display: flex !important; }
+ .withholding-print-page > .pdf-report-header { top: 0.08in; }
+ .withholding-print-page > .pdf-report-footer { bottom: 0.08in; }
+ .pdf-print-rendered:has(.withholding-print) .print-preview-active { margin: 0 !important; }
+ .pdf-print-rendered:has(.withholding-page-header) > .pdf-report-header, .pdf-print-rendered:has(.withholding-page-footer) > .pdf-report-footer { display: none !important; }
+}
+/* Identical leading rules from original styles.css, before form-specific declarations. */
+@layer withholding-original-source {
+/* Match the legacy text-control base in both WebView measurement and Chromium output.
+   Original per-control fonts and source footer rules retain their precedence. */
+.withholding-print[data-form-code] :where(input[data-print-control="text"], textarea[data-print-control]) {
+ font: normal 400 13.3333px/normal Arial, Helvetica, sans-serif;
+}
+
+.withholding-print[data-form-code] * {
+    margin: 0;
+    padding: 0;
+}
+
+.withholding-print[data-form-code], .withholding-print[data-form-code] {
+    margin: 0;
+    padding: 0;
+    font-weight: normal;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 15px;
+    background: none !important;
+    zoom: 1;
+}
+
+.withholding-print[data-form-code] #wrapper, .withholding-print[data-form-code] #container {
+    padding: 1%;
+    margin: 0 auto;
+    width: auto;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 12px;
+}
+
+.withholding-print[data-form-code] #sched1Div1602 {
+    padding: 1%;
+    margin: 0 auto;
+    width: auto;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 12px;
+    background: #e2e2e2;
+    border: #CCC 1px solid;
+}
+
+.withholding-print[data-form-code] #formPaper {
+    background: #FFF;
+    width: auto;
+    border: #CCC 1px solid;
+    margin: 0 auto;
+}
+
+.withholding-print[data-form-code] #footer {
+    background: #FFF;
+    width: auto;
+    border: #CCC 1px solid;
+    margin: 0 auto;
+}
+
+.withholding-print[data-form-code] #formPaper table {
+    width: 100%;
+}
+
+.withholding-print[data-form-code] #footer {
+    background: #FFF;
+    width: auto;
+    border: #CCC 1px solid;
+    margin: 0 auto;
+}
+
+.withholding-print[data-form-code] .tblForm2200AN {
+    background: #e2e2e2;
+    border-collapse: collapse;
+    border-spacing: 0;
+}
+
+.withholding-print[data-form-code] .tblForm2200AN td.tblFormTd2200AN {
+        background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAMAAAAeCAYAAADpYKT6AAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAADdJREFUeNpi/P///zYGKGAB4h/InJ84ZYjkUGwAkab9JIPziwzOb2TOH+Jk/sI4TAxIAIUDEGAA3IUebwZ6si8AAAAASUVORK5CYII=");
+        background-repeat: repeat-x;
+        background-position: top;
+        padding: 1px 0 1px 0;
+        border-top: #AAAAAA 1px solid;
+        border-right: #AAAAAA 1px solid;
+    }
+
+.withholding-print[data-form-code] .tblForm2200AN td.tblFormTdPart2200AN {
+        background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAMAAAAeCAYAAADpYKT6AAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAADdJREFUeNpi/P///zYGKGAB4h/InJ84ZYjkUGwAkab9JIPziwzOb2TOH+Jk/sI4TAxIAIUDEGAA3IUebwZ6si8AAAAASUVORK5CYII=");
+        background-repeat: repeat-x;
+        background-position: top;
+        padding: 1px 0 1px 0;
+        border-top: #AAAAAA 1px solid;
+        border-right: #AAAAAA 1px solid;
+    }
+
+.withholding-print[data-form-code] .tblForm1801 {
+    background: #e2e2e2;
+    border-collapse: collapse;
+    border-spacing: 0;
+}
+
+.withholding-print[data-form-code] .tblForm1801 td.tblFormTd1801 {
+        background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAMAAAAeCAYAAADpYKT6AAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAADdJREFUeNpi/P///zYGKGAB4h/InJ84ZYjkUGwAkab9JIPziwzOb2TOH+Jk/sI4TAxIAIUDEGAA3IUebwZ6si8AAAAASUVORK5CYII=");
+        background-repeat: repeat-x;
+        background-position: top;
+        padding: 2px 0 2px 0;
+        border-top: #AAAAAA 1px solid;
+        border-right: #AAAAAA 1px solid;
+    }
+
+.withholding-print[data-form-code] .tblForm1801 td.tblFormTdPart1801 {
+        background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAMAAAAeCAYAAADpYKT6AAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAADdJREFUeNpi/P///zYGKGAB4h/InJ84ZYjkUGwAkab9JIPziwzOb2TOH+Jk/sI4TAxIAIUDEGAA3IUebwZ6si8AAAAASUVORK5CYII=");
+        background-repeat: repeat-x;
+        background-position: top;
+        padding: 2px 0 2px 0;
+        border-top: #AAAAAA 1px solid;
+        border-right: #AAAAAA 1px solid;
+    }
+
+.withholding-print[data-form-code] .tblForm {
+    background: #e2e2e2;
+    border-collapse: collapse;
+    border-spacing: 0;
+}
+
+.withholding-print[data-form-code] .tblForm td.tblFormTd {
+        background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAMAAAAeCAYAAADpYKT6AAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAADdJREFUeNpi/P///zYGKGAB4h/InJ84ZYjkUGwAkab9JIPziwzOb2TOH+Jk/sI4TAxIAIUDEGAA3IUebwZ6si8AAAAASUVORK5CYII=");
+        background-repeat: repeat-x;
+        background-position: top;
+        padding: 1px 0 1px 0;
+        border-top: #AAAAAA 1px solid;
+        border-right: #AAAAAA 1px solid;
+    }
+
+.withholding-print[data-form-code] .tblForm td.tblFormTdNoTopBorder {
+        
+        background-position: top;
+        padding: 1px 0 1px 0;
+        border-right: #AAAAAA 1px solid;
+    }
+
+.withholding-print[data-form-code] .tblForm td.tblFormTdPart {
+        background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAMAAAAeCAYAAADpYKT6AAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAADdJREFUeNpi/P///zYGKGAB4h/InJ84ZYjkUGwAkab9JIPziwzOb2TOH+Jk/sI4TAxIAIUDEGAA3IUebwZ6si8AAAAASUVORK5CYII=");
+        background-repeat: repeat-x;
+        background-position: top;
+        padding: 1px 0 1px 0;
+        border-top: #AAAAAA 1px solid;
+        border-right: #AAAAAA 1px solid;
+    }
+
+.withholding-print[data-form-code] .spacePadder {
+    padding: 4px 0 4px 0;
+}
+
+.withholding-print[data-form-code] .aBox {
+    background-color: #e2e2e2;
+    
+    color: #000000;
+    padding: 0px;
+    margin: 0px;
+    top: 50%;
+    left: 30%;
+    position: absolute;
+    z-index: 100000;
+}
+
+.withholding-print[data-form-code] .aBox input, .withholding-print[data-form-code] .aBox label { 
+        font-family: Arial, Helvetica, sans-serif !important;
+        font-size: 11px !important;
+    }
+
+.withholding-print[data-form-code] #msg {
+    color: #F00;
+    border: 1px #CCC solid;
+    padding: 5px;
+    background: #FFC;
+}
+
+.withholding-print[data-form-code] .printSignFooterClass table, .withholding-print[data-form-code] .printSignFooterClass table td, .withholding-print[data-form-code] .printSignFooterClass table tr {
+    border-collapse: collapse;
+}
+
+.withholding-print[data-form-code] #watermark {
+    position: absolute;
+    margin: 0 auto;
+    float: left;
+    clear: none;
+    width: 700px;
+    display: block;
+    left: 50%;
+    margin-left: -350px;
+    top: 140px;
+    z-index: 3;
+}
+
+.withholding-print[data-form-code] #bg {
+    position: fixed;
+    float: left;
+    clear: none;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    z-index: -1;
+}
+
+.withholding-print[data-form-code] .formTitle {
+    padding: 2px;
+    padding-top: 20px;
+    margin-bottom: 10px;
+    display: block;
+    font-size: 24px;
+    display: block;
+    width: 100% !important;
+    color: #000;
+    font-size: 24px;
+    border-bottom: 1px #555 solid;
+    font-weight: bold;
+    margin-bottom: 10px;
+}
+
+.withholding-print[data-form-code] .helpTitle {
+    padding: 2px;
+    padding-top: 20px;
+    margin-bottom: 10px;
+    display: block;
+    font-size: 22px;
+    display: block;
+    width: 100% !important;
+    color: rgb(102, 101, 101);
+    font-weight: bold;
+    margin-bottom: 10px;
+    font-family: "Times New Roman";
+}
+
+.withholding-print[data-form-code] .topnav {
+    background: #f9f9f9;
+    border-bottom: 1px solid #333;
+    font-size: 0.85em;
+    height: 30px;
+    position: fixed;
+    top: 0;
+    width: 100%;
+    z-index: 1000000;
+}
+
+.withholding-print[data-form-code] ul.topnav {
+    list-style: none;
+    padding: 0 20px;
+    margin: 0;
+    float: left;
+    background: #f9f9f9;
+    font-size: 14px;
+}
+
+.withholding-print[data-form-code] ul.topnav li {
+        float: left;
+        margin: 0;
+        padding: 0 15px 0 0;
+        position: relative; 
+    }
+
+.withholding-print[data-form-code] ul.topnav li a {
+            padding: 7px;
+            color: #000;
+            display: block;
+            text-decoration: none;
+            float: left;
+        }
+
+.withholding-print[data-form-code] ul.topnav li a:hover {
+            }
+
+.withholding-print[data-form-code] ul.topnav li span { 
+            width: 17px;
+            height: 35px;
+            float: left;
+        }
+
+.withholding-print[data-form-code] ul.topnav li span.subhover {
+                background-position: center bottombottom;
+                cursor: pointer;
+            }
+
+.withholding-print[data-form-code] ul.topnav li ul.subnav {
+            list-style: none;
+            position: absolute; 
+            left: 0;
+            top: 30px;
+            background: #f9f9f9;
+            margin: 0;
+            padding: 0;
+            display: none;
+            float: left;
+            width: 180px;
+            border: 1px solid #111;
+            border-top: 0;
+        }
+
+.withholding-print[data-form-code] ul.topnav li ul.subnav li {
+                margin: 0;
+                padding: 0;
+                border-top: 1px solid #252525; 
+                clear: both;
+                width: 100%;
+                overflow: hidden;
+            }
+
+.withholding-print[data-form-code] ul.topnav li ul.subnav li a {
+    float: left;
+    display: block;
+    width: 100%;
+}
+
+.withholding-print[data-form-code] .previewButtonClass {
+    display: none !important;
+}
+
+.withholding-print[data-form-code] .footerContent {
+    font-weight: normal;
+    font-family: sans-serif, Arial, Helvetica;
+    font-size: 10px;
+}
+
+.withholding-print[data-form-code] .footerColumnHeader {
+    font-weight: bold;
+    font-family: sans-serif, Arial, Helvetica;
+    font-size: 12px;
+}
+
+.withholding-print[data-form-code] .footerHeader {
+    font-weight: bold;
+    font-family: sans-serif, Arial, Helvetica;
+    font-size: 14px;
+}
+
+.withholding-print[data-form-code] .modalContent {
+    font-weight: normal;
+    font-family: Arial, sans-serif, Helvetica;
+    font-size: 10px;
+}
+
+.withholding-print[data-form-code] .modalColumnHeader {
+    font-weight: bold;
+    font-family: Arial, sans-serif, Helvetica;
+    font-size: 11px;
+    color: #000;
+}
+
+.withholding-print[data-form-code] .modalHeader {
+    font-weight: bold;
+    font-family: Arial, sans-serif, Helvetica;
+    font-size: 12px;
+    color: #000;
+}
+
+.withholding-print[data-form-code] .modalContent_1800 {
+    font-weight: normal;
+    font-family: Arial, sans-serif, Helvetica;
+    font-size: 10px;
+}
+
+.withholding-print[data-form-code] .modalColumnHeader_1800 {
+    font-weight: bold !important;
+    font-family: Arial, sans-serif, Helvetica;
+    font-size: 11px !important;
+    color: #000 !important;
+}
+
+.withholding-print[data-form-code] .modalHeader_1800 {
+    font-weight: bold !important;
+    font-family: Arial, sans-serif, Helvetica;
+    font-size: 12px !important;
+    color: #000 !important;
+}
+
+.withholding-print[data-form-code] .modalContent_2200M {
+    font-weight: normal;
+    font-family: Arial, sans-serif, Helvetica;
+    font-size: 10px;
+}
+
+.withholding-print[data-form-code] .modalColumnHeader_2200M {
+    font-weight: bold !important;
+    font-family: Arial, sans-serif, Helvetica;
+    font-size: 11px !important;
+    color: #000 !important;
+}
+
+.withholding-print[data-form-code] .modalHeader_2200M {
+    font-weight: bold !important;
+    font-family: Arial, sans-serif, Helvetica;
+    font-size: 12px !important;
+    color: #000 !important;
+}
+
+.withholding-print[data-form-code] .modalColumnHeader1 {
+    font-weight: normal;
+    font-family: Arial, sans-serif, Helvetica;
+    font-size: 12px;
+}
+
+.withholding-print[data-form-code] .mainLabel {
+    font-weight: bold;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 11px;
+}
+
+.withholding-print[data-form-code] #inserted {
+    font-family: 'Times New Roman';
+    font-size: 14px;
+    border: none;
+    border-collapse: collapse;
+    margin-bottom: 15px;
+}
+
+.withholding-print[data-form-code] #inserted tr {
+        width: 100%;
+        border: none;
+    }
+
+.withholding-print[data-form-code] #inserted td {
+        vertical-align: top;
+        border: none;
+    }
+
+.withholding-print[data-form-code] #inserted p {
+        text-indent: 30px;
+        margin: 7.5px 0 7.5px 0;
+    }
+
+.withholding-print[data-form-code] #inserted li {
+        margin: 0 0 2.5px 15px;
+    }
+
+.withholding-print[data-form-code] #inserted dt {
+        font-weight: bold;
+        margin: 10px 0 5px 0;
+    }
+
+.withholding-print[data-form-code] #inserted dd {
+        margin: 2.5px 0 2.5px 10px;
+    }
+
+.withholding-print[data-form-code] .titlecol {
+    width: 100%;
+    text-align: center;
+    font-family: 'Times New Roman';
+    font-size: 25px;
+    font-weight: bold;
+    margin-bottom: 15px;
+    padding-top: 15px;
+    border: none;
+}
+
+.withholding-print[data-form-code] .titlecol .small {
+        display: inline;
+        font-size: 16px;
+    }
+
+.withholding-print[data-form-code] .subtitle {
+    font-size: 18px;
+    font-weight: bold;
+    text-align: center;
+    font-family: 'Times New Roman';
+}
+
+.withholding-print[data-form-code] .smallSubtitle {
+    font-size: 14px;
+    font-weight: bold;
+    text-align: center;
+    font-family: 'Times New Roman';
+}
+
+.withholding-print[data-form-code] .firstcol {
+    width: 50%;
+    padding: 5px 15px 5px 15px;
+    border-right: 1px solid black !important;
+    text-align: justify;
+}
+
+.withholding-print[data-form-code] .firstcol_noborder {
+    width: 50%;
+    padding: 5px 15px 5px 15px;
+    border-right: 0px solid black !important;
+    text-align: justify;
+}
+
+.withholding-print[data-form-code] .secondcol {
+    width: 50%;
+    padding: 5px 15px 5px 15px;
+    text-align: justify;
+}
+
+.withholding-print[data-form-code] #minitable {
+    width: 50%;
+    
+    text-align: center;
+    border-collapse: collapse;
+}
+
+.withholding-print[data-form-code] #minitable th {
+        background-color: #d9d9d9;
+    }
+
+.withholding-print[data-form-code] #minitable th, .withholding-print[data-form-code] #minitable tr, .withholding-print[data-form-code] #minitable td {
+        border: 1px solid black;
+    }
+
+.withholding-print[data-form-code] .boxed {
+    padding: 10px;
+    font-weight: bold;
+    text-align: center;
+    margin: 0 auto 0 auto;
+    width: 50%;
+    border: 1px solid black;
+}
+
+.withholding-print[data-form-code] .indent {
+    margin-left: 20px;
+}
+
+.withholding-print[data-form-code] #tosa {
+			color:#333;
+            font-family: Arial, Helvetica, sans-serif;
+			position:relative;
+			padding:25px;
+            width: 80%;
+            margin-left: auto;
+            margin-right: auto;
+			margin-top:50px;
+			background-color:white;
+        }
+
+.withholding-print[data-form-code] .centerButton {
+            width: 100px;
+            margin: 0 auto;
+        }
+
+.withholding-print[data-form-code] #tosa h2 {
+        margin-top:25px;
+        margin-bottom:15px;
+        }
+
+.withholding-print[data-form-code] #tosa h4 {
+				margin-top:15px;
+                margin-bottom:15px;
+        }
+
+.withholding-print[data-form-code] #tosa h5 {
+				margin-top:15px;
+                margin-bottom:15px;
+        }
+
+.withholding-print[data-form-code] .centerButton input {
+                width: 70px;
+                height: 30px;
+            }
+
+.withholding-print[data-form-code] .indentTosa {
+            margin-left: 30px;
+			margin-bottom:10px;
+        }
+
+.withholding-print[data-form-code] .payment-option {
+    display: none;
+    width: 50%; 
+    position: relative; 
+    top: 25%; 
+    left: 25%; 
+    right: auto; 
+    overflow-y: auto; 
+    overflow-x: hidden; 
+    background: #e2e2e2;
+    z-index: 100; 
+    border: #0e00d1;
+    border-style: solid;
+    border-width: 2px;
+}
+
+.withholding-print[data-form-code] .payment-option-content {
+    vertical-align: middle;
+    margin: 10px;
+}
+
+.withholding-print[data-form-code] .payment-option-footer {
+    padding: 10px;
+    position: relative;
+    font-weight: normal;
+    text-align: right;
+    background: #d2d2d2;
+}
+}
+
+/* Explicit print normalization, matching the reviewed original-layout exports. */
+@layer withholding-normalization {
+ .withholding-print[data-form-code] a { color: #000 !important; text-decoration: none !important; }
+ .withholding-print[data-form-code] { margin: 0 !important; padding: 0 !important; background: #fff !important; color: #000 !important; }
+ .withholding-print[data-form-code] #inserted { font-size: 10px !important; line-height: 1.15 !important; }
+ .withholding-print[data-form-code] a[id*="btnATC"], .withholding-print[data-form-code] a#btnAddATCPartII, .withholding-print[data-form-code] a#btnTaxType { display: none !important; }
+ .withholding-print[data-form-code] * { filter: none !important; backdrop-filter: none !important; box-shadow: none !important; }
+ .withholding-print[data-form-code] #wrapper, .withholding-print[data-form-code] #formPaper { margin: 0 !important; padding: 0 !important; background: #fff !important; }
+ .withholding-print[data-form-code] .printButtonClass, .withholding-print[data-form-code] #PageFooter, .withholding-print[data-form-code] [id$="txtCurrentPage"], .withholding-print[data-form-code] [id$="txtMaxPage"] { display: none !important; }
+ .withholding-print[data-form-code] table, .withholding-print[data-form-code] td, .withholding-print[data-form-code] tr { background-color: #fff !important; background-image: none !important; }
+ .withholding-print[data-form-code] input:not([type=checkbox]):not([type=radio]), .withholding-print[data-form-code] textarea, .withholding-print[data-form-code] .original-value { box-shadow: none !important; }
+ .withholding-print[data-form-code] input, .withholding-print[data-form-code] textarea, .withholding-print[data-form-code] .original-value { color: #000 !important; background: transparent !important; opacity: 1 !important; -webkit-text-fill-color: #000; }
+ .withholding-print[data-form-code] [id^="Page"] { display: block !important; }
+}
+
+/* Original printme() frame treatment; OCR artwork already contains its own edge. */
+.withholding-print[data-form-code]:not([data-form-code="0619E"]):not([data-form-code="0619F"]) #formPaper { border: 3px solid #000; }
+.withholding-print[data-form-code="1604F"] #formPaper { border-width: 1px; }
+.withholding-print[data-form-code="0619E"] #formPaper, .withholding-print[data-form-code="0619F"] #formPaper { border: 0; }
+
+/* Fixed source tables include their complete outer frame instead of painting over its right edge. */
+.withholding-print[data-form-code] #formPaper { display: table; box-sizing: border-box; min-width: 100%; }
+@layer withholding-normalization {
+ .withholding-print[data-form-code="0605"] a#btnATC, .withholding-print[data-form-code="0605"] a#btnTaxType { display: inline !important; }
+}

@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { formPath, seedWorkspace } from './fixtures';
+import { formPath, seedWorkspace, taxpayerId } from './fixtures';
 
 test.describe('return field behavior', () => {
 	test.beforeEach(async ({ page }) => {
@@ -39,7 +39,7 @@ test('Yes/No radios reveal applicable fields and preserve withheld entries acros
 	await expect(page.getByRole('group', { name: 'ATC row 1', exact: true })).toHaveCount(0);
 	await page.getByRole('combobox', { name: 'Apply over-remittance as', exact: true }).click();
 	await page.getByRole('option', { name: 'Carry over to next quarter', exact: true }).click();
-	await page.getByRole('button', { name: 'Save', exact: true }).click();
+	await page.getByRole('button', { name: 'Save draft', exact: true }).click();
 	await expect(page).toHaveURL(/\/forms$/);
 	const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('ebirforms-created-returns-v1')!).returns[0].values);
 	expect(saved['frm1601EQ:optTaxesWithheld']).toBe('N');
@@ -74,13 +74,16 @@ test('calculated outputs are separate from editable inputs and update from the t
 	await expect(page.getByText('Correct the amounts to calculate the total.')).toBeVisible();
 });
 
-test('quarter select changes are validated before saving', async ({ page }) => {
+test('unfinished quarter is saved as a draft and rejected at finalization', async ({ page }) => {
 	const quarter = page.getByRole('combobox', { name: 'Quarter', exact: true });
 	await quarter.click();
 	await page.getByRole('option', { name: 'Fourth Quarter', exact: true }).click();
-	await page.getByRole('button', { name: 'Save', exact: true }).click();
-	await expect(page).toHaveURL(formPath);
+	await page.getByRole('button', { name: 'Save draft', exact: true }).click();
+	await expect(page).toHaveURL(`/ebirforms/taxpayers/${taxpayerId}/forms`);
+	await page.getByRole('button', { name: /^More actions for BIR Form 1601EQ,/ }).click();
+	await page.getByRole('menuitem', { name: 'Mark as final', exact: true }).click();
 	await expect(page.getByRole('alert')).toContainText('The quarter must end');
+	await page.getByRole('link', { name: 'Edit return to fix errors', exact: true }).click();
 	await expect(quarter).toHaveText('Fourth Quarter');
 });
 });

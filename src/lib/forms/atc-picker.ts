@@ -1,4 +1,4 @@
-import { get1601EQATCs, get1601EQATCDescription } from './form-1601-eq-atcs';
+import { get1601EQATCs, get1601EQATCDescription } from './form-1601-eq/form-1601-eq-atcs';
 
 export function filterATCOptions(category: string, query: string, selected = '') {
 	const codes = [...get1601EQATCs(category)];

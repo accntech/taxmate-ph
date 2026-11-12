@@ -117,3 +117,48 @@ fn find_chromium_renderer_uses_first_existing_candidate() {
 
     assert_eq!(renderer, Some(existing.to_string_lossy().into_owned()));
 }
+
+#[test]
+fn accepts_all_selectable_withholding_versions_and_rejects_inactive_templates() {
+    for code in [
+        "0605",
+        "0619E",
+        "0619F",
+        "1600",
+        "1600PTv2018",
+        "1600VTv2018",
+        "1600WP",
+        "1601C",
+        "1601Cv2018",
+        "1601E",
+        "1601EQ",
+        "1601F",
+        "1601FQ",
+        "1602",
+        "1602Qv2018",
+        "1603",
+        "1603Qv2018",
+        "1604C",
+        "1604CF",
+        "1604E",
+        "1604Ev2018",
+        "1604F",
+        "1606",
+        "0620",
+        "1621",
+        "unknown",
+    ] {
+        let request = PdfExportRequest {
+            form_code: code.into(),
+            paper_size: "a4".into(),
+            html: "<!doctype html><html></html>".into(),
+            suggested_filename: "return.pdf".into(),
+            output_path: None,
+        };
+        assert_eq!(
+            validate_export_request(&request).is_ok(),
+            !["0620", "1621", "unknown"].contains(&code),
+            "{code}"
+        );
+    }
+}

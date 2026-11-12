@@ -1,6 +1,6 @@
 import { render } from 'svelte/server';
 import { describe, expect, it } from 'vitest';
-import Form1601EQ from '$lib/forms/form-1601-eq.svelte';
+import Form1601EQ from '$lib/forms/form-1601-eq/form-1601-eq.svelte';
 import { getFormDefinition } from '$lib/forms';
 import { RadioGroup } from '$lib/components/ui';
 
