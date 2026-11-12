@@ -121,7 +121,12 @@ function base(
     );
   if (period === "quarter")
     fields.push(
-      select(prefix, "optQuarter", "Quarter", opts(["Q1", "Q2", "Q3", "Q4"]), {
+      select(prefix, "optQuarter", "Quarter", [
+        { value: "Q1", label: "First Quarter" },
+        { value: "Q2", label: "Second Quarter" },
+        { value: "Q3", label: "Third Quarter" },
+        { value: "Q4", label: "Fourth Quarter" },
+      ], {
         required: true,
       }),
     );
@@ -445,7 +450,11 @@ for (const code of ["0619E", "0619F"]) {
   );
   if (!e)
     d.sections[0].fields.push(
-      select(p, "txtTaxTypeCode", "Tax type", opts(["WB", "WF"]), {
+      // Descriptions from the packaged xml/taxTypeCodes.xml catalogue.
+      select(p, "txtTaxTypeCode", "Tax type", [
+        { value: "WB", label: "WB — Withholding tax — banks and other financial institutions" },
+        { value: "WF", label: "WF — Final withholding tax" },
+      ], {
         required: true,
       }),
     );
@@ -1353,7 +1362,7 @@ for (const code of ["1604C", "1604CF", "1604E", "1604Ev2018", "1604F"]) {
         p,
         "txtTaxRate",
         "31 Tax rate (%)",
-        opts(["0", "1.5", "3", "5", "6"]),
+        ["0", "1.5", "3", "5", "6"].map((value) => ({ value, label: `${value}%` })),
         { required: true },
       ),
       m(p, "txtTaxR", "32 Tax required to be withheld", true),
