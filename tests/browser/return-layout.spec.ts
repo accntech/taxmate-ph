@@ -8,7 +8,7 @@ for (const width of [1440, 1100, 390]) {
 		await page.goto(formPath);
 		await expect(page.getByText('Loading saved form…', { exact: true })).toBeHidden();
 		const actions = page.locator('footer[aria-label="Return actions"]');
-		await expect(actions.getByRole('button', { name: 'Save', exact: true })).toBeVisible();
+		await expect(actions.getByRole('button', { name: 'Save draft', exact: true })).toBeVisible();
 		await expect(actions.getByRole('button', { name: 'Cancel', exact: true })).toBeVisible();
 		await expect(actions.getByRole('button', { name: 'Submit to BIR', exact: true })).toHaveCount(0);
 		const period = await page.getByRole('region', { name: 'Return period', exact: true }).boundingBox();
@@ -28,7 +28,7 @@ for (const width of [1440, 1100, 390]) {
 		expect(bar!.y + bar!.height).toBeLessThanOrEqual(961);
 		expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width + 1);
 		await page.screenshot({ path: testInfo.outputPath(`1601eq-libro-${width}.png`), fullPage: true });
-		await actions.getByRole('button', { name: 'Save', exact: true }).click();
+		await actions.getByRole('button', { name: 'Save draft', exact: true }).click();
 		await expect(page).toHaveURL(/\/forms$/);
 	});
 }

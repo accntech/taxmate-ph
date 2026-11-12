@@ -26,12 +26,13 @@ export type ExportPdf = (request: PdfExportRequest) => Promise<PdfExportReceipt>
 
 export type PdfExportFilenameInput = {
 	formCode: string
-	year: string
-	quarter: string
+	year?: string
+	quarter?: string
+	period?: string
 }
 
 export function buildPdfExportFilename(input: PdfExportFilenameInput): string {
-	return `${input.formCode}-${input.year}-${input.quarter}.pdf`
+	return `${input.formCode}-${input.period ?? `${input.year}-${input.quarter}`}.pdf`
 }
 
 export function createPdfExportClient(

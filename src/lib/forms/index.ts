@@ -1,3 +1,4 @@
+import { withholdingDefinitions } from './withholding-definitions';
 export type FormStatus = 'ready' | 'planned';
 
 export type FormField = {
@@ -5,6 +6,7 @@ export type FormField = {
 	label: string;
 	type: 'text' | 'number' | 'select';
 	required?: boolean;
+	profileKey?: string;
 	options?: string[];
 };
 
@@ -118,6 +120,15 @@ const forms: FormDefinition[] = [
 		]
 	}
 ];
+
+for (const definition of withholdingDefinitions) {
+ const allFields = [...definition.sections.flatMap(section => section.fields),
+  ...definition.schedules.flatMap(schedule => [...schedule.rows.flatMap(row => row.fields), ...(schedule.totals ?? [])])];
+ forms.push({ code: definition.code, title: definition.title, category: 'Withholding Tax', status: 'ready',
+  fields: allFields.map(field => ({ id: field.id, label: field.label,
+   type: field.type === 'money' ? 'number' : field.type === 'date' ? 'text' : field.type,
+   required: field.required, profileKey: field.profileKey, options: field.options?.map(option => option.value) })) });
+}
 
 export function listForms(): FormSummary[] {
 	return forms.map(({ fields, ...summary }) => summary);

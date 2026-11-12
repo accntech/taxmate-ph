@@ -2,15 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { getFormDefinition, listForms } from '$lib/forms';
 
 describe('form metadata', () => {
-	it('lists the first migrated form as 1601EQ', () => {
-		expect(listForms()).toEqual([
-			{
-				code: '1601EQ',
-				title: 'Quarterly Remittance Return of Creditable Income Taxes Withheld',
-				category: 'Withholding Tax',
-				status: 'ready'
-			}
-		]);
+	it('lists all 23 selectable versions and preserves the first migrated form', () => {
+		expect(listForms()).toHaveLength(23);
+		expect(listForms()[0].code).toBe('1601EQ');
+		expect(listForms().every(form => form.status === 'ready')).toBe(true);
 	});
 
 	it('defines the required legacy field ids for the 1601EQ vertical slice', () => {

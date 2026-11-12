@@ -5,7 +5,7 @@
 	import { normalizeCurrencyInput } from '$lib/components/ui/currency-input/currency';
 	import type { FormDefinition } from '$lib/forms';
 	import { calculate1601EQ } from './form-1601-eq-rules';
-	import AtcPicker from './atc-picker.svelte';
+	import AtcPicker from '../atc-picker.svelte';
 
 	let { definition, values = $bindable(), errors = {}, onvaluechange }: {
 		definition: FormDefinition;

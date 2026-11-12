@@ -3,6 +3,11 @@ import { describe, expect, it } from 'vitest';
 import AtcPicker from '$lib/forms/atc-picker.svelte';
 
 describe('ATC picker', () => {
+ it('uses the exact withholding template catalog instead of the 1601EQ catalog', () => {
+  const { body } = render(AtcPicker, { props: { id: 'atc-pt', value: 'WB030', category: 'G', formCode: '1600PTv2018', onchange: () => {} } });
+  expect(body).toContain('role="combobox"');
+  expect(body.includes('TAX ON CARRIERS AND KEEPERS OF GARAGES')).toBe(true);
+ });
  it('keeps the selected income description available without opening the picker', () => {
   const { body } = render(AtcPicker, { props: { id: 'atc-13', value: 'WI120', category: 'P', onchange: () => {} } });
   expect(body).toContain('INCOME PAYMENTS TO CERTAIN CONTRACTORS');

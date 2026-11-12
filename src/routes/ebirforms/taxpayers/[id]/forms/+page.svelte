@@ -1,13 +1,15 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { resolve } from '$app/paths';
 	import { beforeNavigate, goto } from '$app/navigation';
 	import { save } from '@tauri-apps/plugin-dialog';
 	import { openPath } from '@tauri-apps/plugin-opener';
 	import { buildTaxpayerFormsRoute } from '$lib/apps/app-shell';
 	import { ebirformsWorkspace as workspace } from '$lib/ebirforms/ebirforms-workspace.svelte';
 	import type { CreatedReturn } from '$lib/ebirforms/created-returns';
+	import { getReturnAmount, getReturnPeriod, getManagedTaxpayerValues } from '$lib/forms/form-runtime';
 	import { getFormDefinition } from '$lib/forms';
-	import FormCommand from '$lib/forms/form-command.svelte';
+	import FormCommand from '$lib/ebirforms/form-command.svelte';
 	import { settings } from '$lib/settings.svelte';
 	import { buildReturnReport } from '$lib/printing/return-report';
 	import { buildPdfExportFilename, createPdfExportClient, formatPdfExportError } from '$lib/tauri/pdf-export';
@@ -50,7 +52,7 @@
 	const rows = $derived(workspace.createdReturns.filter(record => record.taxpayerId === params.id).map(record => ({
 		id: record.id, form: record.formCode, period: record.returnPeriod,
 		status: record.archived ? 'Archived' : record.status, updatedAt: record.updatedAt,
-		amount: Number(record.values['frm1601EQ:txtTotalAmountDue'] || '0')
+		amount: getReturnAmount(record.formCode, record.values) === undefined ? '—' : Number(getReturnAmount(record.formCode, record.values)!.replaceAll(',', ''))
 	})));
 	function route(id: string, code: string) {
 		return `${buildTaxpayerFormsRoute(params.id, code)}?return=${encodeURIComponent(id)}`;
@@ -58,7 +60,7 @@
 	function create(formCode: string) {
 		if (busy || !profile || archived || !storageReady) return;
 		createOpen = false;
-		void goto(`${buildTaxpayerFormsRoute(params.id, formCode)}?new=true`);
+		void goto(resolve('/ebirforms/taxpayers/[id]/forms/[formCode]?new=true', { id: params.id, formCode }));
 	}
 	function recordForAction(id: string): CreatedReturn | undefined {
 		if (busy || !storageReady) return;
@@ -106,11 +108,11 @@
 		const definition = record && getFormDefinition(record.formCode);
 		if (!record || !definition) return;
 		isPrinting = true;
-		const values = { ...record.values };
+		const values = { ...record.values, ...(profile ? getManagedTaxpayerValues(record.formCode, profile, record.status) : {}) };
 		const paperSize = settings.prefs.paperSize;
 		try {
 			const suggestedFilename = buildPdfExportFilename({ formCode: record.formCode,
-				year: values['frm1601EQ:txtYear'] || 'YYYY', quarter: values['frm1601EQ:optQuarter'] || 'Q' });
+				period: getReturnPeriod(record.formCode, values) });
 			const outputPath = await save({ defaultPath: suggestedFilename, filters: [{ name: 'PDF document', extensions: ['pdf'] }] });
 			if (!outputPath) { workspace.statusMessage = 'PDF export canceled.'; return; }
 			workspace.statusMessage = 'Generating PDF…';
@@ -171,10 +173,10 @@
 				<p class="font-medium">Review BIR Form {errorRecord.formCode}, {errorRecord.returnPeriod} before continuing.</p>
 				<ul class="my-2 list-disc pl-5">
 					{#each Object.entries(actionErrors) as [id, message] (id)}
-						<li>{getFormDefinition(errorRecord.formCode)?.fields.find(field => field.id === id)?.label || 'Over-remittance treatment'}: {message}</li>
+						<li>{getFormDefinition(errorRecord.formCode)?.fields.find(field => field.id === id)?.label.replace(/^\d+[A-Z]?\s+/, '') || (id.endsWith(':overpaymentOption') ? 'Over-remittance treatment' : 'Return details')}: {message}</li>
 					{/each}
 				</ul>
-				<ButtonLink href={route(errorRecord.id, errorRecord.formCode)} variant="secondary" size="sm">Edit return to fix errors</ButtonLink>
+				<ButtonLink href={`${route(errorRecord.id, errorRecord.formCode)}&validate=true`} variant="secondary" size="sm">Edit return to fix errors</ButtonLink>
 			</div>
 		{/if}
 		{#if !storageReady}<p role="alert" class="text-sm text-danger">{workspace.statusMessage}</p>{/if}
@@ -185,7 +187,7 @@
 				{#if key === 'form'}<span class="font-mono font-medium text-accent">BIR Form {row.form}</span>
 				{:else if key === 'status'}<Badge size="sm" tone={row.status === 'Submitted' ? 'success' : row.status === 'Final' ? 'info' : row.status === 'For resubmission' ? 'warn' : 'neutral'}>{row.status}</Badge>
 				{:else if key === 'updatedAt'}<span class="whitespace-nowrap text-xs text-fg-muted">{date(Number(row.updatedAt))}</span>
-				{:else if key === 'amount'}{amount(Number(row.amount))}
+				{:else if key === 'amount'}{row.amount === '—' ? '—' : amount(Number(row.amount))}
 				{:else}{row[key]}{/if}
 			{/snippet}
 			{#snippet actions(row)}

@@ -2,7 +2,7 @@
 	import type { FormDefinition } from '$lib/forms';
 	let { definition, errors, taxpayerHref = '' }: { definition: FormDefinition; errors: Record<string, string>; taxpayerHref?: string } = $props();
 	function isTaxpayerField(id: string) {
-		return id === 'txtEmail' || /^frm1601EQ:(txtTIN[123]|txtBranchCode|txtRDOCode|txtTaxpayerName|optCategory|txtAddress2?|txtZipCode|txtTelNum)$/.test(id);
+		return !!definition.fields.find(field => field.id === id)?.profileKey || id === 'txtEmail' || /^frm[^:]+:(txtTIN[123]|txtBranchCode|txtRDOCode|txtTaxpayerName|optCategory|txtAddress2?|txtZipCode|txtTelNum|txtEmail)$/.test(id);
 	}
 	function label(id: string) {
 		const row = id.match(/:txt(ATC|TaxBase|TaxRate|TaxWithheld)(1[3-8])$/);

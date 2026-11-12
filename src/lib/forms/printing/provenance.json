@@ -1,0 +1,301 @@
+{
+  "source_root": "/Users/ogie/WebProjects/eBIRForms/_extracted_embedded_files",
+  "maintenance": "The checked-in Svelte components and separate CSS are canonical. Original HTA files and reviewed snapshots were used only for one-time migration; no source HTML is loaded at runtime.",
+  "forms": {
+    "0605": {
+      "source": "forms/BIR-Form0605.hta",
+      "sha256": "b188871306e5bf96d0393d4de928f9391c97af33d18fb176b2ef8f3053a3e555",
+      "component": "src/lib/forms/printing/form-0605-print.svelte",
+      "stylesheet": "src/lib/forms/printing/form-0605-print.css",
+      "reviewed_snapshot_sha256": "160954f10cd40ae9954adab32811810774d3f2e5eab4e0068dba7d340d6768c3"
+    },
+    "0619E": {
+      "source": "forms/BIR-Form0619E.hta",
+      "sha256": "426205a6692a9d11a2a91447446d66b947865257261e4260f91ccb242097d87e",
+      "component": "src/lib/forms/printing/form-0619e-print.svelte",
+      "stylesheet": "src/lib/forms/printing/form-0619e-print.css",
+      "reviewed_snapshot_sha256": "bf0c09284680a3864036394b9a8ac1621f54e0b085b109186b09c929c299f135"
+    },
+    "0619F": {
+      "source": "forms/BIR-Form0619F.hta",
+      "sha256": "994818ea7b5691656d302d32025a39c6895a032d417871a6080803373436ecca",
+      "component": "src/lib/forms/printing/form-0619f-print.svelte",
+      "stylesheet": "src/lib/forms/printing/form-0619f-print.css",
+      "reviewed_snapshot_sha256": "f3ec46d0e70657bbbbf7c2206555093bcba6e97eea38c7a3fd0c0780eb68b2fe"
+    },
+    "1600": {
+      "source": "forms/BIR-Form1600.hta",
+      "sha256": "1ff4ce44be45dff40c6592a25183a5ba015da9baa62767d9f9d890cbbcae470f",
+      "component": "src/lib/forms/printing/form-1600-print.svelte",
+      "stylesheet": "src/lib/forms/printing/form-1600-print.css",
+      "reviewed_snapshot_sha256": "efd4d3242c3aba5fd31a0a08c18ea9f3a61a6d20ab634bee0fed4eff39ab9e3a"
+    },
+    "1600PTv2018": {
+      "source": "forms/BIR-Form1600PTv2018.hta",
+      "sha256": "0126f8bb0e48b83c52501863186d027bb7ec9b71900a55976df87c7e2e60d705",
+      "component": "src/lib/forms/printing/form-1600ptv2018-print.svelte",
+      "stylesheet": "src/lib/forms/printing/form-1600ptv2018-print.css",
+      "reviewed_snapshot_sha256": "55d814db3c018d1d5035ad9a20c04e484d500e4d72fa2a82914a9f0d7a6a2e0e"
+    },
+    "1600VTv2018": {
+      "source": "forms/BIR-Form1600VTv2018.hta",
+      "sha256": "164d8215bad1455859692f47cf0793bb8da5b5c7be4b4fdcc2d5d9ab78aa7f0c",
+      "component": "src/lib/forms/printing/form-1600vtv2018-print.svelte",
+      "stylesheet": "src/lib/forms/printing/form-1600vtv2018-print.css",
+      "reviewed_snapshot_sha256": "c249b19e08a5699f168779526a9a2bf1eb1953ec4bb3807040b6f2d423e14aee"
+    },
+    "1600WP": {
+      "source": "forms/BIR-Form1600WP.hta",
+      "sha256": "9ba0c42312fc76d3ee603f51614b843a99567b61a4cd5e525cd48cb47125e5bb",
+      "component": "src/lib/forms/printing/form-1600wp-print.svelte",
+      "stylesheet": "src/lib/forms/printing/form-1600wp-print.css",
+      "reviewed_snapshot_sha256": "4b52ee88434fd36655eae99b6de9c8bcadcd2f4b0fbf66e5ffa23188e368940b"
+    },
+    "1601C": {
+      "source": "forms/BIR-Form1601C.hta",
+      "sha256": "1dab40c1c64342dff8222c696ceff288847059f819f580ccde7ecf4da3e3088a",
+      "component": "src/lib/forms/printing/form-1601c-print.svelte",
+      "stylesheet": "src/lib/forms/printing/form-1601c-print.css",
+      "reviewed_snapshot_sha256": "b19d3634720fc01f5883c8f276c6a779bc363a6dac433cf493322de50cc99f2e"
+    },
+    "1601Cv2018": {
+      "source": "forms/BIR-Form1601Cv2018.hta",
+      "sha256": "f021f848305ac302c749e001053f5bc9e1fafb2ea68eb916d85b0f24546e43c8",
+      "component": "src/lib/forms/printing/form-1601cv2018-print.svelte",
+      "stylesheet": "src/lib/forms/printing/form-1601cv2018-print.css",
+      "reviewed_snapshot_sha256": "783508a68811f96aabf3e58c2af9e82e997dc82e253a00ae3002cadbf3dc0139"
+    },
+    "1601E": {
+      "source": "forms/BIR-Form1601E.hta",
+      "sha256": "0162739b5a892ca0c7cc31dd355d57086bd9f8bf48d55ba0bc603de5597a3d63",
+      "component": "src/lib/forms/printing/form-1601e-print.svelte",
+      "stylesheet": "src/lib/forms/printing/form-1601e-print.css",
+      "reviewed_snapshot_sha256": "a8d9e5d6b4175c922bbb97082c505b5ca81cd6896da19f8e7275d0a687c94941"
+    },
+    "1601F": {
+      "source": "forms/BIR-Form1601F.hta",
+      "sha256": "ad01bce18578a6bf50bb3ef6e1d80c66a59edf56b15839aab1140db6c5b2f6e3",
+      "component": "src/lib/forms/printing/form-1601f-print.svelte",
+      "stylesheet": "src/lib/forms/printing/form-1601f-print.css",
+      "reviewed_snapshot_sha256": "3b657d1e033aaae26d5336525710b39e9db4855ad6d681c8a1ca3d907578a9c8"
+    },
+    "1601FQ": {
+      "source": "forms/BIR-Form1601FQ.hta",
+      "sha256": "376bde1e846d2fe2a9f23eccfe51865c59d437088dbc1c104db00695a7482c2f",
+      "component": "src/lib/forms/printing/form-1601fq-print.svelte",
+      "stylesheet": "src/lib/forms/printing/form-1601fq-print.css",
+      "reviewed_snapshot_sha256": "756bb5aceaa7366a7744fe745b261ecb695407e531ddb27d68e04b3320178c17"
+    },
+    "1602": {
+      "source": "forms/BIR-Form1602.hta",
+      "sha256": "f3ae4829688c395501a7cb42d70f6efbf1851e0f6b1b7ff7664d08c7f0b7adf0",
+      "component": "src/lib/forms/printing/form-1602-print.svelte",
+      "stylesheet": "src/lib/forms/printing/form-1602-print.css",
+      "reviewed_snapshot_sha256": "642dd3dc35de0c6668539547c59e0088d512870e0cb2dfc1052a830c2803d5be"
+    },
+    "1602Qv2018": {
+      "source": "forms/BIR-Form1602Qv2018.hta",
+      "sha256": "110145cd4d5ced917220313676d204d32f73c213fcbbb957a425d8a5d2792fc1",
+      "component": "src/lib/forms/printing/form-1602qv2018-print.svelte",
+      "stylesheet": "src/lib/forms/printing/form-1602qv2018-print.css",
+      "reviewed_snapshot_sha256": "e7e5af25f65c50c7877adfa737b1c56afeaa1cdc17122e74e49a5acba20f0a9a"
+    },
+    "1603": {
+      "source": "forms/BIR-Form1603.hta",
+      "sha256": "141e9f62fd1c27306ef989776c99e8a47058fc936c7dc1324da5a40e1026eb14",
+      "component": "src/lib/forms/printing/form-1603-print.svelte",
+      "stylesheet": "src/lib/forms/printing/form-1603-print.css",
+      "reviewed_snapshot_sha256": "f3a987fed8ebb3626754d6946590bb288e43c278fc2d97b4faa86c4f3c34ab64"
+    },
+    "1603Qv2018": {
+      "source": "forms/BIR-Form1603Qv2018.hta",
+      "sha256": "1f0ad87c4aea0e5f3e7d188378a07abdad87102eabf33675b6996d59dc87f54d",
+      "component": "src/lib/forms/printing/form-1603qv2018-print.svelte",
+      "stylesheet": "src/lib/forms/printing/form-1603qv2018-print.css",
+      "reviewed_snapshot_sha256": "eb58fbe1b3748cd7dabf75684986710cf9a0098e94107905f3d7c9dabd74bd6a"
+    },
+    "1604C": {
+      "source": "forms/BIR-Form1604C.hta",
+      "sha256": "f038b0d212f999e150ef92c3094514b702ddd191c6f343e7cb2f41926cca9f98",
+      "component": "src/lib/forms/printing/form-1604c-print.svelte",
+      "stylesheet": "src/lib/forms/printing/form-1604c-print.css",
+      "reviewed_snapshot_sha256": "3f63d719bf1725a7097118c3efb1a07e4b3b42ed271a50d968c120f2b4c2dcea"
+    },
+    "1604CF": {
+      "source": "forms/BIR-Form1604CF.hta",
+      "sha256": "c9d77bc671afe1f815b389d8c55da4041a8bd694deaf07698fae796f52a1df9e",
+      "component": "src/lib/forms/printing/form-1604cf-print.svelte",
+      "stylesheet": "src/lib/forms/printing/form-1604cf-print.css",
+      "reviewed_snapshot_sha256": "c2db972694807b89947509b404afdfe0839ebebc38de9a999154c25ace990c77"
+    },
+    "1604E": {
+      "source": "forms/BIR-Form1604E.hta",
+      "sha256": "3019a485f9c5ed9d20a8a2d7462884f0ed7e3c024bdc9bae724de6af5fe5f83c",
+      "component": "src/lib/forms/printing/form-1604e-print.svelte",
+      "stylesheet": "src/lib/forms/printing/form-1604e-print.css",
+      "reviewed_snapshot_sha256": "b6b7cbc1ce2e3b45d1aeaca9d970ae3c8efd91c56d14f3d5024c143fc3689732"
+    },
+    "1604Ev2018": {
+      "source": "forms/BIR-Form1604Ev2018.hta",
+      "sha256": "5151a467ccc1014d85c728a2bf82c125209c0bf0a326eda8abf96f79a2e90aad",
+      "component": "src/lib/forms/printing/form-1604ev2018-print.svelte",
+      "stylesheet": "src/lib/forms/printing/form-1604ev2018-print.css",
+      "reviewed_snapshot_sha256": "801e0153485a861979f623eb390ab49edf85cb130534680dd309f6c59f19fc5d"
+    },
+    "1604F": {
+      "source": "forms/BIR-Form1604F.hta",
+      "sha256": "5474c52f8f8b321f148d8820c5a1984498d6fb406489c2db95839c9e9316db26",
+      "component": "src/lib/forms/printing/form-1604f-print.svelte",
+      "stylesheet": "src/lib/forms/printing/form-1604f-print.css",
+      "reviewed_snapshot_sha256": "3fe93389d7b5094cb111f3f3477d7983b550f4b218105a62bd893b6b5d1588ab"
+    },
+    "1606": {
+      "source": "forms/BIR-Form1606.hta",
+      "sha256": "6092d31f6fe174f3baefa6125981e3de7fbd3af9bb000746eaf795ec3f65ea9b",
+      "component": "src/lib/forms/printing/form-1606-print.svelte",
+      "stylesheet": "src/lib/forms/printing/form-1606-print.css",
+      "reviewed_snapshot_sha256": "ce650a7b1cbdc7a5cd8f466e048f7cf9dd4d27cc6f8a3b3c926e27eb36274f8d"
+    },
+    "1601EQ": {
+      "source": "forms/BIR-Form1601EQ.hta",
+      "sha256": "cd56bf18d1da2127d578af611fe8005fe49913a65781bb603b22b31bbe548b96",
+      "component": "src/lib/forms/printing/form-1601-eq-print.svelte",
+      "stylesheet": "src/lib/forms/printing/form-1601-eq-print.css",
+      "maintenance": "Existing dedicated Svelte print component retained."
+    }
+  },
+  "assets": {
+    "original-1d5df704be8f0f62.gif": {
+      "sha256": "1d5df704be8f0f6248d9e5d8457536337ebc4798b6870a5fe00f449a478ee94c",
+      "mime_type": "image/gif"
+    },
+    "original-3ae42fa2a95c1b8a.jpg": {
+      "sha256": "3ae42fa2a95c1b8a5036703e4968433577c931e23791e2092acf65e81130bc5b",
+      "mime_type": "image/jpeg"
+    },
+    "original-b68774359549f254.jpg": {
+      "sha256": "b68774359549f254dbfd8c988a44b16613470d210335154e4f81795cd7189750",
+      "mime_type": "image/jpeg"
+    },
+    "original-6c831e35170ff5f3.png": {
+      "sha256": "6c831e35170ff5f336f6fcba8f4aa56c1a6e22c010d1250f08bf553e7c900816",
+      "mime_type": "image/png"
+    },
+    "original-496a4fcbfde5f354.png": {
+      "sha256": "496a4fcbfde5f354422c2b08ce50bdd911641b5102985156b2d7a0066ca8f12f",
+      "mime_type": "image/png"
+    },
+    "original-0be0a4db0aeba522.png": {
+      "sha256": "0be0a4db0aeba5228dc6a7627f9fc0c6672be5d2493c4384bb951a0f67b16e45",
+      "mime_type": "image/png"
+    },
+    "original-816b2d6d98e26c06.jpg": {
+      "sha256": "816b2d6d98e26c0644777b26cf96d009029097e650aeddd654990eb2903484ab",
+      "mime_type": "image/jpeg"
+    },
+    "original-f49004d827e2ff22.jpg": {
+      "sha256": "f49004d827e2ff225575b57746713a7734ea9ee775a3c8aed8cbdc70246dc372",
+      "mime_type": "image/jpeg"
+    },
+    "original-7713769eea6cc196.jpg": {
+      "sha256": "7713769eea6cc196e8eb636321d8d2790fd68cf02b3f32f92a26c6474eeba9f1",
+      "mime_type": "image/jpeg"
+    },
+    "original-dd735c7ce12f3a92.png": {
+      "sha256": "dd735c7ce12f3a927df31c105d85dfc301810876685eaec62b6af7a23fff846d",
+      "mime_type": "image/png"
+    },
+    "original-065b90f1c3d98561.png": {
+      "sha256": "065b90f1c3d98561f3c85b366df261cb36b6c490dfb6b79c9590a5fce68350e2",
+      "mime_type": "image/png"
+    },
+    "original-914aadd56852f9bc.jpg": {
+      "sha256": "914aadd56852f9bc97326cd61054d62e89ed1ff861569f148cc67a6779a17c1b",
+      "mime_type": "image/jpeg"
+    },
+    "original-2def78adfb729a7b.png": {
+      "sha256": "2def78adfb729a7be4b7284d55520c1bc7039d6627edd2530550fb154a85a187",
+      "mime_type": "image/png"
+    },
+    "original-cc3df6afa528ca19.png": {
+      "sha256": "cc3df6afa528ca192745d8b33443c2b1a0b6eb0ff67c215397aba6b7034c70c7",
+      "mime_type": "image/png"
+    },
+    "original-0892cf9ac6a65a9c.png": {
+      "sha256": "0892cf9ac6a65a9ca2077fcc54f07044554959456bf088378d21d7e626d45315",
+      "mime_type": "image/png"
+    },
+    "original-53aae0328b21d682.png": {
+      "sha256": "53aae0328b21d68242202e89d2b42ea09aa0b255376831b6849f2979bf0c0e21",
+      "mime_type": "image/png"
+    },
+    "original-468046f95a286ae6.png": {
+      "sha256": "468046f95a286ae679acceb7f94944914b38880dc69642ea8a156424f83fe13a",
+      "mime_type": "image/png"
+    },
+    "original-835c69413368f3b0.jpg": {
+      "sha256": "835c69413368f3b0c754b13dae425c5b45c0c2641f95dabc6cfa06d67f1229e8",
+      "mime_type": "image/jpeg"
+    },
+    "original-594ca0bbf6e6779b.png": {
+      "sha256": "594ca0bbf6e6779b095fe84030857a8431935fb59c203c4b5ae887297bd39c00",
+      "mime_type": "image/png"
+    },
+    "original-28c4d3fd6603157d.png": {
+      "sha256": "28c4d3fd6603157d43dc6ba198c17a434c0c0f25b6633bb5e48c73476c1925df",
+      "mime_type": "image/png"
+    },
+    "original-580a5b376dba7239.png": {
+      "sha256": "580a5b376dba7239dc83ba885111068ad0f70e9a9788e3d08b7f6f742a320683",
+      "mime_type": "image/png"
+    },
+    "original-869e0a6cdf768d3d.png": {
+      "sha256": "869e0a6cdf768d3da195e53ca0e348062c9fd18ad56193ce39a064461b0d61e0",
+      "mime_type": "image/png"
+    },
+    "original-1251c8f7afff49b6.png": {
+      "sha256": "1251c8f7afff49b68f9c056a8991311ef8b7b2ad41b1520d8dfa57cb2cab4c28",
+      "mime_type": "image/png"
+    },
+    "original-d7904eb8e8ef5035.png": {
+      "sha256": "d7904eb8e8ef5035c18181325e9386a39d9f43886aa3d27f103947095bd74852",
+      "mime_type": "image/png"
+    },
+    "original-29565089a8196ccb.png": {
+      "sha256": "29565089a8196ccb0f1663e5513410c12dc99ba0fbd84f7cab42d1012208101f",
+      "mime_type": "image/png"
+    },
+    "original-e2e443cdd698b6af.png": {
+      "sha256": "e2e443cdd698b6af76479cc55eb9550ba743eb96ad06c0edc5310629d55fa7dc",
+      "mime_type": "image/png"
+    },
+    "original-bd12294a96ae23a8.png": {
+      "sha256": "bd12294a96ae23a8b4e6894598845586d2b61d3e962796c01b7907013e37b62b",
+      "mime_type": "image/png"
+    },
+    "original-f9fe9556dc4e574d.jpg": {
+      "sha256": "f9fe9556dc4e574d0d5f6f84895d1e95046a359b9fdb93ea9d5ad06d9cf78022",
+      "mime_type": "image/jpeg"
+    },
+    "original-d0ffdd1dbf69b1a6.jpg": {
+      "sha256": "d0ffdd1dbf69b1a663d87a88f11752991e696a57fcc3f5e3b4cdc371c608e9f6",
+      "mime_type": "image/jpeg"
+    },
+    "original-26bb358d5895ab7a.jpg": {
+      "sha256": "26bb358d5895ab7a4e5648e5891a4bef3b4388518d50fafda7a93bcaffbded71",
+      "mime_type": "image/jpeg"
+    },
+    "original-a9139fbd79570473.jpg": {
+      "sha256": "a9139fbd79570473a282f234f6244add5e19898753862a1bfd6c639f66a6ed42",
+      "mime_type": "image/jpeg"
+    },
+    "original-7488026308d82906.jpg": {
+      "sha256": "7488026308d8290640731164a282349ae20981d88f04f6621f2c85fba5549fa2",
+      "mime_type": "image/jpeg"
+    },
+    "original-a044301c1d741e63.png": {
+      "sha256": "a044301c1d741e6317a2e4dfcc44ecb5ede4abd002be4c9f11631ce55749d7cd",
+      "mime_type": "image/png"
+    }
+  }
+}

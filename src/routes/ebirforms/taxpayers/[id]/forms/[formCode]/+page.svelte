@@ -1,8 +1,11 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { page } from '$app/state';
+	import { resolve } from '$app/paths';
 	import { afterNavigate, beforeNavigate, goto } from '$app/navigation';
-	import Form1601EQ from '$lib/forms/form-1601-eq.svelte';
+	import WithholdingEditor from '$lib/forms/withholding-editor.svelte';
+	import { getWithholdingDefinition } from '$lib/forms/withholding-definitions';
+	import Form1601EQ from '$lib/forms/form-1601-eq/form-1601-eq.svelte';
 	import ReturnErrors from '$lib/forms/return-errors.svelte';
 	import { ebirformsWorkspace as workspace } from '$lib/ebirforms/ebirforms-workspace.svelte';
 	import { Badge, Button, ButtonLink, Page } from '$lib/components/ui';
@@ -35,16 +38,17 @@
 			recordError = 'Choose a saved form from this taxpayer’s forms list, or create a new form there.';
 		} else {
 			recordError = workspace.openReturn(record.id) ? '' : workspace.statusMessage;
+			if (!recordError && page.url.searchParams.get('validate') === 'true') workspace.validateReturn({ applyCalculations: false });
 		}
 	}
 	function save() {
-		if (!busy && workspace.validateReturn({ applyCalculations: false }) && workspace.saveActiveReturn()) {
-			void goto(`/ebirforms/taxpayers/${params.id}/forms`);
+		if (!busy && workspace.saveActiveReturn()) {
+			void goto(resolve('/ebirforms/taxpayers/[id]/forms', { id: params.id }));
 		}
 	}
 	function cancel() {
 		if (busy) return;
-		void goto(`/ebirforms/taxpayers/${params.id}/forms`);
+		void goto(resolve('/ebirforms/taxpayers/[id]/forms', { id: params.id }));
 	}
 </script>
 
@@ -61,7 +65,7 @@
 	{:else if recordError}
 		<p role="alert" class="text-sm text-danger">{recordError}</p>
 	{:else}
-		<section class="eq-workspace" aria-label="BIR Form 1601EQ workspace">
+		<section class="eq-workspace" aria-label={`BIR Form ${params.formCode} workspace`}>
 			<header class="eq-header">
 				<div class="eq-heading">
 					<div class="eq-title-row">
@@ -73,7 +77,7 @@
 							<span class="eq-muted">Unsaved changes</span>
 						{/if}
 					</div>
-					<p class="eq-description">Quarterly expanded withholding tax</p>
+					<p class="eq-description">{workspace.selectedForm?.title}</p>
 				</div>
 			</header>
 			{#if workspace.selectedForm}
@@ -84,12 +88,16 @@
 				{/if}
 				<fieldset disabled={busy} class="eq-form-controls">
 					<legend class="sr-only">BIR form details</legend>
-					<Form1601EQ definition={workspace.selectedForm} bind:values={workspace.formValues} errors={workspace.validationErrors} onvaluechange={(patch) => workspace.updateFormValues(patch)} />
+					{#if workspace.selectedForm.code === '1601EQ'}
+						<Form1601EQ definition={workspace.selectedForm} bind:values={workspace.formValues} errors={workspace.validationErrors} onvaluechange={(patch) => workspace.updateFormValues(patch)} />
+					{:else if getWithholdingDefinition(workspace.selectedForm.code)}
+						<WithholdingEditor definition={getWithholdingDefinition(workspace.selectedForm.code)!} values={workspace.formValues} errors={workspace.validationErrors} taxpayerHref={`/ebirforms/taxpayers/${params.id}/edit`} onvaluechange={(patch) => workspace.updateFormValues(patch)} />
+					{/if}
 				</fieldset>
 			{/if}
 			<footer class="eq-action-bar" aria-label="Return actions">
 				<div class="eq-actions">
-					<Button disabled={busy} onclick={save}>Save</Button>
+					<Button disabled={busy} onclick={save}>Save draft</Button>
 					<Button variant="secondary" disabled={busy} onclick={cancel}>Cancel</Button>
 				</div>
 				<div class="eq-status" role="status">

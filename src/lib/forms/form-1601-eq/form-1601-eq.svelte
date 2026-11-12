@@ -1,5 +1,5 @@
 <script lang="ts">
-	import './form-1601-eq-layout.css';
+	import '../form-editor-layout.css';
 	import type { FormDefinition } from '$lib/forms';
 	import Form1601EQEditor from './form-1601-eq-editor.svelte';
 
