@@ -1,0 +1,2 @@
+# Only needed for the explicitly invoked loopback SFTP compatibility tests.
+paramiko==3.5.1

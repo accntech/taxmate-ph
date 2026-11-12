@@ -71,6 +71,7 @@ fn dry_run_preserves_prior_submission_without_adding_history() {
         root.path(),
         SubmissionRequest {
             xml: xml("0"),
+            rdo_xml: None,
             return_filename: filename.into(),
             form_code: "1601EQ".into(),
             tin: "123456789".into(),

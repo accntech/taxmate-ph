@@ -3,7 +3,6 @@ use std::{
     fs::OpenOptions,
     io,
     io::{Read, Seek, SeekFrom, Write},
-    net::TcpStream,
     path::{Path, PathBuf},
     time::Duration,
 };
@@ -18,8 +17,13 @@ use pbkdf2::pbkdf2_hmac;
 use serde::{Deserialize, Serialize};
 use sha1::Sha1;
 use sha2::{Digest, Sha256};
-use ssh2::Session;
 use tauri::Manager;
+
+#[path = "submission-dispatcher.rs"]
+mod dispatcher;
+
+#[path = "submission-transport.rs"]
+mod transport;
 
 const CURRENT_VERSION: &str = "7.9.6.0";
 const PRIMARY_DISPATCHER_BASE: &str = "http://birgovph.com/";
@@ -27,6 +31,9 @@ const BACKUP_DISPATCHER_BASE: &str = "http://ws1.birgovph.com/";
 const DISPATCHER_SECRET_PASSWORD_ENV: &str = "EBIRFORMS_DISPATCHER_SECRET_PASSWORD";
 const RETURN_COPY_PASSWORD_ENV: &str = "EBIRFORMS_RETURN_COPY_PASSWORD";
 const SUBMISSION_LOG_TAIL_BYTES: u64 = 128 * 1024;
+
+#[cfg(test)]
+static SUBMISSION_TEST_ENV: std::sync::Mutex<()> = std::sync::Mutex::new(());
 
 #[derive(Clone, Debug, Serialize)]
 pub struct SubmissionLog {
@@ -97,6 +104,8 @@ pub enum SubmissionMode {
 #[serde(rename_all = "camelCase")]
 pub struct SubmissionRequest {
     pub xml: String,
+    #[serde(default)]
+    pub rdo_xml: Option<String>,
     pub return_filename: String,
     pub form_code: String,
     pub tin: String,
@@ -213,12 +222,14 @@ pub fn run_submission(
     let email_name = email_file_name(&request.return_filename, &request.email)?;
     let save_path = save_dir.join(&request.return_filename);
     let send_path = rdo_dir.join(email_name);
+    let _active_return = ActiveReturn::acquire(&save_path)?;
     let prepared_xml = update_final_flag(&request.xml, "2");
 
     // Preserve any legacy submitted copy before a draft or resend overwrites it.
     crate::return_history::load_history(root)?;
     fs::write(&save_path, &prepared_xml)?;
-    fs::write(&send_path, &prepared_xml)?;
+    let prepared_rdo = update_final_flag(request.rdo_xml.as_deref().unwrap_or(&request.xml), "2");
+    fs::write(&send_path, &prepared_rdo)?;
     logger.log(format!(
         "files_prepared save_path={} send_path={}",
         path_to_string(&save_path),
@@ -246,7 +257,7 @@ pub fn run_submission(
         &request.form_code,
         CURRENT_VERSION,
     );
-    let dispatcher = resolve_dispatcher(&request, &dispatcher_url, &logger)?;
+    let (dispatcher, dispatcher_url) = resolve_dispatcher(&request, &dispatcher_url, &logger)?;
     encrypt_native_return_copy(&send_path).map_err(|error| {
         logger.log(format!("native_encrypt_error {}", error.message));
         SubmissionError::with_log_path(error.message, &logger)
@@ -262,8 +273,10 @@ pub fn run_submission(
             SubmissionError::with_log_path(error.message, &logger)
         },
     )?;
-    let exit_code = run_native_sftp(&plan, &logger);
-    let submitted = exit_code == 0;
+    let upload = run_native_sftp(&plan, &logger);
+    let submitted = upload.is_ok();
+    let exit_code = if submitted { 0 } else { 1 };
+    let upload_error = upload.err().map(|error| error.message);
     let final_flag = if submitted { "1" } else { "2" };
     let final_xml = update_final_flag(&prepared_xml, final_flag);
 
@@ -277,7 +290,7 @@ pub fn run_submission(
             &request.tin,
         )
         .err()
-        .map(|error| format!(" Submission succeeded, but history could not be saved: {error}"))
+        .map(|error| format!(" Upload completed, but history could not be saved: {error}"))
     } else {
         None
     };
@@ -285,9 +298,8 @@ pub fn run_submission(
         if !submitted {
             return Err(error.into());
         }
-        let warning = format!(
-            " Submission succeeded, but the local return copy could not be updated: {error}"
-        );
+        let warning =
+            format!(" Upload completed, but the local return copy could not be updated: {error}");
         history_warning
             .get_or_insert_with(String::new)
             .push_str(&warning);
@@ -315,11 +327,14 @@ pub fn run_submission(
         log_path: Some(logger.path_string()),
         message: if submitted {
             format!(
-                "Native SFTP upload reported a successful submission.{}",
+                "Return uploaded by SFTP. BIR acknowledgment is still required.{}",
                 history_warning.unwrap_or_default()
             )
         } else {
-            "Native SFTP upload did not report success.".into()
+            format!(
+                "Return upload failed: {}",
+                upload_error.unwrap_or_else(|| "unknown transport error".into())
+            )
         },
     })
 }
@@ -346,22 +361,22 @@ pub fn email_file_name(file_name: &str, email: &str) -> Result<String, Submissio
 }
 
 pub fn update_final_flag(xml: &str, flag: &str) -> String {
-    if !xml.contains("txtFinalFlag=") {
+    const PREFIX: &str = "<div>txtFinalFlag=";
+    const SUFFIX: &str = "txtFinalFlag=</div>";
+    // Raw RDO text may contain the marker in a taxpayer value. Only change the
+    // standalone control record; it is serialized after all taxpayer fields.
+    let Some(start) = xml.rfind(PREFIX) else {
+        return xml.to_string();
+    };
+    let value_start = start + PREFIX.len();
+    let Some(length) = xml[value_start..].find(SUFFIX) else {
+        return xml.to_string();
+    };
+    let value_end = value_start + length;
+    if !matches!(&xml[value_start..value_end], "0" | "1" | "2" | "3") {
         return xml.to_string();
     }
-
-    let mut parts = xml.splitn(3, "txtFinalFlag=");
-    let Some(before) = parts.next() else {
-        return xml.to_string();
-    };
-    let Some(_) = parts.next() else {
-        return xml.to_string();
-    };
-    let Some(after) = parts.next() else {
-        return xml.to_string();
-    };
-
-    format!("{before}txtFinalFlag={flag}txtFinalFlag={after}")
+    format!("{}{flag}{}", &xml[..value_start], &xml[value_end..])
 }
 
 pub fn build_dispatcher_url(base: &str, tin: &str, form_code: &str, version: &str) -> String {
@@ -375,24 +390,7 @@ pub fn build_dispatcher_url(base: &str, tin: &str, form_code: &str, version: &st
 }
 
 pub fn parse_dispatcher_response(response: &str) -> Result<DispatcherSettings, SubmissionError> {
-    serde_json::from_str(response)
-        .or_else(|_| {
-            let legacy_json = legacy_js_object_to_json(response)
-                .ok_or_else(|| serde_json::Error::io(io::Error::other("not a legacy object")))?;
-
-            serde_json::from_str(&legacy_json)
-        })
-        .map_err(|error| SubmissionError::new(format!("Invalid dispatcher response: {error}")))
-}
-
-fn legacy_js_object_to_json(response: &str) -> Option<String> {
-    let trimmed = response.trim();
-
-    if !trimmed.starts_with('{') || !trimmed.ends_with('}') || !trimmed.contains('\'') {
-        return None;
-    }
-
-    Some(trimmed.replace('\'', "\""))
+    dispatcher::parse(response)
 }
 
 fn validate_request(request: &SubmissionRequest) -> Result<(), SubmissionError> {
@@ -412,6 +410,17 @@ fn validate_request(request: &SubmissionRequest) -> Result<(), SubmissionError> 
         return Err(SubmissionError::new("TIN is required."));
     }
 
+    if request.mode == SubmissionMode::LegacySftp
+        && request
+            .rdo_xml
+            .as_deref()
+            .is_none_or(|xml| xml.trim().is_empty())
+    {
+        return Err(SubmissionError::new(
+            "A compatible RDO payload is required for live submission.",
+        ));
+    }
+
     Ok(())
 }
 
@@ -419,7 +428,7 @@ fn resolve_dispatcher(
     request: &SubmissionRequest,
     primary_url: &str,
     logger: &SubmissionLogger,
-) -> Result<DispatcherSettings, SubmissionError> {
+) -> Result<(DispatcherSettings, String), SubmissionError> {
     if !request.fetch_dispatcher {
         if let Some(dispatcher) = &request.dispatcher {
             logger.log(format!(
@@ -428,36 +437,28 @@ fn resolve_dispatcher(
                 !dispatcher.server.is_empty(),
                 dispatcher.port
             ));
-            return Ok(dispatcher.clone());
+            return Ok((dispatcher.clone(), primary_url.to_string()));
         }
-
         let message = "Dispatcher settings are required unless dispatcher fetching is enabled.";
         logger.log(format!("dispatcher_missing {message}"));
         return Err(SubmissionError::with_log_path(message, logger));
     }
-
-    logger.log(format!("dispatcher_fetch_primary url={primary_url}"));
-    fetch_dispatcher(primary_url).or_else(|primary_error| {
-        logger.log(format!(
-            "dispatcher_fetch_primary_error {}",
-            primary_error.message
-        ));
-        let backup_url = build_dispatcher_url(
-            BACKUP_DISPATCHER_BASE,
-            &request.tin,
-            &request.form_code,
-            CURRENT_VERSION,
-        );
-        logger.log(format!("dispatcher_fetch_backup url={backup_url}"));
-
-        fetch_dispatcher(&backup_url).map_err(|backup_error| {
-            logger.log(format!(
-                "dispatcher_fetch_backup_error {}",
-                backup_error.message
-            ));
-            SubmissionError::with_log_path(backup_error.message, logger)
-        })
+    let backup_url = build_dispatcher_url(
+        BACKUP_DISPATCHER_BASE,
+        &request.tin,
+        &request.form_code,
+        CURRENT_VERSION,
+    );
+    dispatcher::resolve_with(primary_url, &backup_url, |url| {
+        logger.log(format!("dispatcher_fetch url={url}"));
+        let result = fetch_dispatcher(url);
+        match &result {
+            Ok(settings) => logger.log(format!("dispatcher_result mode={}", settings.mode)),
+            Err(error) => logger.log(format!("dispatcher_fetch_error {}", error.message)),
+        }
+        result
     })
+    .map_err(|error| SubmissionError::with_log_path(error.message, logger))
 }
 
 fn fetch_dispatcher(url: &str) -> Result<DispatcherSettings, SubmissionError> {
@@ -466,10 +467,16 @@ fn fetch_dispatcher(url: &str) -> Result<DispatcherSettings, SubmissionError> {
         .build()
         .get(url)
         .call()
-        .map_err(|error| SubmissionError::new(format!("Dispatcher request failed: {error}")))?
-        .into_string()
-        .map_err(|error| SubmissionError::new(format!("Dispatcher response failed: {error}")))?;
+        .map_err(|error| SubmissionError::new(format!("Dispatcher request failed: {error}")))?;
+    read_dispatcher_response(response.into_reader())
+}
 
+fn read_dispatcher_response(reader: impl Read) -> Result<DispatcherSettings, SubmissionError> {
+    let mut response = String::new();
+    reader
+        .take(16 * 1024 + 1)
+        .read_to_string(&mut response)
+        .map_err(|_| SubmissionError::new("Could not read dispatcher response."))?;
     parse_dispatcher_response(&response)
 }
 
@@ -501,10 +508,12 @@ pub fn encrypt_native_return_copy(path: &Path) -> Result<(), SubmissionError> {
     let plain = fs::read(path)?;
     let compressed = zlib_compress(&plain)?;
     let encrypted = dcpcrypt_encrypt(&compressed)?;
-    let temp_path = path.with_file_name("tmpAES.tmp");
-
-    fs::write(&temp_path, encrypted)?;
-    fs::rename(temp_path, path)?;
+    let mut staging =
+        tempfile::NamedTempFile::new_in(path.parent().unwrap_or_else(|| Path::new(".")))?;
+    staging.write_all(&encrypted)?;
+    staging
+        .persist(path)
+        .map_err(|error| SubmissionError::from(error.error))?;
 
     Ok(())
 }
@@ -519,7 +528,7 @@ pub fn build_sftp_upload_plan(
     form_code: &str,
     local_path: PathBuf,
 ) -> Result<SftpUploadPlan, SubmissionError> {
-    if dispatcher.mode.trim() == "0" {
+    if matches!(dispatcher.mode.trim(), "" | "0") {
         return Err(SubmissionError::new(
             "Dispatcher reported that SFTP is disabled.",
         ));
@@ -534,6 +543,11 @@ pub fn build_sftp_upload_plan(
         dispatcher.port.trim().parse::<u16>().map_err(|error| {
             SubmissionError::new(format!("Dispatcher port is invalid: {error}"))
         })?;
+    if port == 0 {
+        return Err(SubmissionError::new(
+            "Dispatcher port must be greater than zero.",
+        ));
+    }
     let host = decrypt_dispatcher_secret(&dispatcher.server)?;
     let username = decrypt_dispatcher_secret(&dispatcher.username)?;
     let password = decrypt_dispatcher_secret(&dispatcher.password)?;
@@ -549,56 +563,30 @@ pub fn build_sftp_upload_plan(
     })
 }
 
-fn run_native_sftp(plan: &SftpUploadPlan, logger: &SubmissionLogger) -> i32 {
+fn run_native_sftp(
+    plan: &SftpUploadPlan,
+    logger: &SubmissionLogger,
+) -> Result<(), SubmissionError> {
     logger.log(format!(
         "native_sftp_start host={} port={} remote_path={}",
         plan.host, plan.port, plan.remote_path
     ));
 
-    match upload_native_sftp(plan) {
+    let root = logger
+        .path
+        .parent()
+        .and_then(Path::parent)
+        .unwrap_or_else(|| Path::new("."));
+    match transport::upload(plan, &root.join("settings/bir-known-hosts")) {
         Ok(()) => {
             logger.log("native_sftp_complete");
-            0
+            Ok(())
         }
         Err(error) => {
             logger.log(format!("native_sftp_error {}", error.message));
-            1
+            Err(error)
         }
     }
-}
-
-fn upload_native_sftp(plan: &SftpUploadPlan) -> Result<(), SubmissionError> {
-    let tcp = TcpStream::connect((plan.host.as_str(), plan.port))
-        .map_err(|error| SubmissionError::new(format!("SFTP connection failed: {error}")))?;
-    tcp.set_read_timeout(Some(Duration::from_secs(30)))?;
-    tcp.set_write_timeout(Some(Duration::from_secs(30)))?;
-
-    let mut session = Session::new()
-        .map_err(|error| SubmissionError::new(format!("SFTP session failed: {error}")))?;
-    session.set_tcp_stream(tcp);
-    session
-        .handshake()
-        .map_err(|error| SubmissionError::new(format!("SFTP handshake failed: {error}")))?;
-    session
-        .userauth_password(&plan.username, &plan.password)
-        .map_err(|error| SubmissionError::new(format!("SFTP authentication failed: {error}")))?;
-
-    if !session.authenticated() {
-        return Err(SubmissionError::new("SFTP authentication was rejected."));
-    }
-
-    let sftp = session
-        .sftp()
-        .map_err(|error| SubmissionError::new(format!("SFTP channel failed: {error}")))?;
-    let mut local = fs::File::open(&plan.local_path)?;
-    let mut remote = sftp
-        .create(Path::new(&plan.remote_path))
-        .map_err(|error| SubmissionError::new(format!("SFTP upload create failed: {error}")))?;
-
-    io::copy(&mut local, &mut remote)
-        .map_err(|error| SubmissionError::new(format!("SFTP upload failed: {error}")))?;
-
-    Ok(())
 }
 
 fn legacy_remote_folder(form_code: &str) -> String {
@@ -606,7 +594,8 @@ fn legacy_remote_folder(form_code: &str) -> String {
 }
 
 fn zlib_compress(plain: &[u8]) -> Result<Vec<u8>, SubmissionError> {
-    let mut encoder = ZlibEncoder::new(Vec::new(), Compression::new(3));
+    // Encrypt.exe's compression enum 3 maps to zlib's best-compression level 9.
+    let mut encoder = ZlibEncoder::new(Vec::new(), Compression::best());
     encoder.write_all(plain)?;
     encoder
         .finish()
@@ -637,6 +626,8 @@ fn dcpcrypt_transform(input: &[u8], encrypt: bool) -> Result<Vec<u8>, Submission
     let cipher = Aes256::new_from_slice(&key)
         .map_err(|error| SubmissionError::new(format!("Return copy cipher failed: {error}")))?;
     let mut chain = [0_u8; 16];
+    // DCPcrypt Init(nil IV) encrypts the zero block before Reset/CBC begins.
+    aes_encrypt_block(&cipher, &mut chain);
     let full_len = input.len() / 16 * 16;
     let mut output = Vec::with_capacity(input.len());
 
@@ -795,4 +786,191 @@ impl SubmissionError {
 
 fn path_to_string(path: &Path) -> String {
     path.to_string_lossy().into_owned()
+}
+
+struct ActiveReturn {
+    _file: fs::File,
+}
+
+impl Drop for ActiveReturn {
+    fn drop(&mut self) {
+        // Closing alone can retain a lock while a spawned child has inherited
+        // the handle. Release the lease explicitly when this operation ends.
+        let _ = self._file.unlock();
+    }
+}
+
+impl ActiveReturn {
+    fn acquire(save_path: &Path) -> Result<Self, SubmissionError> {
+        let directory = save_path.parent().unwrap().join(".submission-locks");
+        fs::create_dir_all(&directory)?;
+        let digest = Sha256::digest(save_path.file_name().unwrap().as_encoded_bytes());
+        let name = digest
+            .iter()
+            .map(|byte| format!("{byte:02x}"))
+            .collect::<String>();
+        let file = fs::File::options()
+            .read(true)
+            .write(true)
+            .create(true)
+            .truncate(false)
+            .open(directory.join(name))?;
+        file.try_lock().map_err(|_| SubmissionError::new(
+            "This return is already being prepared or submitted, or could not be locked. Try again after the current operation finishes."
+        ))?;
+        Ok(Self { _file: file })
+    }
+}
+
+#[cfg(test)]
+mod compatibility_tests {
+    use super::*;
+
+    fn with_synthetic_password(action: impl FnOnce()) {
+        let _guard = SUBMISSION_TEST_ENV
+            .lock()
+            .unwrap_or_else(|e| e.into_inner());
+        struct Restore(Option<String>);
+        impl Drop for Restore {
+            fn drop(&mut self) {
+                match &self.0 {
+                    Some(value) => env::set_var(RETURN_COPY_PASSWORD_ENV, value),
+                    None => env::remove_var(RETURN_COPY_PASSWORD_ENV),
+                }
+            }
+        }
+        let _restore = Restore(env::var(RETURN_COPY_PASSWORD_ENV).ok());
+        env::set_var(
+            RETURN_COPY_PASSWORD_ENV,
+            "public synthetic compatibility test",
+        );
+        action();
+    }
+
+    fn unhex(text: &str) -> Vec<u8> {
+        text.as_bytes()
+            .chunks_exact(2)
+            .map(|pair| u8::from_str_radix(std::str::from_utf8(pair).unwrap(), 16).unwrap())
+            .collect()
+    }
+
+    #[test]
+    fn cipher_matches_original_installer_machine_code_vectors() {
+        with_synthetic_password(|| {
+            let fixture: serde_json::Value = serde_json::from_str(include_str!(
+                "../tests/fixtures/submission/native-cipher-vectors.json"
+            ))
+            .unwrap();
+            for vector in fixture["vectors"].as_array().unwrap() {
+                let length = vector["length"].as_u64().unwrap() as usize;
+                let plain: Vec<u8> = (0..length).map(|i| ((i * 37 + 11) % 256) as u8).collect();
+                let actual = dcpcrypt_encrypt(&plain).unwrap();
+                let digest = Sha256::digest(&actual)
+                    .iter()
+                    .map(|byte| format!("{byte:02x}"))
+                    .collect::<String>();
+                assert_eq!(
+                    digest,
+                    vector["ciphertext_sha256"].as_str().unwrap(),
+                    "original x86 ciphertext for length {length}"
+                );
+                if let Some(expected) = vector["ciphertext_hex"].as_str() {
+                    let original = unhex(expected);
+                    assert_eq!(actual, original, "cipher length {length}");
+                    assert_eq!(
+                        dcpcrypt_decrypt(&original).unwrap(),
+                        plain,
+                        "original decrypt length {length}"
+                    );
+                }
+            }
+        });
+    }
+
+    #[test]
+    fn reads_independently_compressed_original_cipher_return_copy() {
+        with_synthetic_password(|| {
+            let fixture: serde_json::Value = serde_json::from_str(include_str!(
+                "../tests/fixtures/submission/return-copy-vector.json"
+            ))
+            .unwrap();
+            let actual =
+                decrypt_native_return_copy(&unhex(fixture["ciphertext_hex"].as_str().unwrap()))
+                    .expect("original cipher output must decrypt and inflate");
+            assert_eq!(actual, fixture["plaintext"].as_str().unwrap().as_bytes());
+        });
+    }
+
+    #[test]
+    fn compression_uses_original_enum_three_level_nine_and_zlib_framing() {
+        let plain = b"legacy return compression framing test".repeat(100);
+        let compressed = zlib_compress(&plain).unwrap();
+        assert_eq!(compressed[0], 0x78, "zlib deflate header");
+        assert_eq!(
+            compressed[1] >> 6,
+            3,
+            "original enum 3 selects level 9, not compression level 3"
+        );
+        assert_eq!(zlib_decompress(&compressed).unwrap(), plain);
+    }
+
+    #[test]
+    fn encrypting_a_return_does_not_overwrite_a_shared_temporary_file() {
+        with_synthetic_password(|| {
+            let root = tempfile::tempdir().unwrap();
+            let sentinel = root.path().join("tmpAES.tmp");
+            fs::write(&sentinel, b"unrelated file").unwrap();
+            let return_path = root.path().join("return.xml");
+            fs::write(&return_path, b"synthetic return").unwrap();
+            encrypt_native_return_copy(&return_path).unwrap();
+            assert_eq!(
+                fs::read(&sentinel).ok().as_deref(),
+                Some(b"unrelated file".as_slice())
+            );
+            assert_eq!(
+                decrypt_native_return_copy(&fs::read(return_path).unwrap()).unwrap(),
+                b"synthetic return"
+            );
+        });
+    }
+
+    #[test]
+    fn an_in_flight_return_cannot_be_overwritten_by_another_preparation() {
+        let root = tempfile::tempdir().unwrap();
+        let save_dir = root.path().join("savefile");
+        fs::create_dir_all(&save_dir).unwrap();
+        let path = save_dir.join("return.xml");
+        fs::write(&path, b"original in-flight return").unwrap();
+        let active = ActiveReturn::acquire(&path).unwrap();
+        let request: SubmissionRequest = serde_json::from_value(serde_json::json!({
+            "xml":"<div>txtFinalFlag=0txtFinalFlag=</div>",
+            "returnFilename":"return.xml", "formCode":"1601EQ", "tin":"123456789",
+            "email":"payer@example.com", "mode":"dry_run", "fetchDispatcher":false
+        }))
+        .unwrap();
+        let result = run_submission(root.path(), request);
+        assert!(
+            result.is_err(),
+            "a concurrent command must fail before overwriting this return"
+        );
+        assert_eq!(fs::read(&path).unwrap(), b"original in-flight return");
+        // A process launch can temporarily inherit/duplicate the file handle.
+        let inherited_handle = active._file.try_clone().unwrap();
+        drop(active);
+        assert!(
+            ActiveReturn::acquire(&path).is_ok(),
+            "dropping the holder releases the OS lock"
+        );
+        drop(inherited_handle);
+    }
+
+    #[test]
+    fn oversized_dispatcher_response_is_not_read_into_memory_in_full() {
+        let mut body = io::Cursor::new(vec![b' '; 1024 * 1024]);
+        assert!(read_dispatcher_response(&mut body).is_err());
+        assert!(
+            body.position() <= 16 * 1024 + 1,
+            "dispatcher reader must stop at its bounded limit"
+        );
+    }
 }

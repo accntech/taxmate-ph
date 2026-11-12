@@ -1,0 +1,101 @@
+{
+  "artifact_sha256": "429337f44f84b93cd1095df48c8f3265e5ede7c646d1b48d9b80f4f92de74d2c",
+  "authority": "controlled CPU replay of original machine code; synthetic inputs; no Windows process or network",
+  "key_derivation": "SHA256(public synthetic compatibility test)",
+  "key_hex": "5c38740d9f6cfa8b6fbf8f269c6d65161acae5a54de6593b031e876f49a33c19",
+  "entry_points": {
+    "init": "0x429d10",
+    "encrypt_cbc": "0x429f00"
+  },
+  "vectors": [
+    {
+      "length": 0,
+      "matches_reconstruction": true,
+      "raw_zero_iv_matches": true,
+      "plaintext_hex": "",
+      "ciphertext_hex": "",
+      "ciphertext_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "length": 1,
+      "matches_reconstruction": true,
+      "raw_zero_iv_matches": false,
+      "plaintext_hex": "0b",
+      "ciphertext_hex": "3d",
+      "ciphertext_sha256": "380918b946a526640a40df5dced6516794f3d97bbd9e6bb553d037c4439f31c3"
+    },
+    {
+      "length": 15,
+      "matches_reconstruction": true,
+      "raw_zero_iv_matches": false,
+      "plaintext_hex": "0b30557a9fc4e90e33587da2c7ec11",
+      "ciphertext_hex": "3dcc0a694e206b6adac44f1e7e266a",
+      "ciphertext_sha256": "aea9f7ca6d12a924ace5aa1074a6ae590b082f2cbeff0885f780f907e1ed5756"
+    },
+    {
+      "length": 16,
+      "matches_reconstruction": true,
+      "raw_zero_iv_matches": false,
+      "plaintext_hex": "0b30557a9fc4e90e33587da2c7ec1136",
+      "ciphertext_hex": "4c167b0d5f74093471436b751303dd8a",
+      "ciphertext_sha256": "f643e692938859b0b7668a500c60c65f9e24076576b18a07d6a7e5b1644f67a3"
+    },
+    {
+      "length": 17,
+      "matches_reconstruction": true,
+      "raw_zero_iv_matches": false,
+      "plaintext_hex": "0b30557a9fc4e90e33587da2c7ec11365b",
+      "ciphertext_hex": "4c167b0d5f74093471436b751303dd8a12",
+      "ciphertext_sha256": "19793114e2a61c6fb7eb48e5b3f92c888aeb4335589d5297d66ad9e9dfd3c37a"
+    },
+    {
+      "length": 31,
+      "matches_reconstruction": true,
+      "raw_zero_iv_matches": false,
+      "plaintext_hex": "0b30557a9fc4e90e33587da2c7ec11365b80a5caef14395e83a8cdf2173c61",
+      "ciphertext_hex": "4c167b0d5f74093471436b751303dd8a122c85f3b78eab19f12e9f50f6f339",
+      "ciphertext_sha256": "609f6085c6073ef7633044d83ea7aaf117514ba0ff02970095227a5f98ce1933"
+    },
+    {
+      "length": 32,
+      "matches_reconstruction": true,
+      "raw_zero_iv_matches": false,
+      "plaintext_hex": "0b30557a9fc4e90e33587da2c7ec11365b80a5caef14395e83a8cdf2173c6186",
+      "ciphertext_hex": "4c167b0d5f74093471436b751303dd8ad21bbd149878ad62ceea795224766cd3",
+      "ciphertext_sha256": "4cf3ffa4be6e9fa7c17690480f5ca528f2efef00d3c7b654319a1af3dfb7e314"
+    },
+    {
+      "length": 33,
+      "matches_reconstruction": true,
+      "raw_zero_iv_matches": false,
+      "plaintext_hex": "0b30557a9fc4e90e33587da2c7ec11365b80a5caef14395e83a8cdf2173c6186ab",
+      "ciphertext_hex": "4c167b0d5f74093471436b751303dd8ad21bbd149878ad62ceea795224766cd372",
+      "ciphertext_sha256": "5dd24815456e18688a3f5d33a54ec180775a80405af35cb2dc1d0c9606eda51a"
+    },
+    {
+      "length": 100,
+      "matches_reconstruction": true,
+      "raw_zero_iv_matches": false,
+      "plaintext_hex": "0b30557a9fc4e90e33587da2c7ec11365b80a5caef14395e83a8cdf2173c6186abd0f51a3f6489aed3f81d42678cb1d6fb20456a8fb4d9fe23486d92b7dc01264b7095badf04294e7398bde2072c51769bc0e50a2f54799ec3e80d32577ca1c6eb10355a",
+      "ciphertext_hex": "4c167b0d5f74093471436b751303dd8ad21bbd149878ad62ceea795224766cd36c50a0ffd0796602e78d9236d74e78966221247850f80da57d4bebbefe890815ed65cbdbb093e922ec11ad5709a46fae72bccf972771e450479fd2015714b871f352d912",
+      "ciphertext_sha256": "e61d746cd6d313234aeeeb39dc7da2a24425ba1878a89cf68668cc0014471976"
+    },
+    {
+      "length": 8192,
+      "matches_reconstruction": true,
+      "raw_zero_iv_matches": false,
+      "plaintext_hex": null,
+      "ciphertext_hex": null,
+      "ciphertext_sha256": "c3f435b68fd255ecd9c998121c5960085c0c4a2e30178d0ce6037cff1064ab24"
+    },
+    {
+      "length": 8193,
+      "matches_reconstruction": true,
+      "raw_zero_iv_matches": false,
+      "plaintext_hex": null,
+      "ciphertext_hex": null,
+      "ciphertext_sha256": "aac5f5e4ee0437fc193a80f03f4e44ed922fd21cd6b2312f4fb01766c55b7942"
+    }
+  ],
+  "synthetic_passphrase": "public synthetic compatibility test"
+}

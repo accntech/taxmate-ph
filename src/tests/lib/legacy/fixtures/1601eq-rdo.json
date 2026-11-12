@@ -1,0 +1,1606 @@
+{
+  "source": "BIR-Form1601EQ.hta saveEncryptedProfile; populateAtcPart2; rdoSelect initialization",
+  "source_sha256": "cd56bf18d1da2127d578af611fe8005fe49913a65781bb603b22b31bbe548b96",
+  "oracle": "Original saveEncryptedProfile replayed with synthetic DOM controls and in-memory file/encryption stubs. No network or original executable is invoked.",
+  "appValues": {
+    "frm1601EQ:txtYear": "2025",
+    "frm1601EQ:optQuarter": "Q2",
+    "frm1601EQ:optAmendedReturn": "Y",
+    "frm1601EQ:optTaxesWithheld": "Y",
+    "frm1601EQ:txtSheetsAttached": "2",
+    "frm1601EQ:txtTIN1": "123",
+    "frm1601EQ:txtTIN2": "456",
+    "frm1601EQ:txtTIN3": "789",
+    "frm1601EQ:txtBranchCode": "00000",
+    "frm1601EQ:txtRDOCode": "040",
+    "frm1601EQ:txtTaxpayerName": "ACME & CO <TEST>",
+    "frm1601EQ:txtAddress": "123 Example Street",
+    "frm1601EQ:txtAddress2": "Unit 2",
+    "frm1601EQ:txtZipCode": "1000",
+    "frm1601EQ:txtTelNum": "09171234567",
+    "frm1601EQ:optCategory": "P",
+    "frm1601EQ:txtATC13": "WI120",
+    "frm1601EQ:txtTaxBase13": "100000.00",
+    "frm1601EQ:txtTaxRate13": "2.00",
+    "frm1601EQ:txtTaxWithheld13": "2000.00",
+    "frm1601EQ:txtTotalTaxesWithheld": "2000.00",
+    "frm1601EQ:txtRemittanceFirstMonth": "100.00",
+    "frm1601EQ:txtRemittanceSecondMonth": "200.00",
+    "frm1601EQ:txtTaxRemittedPreviousReturn": "50.00",
+    "frm1601EQ:txtOverremittancePreviousQuarter": "0.00",
+    "frm1601EQ:txtTotalRemittances": "350.00",
+    "frm1601EQ:txtTaxStillDue": "1650.00",
+    "frm1601EQ:txtSurcharge": "10.00",
+    "frm1601EQ:txtInterest": "0.00",
+    "frm1601EQ:txtCompromise": "0.00",
+    "frm1601EQ:txtTotalPenalties": "10.00",
+    "frm1601EQ:txtTotalAmountDue": "1660.00",
+    "txtEmail": "payer@example.test",
+    "txtFinalFlag": "2",
+    "frm1601EQ:txtTaxWithheld14": "0.00",
+    "frm1601EQ:txtTaxWithheld15": "0.00",
+    "frm1601EQ:txtTaxWithheld16": "0.00",
+    "frm1601EQ:txtTaxWithheld17": "0.00",
+    "frm1601EQ:txtTaxWithheld18": "0.00"
+  },
+  "controls": [
+    {
+      "id": "frm1601EQ:txtYear",
+      "type": "text",
+      "value": "2025",
+      "checked": false
+    },
+    {
+      "id": "frm1601EQ:optQuarter:1",
+      "type": "radio",
+      "value": "1",
+      "checked": false
+    },
+    {
+      "id": "frm1601EQ:optQuarter:2",
+      "type": "radio",
+      "value": "2",
+      "checked": true
+    },
+    {
+      "id": "frm1601EQ:optQuarter:3",
+      "type": "radio",
+      "value": "3",
+      "checked": false
+    },
+    {
+      "id": "frm1601EQ:optQuarter:4",
+      "type": "radio",
+      "value": "4",
+      "checked": false
+    },
+    {
+      "id": "frm1601EQ:optAmend:Y",
+      "type": "radio",
+      "value": "Y",
+      "checked": true
+    },
+    {
+      "id": "frm1601EQ:optAmend:N",
+      "type": "radio",
+      "value": "N",
+      "checked": false
+    },
+    {
+      "id": "frm1601EQ:optWithheld:Y",
+      "type": "radio",
+      "value": "Y",
+      "checked": true
+    },
+    {
+      "id": "frm1601EQ:optWithheld:N",
+      "type": "radio",
+      "value": "N",
+      "checked": false
+    },
+    {
+      "id": "frm1601EQ:txtNoSheets",
+      "type": "text",
+      "value": "2",
+      "checked": false
+    },
+    {
+      "id": "frm1601EQ:txtTIN1",
+      "type": "text",
+      "value": "123",
+      "checked": false
+    },
+    {
+      "id": "frm1601EQ:txtTIN2",
+      "type": "text",
+      "value": "456",
+      "checked": false
+    },
+    {
+      "id": "frm1601EQ:txtTIN3",
+      "type": "text",
+      "value": "789",
+      "checked": false
+    },
+    {
+      "id": "frm1601EQ:txtBranchCode",
+      "type": "text",
+      "value": "00000",
+      "checked": false
+    },
+    {
+      "id": "frm1601EQ:txtRDOCode",
+      "type": "select-one",
+      "value": "040"
+    },
+    {
+      "id": "frm1601EQ:txtTaxpayerName",
+      "type": "text",
+      "value": "ACME & CO <TEST>",
+      "checked": false
+    },
+    {
+      "id": "frm1601EQ:txtLineBus",
+      "type": "text",
+      "value": "",
+      "checked": false
+    },
+    {
+      "id": "frm1601EQ:txtAddress",
+      "type": "text",
+      "value": "123 Example Street",
+      "checked": false
+    },
+    {
+      "id": "frm1601EQ:txtAddress2",
+      "type": "text",
+      "value": "Unit 2",
+      "checked": false
+    },
+    {
+      "id": "frm1601EQ:txtZipCode",
+      "type": "text",
+      "value": "1000",
+      "checked": false
+    },
+    {
+      "id": "frm1601EQ:txtTelNum",
+      "type": "text",
+      "value": "09171234567",
+      "checked": false
+    },
+    {
+      "id": "frm1601EQ:optCategory:P",
+      "type": "radio",
+      "value": "P",
+      "checked": true
+    },
+    {
+      "id": "frm1601EQ:optCategory:G",
+      "type": "radio",
+      "value": "G",
+      "checked": false
+    },
+    {
+      "id": "txtEmail",
+      "type": "text",
+      "value": "payer@example.test",
+      "checked": false
+    },
+    {
+      "id": "frm1601EQ:txtAtcCd1",
+      "type": "text",
+      "value": "WI120"
+    },
+    {
+      "id": "frm1601EQ:txtTaxBase1",
+      "type": "text",
+      "value": "100,000.00"
+    },
+    {
+      "id": "frm1601EQ:txtTaxRate1",
+      "type": "text",
+      "value": "2.00"
+    },
+    {
+      "id": "frm1601EQ:txtTaxbeWithHeld1",
+      "type": "text",
+      "value": "2,000.00"
+    },
+    {
+      "id": "frm1601EQ:txtAtcCd2",
+      "type": "text",
+      "value": ""
+    },
+    {
+      "id": "frm1601EQ:txtTaxBase2",
+      "type": "text",
+      "value": ""
+    },
+    {
+      "id": "frm1601EQ:txtTaxRate2",
+      "type": "text",
+      "value": ""
+    },
+    {
+      "id": "frm1601EQ:txtTaxbeWithHeld2",
+      "type": "text",
+      "value": "0.00"
+    },
+    {
+      "id": "frm1601EQ:txtAtcCd3",
+      "type": "text",
+      "value": ""
+    },
+    {
+      "id": "frm1601EQ:txtTaxBase3",
+      "type": "text",
+      "value": ""
+    },
+    {
+      "id": "frm1601EQ:txtTaxRate3",
+      "type": "text",
+      "value": ""
+    },
+    {
+      "id": "frm1601EQ:txtTaxbeWithHeld3",
+      "type": "text",
+      "value": "0.00"
+    },
+    {
+      "id": "frm1601EQ:txtAtcCd4",
+      "type": "text",
+      "value": ""
+    },
+    {
+      "id": "frm1601EQ:txtTaxBase4",
+      "type": "text",
+      "value": ""
+    },
+    {
+      "id": "frm1601EQ:txtTaxRate4",
+      "type": "text",
+      "value": ""
+    },
+    {
+      "id": "frm1601EQ:txtTaxbeWithHeld4",
+      "type": "text",
+      "value": "0.00"
+    },
+    {
+      "id": "frm1601EQ:txtAtcCd5",
+      "type": "text",
+      "value": ""
+    },
+    {
+      "id": "frm1601EQ:txtTaxBase5",
+      "type": "text",
+      "value": ""
+    },
+    {
+      "id": "frm1601EQ:txtTaxRate5",
+      "type": "text",
+      "value": ""
+    },
+    {
+      "id": "frm1601EQ:txtTaxbeWithHeld5",
+      "type": "text",
+      "value": "0.00"
+    },
+    {
+      "id": "frm1601EQ:txtAtcCd6",
+      "type": "text",
+      "value": ""
+    },
+    {
+      "id": "frm1601EQ:txtTaxBase6",
+      "type": "text",
+      "value": ""
+    },
+    {
+      "id": "frm1601EQ:txtTaxRate6",
+      "type": "text",
+      "value": ""
+    },
+    {
+      "id": "frm1601EQ:txtTaxbeWithHeld6",
+      "type": "text",
+      "value": "0.00"
+    },
+    {
+      "id": "frm1601EQ:txtTotalOtherTax",
+      "type": "text",
+      "value": "0.00",
+      "checked": false
+    },
+    {
+      "id": "frm1601EQ:txtTax19",
+      "type": "text",
+      "value": "2,000.00",
+      "checked": false
+    },
+    {
+      "id": "frm1601EQ:txtTax20",
+      "type": "text",
+      "value": "100.00",
+      "checked": false
+    },
+    {
+      "id": "frm1601EQ:txtTax21",
+      "type": "text",
+      "value": "200.00",
+      "checked": false
+    },
+    {
+      "id": "frm1601EQ:txtTax22",
+      "type": "text",
+      "value": "50.00",
+      "checked": false
+    },
+    {
+      "id": "frm1601EQ:txtTax23",
+      "type": "text",
+      "value": "0.00",
+      "checked": false
+    },
+    {
+      "id": "frm1601EQ:txtTax24",
+      "type": "text",
+      "value": "350.00",
+      "checked": false
+    },
+    {
+      "id": "frm1601EQ:txtTax25",
+      "type": "text",
+      "value": "1,650.00",
+      "checked": false
+    },
+    {
+      "id": "frm1601EQ:txtTax26",
+      "type": "text",
+      "value": "10.00",
+      "checked": false
+    },
+    {
+      "id": "frm1601EQ:inputSurcharge",
+      "type": "hidden",
+      "value": "",
+      "checked": false
+    },
+    {
+      "id": "frm1601EQ:txtTax27",
+      "type": "text",
+      "value": "0.00",
+      "checked": false
+    },
+    {
+      "id": "frm1601EQ:txtTax28",
+      "type": "text",
+      "value": "0.00",
+      "checked": false
+    },
+    {
+      "id": "frm1601EQ:txtTax29",
+      "type": "text",
+      "value": "10.00",
+      "checked": false
+    },
+    {
+      "id": "frm1601EQ:txtTax30",
+      "type": "text",
+      "value": "1,660.00",
+      "checked": false
+    },
+    {
+      "id": "frm1601EQ:ifRefund",
+      "type": "checkbox",
+      "value": "",
+      "checked": false
+    },
+    {
+      "id": "frm1601EQ:ifIssueCert",
+      "type": "checkbox",
+      "value": "",
+      "checked": false
+    },
+    {
+      "id": "frm1601EQ:ifCarriedOver",
+      "type": "checkbox",
+      "value": "",
+      "checked": false
+    },
+    {
+      "id": "txtTaxAgentNo",
+      "type": "text",
+      "value": "",
+      "checked": false
+    },
+    {
+      "id": "txtDateIssue",
+      "type": "text",
+      "value": "",
+      "checked": false
+    },
+    {
+      "id": "txtDateExpiry",
+      "type": "text",
+      "value": "",
+      "checked": false
+    },
+    {
+      "id": "frm1601EQ:txtAgency33",
+      "type": "text",
+      "value": "",
+      "checked": false
+    },
+    {
+      "id": "frm1601EQ:txtNumber33",
+      "type": "text",
+      "value": "",
+      "checked": false
+    },
+    {
+      "id": "frm1601EQ:txtDate33",
+      "type": "text",
+      "value": "",
+      "checked": false
+    },
+    {
+      "id": "frm1601EQ:txtAmount33",
+      "type": "text",
+      "value": "",
+      "checked": false
+    },
+    {
+      "id": "frm1601EQ:txtAgency34",
+      "type": "text",
+      "value": "",
+      "checked": false
+    },
+    {
+      "id": "frm1601EQ:txtNumber34",
+      "type": "text",
+      "value": "",
+      "checked": false
+    },
+    {
+      "id": "frm1601EQ:txtDate34",
+      "type": "text",
+      "value": "",
+      "checked": false
+    },
+    {
+      "id": "frm1601EQ:txtAmount34",
+      "type": "text",
+      "value": "",
+      "checked": false
+    },
+    {
+      "id": "frm1601EQ:txtAgency35",
+      "type": "text",
+      "value": "",
+      "checked": false
+    },
+    {
+      "id": "frm1601EQ:txtNumber35",
+      "type": "text",
+      "value": "",
+      "checked": false
+    },
+    {
+      "id": "frm1601EQ:txtDate35",
+      "type": "text",
+      "value": "",
+      "checked": false
+    },
+    {
+      "id": "frm1601EQ:txtAmount35",
+      "type": "text",
+      "value": "",
+      "checked": false
+    },
+    {
+      "id": "frm1601EQ:txtParticular36",
+      "type": "text",
+      "value": "",
+      "checked": false
+    },
+    {
+      "id": "frm1601EQ:txtAgency36",
+      "type": "text",
+      "value": "",
+      "checked": false
+    },
+    {
+      "id": "frm1601EQ:txtNumber36",
+      "type": "text",
+      "value": "",
+      "checked": false
+    },
+    {
+      "id": "frm1601EQ:txtDate36",
+      "type": "text",
+      "value": "",
+      "checked": false
+    },
+    {
+      "id": "frm1601EQ:txtAmount36",
+      "type": "text",
+      "value": "",
+      "checked": false
+    },
+    {
+      "id": "frm1601EQ:cmdValidate",
+      "type": "button",
+      "value": "Validate",
+      "checked": false
+    },
+    {
+      "id": "frm1601EQ:cmdEdit",
+      "type": "button",
+      "value": "Edit",
+      "checked": false
+    },
+    {
+      "id": "btnUpload",
+      "type": "hidden",
+      "value": "Submit",
+      "checked": false
+    },
+    {
+      "id": "btnSave",
+      "type": "button",
+      "value": "Save",
+      "checked": false
+    },
+    {
+      "id": "btnPrint",
+      "type": "button",
+      "value": "Print",
+      "checked": false
+    },
+    {
+      "id": "frm1601EQ:btnFinalCopy",
+      "type": "button",
+      "value": "Submit / Final Copy",
+      "checked": false
+    },
+    {
+      "id": "btnOkPop",
+      "type": "button",
+      "value": "OK",
+      "checked": false
+    },
+    {
+      "id": "AtcCode1",
+      "type": "checkbox",
+      "value": "WI010",
+      "checked": false
+    },
+    {
+      "id": "AtcCode2",
+      "type": "checkbox",
+      "value": "WI011",
+      "checked": false
+    },
+    {
+      "id": "AtcCode3",
+      "type": "checkbox",
+      "value": "WI020",
+      "checked": false
+    },
+    {
+      "id": "AtcCode4",
+      "type": "checkbox",
+      "value": "WI021",
+      "checked": false
+    },
+    {
+      "id": "AtcCode5",
+      "type": "checkbox",
+      "value": "WI030",
+      "checked": false
+    },
+    {
+      "id": "AtcCode6",
+      "type": "checkbox",
+      "value": "WI031",
+      "checked": false
+    },
+    {
+      "id": "AtcCode7",
+      "type": "checkbox",
+      "value": "WI040",
+      "checked": false
+    },
+    {
+      "id": "AtcCode8",
+      "type": "checkbox",
+      "value": "WI041",
+      "checked": false
+    },
+    {
+      "id": "AtcCode9",
+      "type": "checkbox",
+      "value": "WI050",
+      "checked": false
+    },
+    {
+      "id": "AtcCode10",
+      "type": "checkbox",
+      "value": "WI051",
+      "checked": false
+    },
+    {
+      "id": "AtcCode11",
+      "type": "checkbox",
+      "value": "WI060",
+      "checked": false
+    },
+    {
+      "id": "AtcCode12",
+      "type": "checkbox",
+      "value": "WI061",
+      "checked": false
+    },
+    {
+      "id": "AtcCode13",
+      "type": "checkbox",
+      "value": "WI070",
+      "checked": false
+    },
+    {
+      "id": "AtcCode14",
+      "type": "checkbox",
+      "value": "WI071",
+      "checked": false
+    },
+    {
+      "id": "AtcCode15",
+      "type": "checkbox",
+      "value": "WI080",
+      "checked": false
+    },
+    {
+      "id": "AtcCode16",
+      "type": "checkbox",
+      "value": "WI081",
+      "checked": false
+    },
+    {
+      "id": "AtcCode17",
+      "type": "checkbox",
+      "value": "WI090",
+      "checked": false
+    },
+    {
+      "id": "AtcCode18",
+      "type": "checkbox",
+      "value": "WI091",
+      "checked": false
+    },
+    {
+      "id": "AtcCode19",
+      "type": "checkbox",
+      "value": "WI100",
+      "checked": false
+    },
+    {
+      "id": "AtcCode20",
+      "type": "checkbox",
+      "value": "WI110",
+      "checked": false
+    },
+    {
+      "id": "AtcCode21",
+      "type": "checkbox",
+      "value": "WI120",
+      "checked": true
+    },
+    {
+      "id": "AtcCode22",
+      "type": "checkbox",
+      "value": "WI130",
+      "checked": false
+    },
+    {
+      "id": "AtcCode23",
+      "type": "checkbox",
+      "value": "WI139",
+      "checked": false
+    },
+    {
+      "id": "AtcCode24",
+      "type": "checkbox",
+      "value": "WI140",
+      "checked": false
+    },
+    {
+      "id": "AtcCode25",
+      "type": "checkbox",
+      "value": "WI150",
+      "checked": false
+    },
+    {
+      "id": "AtcCode26",
+      "type": "checkbox",
+      "value": "WI151",
+      "checked": false
+    },
+    {
+      "id": "AtcCode27",
+      "type": "checkbox",
+      "value": "WI152",
+      "checked": false
+    },
+    {
+      "id": "AtcCode28",
+      "type": "checkbox",
+      "value": "WI153",
+      "checked": false
+    },
+    {
+      "id": "AtcCode29",
+      "type": "checkbox",
+      "value": "WI156",
+      "checked": false
+    },
+    {
+      "id": "AtcCode30",
+      "type": "checkbox",
+      "value": "WI640",
+      "checked": false
+    },
+    {
+      "id": "AtcCode31",
+      "type": "checkbox",
+      "value": "WI157",
+      "checked": false
+    },
+    {
+      "id": "AtcCode32",
+      "type": "checkbox",
+      "value": "WI159",
+      "checked": false
+    },
+    {
+      "id": "AtcCode33",
+      "type": "checkbox",
+      "value": "WI158",
+      "checked": false
+    },
+    {
+      "id": "AtcCode34",
+      "type": "checkbox",
+      "value": "WI160",
+      "checked": false
+    },
+    {
+      "id": "AtcCode35",
+      "type": "checkbox",
+      "value": "WI515",
+      "checked": false
+    },
+    {
+      "id": "AtcCode36",
+      "type": "checkbox",
+      "value": "WI516",
+      "checked": false
+    },
+    {
+      "id": "AtcCode37",
+      "type": "checkbox",
+      "value": "WI530",
+      "checked": false
+    },
+    {
+      "id": "AtcCode38",
+      "type": "checkbox",
+      "value": "WI535",
+      "checked": false
+    },
+    {
+      "id": "AtcCode39",
+      "type": "checkbox",
+      "value": "WI540",
+      "checked": false
+    },
+    {
+      "id": "AtcCode40",
+      "type": "checkbox",
+      "value": "WI610",
+      "checked": false
+    },
+    {
+      "id": "AtcCode41",
+      "type": "checkbox",
+      "value": "WI630",
+      "checked": false
+    },
+    {
+      "id": "AtcCode42",
+      "type": "checkbox",
+      "value": "WI632",
+      "checked": false
+    },
+    {
+      "id": "AtcCode43",
+      "type": "checkbox",
+      "value": "WI650",
+      "checked": false
+    },
+    {
+      "id": "AtcCode44",
+      "type": "checkbox",
+      "value": "WI651",
+      "checked": false
+    },
+    {
+      "id": "AtcCode45",
+      "type": "checkbox",
+      "value": "WI660",
+      "checked": false
+    },
+    {
+      "id": "AtcCode46",
+      "type": "checkbox",
+      "value": "WI661",
+      "checked": false
+    },
+    {
+      "id": "AtcCode47",
+      "type": "checkbox",
+      "value": "WI662",
+      "checked": false
+    },
+    {
+      "id": "AtcCode48",
+      "type": "checkbox",
+      "value": "WI663",
+      "checked": false
+    },
+    {
+      "id": "AtcCode49",
+      "type": "checkbox",
+      "value": "WI680",
+      "checked": false
+    },
+    {
+      "id": "AtcCode50",
+      "type": "checkbox",
+      "value": "WI710",
+      "checked": false
+    },
+    {
+      "id": "AtcCode51",
+      "type": "checkbox",
+      "value": "WI720",
+      "checked": false
+    },
+    {
+      "id": "AtcCode52",
+      "type": "checkbox",
+      "value": "WC010",
+      "checked": false
+    },
+    {
+      "id": "AtcCode53",
+      "type": "checkbox",
+      "value": "WC011",
+      "checked": false
+    },
+    {
+      "id": "AtcCode54",
+      "type": "checkbox",
+      "value": "WC020",
+      "checked": false
+    },
+    {
+      "id": "AtcCode55",
+      "type": "checkbox",
+      "value": "WC021",
+      "checked": false
+    },
+    {
+      "id": "AtcCode56",
+      "type": "checkbox",
+      "value": "WC030",
+      "checked": false
+    },
+    {
+      "id": "AtcCode57",
+      "type": "checkbox",
+      "value": "WC031",
+      "checked": false
+    },
+    {
+      "id": "AtcCode58",
+      "type": "checkbox",
+      "value": "WC040",
+      "checked": false
+    },
+    {
+      "id": "AtcCode59",
+      "type": "checkbox",
+      "value": "WC041",
+      "checked": false
+    },
+    {
+      "id": "AtcCode60",
+      "type": "checkbox",
+      "value": "WC050",
+      "checked": false
+    },
+    {
+      "id": "AtcCode61",
+      "type": "checkbox",
+      "value": "WC051",
+      "checked": false
+    },
+    {
+      "id": "AtcCode62",
+      "type": "checkbox",
+      "value": "WC060",
+      "checked": false
+    },
+    {
+      "id": "AtcCode63",
+      "type": "checkbox",
+      "value": "WC061",
+      "checked": false
+    },
+    {
+      "id": "AtcCode64",
+      "type": "checkbox",
+      "value": "WC070",
+      "checked": false
+    },
+    {
+      "id": "AtcCode65",
+      "type": "checkbox",
+      "value": "WC071",
+      "checked": false
+    },
+    {
+      "id": "AtcCode66",
+      "type": "checkbox",
+      "value": "WC080",
+      "checked": false
+    },
+    {
+      "id": "AtcCode67",
+      "type": "checkbox",
+      "value": "WC081",
+      "checked": false
+    },
+    {
+      "id": "AtcCode68",
+      "type": "checkbox",
+      "value": "WC100",
+      "checked": false
+    },
+    {
+      "id": "AtcCode69",
+      "type": "checkbox",
+      "value": "WC110",
+      "checked": false
+    },
+    {
+      "id": "AtcCode70",
+      "type": "checkbox",
+      "value": "WC120",
+      "checked": false
+    },
+    {
+      "id": "AtcCode71",
+      "type": "checkbox",
+      "value": "WC139",
+      "checked": false
+    },
+    {
+      "id": "AtcCode72",
+      "type": "checkbox",
+      "value": "WC140",
+      "checked": false
+    },
+    {
+      "id": "AtcCode73",
+      "type": "checkbox",
+      "value": "WC150",
+      "checked": false
+    },
+    {
+      "id": "AtcCode74",
+      "type": "checkbox",
+      "value": "WC151",
+      "checked": false
+    },
+    {
+      "id": "AtcCode75",
+      "type": "checkbox",
+      "value": "WC156",
+      "checked": false
+    },
+    {
+      "id": "AtcCode76",
+      "type": "checkbox",
+      "value": "WC640",
+      "checked": false
+    },
+    {
+      "id": "AtcCode77",
+      "type": "checkbox",
+      "value": "WC157",
+      "checked": false
+    },
+    {
+      "id": "AtcCode78",
+      "type": "checkbox",
+      "value": "WC158",
+      "checked": false
+    },
+    {
+      "id": "AtcCode79",
+      "type": "checkbox",
+      "value": "WC160",
+      "checked": false
+    },
+    {
+      "id": "AtcCode80",
+      "type": "checkbox",
+      "value": "WC515",
+      "checked": false
+    },
+    {
+      "id": "AtcCode81",
+      "type": "checkbox",
+      "value": "WC516",
+      "checked": false
+    },
+    {
+      "id": "AtcCode82",
+      "type": "checkbox",
+      "value": "WC535",
+      "checked": false
+    },
+    {
+      "id": "AtcCode83",
+      "type": "checkbox",
+      "value": "WC540",
+      "checked": false
+    },
+    {
+      "id": "AtcCode84",
+      "type": "checkbox",
+      "value": "WC610",
+      "checked": false
+    },
+    {
+      "id": "AtcCode85",
+      "type": "checkbox",
+      "value": "WC630",
+      "checked": false
+    },
+    {
+      "id": "AtcCode86",
+      "type": "checkbox",
+      "value": "WC632",
+      "checked": false
+    },
+    {
+      "id": "AtcCode87",
+      "type": "checkbox",
+      "value": "WC650",
+      "checked": false
+    },
+    {
+      "id": "AtcCode88",
+      "type": "checkbox",
+      "value": "WC651",
+      "checked": false
+    },
+    {
+      "id": "AtcCode89",
+      "type": "checkbox",
+      "value": "WC660",
+      "checked": false
+    },
+    {
+      "id": "AtcCode90",
+      "type": "checkbox",
+      "value": "WC661",
+      "checked": false
+    },
+    {
+      "id": "AtcCode91",
+      "type": "checkbox",
+      "value": "WC662",
+      "checked": false
+    },
+    {
+      "id": "AtcCode92",
+      "type": "checkbox",
+      "value": "WC663",
+      "checked": false
+    },
+    {
+      "id": "AtcCode93",
+      "type": "checkbox",
+      "value": "WC680",
+      "checked": false
+    },
+    {
+      "id": "AtcCode94",
+      "type": "checkbox",
+      "value": "WC690",
+      "checked": false
+    },
+    {
+      "id": "AtcCode95",
+      "type": "checkbox",
+      "value": "WC710",
+      "checked": false
+    },
+    {
+      "id": "AtcCode96",
+      "type": "checkbox",
+      "value": "WC720",
+      "checked": false
+    },
+    {
+      "id": "AtcCode97",
+      "type": "checkbox",
+      "value": "WI820",
+      "checked": false
+    },
+    {
+      "id": "AtcCode98",
+      "type": "checkbox",
+      "value": "WI830",
+      "checked": false
+    },
+    {
+      "id": "AtcCode99",
+      "type": "checkbox",
+      "value": "WC820",
+      "checked": false
+    },
+    {
+      "id": "AtcCode100",
+      "type": "checkbox",
+      "value": "WC830",
+      "checked": false
+    },
+    {
+      "id": "AtcCode101",
+      "type": "checkbox",
+      "value": "WI770",
+      "checked": false
+    },
+    {
+      "id": "AtcCode102",
+      "type": "checkbox",
+      "value": "WI780",
+      "checked": false
+    },
+    {
+      "id": "AtcCode103",
+      "type": "checkbox",
+      "value": "WC770",
+      "checked": false
+    },
+    {
+      "id": "AtcCode104",
+      "type": "checkbox",
+      "value": "WC780",
+      "checked": false
+    },
+    {
+      "id": "AtcCode105",
+      "type": "checkbox",
+      "value": "WC790",
+      "checked": false
+    },
+    {
+      "id": "AtcCode106",
+      "type": "checkbox",
+      "value": "WI840",
+      "checked": false
+    },
+    {
+      "id": "AtcCode107",
+      "type": "checkbox",
+      "value": "WC840",
+      "checked": false
+    },
+    {
+      "id": "AtcCode108",
+      "type": "checkbox",
+      "value": "WI850",
+      "checked": false
+    },
+    {
+      "id": "AtcCode109",
+      "type": "checkbox",
+      "value": "WC850",
+      "checked": false
+    },
+    {
+      "id": "AtcCode110",
+      "type": "checkbox",
+      "value": "WI860",
+      "checked": false
+    },
+    {
+      "id": "AtcCode111",
+      "type": "checkbox",
+      "value": "WC860",
+      "checked": false
+    },
+    {
+      "id": "hPartIITableSize",
+      "type": "text",
+      "value": "6",
+      "checked": false
+    },
+    {
+      "id": "btnPrintOtherAtc",
+      "type": "button",
+      "value": " Print ",
+      "checked": false
+    },
+    {
+      "id": "",
+      "type": "button",
+      "value": " Close ",
+      "checked": false
+    },
+    {
+      "id": "btnClearOtherAtc",
+      "type": "button",
+      "value": " Clear ",
+      "checked": false
+    },
+    {
+      "id": "btnOkImport",
+      "type": "button",
+      "value": "OK",
+      "checked": false
+    },
+    {
+      "id": "btnCancelImport",
+      "type": "button",
+      "value": "CANCEL",
+      "checked": false
+    },
+    {
+      "id": "txtFinalFlag",
+      "type": "text",
+      "value": "2",
+      "checked": false
+    },
+    {
+      "id": "txtEnroll",
+      "type": "text",
+      "value": "N",
+      "checked": false
+    },
+    {
+      "id": "ebirOnlineConfirmUsername",
+      "type": "text",
+      "value": "",
+      "checked": false
+    },
+    {
+      "id": "ebirOnlineConfirmPassword",
+      "type": "password",
+      "value": "",
+      "checked": false
+    },
+    {
+      "id": "ebirOnlineConfirmSubmit",
+      "type": "button",
+      "value": "Submit",
+      "checked": false
+    },
+    {
+      "id": "ebirOnlineConfirmCancel",
+      "type": "button",
+      "value": "Cancel",
+      "checked": false
+    },
+    {
+      "id": "btnAgree",
+      "type": "button",
+      "value": "Agree",
+      "checked": false
+    },
+    {
+      "id": "ebirEnrollYes",
+      "type": "button",
+      "value": "  Ok  ",
+      "checked": false
+    },
+    {
+      "id": "ebirEnrollNo",
+      "type": "button",
+      "value": "Cancel",
+      "checked": false
+    },
+    {
+      "id": "isregistered",
+      "type": "button",
+      "value": "YES",
+      "checked": false
+    },
+    {
+      "id": "notregistered",
+      "type": "button",
+      "value": "NO",
+      "checked": false
+    },
+    {
+      "id": "ebirOnlineUsername",
+      "type": "text",
+      "value": "",
+      "checked": false
+    },
+    {
+      "id": "ebirOnlinePassword",
+      "type": "password",
+      "value": "",
+      "checked": false
+    },
+    {
+      "id": "ebirOnlineSecret",
+      "type": "text",
+      "value": "",
+      "checked": false
+    },
+    {
+      "id": "ebirOnlineSubmit",
+      "type": "button",
+      "value": "Submit",
+      "checked": false
+    },
+    {
+      "id": "ebirOnlineCancel",
+      "type": "button",
+      "value": "Cancel",
+      "checked": false
+    },
+    {
+      "id": "driveSelectTPExport",
+      "type": "select-one",
+      "value": "",
+      "checked": false
+    },
+    {
+      "id": "btnOkExport",
+      "type": "button",
+      "value": "OK",
+      "checked": false
+    },
+    {
+      "id": "btnCancelExport",
+      "type": "button",
+      "value": "CANCEL",
+      "checked": false
+    }
+  ],
+  "xmlFormat": "\n            ",
+  "atc_source_sha256": "0230926ea7facf45ce4a9b49d23865d72457f3cf6a3cc07f3c0aeaaee21c4162",
+  "originalAtcCodes": {
+    "P": [
+      "WI010",
+      "WI011",
+      "WI020",
+      "WI021",
+      "WI030",
+      "WI031",
+      "WI040",
+      "WI041",
+      "WI050",
+      "WI051",
+      "WI060",
+      "WI061",
+      "WI070",
+      "WI071",
+      "WI080",
+      "WI081",
+      "WI090",
+      "WI091",
+      "WI100",
+      "WI110",
+      "WI120",
+      "WI130",
+      "WI139",
+      "WI140",
+      "WI150",
+      "WI151",
+      "WI152",
+      "WI153",
+      "WI156",
+      "WI640",
+      "WI157",
+      "WI159",
+      "WI158",
+      "WI160",
+      "WI515",
+      "WI516",
+      "WI530",
+      "WI535",
+      "WI540",
+      "WI610",
+      "WI630",
+      "WI632",
+      "WI650",
+      "WI651",
+      "WI660",
+      "WI661",
+      "WI662",
+      "WI663",
+      "WI680",
+      "WI710",
+      "WI720",
+      "WC010",
+      "WC011",
+      "WC020",
+      "WC021",
+      "WC030",
+      "WC031",
+      "WC040",
+      "WC041",
+      "WC050",
+      "WC051",
+      "WC060",
+      "WC061",
+      "WC070",
+      "WC071",
+      "WC080",
+      "WC081",
+      "WC100",
+      "WC110",
+      "WC120",
+      "WC139",
+      "WC140",
+      "WC150",
+      "WC151",
+      "WC156",
+      "WC640",
+      "WC157",
+      "WC158",
+      "WC160",
+      "WC515",
+      "WC516",
+      "WC535",
+      "WC540",
+      "WC610",
+      "WC630",
+      "WC632",
+      "WC650",
+      "WC651",
+      "WC660",
+      "WC661",
+      "WC662",
+      "WC663",
+      "WC680",
+      "WC690",
+      "WC710",
+      "WC720",
+      "WI820",
+      "WI830",
+      "WC820",
+      "WC830",
+      "WI770",
+      "WI780",
+      "WC770",
+      "WC780",
+      "WC790",
+      "WI840",
+      "WC840",
+      "WI850",
+      "WC850",
+      "WI860",
+      "WC860"
+    ],
+    "G": [
+      "WI010",
+      "WI011",
+      "WI020",
+      "WI021",
+      "WI030",
+      "WI031",
+      "WI040",
+      "WI041",
+      "WI050",
+      "WI051",
+      "WI060",
+      "WI061",
+      "WI070",
+      "WI071",
+      "WI080",
+      "WI081",
+      "WI090",
+      "WI091",
+      "WI100",
+      "WI110",
+      "WI120",
+      "WI130",
+      "WI139",
+      "WI140",
+      "WI150",
+      "WI151",
+      "WI152",
+      "WI153",
+      "WI156",
+      "WI640",
+      "WI157",
+      "WI159",
+      "WI158",
+      "WI160",
+      "WI515",
+      "WI516",
+      "WI530",
+      "WI535",
+      "WI540",
+      "WI610",
+      "WI630",
+      "WI632",
+      "WI650",
+      "WI651",
+      "WI660",
+      "WI661",
+      "WI662",
+      "WI663",
+      "WI680",
+      "WI710",
+      "WI720",
+      "WC010",
+      "WC011",
+      "WC020",
+      "WC021",
+      "WC030",
+      "WC031",
+      "WC040",
+      "WC041",
+      "WC050",
+      "WC051",
+      "WC060",
+      "WC061",
+      "WC070",
+      "WC071",
+      "WC080",
+      "WC081",
+      "WC100",
+      "WC110",
+      "WC120",
+      "WC139",
+      "WC140",
+      "WC150",
+      "WC151",
+      "WC156",
+      "WC640",
+      "WC157",
+      "WC158",
+      "WC160",
+      "WC515",
+      "WC516",
+      "WC535",
+      "WC540",
+      "WC610",
+      "WC630",
+      "WC632",
+      "WC650",
+      "WC651",
+      "WC660",
+      "WC661",
+      "WC662",
+      "WC663",
+      "WC680",
+      "WC690",
+      "WC710",
+      "WC720"
+    ]
+  }
+}

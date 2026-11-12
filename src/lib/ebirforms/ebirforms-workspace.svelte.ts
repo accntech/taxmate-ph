@@ -6,6 +6,7 @@ import { createWorkingReturnsClient } from '$lib/tauri/working-returns';
 import { settings } from '$lib/settings.svelte';
 import { isTauri } from '@tauri-apps/api/core';
 import { parseLegacyXml, serializeLegacyXml } from '$lib/legacy/xml';
+import { serialize1601EQSubmissionXml } from '$lib/legacy/submission-xml';
 import {
 	buildProfileFilename,
 	buildReturnFilename,
@@ -536,6 +537,10 @@ class EbirformsWorkspace {
 			const submitReturn = createSubmissionClient();
 			const receipt = await submitReturn({
 				xml: this.generatedXml,
+					rdoXml: settings.prefs.submissionMode === 'legacy_sftp' && this.selectedForm?.code === '1601EQ'
+						? serialize1601EQSubmissionXml({ ...submittedValues,
+							txtEmail: getReturnEmail('1601EQ', submittedValues, this.profile), txtFinalFlag: '2' })
+						: undefined,
 				returnFilename: this.returnFilename,
 				formCode: this.selectedForm?.code ?? '1601EQ',
 				tin: this.dispatcherTin,
