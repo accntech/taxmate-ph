@@ -1,4 +1,7 @@
 fn main() {
+    // The generated context embeds icons, including the macOS dev Dock icon.
+    println!("cargo:rerun-if-changed=icons");
+
     if std::env::var("CARGO_CFG_TARGET_OS").as_deref() == Ok("windows") {
         // Cargo checks do not run the Bun hook. Allow resource discovery on a fresh
         // checkout while the actual Windows build prepares the DLLs for packaging.
