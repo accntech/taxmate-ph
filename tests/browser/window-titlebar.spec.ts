@@ -95,7 +95,8 @@ for (const platform of ['macos', 'windows', 'linux']) {
 		await expect(bar.getByRole('button', { name: 'Toggle sidebar', exact: true })).toBeVisible();
 		await expect(page.locator('[data-app-topbar]')).toHaveCount(1);
 		const sidebar = page.getByRole('complementary', { name: 'Primary' });
-		await expect(sidebar.getByText('TaxMate PH', { exact: true })).toHaveCount(0);
+		await expect(sidebar.getByRole('link', { name: 'TaxMate PH home', exact: true })).toBeVisible();
+		await expect(sidebar.getByRole('img', { name: 'TaxMate logo', exact: true })).toHaveAttribute('src', '/brand/taxmate-logo.png');
 		await expect(sidebar.getByText('Local compliance workspace', { exact: true })).toHaveCount(0);
 		for (const width of [800, 390]) {
 			await page.setViewportSize({ width, height: 700 });
