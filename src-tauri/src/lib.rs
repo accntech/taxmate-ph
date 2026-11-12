@@ -1,5 +1,6 @@
 pub mod pdf_export;
 pub mod profile_store;
+pub mod return_history;
 pub mod submission;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -11,7 +12,9 @@ pub fn run() {
             pdf_export::export_form_pdf,
             profile_store::list_taxpayer_profiles,
             profile_store::save_taxpayer_profile,
-            submission::submit_return
+            profile_store::delete_taxpayer_profile,
+            submission::submit_return,
+            return_history::list_submitted_returns
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

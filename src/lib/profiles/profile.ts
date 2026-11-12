@@ -1,3 +1,5 @@
+import { isPackagedRdoCode } from './rdo-codes';
+
 export type TinParts = {
 	tin1: string;
 	tin2: string;
@@ -25,6 +27,43 @@ export type TaxpayerProfileInput = TinParts & {
 export type TaxpayerProfile = TaxpayerProfileInput & {
 	id: string;
 };
+
+export type ProfileValidationErrors = Partial<
+	Record<'taxpayerName' | 'tin' | 'rdoCode' | 'category' | 'zipCode' | 'email', string>
+>;
+
+export function validateTaxpayerProfile(
+	profile: TaxpayerProfileInput,
+	rawTin?: string
+): ProfileValidationErrors {
+	const errors: ProfileValidationErrors = {};
+	if (!profile.taxpayerName.trim()) {
+		errors.taxpayerName = 'Enter the taxpayer name.';
+	}
+	const partsValid =
+		[profile.tin1, profile.tin2, profile.tin3].every((part) => /^\d{3}$/.test(part)) &&
+		/^\d{4}$/.test(profile.branchCode);
+	const rawValid =
+		rawTin === undefined || (/^[\d\s-]+$/.test(rawTin) && rawTin.replace(/\D/g, '').length === 13);
+	if (!partsValid || !rawValid) {
+		errors.tin = 'Enter 9 TIN digits and a 4-digit branch code.';
+	} else if (profile.tin1 + profile.tin2 + profile.tin3 === '000000000') {
+		errors.tin = 'TIN cannot be all zeros.';
+	}
+	if (!isPackagedRdoCode(profile.rdoCode)) {
+		errors.rdoCode = 'Enter a supported RDO code, such as 040 or 17A.';
+	}
+	if (!['P', 'G'].includes(profile.category)) {
+		errors.category = 'Choose Private or Government.';
+	}
+	if (profile.zipCode.trim() && !/^\d{4}$/.test(profile.zipCode.trim())) {
+		errors.zipCode = 'Enter a 4-digit ZIP code.';
+	}
+	if (profile.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(profile.email.trim())) {
+		errors.email = 'Enter a valid email address, such as name@example.com.';
+	}
+	return errors;
+}
 
 function digitsOnly(value: string): string {
 	return value.replace(/\D/g, '');

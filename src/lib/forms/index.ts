@@ -66,10 +66,10 @@ const forms: FormDefinition[] = [
 			{ id: 'frm1601EQ:txtBranchCode', label: 'Branch Code', type: 'text', required: true },
 			{ id: 'frm1601EQ:txtRDOCode', label: 'RDO Code', type: 'text', required: true },
 			{ id: 'frm1601EQ:txtTaxpayerName', label: 'Taxpayer Name', type: 'text', required: true },
-			{ id: 'frm1601EQ:txtAddress', label: '9 Registered Address', type: 'text' },
+			{ id: 'frm1601EQ:txtAddress', label: '9 Registered Address', type: 'text', required: true },
 			{ id: 'frm1601EQ:txtAddress2', label: '9 Registered Address Line 2', type: 'text' },
-			{ id: 'frm1601EQ:txtZipCode', label: '9A ZIP Code', type: 'text' },
-			{ id: 'frm1601EQ:txtTelNum', label: '10 Contact Number', type: 'text' },
+			{ id: 'frm1601EQ:txtZipCode', label: '9A ZIP Code', type: 'text', required: true },
+			{ id: 'frm1601EQ:txtTelNum', label: '10 Contact Number', type: 'text', required: true },
 			{
 				id: 'frm1601EQ:optCategory',
 				label: '11 Category of Withholding Agent',
@@ -77,7 +77,7 @@ const forms: FormDefinition[] = [
 				required: true,
 				options: ['P', 'G']
 			},
-			{ id: 'txtEmail', label: '12 Email Address', type: 'text' },
+			{ id: 'txtEmail', label: '12 Email Address', type: 'text', required: true },
 			...atcFields,
 			{
 				id: 'frm1601EQ:txtTotalTaxesWithheld',

@@ -145,6 +145,8 @@ pub fn run_submission(
     let send_path = rdo_dir.join(email_name);
     let prepared_xml = update_final_flag(&request.xml, "2");
 
+    // Preserve any legacy submitted copy before a draft or resend overwrites it.
+    crate::return_history::load_history(root)?;
     fs::write(&save_path, &prepared_xml)?;
     fs::write(&send_path, &prepared_xml)?;
     logger.log(format!(
@@ -195,7 +197,26 @@ pub fn run_submission(
     let final_flag = if submitted { "1" } else { "2" };
     let final_xml = update_final_flag(&prepared_xml, final_flag);
 
-    fs::write(&save_path, &final_xml)?;
+    // The remote upload has already succeeded: local history errors must not invite a resend.
+    let mut history_warning = if submitted {
+        crate::return_history::record_submission(
+            root, &save_path, &final_xml, &request.form_code, &request.tin,
+        )
+        .err()
+        .map(|error| format!(" Submission succeeded, but history could not be saved: {error}"))
+    } else {
+        None
+    };
+    if let Err(error) = fs::write(&save_path, &final_xml) {
+        if !submitted {
+            return Err(error.into());
+        }
+        let warning = format!(" Submission succeeded, but the local return copy could not be updated: {error}");
+        history_warning.get_or_insert_with(String::new).push_str(&warning);
+    }
+    if let Some(warning) = &history_warning {
+        logger.log(warning);
+    }
     logger.log(format!(
         "submission_complete status={} final_flag={}",
         if submitted { "submitted" } else { "failed" },
@@ -215,7 +236,7 @@ pub fn run_submission(
         exit_code: Some(exit_code),
         log_path: Some(logger.path_string()),
         message: if submitted {
-            "Native SFTP upload reported a successful submission.".into()
+            format!("Native SFTP upload reported a successful submission.{}", history_warning.unwrap_or_default())
         } else {
             "Native SFTP upload did not report success.".into()
         },

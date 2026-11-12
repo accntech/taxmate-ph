@@ -45,12 +45,7 @@
 	</PageHeader>
 
 	<div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-		{#each [
-			['RDO', workspace.profile.rdoCode || 'not set'],
-			['Email', workspace.profile.email || 'not set'],
-			['Profile file', workspace.profileFilename],
-			['Current return', workspace.returnFilename]
-		] as [label, value]}
+		{#each [['RDO', workspace.profile.rdoCode || 'not set'], ['Email', workspace.profile.email || 'not set'], ['Profile file', workspace.profileFilename], ['Current return', workspace.returnFilename]] as [label, value] (label)}
 			<Card variant="muted" class="grid gap-1">
 				<p class="text-xs font-medium text-fg-muted">{label}</p>
 				<p class="truncate font-mono text-sm font-semibold text-fg">{value}</p>
@@ -63,7 +58,12 @@
 			<DocumentAdd size={18} color="currentColor" />
 			Create or manage forms
 		</ButtonLink>
-		<ButtonLink href="/ebirforms/taxpayers" variant="secondary" size="touch" class="w-full">
+		<ButtonLink
+			href={`${buildTaxpayerRoute(params.id)}/edit`}
+			variant="secondary"
+			size="touch"
+			class="w-full"
+		>
 			<FileText size={18} color="currentColor" />
 			Edit profile
 		</ButtonLink>
