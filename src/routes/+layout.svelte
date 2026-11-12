@@ -125,6 +125,13 @@
 		bind:isMobile
 		storageKey="taxmate-ph-sidebar"
 	>
+		{#snippet header({ collapsed: sidebarCollapsed })}
+			<a class={['brand', { collapsed: sidebarCollapsed }]} href="/" aria-label="TaxMate PH home" onclick={() => (mobileOpen = false)}>
+				<img src="/brand/taxmate-logo.png" alt="TaxMate logo" width="36" height="36" />
+				{#if !sidebarCollapsed}<span>TaxMate PH</span>{/if}
+			</a>
+		{/snippet}
+
 		{#snippet content({ collapsed: sidebarCollapsed })}
 			<span
 				class={["sidebar-reveal-anim", (sidebarCollapsed ? stylex.attrs(styles.workspaceLabel, styles.collapsedLabel).class : stylex.attrs(styles.workspaceLabel).class)]}
@@ -188,3 +195,20 @@
 		</main>
 	</div>
 </div>
+
+<style>
+	.brand {
+		display: flex;
+		align-items: center;
+		gap: .625rem;
+		min-width: 0;
+		color: var(--fg);
+		font-size: .9375rem;
+		font-weight: 600;
+		white-space: nowrap;
+		border-radius: var(--radius-md);
+	}
+	.brand.collapsed { width: 100%; justify-content: center; }
+	.brand:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+	.brand img { flex-shrink: 0; border-radius: .5rem; background: #fff; }
+</style>

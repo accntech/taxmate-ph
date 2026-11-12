@@ -344,6 +344,8 @@
 	<Card variant="panel" padding="lg" class={stylex.attrs(styles.card).class}>
 		{@render sectionTitle('About', 'App information and references.', InfoCircle)}
 
+		<img class="about-logo" src="/brand/taxmate-logo.png" alt="TaxMate logo" width="80" height="80" />
+
 		<div class={stylex.attrs(styles.aboutGrid).class}>
 			<div class={stylex.attrs(styles.aboutRow).class}>
 				<span class={stylex.attrs(styles.aboutLabel).class}>Application</span>
@@ -388,6 +390,13 @@
 </Dialog>
 
 <style>
+	.about-logo {
+		display: block;
+		margin-top: 1rem;
+		border-radius: .75rem;
+		background: #fff;
+	}
+
 	.appearance-section {
 		display: grid;
 		gap: 1rem;

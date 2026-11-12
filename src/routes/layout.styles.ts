@@ -48,6 +48,7 @@ export const styles = stylex.create({
   "collapsedNavigation": {
     "marginInline": "auto",
     "width": "calc(var(--spacing) * 11)",
+    "maxWidth": "100%",
     "height": "calc(var(--spacing) * 11)",
     "gridTemplateColumns": "1.25rem 0fr",
     "justifyContent": "center",
