@@ -1,4 +1,5 @@
 import { browser } from '$app/environment';
+import type { SubmissionMode } from '$lib/tauri/submission';
 
 export type ThemeMode = 'light' | 'dark' | 'system';
 type ResolvedTheme = 'light' | 'dark';
@@ -7,6 +8,7 @@ export type PaperSize = 'a4' | 'letter' | 'long';
 export type FilingPeriod = 'monthly' | 'quarterly' | 'annual';
 
 export type Prefs = {
+	submissionMode: SubmissionMode;
 	paperSize: PaperSize;
 	filingPeriod: FilingPeriod;
 	defaultTaxpayer: string;
@@ -18,6 +20,7 @@ const PREFS_KEY = 'taxmate-ph-prefs';
 const LEGACY_SIDEBAR_KEY = 'taxmate-ph-sidebar';
 
 const defaultPrefs: Prefs = {
+	submissionMode: 'legacy_sftp',
 	paperSize: 'long',
 	filingPeriod: 'quarterly',
 	defaultTaxpayer: ''
@@ -55,7 +58,8 @@ class SettingsStore {
 		try {
 			const raw = localStorage.getItem(PREFS_KEY);
 			if (raw) {
-				this.prefs = { ...defaultPrefs, ...(JSON.parse(raw) as Partial<Prefs>) };
+				const stored = JSON.parse(raw) as Partial<Prefs>;
+				this.prefs = { ...defaultPrefs, ...stored, submissionMode: stored.submissionMode === 'dry_run' ? 'dry_run' : 'legacy_sftp' };
 			}
 		} catch {
 			this.prefs = { ...defaultPrefs };

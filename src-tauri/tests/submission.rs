@@ -217,7 +217,7 @@ fn dry_run_writes_savefile_and_email_copy_without_uploading() {
 }
 
 #[test]
-fn live_submission_is_rejected_before_writing_or_networking() {
+fn live_1601eq_prepares_encrypted_copy_and_rejects_invalid_dispatcher() {
     with_submission_env(
         Some("test-dispatcher-password"),
         Some("test-return-copy-password"),
@@ -243,8 +243,14 @@ fn live_submission_is_rejected_before_writing_or_networking() {
 
             let error =
                 run_submission(root.path(), request).expect_err("invalid dispatcher should fail");
-            assert!(error.message.contains("Live submission is disabled"));
-            assert!(!root.path().join("savefile").exists());
+            assert!(error.message.contains("Dispatcher secret is not base64"));
+            assert!(root.path().join("savefile").exists());
+            let encrypted = fs::read(
+                root.path()
+                    .join("IAF_RDO_Copy/1234567890000-1601EQ-2026Q1#payer@example.com#.xml"),
+            )
+            .unwrap();
+            assert!(decrypt_native_return_copy(&encrypted).is_ok());
         },
     );
 }
@@ -319,61 +325,46 @@ fn dispatcher_cipher_text(plain: &str) -> String {
 }
 
 #[test]
-fn mock_mode_is_supported_and_explicitly_simulated() {
-    let root = tempfile::tempdir().unwrap();
-    let request: SubmissionRequest = serde_json::from_value(serde_json::json!({
-        "xml": "<div>txtFinalFlag=0txtFinalFlag=</div>",
-        "returnFilename": "1234567890000-0619E-202601.xml", "formCode": "0619E",
-        "tin": "123456789", "email": "payer@example.com", "mode": "mock",
-        "fetchDispatcher": true
-    }))
-    .expect("mock mode supported");
-    let receipt = run_submission(root.path(), request).unwrap();
-    let json = serde_json::to_value(&receipt).unwrap();
-    assert_eq!(json["status"], "simulated");
-    assert_eq!(receipt.final_flag, "2");
-    assert!(json["reference"].as_str().unwrap().starts_with("MOCK-"));
-    assert!(receipt.dispatcher_url.is_none());
+fn mock_mode_is_no_longer_accepted() {
     assert!(
-        ebirforms_tauri_lib::return_history::load_history(root.path())
-            .unwrap()
-            .is_empty()
+        serde_json::from_value::<SubmissionRequest>(serde_json::json!({
+            "xml": "<div>txtFinalFlag=0txtFinalFlag=</div>",
+            "returnFilename": "1234567890000-1601EQ-2026Q1.xml", "formCode": "1601EQ",
+            "tin": "123456789", "email": "payer@example.com", "mode": "mock",
+            "fetchDispatcher": false
+        }))
+        .is_err()
     );
 }
 
 #[test]
-fn live_fetch_is_rejected_and_mock_cannot_overwrite_real_submission() {
+fn live_other_forms_are_rejected_before_writing_or_fetching() {
     let root = tempfile::tempdir().unwrap();
-    let filename = "1234567890000-0619E-202601.xml";
-    let save_dir = root.path().join("savefile");
-    fs::create_dir_all(&save_dir).unwrap();
-    fs::write(save_dir.join(filename), "original-submitted-copy").unwrap();
-    for mode in ["legacy_sftp", "mock"] {
+    for form in ["0619E", "1601E", "1601FQ"] {
         let request: SubmissionRequest = serde_json::from_value(serde_json::json!({
-            "xml":"<div>txtFinalFlag=0txtFinalFlag=</div>", "returnFilename":filename,
-            "formCode":"0619E", "tin":"123456789", "email":"payer@example.com",
-            "mode":mode, "fetchDispatcher":true
+            "xml":"<div>txtFinalFlag=0txtFinalFlag=</div>",
+            "returnFilename":"return.xml", "formCode":form,
+            "tin":"123456789", "email":"payer@example.com",
+            "mode":"legacy_sftp", "fetchDispatcher":true
         }))
         .unwrap();
-        let result = run_submission(root.path(), request);
-        if mode == "legacy_sftp" {
-            assert!(result
-                .unwrap_err()
-                .message
-                .contains("Live submission is disabled"));
-        } else {
-            let receipt = result.unwrap();
-            assert!(std::path::Path::new(&receipt.save_path)
-                .parent()
-                .unwrap()
-                .parent()
-                .unwrap()
-                .join("receipt.json")
-                .exists());
-        }
-        assert_eq!(
-            fs::read_to_string(save_dir.join(filename)).unwrap(),
-            "original-submitted-copy"
-        );
+        let error = run_submission(root.path(), request).unwrap_err();
+        assert!(error.message.contains("only available for Form 1601EQ"));
+        assert!(!root.path().join("savefile").exists());
     }
+}
+
+#[test]
+fn live_1601eq_requires_sending_settings_when_fetching_is_disabled() {
+    let root = tempfile::tempdir().unwrap();
+    let request: SubmissionRequest = serde_json::from_value(serde_json::json!({
+        "xml":"<div>txtFinalFlag=0txtFinalFlag=</div>",
+        "returnFilename":"return.xml", "formCode":"1601EQ",
+        "tin":"123456789", "email":"payer@example.com",
+        "mode":"legacy_sftp", "fetchDispatcher":false
+    }))
+    .unwrap();
+    let error = run_submission(root.path(), request).unwrap_err();
+    assert!(error.message.contains("Dispatcher settings are required"));
+    assert!(error.log_path.is_some());
 }

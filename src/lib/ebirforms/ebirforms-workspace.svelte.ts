@@ -3,6 +3,7 @@ import { getFormDefinition, listForms } from '$lib/forms';
 import { calculateReturn, validateReturnValues, getReturnPeriod, getReturnTin, getManagedTaxpayerValues, getReturnEmail } from '$lib/forms/form-runtime';
 import { createWithholdingValues } from '$lib/forms/withholding-rules';
 import { createWorkingReturnsClient } from '$lib/tauri/working-returns';
+import { settings } from '$lib/settings.svelte';
 import { isTauri } from '@tauri-apps/api/core';
 import { parseLegacyXml, serializeLegacyXml } from '$lib/legacy/xml';
 import {
@@ -20,7 +21,6 @@ import { createProfileStoreClient, formatProfileStoreError } from '$lib/tauri/pr
 import {
 	createSubmissionClient,
 	formatSubmissionError,
-	type SubmissionMode,
 	type SubmissionReceipt
 } from '$lib/tauri/submission';
 
@@ -88,7 +88,6 @@ class EbirformsWorkspace {
 	profileLoadErrorDetails = $state('');
 	hasLoadedProfiles = $state(false);
 	statusMessage = $state('Choose a taxpayer to begin a return.');
-	submissionMode = $state<SubmissionMode>('mock');
 	submissionReceipt = $state<SubmissionReceipt | null>(null);
 	selectedProfileId = $state(initialProfile.id);
 	profile = $state<TaxpayerProfile>({ ...initialProfile });
@@ -485,7 +484,7 @@ class EbirformsWorkspace {
 		this.validationErrors = validateReturnValues(this.selectedForm?.code ?? '1601EQ', this.formValues);
 		if (Object.keys(this.validationErrors).length) {
 			this.statusMessage =
-				'Correct the highlighted return details before finalizing or mock submitting.';
+				'Correct the highlighted return details before finalizing or submitting.';
 			return false;
 		}
 		if (applyCalculations) this.formValues = calculateReturn(this.selectedForm?.code ?? '1601EQ', this.formValues);
@@ -498,7 +497,7 @@ class EbirformsWorkspace {
 		const previousFlag = this.finalFlag;
 		this.finalFlag = '1';
 		if (this.activeReturnId && !await this.saveActiveReturn('Final')) { this.finalFlag = previousFlag; return; }
-		this.statusMessage = 'Return validated and marked final locally. Mock submit tests the workflow without sending to BIR.';
+		this.statusMessage = 'Return validated and marked final locally.';
 	}
 
 	async markNeedsResend() {
@@ -517,7 +516,12 @@ class EbirformsWorkspace {
 	}
 
 	async submitCurrentReturn() {
-		if (this.isSubmitting || this.isSavingDraft || this.isPersisting || !this.validateReturn()) return;
+		if (this.isSubmitting || this.isSavingDraft || this.isPersisting) return;
+		if (settings.prefs.submissionMode === 'legacy_sftp' && this.selectedForm?.code !== '1601EQ') {
+			this.statusMessage = 'BIR submission is currently available for Form 1601-EQ only.';
+			return;
+		}
+		if (!this.validateReturn()) return;
 		// Capture the exact return being transmitted before yielding to the client.
 		// Navigation and edits while the upload runs must not alter its saved identity.
 		const returnId = this.activeReturnId;
@@ -536,9 +540,9 @@ class EbirformsWorkspace {
 				formCode: this.selectedForm?.code ?? '1601EQ',
 				tin: this.dispatcherTin,
 				email: getReturnEmail(this.selectedForm?.code ?? '1601EQ', this.formValues, this.profile),
-				mode: 'mock',
+				mode: settings.prefs.submissionMode,
 				dispatcher: undefined,
-				fetchDispatcher: false
+				fetchDispatcher: settings.prefs.submissionMode === 'legacy_sftp'
 			});
 			const current = this.activeReturnId === returnId && this.selectedProfileId === taxpayerId;
 			const unchanged = current && JSON.stringify(this.formValues) === JSON.stringify(submittedValues);
@@ -551,7 +555,7 @@ class EbirformsWorkspace {
 			if (returnId && receipt.status !== 'failed') {
 				const active = this.createdReturns.find(item => item.id === returnId && item.taxpayerId === taxpayerId);
 				if (active) {
-					const status: CreatedReturnStatus = receipt.status === 'simulated' ? 'Simulated' : receipt.status === 'submitted' ? 'Submitted' : receipt.finalFlag === '1' ? 'Final' : 'Draft';
+					const status: CreatedReturnStatus = receipt.status === 'submitted' ? 'Submitted' : receipt.finalFlag === '1' ? 'Final' : 'Draft';
 					const record: CreatedReturn = { ...active, values: submittedValues, returnPeriod: submittedPeriod,
 						status, finalFlag: receipt.finalFlag, updatedAt: Date.now() };
 					if (!await this.#persistWorkingCopies(this.createdReturns.map(item => item.id === returnId ? record : item))) {

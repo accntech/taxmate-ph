@@ -10,7 +10,7 @@ test('table owns all six actions and editor saves back to the table', async ({ p
 	await page.goto(tablePath);
 	await expect(page.getByRole('link', { name: 'Edit', exact: true })).toBeVisible();
 	await menu(page);
-	for (const name of ['Archive', 'Delete…', 'Mark as final', 'Mock submit', 'Generate PDF']) {
+	for (const name of ['Archive', 'Delete…', 'Mark as final', 'Submit to BIR', 'Generate PDF']) {
 		await expect(page.getByRole('menuitem', { name, exact: true })).toBeVisible();
 	}
 	await page.keyboard.press('Escape');
@@ -63,7 +63,7 @@ test('mark final and submit update the selected table row without entering the e
 		native.invoke = async (command: string, args: any) => {
 			if (command === 'submit_return') {
 				(window as any).submittedRequest = args.request;
-				return { status: 'simulated', finalFlag: '2', savePath: '', sendPath: '', message: 'Mock submission saved. Nothing sent to BIR.' };
+				return { status: 'submitted', finalFlag: '1', savePath: '', sendPath: '', message: 'Return uploaded.' };
 			}
 			return previous(command, args);
 		};
@@ -73,10 +73,10 @@ test('mark final and submit update the selected table row without entering the e
 	await expect(page.getByRole('cell', { name: 'Final', exact: true })).toBeVisible();
 	await expect(page).toHaveURL(tablePath);
 	await menu(page);
-	await page.getByRole('menuitem', { name: 'Mock submit', exact: true }).click();
-	await expect(page.getByRole('cell', { name: 'Simulated', exact: true })).toBeVisible();
+	await page.getByRole('menuitem', { name: 'Submit to BIR', exact: true }).click();
+	await expect(page.getByRole('cell', { name: 'Submitted', exact: true })).toBeVisible();
 	await expect(page).toHaveURL(tablePath);
-	expect(await page.evaluate(() => (window as any).submittedRequest.mode)).toBe('mock');
+	expect(await page.evaluate(() => (window as any).submittedRequest.mode)).toBe('legacy_sftp');
 });
 
 test('invalid finalization stays in table with a link to fix the selected form', async ({ page }) => {
@@ -108,7 +108,7 @@ for (const theme of ['light', 'dark']) {
 			await trigger.focus();
 			await trigger.press('ArrowDown');
 			await expect(page.getByRole('menuitem', { name: 'Archive', exact: true })).toBeFocused();
-			for (const name of ['Mark as final', 'Mock submit', 'Generate PDF', 'Delete…']) {
+			for (const name of ['Mark as final', 'Submit to BIR', 'Generate PDF', 'Delete…']) {
 				await expect(page.getByRole('menuitem', { name, exact: true })).toBeInViewport();
 			}
 			await page.screenshot({ path: testInfo.outputPath(`form-menu-${theme}-${width}.png`), fullPage: true, animations: 'disabled' });
@@ -134,4 +134,22 @@ test('row action targets the selected return rather than the previously edited o
 	const returns = await page.evaluate(() => JSON.parse(localStorage.getItem('ebirforms-created-returns-v1')!).returns);
 	expect(returns.find((record: any) => record.id === 'second-return').status).toBe('Final');
 	expect(returns.find((record: any) => record.id === 'review-return').status).toBe('Draft');
+});
+
+test('native submission failure is visible and leaves the return unsubmitted', async ({ page }) => {
+ await seedWorkspace(page);
+ await page.goto(tablePath);
+ await page.evaluate(() => {
+  const native = (window as any).__TAURI_INTERNALS__;
+  const previous = native.invoke;
+  native.invoke = async (command: string, args: any) => {
+   if (command === 'submit_return') throw { message: 'Dispatcher connection failed', logPath: '/test/submission.log' };
+   return previous(command, args);
+  };
+ });
+ await menu(page);
+ await page.getByRole('menuitem', { name: 'Submit to BIR', exact: true }).click();
+ await expect(page.getByRole('alert')).toContainText('Dispatcher connection failed');
+ await expect(page.getByRole('alert')).toContainText('/test/submission.log');
+ await expect(page.getByRole('cell', { name: 'Draft', exact: true })).toBeVisible();
 });

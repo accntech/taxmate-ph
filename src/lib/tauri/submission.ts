@@ -1,6 +1,6 @@
 import { invoke } from '@tauri-apps/api/core'
 
-export type SubmissionMode = 'dry_run' | 'mock' | 'legacy_sftp'
+export type SubmissionMode = 'dry_run' | 'legacy_sftp'
 
 export type DispatcherSettings = {
 	mode: string
@@ -23,7 +23,7 @@ export type SubmissionRequest = {
 }
 
 export type SubmissionReceipt = {
-	status: 'drafted' | 'submitted' | 'simulated' | 'failed'
+	status: 'drafted' | 'submitted' | 'failed'
 	finalFlag: string
 	savePath: string
 	sendPath: string
@@ -31,7 +31,6 @@ export type SubmissionReceipt = {
 	exitCode?: number
 	logPath?: string
 	message: string
-	reference?: string
 }
 
 export type SubmissionError = {
