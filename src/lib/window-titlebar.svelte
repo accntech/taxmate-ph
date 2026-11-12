@@ -17,7 +17,7 @@
 		inset: 0 0 auto;
 		z-index: 50;
 		align-items: center;
-		height: var(--desktop-titlebar-height, 64px);
+		height: var(--desktop-titlebar-height, 48px);
 		padding-left: calc(var(--desktop-titlebar-left-inset, 0px) + 16px);
 		padding-right: calc(var(--desktop-titlebar-right-inset, 0px) + 16px);
 		border-bottom: 1px solid var(--border-soft);
