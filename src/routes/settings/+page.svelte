@@ -1,8 +1,8 @@
 <script lang="ts">
 	import * as stylex from '@stylexjs/stylex';
 	import { styles } from './settings.styles';
-	import { Badge, Button, Card, Dialog, Input, Page, PageHeader, Select } from '$lib/components/ui';
-	import { settings, type ColorTheme, type FilingPeriod, type PaperSize } from '$lib/settings.svelte';
+	import { Badge, Button, Card, Dialog, Page, PageHeader, Select } from '$lib/components/ui';
+	import { settings, type ColorTheme, type PaperSize } from '$lib/settings.svelte';
 	import { createSubmissionLogClient, formatSubmissionError, formatSubmissionLog, type SubmissionLog } from '$lib/tauri/submission';
 	import { isTauri } from '@tauri-apps/api/core';
 	import Settings from '@solar-icons/svelte/category/settings/Linear/Settings.svelte';
@@ -37,18 +37,11 @@
 		{ value: 'long', label: 'Long / Folio', meta: '8.5 × 13 in' }
 	];
 
-	const periodOptions: { value: FilingPeriod; label: string; meta: string }[] = [
-		{ value: 'monthly', label: 'Monthly', meta: 'e.g. 2550M' },
-		{ value: 'quarterly', label: 'Quarterly', meta: 'e.g. 2550Q' },
-		{ value: 'annual', label: 'Annual', meta: 'e.g. 1701' }
-	];
-
 	const birLinks = [
 		{ label: 'eBIRForms — official BIR page', href: 'https://www.bir.gov.ph/eservices/ebirforms' },
 		{ label: 'Bureau of Internal Revenue', href: 'https://www.bir.gov.ph' }
 	];
 
-	let taxpayerName = $state(settings.prefs.defaultTaxpayer);
 	let resetOpen = $state(false);
 	let logOpen = $state(false);
 	let logLoading = $state(false);
@@ -106,7 +99,6 @@
 
 	function confirmReset() {
 		settings.resetToDefaults();
-		taxpayerName = settings.prefs.defaultTaxpayer;
 		resetOpen = false;
 	}
 </script>
@@ -226,24 +218,6 @@
 	/>
 {/snippet}
 
-{#snippet periodControl()}
-	<Select
-		value={settings.prefs.filingPeriod}
-		options={periodOptions}
-		onchange={(value) => settings.updatePrefs({ filingPeriod: value })}
-		class={stylex.attrs(styles.select).class}
-	/>
-{/snippet}
-
-{#snippet taxpayerControl()}
-	<Input
-		bind:value={taxpayerName}
-		placeholder="None"
-		class={stylex.attrs(styles.select).class}
-		onblur={() => settings.updatePrefs({ defaultTaxpayer: taxpayerName.trim() })}
-	/>
-{/snippet}
-
 {#snippet sendingControl()}
 	<div role="group" aria-label="Sending mode" class={stylex.attrs(styles.segmentGroup).class}>
 		{@render segmented(settings.prefs.submissionMode === 'legacy_sftp', () => settings.updatePrefs({ submissionMode: 'legacy_sftp' }), 'Send to BIR')}
@@ -304,9 +278,7 @@
 
 	<Card variant="panel" padding="lg" class={stylex.attrs(styles.card).class}>
 		{@render sectionTitle('Defaults', 'Pre-filled values when you start new work.', Printer)}
-		{@render row('Paper size', 'Default page size for printouts and PDF exports.', paperControl)}
-		{@render row('Filing period', 'Suggested period when preparing a new return.', periodControl)}
-		{@render row('Default taxpayer', 'Selected first when you open a workspace.', taxpayerControl, true)}
+		{@render row('Paper size', 'Default page size for printouts and PDF exports.', paperControl, true)}
 	</Card>
 
 	<Card variant="panel" padding="lg" class={stylex.attrs(styles.card).class}>
