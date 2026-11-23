@@ -80,7 +80,7 @@ test('calculated outputs are separate from editable inputs and update from the t
 	await expect(row.getByText('Enter an amount such as 1,234.56, zero or greater.', { exact: true })).toBeVisible();
 	await expect(page.getByRole('dialog')).toBeVisible();
 	await page.getByRole('dialog').getByRole('button', { name: 'Cancel', exact: true }).click();
-	await expect(page.getByRole('button', { name: 'Edit line item 1', exact: true })).toContainText('₱100,000.00');
+	await expect(page.getByRole('textbox', { name: 'Item 13 Tax base', exact: true })).toHaveValue('100,000.00');
 });
 
 test('unfinished quarter is saved as a draft and rejected at finalization', async ({ page }) => {
