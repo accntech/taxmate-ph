@@ -58,3 +58,31 @@ test('saves a new taxpayer with all five branch digits', async ({ page }) => {
  await expect(page).toHaveURL('/ebirforms/taxpayers');
  await expect(page.getByText('001-234-567-12345', { exact: true })).toBeVisible();
 });
+
+test('rejects a TIN change that would overwrite another taxpayer', async ({ page }) => {
+ await seedWorkspace(page);
+ await page.addInitScript(() => {
+  const native = (window as any).__TAURI_INTERNALS__;
+  const invoke = native.invoke;
+  native.invoke = async (command: string, args: unknown) => {
+   if (command === 'list_taxpayer_profiles') {
+    const [profile] = await invoke(command, args);
+    return [profile, { ...profile, id: '0022345670008', tin1: '002', taxpayerName: 'Second Taxpayer' }];
+   }
+   return invoke(command, args);
+  };
+ });
+
+ await page.goto(`/ebirforms/taxpayers/${taxpayerId}/edit`);
+ const tin = page.getByRole('textbox', { name: 'TIN and branch code', exact: true });
+ await tin.focus();
+ await tin.fill('00223456700008');
+ await tin.blur();
+ await expect(tin).toHaveValue('002-234-567-00008');
+ await page.getByRole('button', { name: 'Save profile', exact: true }).click();
+
+ await expect(tin).toHaveAttribute('aria-invalid', 'true');
+ await expect(tin).toBeFocused();
+ await expect(page.getByText('This TIN and branch code already belong to another taxpayer.')).toBeVisible();
+ await expect(page).toHaveURL(`/ebirforms/taxpayers/${taxpayerId}/edit`);
+});

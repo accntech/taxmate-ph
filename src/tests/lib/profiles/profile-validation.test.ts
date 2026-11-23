@@ -28,6 +28,16 @@ describe('taxpayer profile save validation', () => {
 		expect(workspace.selectedProfileId).toBe('');
 	});
 
+	it('rejects a TIN change that would overwrite another taxpayer file', async () => {
+		const other = { ...initialProfile, id: '1244567890000', tin1: '124', taxpayerName: 'Other taxpayer' };
+		workspace.profiles = [{ ...initialProfile }, other];
+		workspace.profile.tin1 = other.tin1;
+
+		expect(await workspace.saveTaxpayerProfile('124-456-789-00000')).toBe(false);
+		expect(save).not.toHaveBeenCalled();
+		expect(workspace.profiles).toEqual([initialProfile, other]);
+	});
+
 	it('rejects an invalid update without overwriting the saved profile', async () => {
 		workspace.profile.taxpayerName = '   ';
 		await workspace.saveTaxpayerProfile();

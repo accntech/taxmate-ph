@@ -39,8 +39,9 @@ export type ProfileValidationErrors = Partial<
 >;
 
 export function validateTaxpayerProfile(
-	profile: TaxpayerProfileInput,
-	rawTin?: string
+	profile: TaxpayerProfileInput & { id?: string },
+	rawTin?: string,
+	profiles: readonly TaxpayerProfile[] = []
 ): ProfileValidationErrors {
 	const errors: ProfileValidationErrors = {};
 	if (!profile.taxpayerName.trim()) {
@@ -55,6 +56,12 @@ export function validateTaxpayerProfile(
 		errors.tin = 'Enter 9 TIN digits and a 5-digit branch code.';
 	} else if (profile.tin1 + profile.tin2 + profile.tin3 === '000000000') {
 		errors.tin = 'TIN cannot be all zeros.';
+	} else {
+		const id = normalizeTinParts(profile);
+		const existing = findMatchingTaxpayerProfile(profiles, profile) ?? profiles.find((item) => item.id === id);
+		if (existing && existing.id !== profile.id) {
+			errors.tin = 'This TIN and branch code already belong to another taxpayer.';
+		}
 	}
 	if (!isPackagedRdoCode(profile.rdoCode)) {
 		errors.rdoCode = 'Enter a supported RDO code, such as 040 or 17A.';
@@ -131,7 +138,7 @@ export function buildReturnFilename(input: ReturnFilenameInput): string {
 }
 
 export function findMatchingTaxpayerProfile(
-	profiles: TaxpayerProfile[],
+	profiles: readonly TaxpayerProfile[],
 	input: TaxpayerProfileInput & { id?: string }
 ): TaxpayerProfile | undefined {
 	const normalizedId = normalizeTinParts(input);

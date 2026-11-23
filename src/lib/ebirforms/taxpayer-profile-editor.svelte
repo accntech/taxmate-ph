@@ -23,7 +23,7 @@
 	let isSavingProfile = $state(false);
 	let tinInput = $state(formatTinInput(workspace.profile));
 	let validationErrors = $derived(
-		validationAttempted ? validateTaxpayerProfile(workspace.profile, tinInput) : {}
+		validationAttempted ? validateTaxpayerProfile(workspace.profile, tinInput, workspace.profiles) : {}
 	);
 	let activeProfileRoute = $derived(
 		workspace.selectedProfileId ? `${buildTaxpayerRoute(workspace.selectedProfileId)}/forms` : ''

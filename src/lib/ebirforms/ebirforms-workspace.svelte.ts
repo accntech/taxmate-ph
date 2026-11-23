@@ -394,7 +394,7 @@ class EbirformsWorkspace {
 	}
 
 	async saveTaxpayerProfile(rawTin?: string) {
-		if (Object.keys(validateTaxpayerProfile(this.profile, rawTin)).length > 0) {
+		if (Object.keys(validateTaxpayerProfile(this.profile, rawTin, this.profiles)).length > 0) {
 			this.statusMessage = 'Profile not saved. Correct the highlighted details and try again.';
 			return false;
 		}
