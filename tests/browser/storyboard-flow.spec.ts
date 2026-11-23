@@ -29,6 +29,8 @@ for (const outcome of ['success', 'cancel', 'error'] as const) {
 		await page.evaluate(outcome => {
 			const native = (window as any).__TAURI_INTERNALS__;
 			const previous = native.invoke;
+			native.transformCallback = () => 1;
+			native.unregisterCallback = () => {};
 			native.invoke = async (command: string, args: any) => {
 				if (command === 'plugin:dialog|save') return outcome === 'cancel' ? null : '/tmp/return.pdf';
 				if (command === 'export_form_pdf') {
@@ -42,7 +44,7 @@ for (const outcome of ['success', 'cancel', 'error'] as const) {
 		const before = await page.evaluate(() => localStorage.getItem('ebirforms-created-returns-v1'));
 		await page.getByRole('button', { name: /^More actions for BIR Form/ }).click();
 		await page.getByRole('menuitem', { name: 'Generate PDF', exact: true }).click();
-		await expect(page.getByRole('status').filter({ hasText: outcome === 'success' ? 'PDF saved to /tmp/return.pdf' : outcome === 'cancel' ? 'PDF export canceled.' : 'PDF export failed: Renderer unavailable' })).toBeVisible();
+		await expect(page.getByRole(outcome === 'error' ? 'alert' : 'status').filter({ hasText: outcome === 'success' ? 'PDF saved to /tmp/return.pdf' : outcome === 'cancel' ? 'PDF export canceled.' : 'PDF export failed: Renderer unavailable' })).toBeVisible();
 		await expect(page).toHaveURL(`/ebirforms/taxpayers/${taxpayerId}/forms`);
 		expect(await page.evaluate(() => localStorage.getItem('ebirforms-created-returns-v1'))).toBe(before);
 		await expect(page.getByRole('button', { name: /^More actions for BIR Form/ })).toBeEnabled();
