@@ -56,6 +56,38 @@ test('1601FQ hides withholding schedules on No and restores draft items on Yes',
 	await expect(atcHeading).toBeVisible();
 });
 
+test('1600PT hides ATC and payee schedules on No and restores saved details on Yes', async ({ page }) => {
+	const schedule = await seededSchedule(page, '1600PTv2018', 'payees', [['001234567', 'Sample Payee', 'WP010', '1000', '3', '30']]);
+	const withheld = page.getByRole('radiogroup', { name: 'Any tax withheld?', exact: true });
+	const atcHeading = page.locator('summary').getByText('Computation by ATC', { exact: true });
+	await expect(scheduleList(page, schedule)).toContainText('Sample Payee');
+	await withheld.getByRole('radio', { name: 'No', exact: true }).check();
+	await expect(atcHeading).toHaveCount(0);
+	await expect(scheduleList(page, schedule)).toHaveCount(0);
+	await expect(page.getByText('No taxes withheld this month.', { exact: true })).toBeVisible();
+	await page.getByRole('button', { name: 'Save draft', exact: true }).click();
+	await expect(page).toHaveURL(/\/forms$/);
+	await page.getByRole('link', { name: 'Edit', exact: true }).click();
+	await expect(withheld.getByRole('radio', { name: 'No', exact: true })).toBeChecked();
+	await withheld.getByRole('radio', { name: 'Yes', exact: true }).check();
+	await expect(atcHeading).toBeVisible();
+	await openSchedule(page, schedule.title);
+	await expect(scheduleList(page, schedule)).toContainText('Sample Payee');
+});
+
+const otherGatedForms = ['1600', '1600WP', '1600VTv2018', '1601E', '1601F', '1602', '1602Qv2018', '1603Qv2018'];
+for (const code of otherGatedForms) {
+	test(`${code} only offers withholding schedules under Yes`, async ({ page }) => {
+		await seedWorkspace(page);
+		await page.goto(`/ebirforms/taxpayers/${taxpayerId}/forms/${code}?new=true`);
+		const withheld = page.getByRole('radiogroup', { name: 'Any tax withheld?', exact: true });
+		await expect(withheld.getByRole('radio', { name: 'No', exact: true })).toBeChecked();
+		await expect(page.locator('.wh-schedule')).toHaveCount(0);
+		await withheld.getByRole('radio', { name: 'Yes', exact: true }).check();
+		await expect(page.locator('.wh-schedule')).toHaveCount(getWithholdingDefinition(code)!.schedules.length);
+	});
+}
+
 test('an empty schedule has no extra divider above its totals', async ({ page }) => {
 	const schedule = await seededSchedule(page, '1602Qv2018', 'interest', []);
 	const panel = page.locator('details').filter({ has: page.getByText(schedule.title, { exact: true }) });
@@ -229,6 +261,7 @@ test('payee editor fits a narrow dark window and keeps keyboard focus visible', 
 	await page.setViewportSize({ width: 390, height: 960 });
 	await seedWorkspace(page, 'dark');
 	await page.goto(`/ebirforms/taxpayers/${taxpayerId}/forms/1600?new=true`);
+	await page.getByRole('radiogroup', { name: 'Any tax withheld?', exact: true }).getByRole('radio', { name: 'Yes', exact: true }).check();
 	const schedule = getWithholdingDefinition('1600')!.schedules.find(schedule => schedule.id === 'payees')!;
 	await openSchedule(page, schedule.title);
 	await page.getByRole('button', { name: `Add line item to ${schedule.title}`, exact: true }).click();
@@ -247,9 +280,8 @@ for (const definition of withholdingDefinitions.filter(definition => definition.
 		await seedWorkspace(page);
 		await page.goto(`/ebirforms/taxpayers/${taxpayerId}/forms/${definition.code}?new=true`);
 		await expect(page.getByRole('region', { name: `BIR Form ${definition.code} workspace`, exact: true }).getByRole('heading', { level: 1 })).toBeVisible();
-		if (definition.code === '1601FQ') {
-			await page.getByRole('radiogroup', { name: 'Any tax withheld?', exact: true }).getByRole('radio', { name: 'Yes', exact: true }).check();
-		}
+		const withheld = page.getByRole('radiogroup', { name: 'Any tax withheld?', exact: true });
+		if (await withheld.count()) await withheld.getByRole('radio', { name: 'Yes', exact: true }).check();
 		for (const schedule of definition.schedules) {
 			await openSchedule(page, schedule.title);
 			const add = page.getByRole('button', { name: `Add line item to ${schedule.title}`, exact: true });

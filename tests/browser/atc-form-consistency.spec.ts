@@ -53,9 +53,8 @@ for (const definition of atcForms) {
   await seedWorkspace(page);
   await page.goto(`/ebirforms/taxpayers/${taxpayerId}/forms/${definition.code}?new=true`);
   await expect(page.getByRole('region', { name: `BIR Form ${definition.code} workspace`, exact: true }).getByRole('heading', { level: 1 })).toBeVisible();
-  if (definition.code === '1601FQ') {
-   await page.getByRole('radiogroup', { name: 'Any tax withheld?', exact: true }).getByRole('radio', { name: 'Yes', exact: true }).check();
-  }
+  const withheld = page.getByRole('radiogroup', { name: 'Any tax withheld?', exact: true });
+  if (definition.schedules.length && await withheld.count()) await withheld.getByRole('radio', { name: 'Yes', exact: true }).check();
   let exercised = 0;
   const standalone = await page.getByRole('combobox', { name: 'ATC', exact: true }).evaluateAll(elements => elements.map(element => element.id));
   for (const id of standalone) {
@@ -90,6 +89,7 @@ for (const category of ['P', 'G']) {
   }, category);
   await page.goto(`/ebirforms/taxpayers/${taxpayerId}/forms/1602?new=true`);
   await expect(page.getByRole('region', { name: 'BIR Form 1602 workspace', exact: true }).getByRole('heading', { level: 1 })).toBeVisible();
+  await page.getByRole('radiogroup', { name: 'Any tax withheld?', exact: true }).getByRole('radio', { name: 'Yes', exact: true }).check();
   await openScheduleEditor(page, getWithholdingDefinition('1602')!.schedules.find(schedule => schedule.rows[0].fields.some(field => field.label === 'ATC'))!.title);
   await page.getByRole('combobox', { name: 'ATC', exact: true }).first().click();
   const search = page.getByPlaceholder('Search code or income', { exact: true });
@@ -106,6 +106,7 @@ test('revised 1602Q searches both descriptions for shared interest codes', async
  await seedWorkspace(page);
  await page.goto(`/ebirforms/taxpayers/${taxpayerId}/forms/1602Qv2018?new=true`);
  await expect(page.getByRole('region', { name: 'BIR Form 1602Qv2018 workspace', exact: true }).getByRole('heading', { level: 1 })).toBeVisible();
+ await page.getByRole('radiogroup', { name: 'Any tax withheld?', exact: true }).getByRole('radio', { name: 'Yes', exact: true }).check();
  await openScheduleEditor(page, getWithholdingDefinition('1602Qv2018')!.schedules.find(schedule => schedule.rows[0].fields.some(field => field.label === 'ATC'))!.title);
  await page.getByRole('combobox', { name: 'ATC', exact: true }).first().click();
  await page.getByPlaceholder('Search code or income', { exact: true }).fill('deposit substitutes');

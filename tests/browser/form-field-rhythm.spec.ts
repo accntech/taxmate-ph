@@ -80,9 +80,8 @@ for (const definition of withholdingDefinitions) {
 			})).toEqual([]);
 		};
 		await assertLabels('.eq-workspace [data-slot="label"], .eq-workspace [data-slot="radio-group"] > legend');
-		if (definition.code === '1601FQ') {
-			await page.getByRole('radiogroup', { name: 'Any tax withheld?', exact: true }).getByRole('radio', { name: 'Yes', exact: true }).check();
-		}
+		const withheld = page.getByRole('radiogroup', { name: 'Any tax withheld?', exact: true });
+		if (definition.schedules.length && await withheld.count()) await withheld.getByRole('radio', { name: 'Yes', exact: true }).check();
 		for (const schedule of definition.schedules) {
 			const disclosure = page.locator('summary').filter({ hasText: schedule.title }).first();
 			if (await disclosure.locator('..').getAttribute('open') === null) await disclosure.click();

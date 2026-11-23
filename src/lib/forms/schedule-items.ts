@@ -1,5 +1,5 @@
 import {
-	withholdingRowCountKey, withholdingSchedules,
+	withholdingRowCountKey, withholdingSchedules, withholdingSchedulesEnabled,
 	type WithholdingDefinition, type WithholdingRow, type WithholdingSchedule
 } from './withholding-definitions';
 import { calculateWithholding, validateWithholding } from './withholding-rules';
@@ -42,6 +42,9 @@ export function scheduleItemValues(row: WithholdingRow, values: Values): string[
 }
 
 export function validateScheduleDraft(definition: WithholdingDefinition, schedule: WithholdingSchedule, row: WithholdingRow, draft: Values, values: Values): Values {
+	if (!withholdingSchedulesEnabled(definition, values)) {
+		return { [definition.prefix + 'optWithheld']: 'Select Yes before entering withholding details.' };
+	}
 	const candidate = { ...values, ...draft };
 	const runtimeRow = allocatedSchedule(definition, schedule, candidate).rows.find(item => item.id === row.id) ?? row;
 	const validation = validateWithholding(definition.code, candidate);

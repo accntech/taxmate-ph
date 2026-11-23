@@ -23,6 +23,7 @@ async function openDisclosure(page: Page, title: string) {
 test('adding an ATC schedule row opens it and moves keyboard focus to its first field', async ({ page }) => {
 	await seedWorkspace(page);
 	await create(page, '1601E');
+	await page.getByRole('radiogroup', { name: 'Any tax withheld?' }).getByLabel('Yes', { exact: true }).check();
 	await page.getByRole('button', { name: 'Add line item to Computation by ATC', exact: true }).click();
 	await expect(page.getByRole('dialog', { name: 'New line item', exact: true })).toBeVisible();
 	await expect(field(page, 'frm1601E:txtAtcCode1')).toBeVisible();

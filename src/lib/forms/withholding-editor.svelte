@@ -212,7 +212,7 @@
 	<section class="form-paper-part-two" aria-labelledby="computation-title">
 		<h2 class="form-paper-heading" id="computation-title">Part II · {layout.computation ?? 'Computation of Tax'}</h2>
 		{#if !schedulesEnabled}
-			<p class="eq-muted form-paper-feedback">No taxes withheld this quarter.</p>
+			<p class="eq-muted form-paper-feedback">No taxes withheld this {definition.period === 'month' ? 'month' : 'quarter'}.</p>
 		{/if}
 		{#if annual}
 			<aside class="form-paper-summary" aria-label="Summary">

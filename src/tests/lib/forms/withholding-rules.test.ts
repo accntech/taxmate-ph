@@ -8,6 +8,7 @@ import {
 } from "$lib/forms/withholding-rules";
 import {
   getWithholdingDefinition,
+  getWithholdingAtcs,
   withholdingDefinitions,
   withholdingFields,
   withholdingSchedules,
@@ -72,6 +73,29 @@ describe("packaged withholding arithmetic", () => {
     const errors = validateWithholding("1601FQ", values);
     expect(Object.keys(errors).filter(id => /treaty|txtAtcCode|optWithheld/i.test(id))).toEqual([]);
     expect(calculateWithholding("1601FQ", { ...values, "frm1601FQ:optWithheld": "Y" })["frm1601FQ:txtTax22"]).toBe("50.00");
+  });
+  it("excludes retained 1600PT schedule entries from validation under No", () => {
+    const values = {
+      ...createWithholdingValues("1600PTv2018"),
+      "frm1600PT:txtAtcCode1": "INVALID",
+      "frm1600PT:dtSched:txtFullname1": "Sample Payee",
+    };
+    const scheduleErrors = (draft: Record<string, string>) => Object.keys(validateWithholding("1600PTv2018", draft))
+      .filter(id => /txtAtcCode|dtSched|optWithheld/.test(id));
+    expect(scheduleErrors(values)).toEqual([]);
+    expect(scheduleErrors({ ...values, "frm1600PT:optWithheld": "Y" })).toContain("frm1600PT:txtAtcCode1");
+  });
+  it.each([
+    ["1601F", { "treaty:1:income": "1000", "treaty:1:rate": "5" }, "txtTax16", "50.00"],
+    ["1602", { txt14A: "1000", txtReg1: "700" }, "txt33", "200.00"],
+    ["1602Qv2018", { txtSched1Amount1: "1000" }, "txt17", "200.00"],
+    ["1603Qv2018", { "Sched1:txtValue1": "650" }, "txtTax14", "350.00"],
+  ] as const)("ignores retained %s schedule amounts under No", (code, inputs, totalField, yesTotal) => {
+    const prefix = getWithholdingDefinition(code)!.prefix;
+    const draft = calculate(code, { ...inputs, optWithheld: "N" });
+    expect(draft[prefix + totalField]).toBe("0.00");
+    for (const [field, value] of Object.entries(inputs)) expect(draft[prefix + field]).toBe(value);
+    expect(calculateWithholding(code, { ...draft, [prefix + "optWithheld"]: "Y" })[prefix + totalField]).toBe(yesTotal);
   });
   it("retains positive penalties when PT/VT tax is overremitted", () => {
     for (const code of ["1600PTv2018", "1600VTv2018"])

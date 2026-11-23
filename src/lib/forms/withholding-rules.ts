@@ -63,6 +63,11 @@ export function calculateWithholding(code: string, values: Values): Values {
   const d = definition(code),
     p = d.prefix,
     r = { ...values };
+  const schedules = withholdingSchedules(d, values);
+  const schedulesEnabled = withholdingSchedulesEnabled(d, values);
+  const inactiveInputs = new Set(schedulesEnabled ? [] : schedules.flatMap(schedule =>
+    schedule.rows.flatMap(row => row.fields.filter(field => !field.readonly).map(field => field.id)),
+  ));
   for (const field of withholdingFields(d, values))
     if (field.readonly && field.defaultValue !== undefined)
       r[field.id] = field.defaultValue;
@@ -70,7 +75,8 @@ export function calculateWithholding(code: string, values: Values): Values {
     r[p + "itemYearEndMonth"] = "12";
     r[p + "itemFiscalStartMonth"] = "Calendar";
   }
-  const n = (k: string) => number(r[p + k]);
+  const readNumber = (id: string) => inactiveInputs.has(id) ? 0 : number(r[id]);
+  const n = (k: string) => readNumber(p + k);
   const set = (k: string, v: number) => {
     r[p + k] = money(v);
     return number(r[p + k]);
@@ -84,7 +90,7 @@ export function calculateWithholding(code: string, values: Values): Values {
     treatyTotal = 0,
     adjustment = 0;
   const atc = getWithholdingAtcs(code, values[p + "optCategory"]);
-  for (const schedule of withholdingSchedules(d, values)) {
+  for (const schedule of schedules) {
     if (schedule.id === "atc" || schedule.id === "payees") {
       let total = 0;
       for (const row of schedule.rows) {
@@ -116,12 +122,9 @@ export function calculateWithholding(code: string, values: Values): Values {
       else r[p + "dtSched:TotaltaxWithheld"] = money(total);
     }
     if (schedule.id === "treaty") {
-      const enabled = withholdingSchedulesEnabled(d, values);
       for (const row of schedule.rows) {
         const [, , amount, rate, tax] = row.fields;
-        r[tax.id] = money(
-          enabled ? (number(values[amount.id]) * number(values[rate.id])) / 100 : 0,
-        );
+        r[tax.id] = money((readNumber(amount.id) * readNumber(rate.id)) / 100);
         treatyTotal += number(r[tax.id]);
       }
     }
@@ -283,9 +286,10 @@ export function calculateWithholding(code: string, values: Values): Values {
           pct = number(rate.defaultValue);
         r[divisor.id] = String(div);
         r[rate.id] = String(pct);
-        r[base.id] = money((number(values[amount.id]) / div) * 100);
+        const benefit = readNumber(amount.id);
+        r[base.id] = money((benefit / div) * 100);
         r[out.id] = money((number(r[base.id]) * pct) / 100);
-        gross += number(values[amount.id]);
+        gross += benefit;
         tax += number(r[out.id]);
       }
       if (code === "1603") {

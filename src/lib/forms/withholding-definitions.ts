@@ -5551,11 +5551,17 @@ export function withholdingRowCountKey(
   return d.prefix + "__rows:" + scheduleId;
 }
 
+// These legacy forms disable their withholding schedules when No is selected.
+const formsWithConditionalSchedules = new Set([
+  "1600", "1600WP", "1600PTv2018", "1600VTv2018", "1601E", "1601F", "1601FQ",
+  "1602", "1602Qv2018", "1603Qv2018",
+]);
+
 export function withholdingSchedulesEnabled(
   d: WithholdingDefinition,
   values: Record<string, string>,
 ): boolean {
-  return d.code !== "1601FQ" || values[d.prefix + "optWithheld"] !== "N";
+  return !formsWithConditionalSchedules.has(d.code) || values[d.prefix + "optWithheld"] !== "N";
 }
 
 /** Exclude inactive schedule data from return output while preserving the saved draft. */
