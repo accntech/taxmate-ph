@@ -37,9 +37,8 @@ export const atcPicker = stylex.create({
     color: "var(--fg-muted)"
   },
   optionDescription: {
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
+    whiteSpace: "normal",
+    overflowWrap: "anywhere",
     fontSize: "0.75rem",
     lineHeight: "calc(1 / 0.75)",
     color: "var(--fg-muted)"

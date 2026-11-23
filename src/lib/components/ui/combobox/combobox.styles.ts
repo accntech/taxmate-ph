@@ -128,7 +128,13 @@ export const combobox = stylex.create({
     boxShadow:
       "var(--sx-inset-shadow), var(--sx-inset-ring-shadow), var(--sx-ring-offset-shadow), var(--sx-ring-shadow), var(--sx-shadow)",
   },
+  wrappingPopup: {
+    display: "flex",
+    flexDirection: "column",
+    maxHeight: "calc(100dvh - 16px)",
+  },
   searchRow: {
+    flexShrink: 0,
     borderBottomStyle: "solid",
     borderBottomWidth: "1px",
     borderColor: "var(--border)",
@@ -203,6 +209,14 @@ export const combobox = stylex.create({
   options: {
     overflowY: "auto",
     paddingBlock: "var(--spacing)",
+  },
+  wrappingOptionsFrame: {
+    display: "flex",
+    flexDirection: "column",
+    minHeight: 0,
+  },
+  wrappingOptions: {
+    minHeight: 0,
   },
   spacer: {
     position: "relative",
@@ -355,6 +369,11 @@ export const combobox = stylex.create({
     borderTopWidth: "1px",
     borderColor: "var(--border-soft)",
   },
+  wrappingCreateFooter: {
+    flexShrink: 0,
+    maxHeight: "25dvh",
+    overflowY: "auto",
+  },
   createBadge: {
     display: "grid",
     width: "calc(var(--spacing) * 5)",
@@ -375,6 +394,10 @@ export const combobox = stylex.create({
     overflow: "hidden",
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
+  },
+  wrappingCreateLabel: {
+    whiteSpace: "normal",
+    overflowWrap: "anywhere",
   },
   createQuery: {
     "--sx-font-weight": "var(--font-weight-semibold)",
@@ -481,6 +504,9 @@ export const combobox = stylex.create({
       default: null,
       ":disabled": "50%",
     },
+  },
+  wrappingOption: {
+    paddingBlock: "var(--spacing)",
   },
   createButton: {
     display: "flex",

@@ -21,7 +21,7 @@ async function exercisePicker(page: Page, picker: Locator) {
  await expect(page.getByRole('button', { name: /^Use ATC/ })).toHaveCount(0);
  const firstOption = page.getByRole('option').first();
  await expect(firstOption).toBeVisible();
- await expect(firstOption).toHaveCSS('height', '44px');
+ await expect(firstOption).toHaveCSS('min-height', '44px');
  const code = (await firstOption.innerText()).split(/\s+/)[0];
  await search.fill(code);
  await expect(page.getByRole('option').first()).toContainText(code);
@@ -35,7 +35,7 @@ async function exercisePicker(page: Page, picker: Locator) {
  await expect(page.getByRole('button', { name: /^Use ATC/ })).toHaveCount(0);
  await search.fill('zz999');
  const use = page.getByRole('button', { name: 'Use ATC "zz999"', exact: true });
- await expect(use).toHaveCSS('height', '36px');
+ await expect(use).toHaveCSS('min-height', '36px');
  await use.click();
  await expect(picker).toHaveText('ZZ999');
  await expect(page.locator('[popover="manual"]')).toHaveCount(0);

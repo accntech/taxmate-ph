@@ -71,6 +71,7 @@
     id?: string;
     name?: string;
     popupWidth?: number;
+    wrapOptions?: boolean;
     itemHeight?: number;
     maxVisibleItems?: number;
     class?: string;
@@ -97,6 +98,7 @@
     id,
     name,
     popupWidth,
+    wrapOptions = false,
     itemHeight = 32,
     maxVisibleItems = 8,
     sx,
@@ -238,10 +240,11 @@
       observeElementRect(instance, (rect) =>
         callback({ width: rect.width, height: rect.height || viewportHeight }),
       ),
-    measureElement: (element) => {
+    measureElement: (element, entry) => {
       const index = Number(element.dataset.index);
       return (
-        element.getBoundingClientRect().height ||
+        entry?.borderBoxSize?.[0]?.blockSize ||
+        element.offsetHeight ||
         (filteredFlat[index]?.kind === "header" ? 32 : itemHeight)
       );
     },
@@ -262,7 +265,7 @@
 
   const totalHeight = $derived($rowVirtualizer.getTotalSize());
   const canScrollUp = $derived(scrollTop > 0);
-  const canScrollDown = $derived(totalHeight - scrollTop - viewportHeight > 1);
+  const canScrollDown = $derived(totalHeight - scrollTop - ($rowVirtualizer.scrollRect?.height ?? viewportHeight) > 1);
 
   function toggleOpen() {
     if (disabled) return;
@@ -288,7 +291,7 @@
 
   async function focusInput() {
     await tick();
-    inputEl?.focus();
+    inputEl?.focus({ preventScroll: true });
     inputEl?.select();
   }
 
@@ -485,7 +488,9 @@
   function reposition() {
     if (!triggerEl || !popoverEl) return;
     const anchor = triggerEl.getBoundingClientRect();
+    const previousWidth = popoverEl.style.width;
     popoverEl.style.width = `${Math.min(popupWidth ?? anchor.width, window.innerWidth - 16)}px`;
+    if (wrapOptions && popoverEl.style.width !== previousWidth) getStore(rowVirtualizer).measure();
     const next = place(anchor, popoverEl.getBoundingClientRect(), {
       width: window.innerWidth, height: window.innerHeight,
     });
@@ -669,7 +674,7 @@
       bind:this={popoverEl}
       popover="manual"
       style="position: fixed; margin: 0; max-width: calc(100vw - 16px);"
-      class={[stylex.attrs(comboboxLayout.popup).class]}
+      class={[stylex.attrs(comboboxLayout.popup, wrapOptions && comboboxLayout.wrappingPopup).class]}
       in:popIn
       out:popOut
     >
@@ -704,13 +709,13 @@
           {emptyMessage}
         </div>
       {:else}
-        <div class={[stylex.attrs(comboboxLayout.positioningFrame).class]}>
+        <div class={[stylex.attrs(comboboxLayout.positioningFrame, wrapOptions && comboboxLayout.wrappingOptionsFrame).class]}>
           <div
             bind:this={listEl}
             id={listboxId}
             role="listbox"
             aria-multiselectable={multiple}
-            class={[stylex.attrs(comboboxLayout.options).class]}
+            class={[stylex.attrs(comboboxLayout.options, wrapOptions && comboboxLayout.wrappingOptions).class]}
             style:max-height="min({viewportHeight}px, calc(100dvh - 88px - {showCreate ? Math.min(itemHeight, 36) + 2 : 0}px))"
             onscroll={onScroll}
           >
@@ -753,10 +758,12 @@
                           class={[
                             stylex.attrs(
                               comboboxLayout.option,
+                              wrapOptions && comboboxLayout.wrappingOption,
                               hl ? comboboxLayout.highlighted : null,
                             ).class,
                           ]}
-                          style:height="{itemHeight}px"
+                          style:height={wrapOptions ? undefined : `${itemHeight}px`}
+                          style:min-height={wrapOptions ? `${itemHeight}px` : undefined}
                         >
                           {#if multiple}
                             <span
@@ -875,7 +882,7 @@
         </div>
       {/if}
       {#if showCreate}
-        <div class={[stylex.attrs(comboboxLayout.createFooter).class]}>
+        <div class={[stylex.attrs(comboboxLayout.createFooter, wrapOptions && comboboxLayout.wrappingCreateFooter).class]}>
           <button
             type="button"
             onclick={triggerCreate}
@@ -883,10 +890,12 @@
             class={[
               stylex.attrs(
                 comboboxLayout.createButton,
+                wrapOptions && comboboxLayout.wrappingOption,
                 highlight === createIndex && comboboxLayout.highlighted,
               ).class,
             ]}
-            style:height="{Math.min(itemHeight, 36)}px"
+            style:height={wrapOptions ? undefined : `${Math.min(itemHeight, 36)}px`}
+            style:min-height={wrapOptions ? `${Math.min(itemHeight, 36)}px` : undefined}
           >
             <span
               class={[stylex.attrs(comboboxLayout.createBadge).class]}
@@ -899,7 +908,7 @@
                 focusable="false"
               />
             </span>
-            <span class={[stylex.attrs(comboboxLayout.createLabel).class]}>
+            <span class={[stylex.attrs(comboboxLayout.createLabel, wrapOptions && comboboxLayout.wrappingCreateLabel).class]}>
               {#if trimmedQuery}
                 {createLabel ?? "Create"}
                 <span class={[stylex.attrs(comboboxLayout.createQuery).class]}

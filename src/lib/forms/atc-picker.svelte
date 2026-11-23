@@ -56,7 +56,7 @@
 		invalid={!!error}
 		aria-required={required || undefined}
 		aria-describedby={describedBy}
-		popupWidth={576}
+		wrapOptions
 		itemHeight={44}
 		maxVisibleItems={4}
 		clearable

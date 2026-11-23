@@ -17,6 +17,22 @@ for (const width of [1440, 390]) {
   await search.fill('WI01');
   await expect(page.getByRole('option', { name: /WI010/ })).toContainText('5%');
   await expect(page.getByRole('option', { name: /WI011/ })).toContainText('10%');
+  const popup = page.locator('[popover="manual"]');
+  await expect(popup).toHaveCSS('opacity', '1');
+  const triggerBounds = (await atc.boundingBox())!;
+  const popupBounds = (await popup.boundingBox())!;
+  expect(Math.abs(popupBounds.width - triggerBounds.width)).toBeLessThan(1);
+  expect(Math.abs(popupBounds.x - triggerBounds.x)).toBeLessThan(1);
+  const first = page.getByRole('option', { name: /^WI010 / });
+  const second = page.getByRole('option', { name: /^WI011 / });
+  const description = first.getByText(/^PROFESSIONAL/);
+  await expect.poll(() => description.evaluate(element => {
+   const bounds = element.getBoundingClientRect();
+   const row = element.closest('[role="option"]')!.getBoundingClientRect();
+   return bounds.height > Number.parseFloat(getComputedStyle(element).lineHeight) + 1 &&
+    bounds.bottom <= row.bottom && element.scrollWidth <= element.clientWidth + 1;
+  })).toBe(true);
+  await expect.poll(async () => (await second.boundingBox())!.y - await first.evaluate(element => element.getBoundingClientRect().bottom)).toBeGreaterThanOrEqual(-1);
   await search.fill('WI010');
   const option = page.getByRole('option', { name: /WI010/ });
   await expect(option).toBeVisible();
@@ -60,6 +76,32 @@ for (const width of [1440, 390]) {
   expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(width);
  });
 }
+
+ test('a narrow inline ATC popup wraps options and supports keyboard selection', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await seedWorkspace(page, 'dark');
+  await page.goto(formPath);
+  const trigger = page.getByRole('combobox', { name: 'Item 13 ATC', exact: true });
+  await expect(trigger).toHaveCSS('height', '38px');
+  await trigger.evaluate(element => element.scrollIntoView({ block: 'center' }));
+  await trigger.click();
+  const search = page.getByPlaceholder('Search code or income', { exact: true });
+  await expect(search).toBeFocused();
+  await search.fill('WI01');
+  const popup = page.locator('[popover="manual"]');
+  await expect(popup).toHaveCSS('opacity', '1');
+  const triggerBounds = (await trigger.boundingBox())!;
+  const popupBounds = (await popup.boundingBox())!;
+  expect(Math.abs(popupBounds.width - triggerBounds.width)).toBeLessThan(1);
+  expect(popupBounds.x).toBeGreaterThanOrEqual(0);
+  expect(popupBounds.x + popupBounds.width).toBeLessThanOrEqual(390);
+  const first = page.getByRole('option', { name: /^WI010 / });
+  await expect.poll(async () => (await first.boundingBox())?.height ?? 0).toBeGreaterThan(80);
+  await search.press('ArrowDown');
+  await search.press('Enter');
+  await expect(trigger).toHaveText('WI011');
+  await expect(trigger).toBeFocused();
+ });
 
  test('ATC popup stays inside a short window', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 400 });
