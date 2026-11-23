@@ -11,7 +11,7 @@ test('forms storyboard supports cancel, create, open, and back navigation', asyn
 	await page.getByRole('button', { name: 'Create return', exact: true }).click();
 	await page.getByRole('combobox', { name: 'Search BIR forms' }).fill('1601EQ');
 	await page.getByRole('option').click();
-	await expect(page.getByRole('heading', { name: 'BIR Form 1601EQ', exact: true })).toBeVisible();
+	await expect(page.getByRole('heading', { name: /^Quarterly Remittance Return/ })).toBeVisible();
 	await page.getByRole('link', { name: '← Back to forms', exact: true }).click();
 	await expect(page.getByRole('row')).toHaveCount(2);
 	await page.locator('a[href*="review-return"]').filter({ hasText: 'Edit' }).click();

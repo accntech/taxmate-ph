@@ -23,7 +23,7 @@ describe('1601EQ preparation', () => {
 	it('uses currency controls for money and a separate whole-number attachment count', () => {
 		const body = markup({ 'frm1601EQ:optTaxesWithheld': 'Y', 'frm1601EQ:txtATC13': 'WI120', 'frm1601EQ:txtTaxBase13': '100000' });
 		expect(body).toContain('data-slot="currency-input"');
-		expect(body).toContain('₱100,000.00');
+		expect(body).toMatch(/<input(?=[^>]*aria-label="Item 13 Tax base")(?=[^>]*value="100,000.00")/);
 		expect(body).toContain('aria-label="Edit line item 1"');
 		expect(body).toContain('inputmode="numeric"');
 	});
@@ -52,7 +52,7 @@ describe('1601EQ preparation', () => {
 		const imported = markup({ 'frm1601EQ:optTaxesWithheld': 'Y', 'frm1601EQ:txtATC18': 'WI010', 'frm1601EQ:txtTaxBase18': '1000', 'frm1601EQ:txtTaxRate18': '5' });
 		expect(imported).toContain('WI010');
 		expect(imported).toContain('aria-label="Edit line item 1"');
-		expect(imported).toContain('₱1,000.00');
+		expect(imported).toMatch(/<input(?=[^>]*aria-label="Item 18 Tax base")(?=[^>]*value="1,000.00")/);
 	});
 	it('only exposes previous quarter credits after Q1', () => {
 		expect(markup().includes('Over-remittance from previous quarter')).toBe(false);

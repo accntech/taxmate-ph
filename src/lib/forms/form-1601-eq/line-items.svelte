@@ -7,12 +7,13 @@
 	import { prefersReducedMotion } from 'svelte/motion';
 	import { Sheet } from '$lib/components/ui/sheet';
 	import TrashBinTrash from '@solar-icons/svelte/category/ui/Linear/TrashBinTrash.svelte';
+	import Icon from '$lib/components/ui/icon/icon.svelte';
+	import { glyphs } from '$lib/components/ui/icons';
 	import BillList from '@solar-icons/svelte/category/money/Linear/BillList.svelte';
 	import { Button, CalculatedValue, CurrencyInput } from '$lib/components/ui';
 	import { normalizeCurrencyInput } from '$lib/components/ui/currency-input/currency';
 	import AtcPicker from '../atc-picker.svelte';
 	import { calculate1601EQ, form1601EQRows, validate1601EQ } from './form-1601-eq-rules';
-	import { get1601EQATCDescription } from './form-1601-eq-atcs';
 
 	let { values, errors = {}, onchange }: {
 		values: Record<string, string>;
@@ -125,6 +126,13 @@
 		close();
 	}
 
+	function updateInline(part: 'txtATC' | 'txtTaxBase', row: number, value: string) {
+		const id = prefix + part + row;
+		if ((values[id] || '') === value) return;
+		removed = null;
+		onchange(part === 'txtATC' ? { [id]: value, [prefix + 'txtTaxRate' + row]: '' } : { [id]: value });
+	}
+
 	function remove(row: number) {
 		removed = snapshot();
 		removedKeys = { ...rowKeys };
@@ -179,7 +187,10 @@
 		dragging = session.row;
 		dragPosition = { left: session.left, top: event.clientY - session.offset, width: session.width, height: session.height };
 		const next = rows.filter(row => row !== session.row);
-		const target = session.centers.filter(point => point.row !== session.row).findIndex(point => event.clientY < point.center);
+		const center = dragPosition.top + session.height / 2;
+		const movingUp = event.clientY < session.startY;
+		const target = session.centers.filter(point => point.row !== session.row)
+			.findIndex(point => movingUp ? center <= point.center + 1 : center < point.center - 1);
 		next.splice(target === -1 ? next.length : target, 0, session.row);
 		if (!previewRows || next.some((row, index) => row !== previewRows![index])) previewRows = next;
 	}
@@ -260,13 +271,12 @@
 	<svg width="16" height="24" viewBox="0 0 16 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="6" r="1.5" /><circle cx="11" cy="6" r="1.5" /><circle cx="5" cy="12" r="1.5" /><circle cx="11" cy="12" r="1.5" /><circle cx="5" cy="18" r="1.5" /><circle cx="11" cy="18" r="1.5" /></svg>
 {/snippet}
 
-{#snippet rowSummary(row: number, index: number)}
+{#snippet rowSummary(row: number)}
 	{@const atc = values[prefix + 'txtATC' + row] || ''}
-	{@const invalid = parts.some(part => errors[prefix + part + row])}
-	<span class="identity"><span class="ordinal">{index + 1}</span><strong>{atc || 'ATC not selected'}</strong><span class="rate">{calculated[prefix + 'txtTaxRate' + row] ? `${calculated[prefix + 'txtTaxRate' + row]}%` : 'Rate unavailable'}</span></span>
-	<span class="description">{atc ? get1601EQATCDescription(atc, values[prefix + 'optCategory']) : 'Choose an ATC to complete this line.'}</span>
-	<span class="amounts"><span>Tax base <b>{money(values[prefix + 'txtTaxBase' + row])}</b></span><span>Tax withheld <b>{normalizeCurrencyInput(values[prefix + 'txtTaxBase' + row] || '') === null ? '—' : money(calculated[prefix + 'txtTaxWithheld' + row])}</b></span></span>
-	{#if invalid}<span class="error">Review this line item.</span>{/if}
+	<span class="item-number">Item {row}</span>
+	<strong>{atc || 'ATC not selected'}</strong>
+	<span>{money(values[prefix + 'txtTaxBase' + row])}</span>
+	<strong>{money(calculated[prefix + 'txtTaxWithheld' + row])}</strong>
 {/snippet}
 
 {#if dragging !== null && dragPosition}
@@ -274,14 +284,13 @@
 		style:width={`${dragPosition.width}px`} style:min-height={`${dragPosition.height}px`}
 		style:transform={`translate3d(${dragPosition.left}px, ${dragPosition.top}px, 0)`}>
 		<span class="grip">{@render gripIcon()}</span>
-		<div class="item-details">{@render rowSummary(dragging, rows.indexOf(dragging))}</div>
-		<span class="row-actions"><TrashBinTrash size={18} color="currentColor" /></span>
+		<div class="preview-content">{@render rowSummary(dragging)}</div>
 	</div>
 {/if}
 
-<section aria-label="Taxes withheld" class="eq-section">
+<section aria-label="Taxes withheld" class="tax-lines">
 	<header class="eq-section-header">
-		<h2>Taxes withheld</h2>
+		<h2>Part II · Computation of Tax</h2>
 		{#if values[prefix + 'optTaxesWithheld'] === 'Y'}<span class="count">{rows.length} / 6 line items</span>{/if}
 	</header>
 	{#if values[prefix + 'optTaxesWithheld'] === 'Y'}
@@ -294,19 +303,50 @@
 			</div>
 		{:else}
 			<p id="atc-drag-help" class="help">Drag the grip to reorder. With the grip focused, use ↑ or ↓.</p>
+			<div class="column-head" aria-hidden="true">
+				<div class="line-cells">
+					<span>Item</span><span>ATC</span><span>Tax base</span><span>Tax rate</span><span>Tax withheld</span>
+				</div>
+			</div>
 			<ol bind:this={listElement} aria-label="ATC line items" class="items" onpointermove={movePointer} onpointerup={finishPointer} onpointercancel={cancelPointer} onlostpointercapture={cancelPointer}>
 				{#each displayRows as row, index (rowKeys[row])}
 					{@const invalid = parts.some(part => errors[prefix + part + row])}
+					{@const inlineId = `eq-inline-${row}`}
+					{@const rate = calculated[prefix + 'txtTaxRate' + row]}
+					{@const taxBase = values[prefix + 'txtTaxBase' + row] || ''}
 					<li animate:flip={{ duration: prefersReducedMotion.current ? 0 : 180, easing: cubicOut }} class={['item', dragging === row && 'dragging', invalid && 'invalid']}>
+						<div class="line-cells">
+							<div class="item-number"><span class="mobile-label">Item</span>{row}</div>
+							<div class="entry-cell">
+								<span class="mobile-label" aria-hidden="true">ATC</span>
+								<AtcPicker id={inlineId + '-atc'} label={`Item ${row} ATC`} value={values[prefix + 'txtATC' + row] || ''}
+									category={values[prefix + 'optCategory'] || ''} year={Number(values[prefix + 'txtYear'])}
+									error={errors[prefix + 'txtATC' + row] || ''} onchange={(code) => updateInline('txtATC', row, code)} />
+							</div>
+							<div class="entry-cell">
+								<span class="mobile-label" aria-hidden="true">Tax base</span>
+								<CurrencyInput id={inlineId + '-base'} aria-label={`Item ${row} Tax base`} value={taxBase}
+									error={errors[prefix + 'txtTaxBase' + row] || ''} onchange={(value) => updateInline('txtTaxBase', row, value)} />
+							</div>
+							<div class="number-cell">
+								<span class="mobile-label" aria-hidden="true">Tax rate</span>
+								<output aria-label={`Item ${row} Tax rate`}>{rate ? `${rate}%` : '—'}</output>
+							</div>
+							<div class="number-cell withheld-cell">
+								<span class="mobile-label" aria-hidden="true">Tax withheld</span>
+								<output aria-label={`Item ${row} Tax withheld`}>{normalizeCurrencyInput(taxBase) === null ? '—' : money(calculated[prefix + 'txtTaxWithheld' + row])}</output>
+							</div>
+							{#if invalid && !errors[prefix + 'txtATC' + row] && !errors[prefix + 'txtTaxBase' + row]}
+								<span class="row-error error">Review this line item.</span>
+							{/if}
+						</div>
 						<button id={`drag-atc-${row}`} type="button" class="grip" disabled={rows.length < 2}
 							aria-label={`Drag line item ${index + 1}`} aria-describedby="atc-drag-help"
 							onpointerdown={(event) => startPointer(event, row)} onkeydown={(event) => reorderKey(event, index)}>
 							{@render gripIcon()}
 						</button>
-						<button type="button" class="item-details" aria-label={`Edit line item ${index + 1}`} onclick={(event) => edit(row, undefined, event.currentTarget)}>
-							{@render rowSummary(row, index)}
-						</button>
 						<div class="row-actions">
+							<Button variant="ghost" size="icon" aria-label={`Edit line item ${index + 1}`} title="Edit line item" onclick={(event) => edit(row, undefined, event.currentTarget)}><span class="edit-icon"><Icon icon={glyphs.pencil} /></span></Button>
 							<Button variant="ghost" size="icon" aria-label={`Remove line item ${index + 1}`} title="Remove line item" onclick={() => remove(row)}><TrashBinTrash size={18} color="currentColor" aria-hidden="true" /></Button>
 						</div>
 					</li>
@@ -339,37 +379,74 @@
 </Sheet>
 
 <style>
-	.count, .help, .empty > p, .description, .amounts, .rate { color: var(--fg-muted); font-size: .8rem; }
+	.count, .help, .empty > p { color: var(--fg-muted); font-size: .8rem; }
 	.count { white-space: nowrap; font-variant-numeric: tabular-nums; }
-	.empty { display: grid; justify-items: center; gap: .75rem; padding: 2.5rem 1rem; border: 1px dashed var(--border); border-radius: 10px; background: var(--bg); text-align: center; }
+	.empty { display: grid; justify-items: center; gap: .75rem; padding: 2rem 1rem; border: 1px dashed var(--border); background: var(--bg); text-align: center; }
 	.empty-icon { display: grid; width: 2.5rem; height: 2.5rem; place-items: center; border: 1px solid var(--border); border-radius: .5rem; color: var(--fg-muted); font-size: 1.5rem; }
 	.empty .empty-title { color: var(--fg); font-size: .95rem; font-weight: 600; }
 	kbd { margin-left: .4rem; color: var(--fg-subtle); font-family: var(--font-sans); font-size: .7rem; }
 	.help { margin-bottom: .75rem; }
-	.items { display: grid; gap: .5rem; margin: 0; padding: 0; list-style: none; }
-	.item { display: grid; grid-template-columns: 2rem minmax(0, 1fr) auto; gap: .375rem; align-items: start; padding: .625rem; border: 1px solid var(--border-soft); border-radius: 8px; background: var(--bg-elev); }
-	.item.dragging { opacity: .3; border-color: var(--accent); }
-	.drag-preview { position: fixed; top: 0; left: 0; z-index: 100; pointer-events: none; box-shadow: 0 12px 32px rgb(0 0 0 / .25); border-color: var(--accent); }
-	.drag-preview .item-details { cursor: grabbing; }
-	.item.invalid { border-color: var(--danger); }
-	.grip { display: grid; width: 2rem; height: 2.5rem; place-items: center; border: 1px solid transparent; border-radius: 4px; color: var(--fg-muted); background: transparent; font-size: 1.5rem; cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none; }
+	.tax-lines { min-width: 0; }
+	.eq-section-header { flex-wrap: wrap; margin: 0; padding: .625rem .875rem; border-block: 1px solid var(--border); background: var(--bg-hover); }
+	.tax-lines > .help, .tax-lines > .add-row, .tax-lines > .eq-muted, .tax-lines > .eq-undo, .tax-lines > .error { margin: .75rem .875rem; }
+	.empty, .items, .column-head { margin-inline: .875rem; }
+	.items { margin-block: 0; padding: 0; list-style: none; }
+	.item, .column-head { display: grid; grid-template-columns: 2.75rem minmax(0, 1fr) 5.5rem; align-items: stretch; border-inline: 1px solid var(--border); background: var(--bg-elev); }
+	.item { border-bottom: 1px solid var(--border); }
+	.column-head { border-block: 1px solid var(--border); background: var(--bg); color: var(--fg-muted); font-size: .75rem; font-weight: 600; }
+	.line-cells { grid-column: 2; grid-row: 1; display: grid; grid-template-columns: 3.125rem minmax(0, 1fr) minmax(0, 1.25fr) minmax(0, .7fr) minmax(0, 1fr); min-width: 0; }
+	.line-cells > * { min-width: 0; padding: .5rem; border-left: 1px solid var(--border); }
+	.line-cells > :last-child { border-right: 1px solid var(--border); }
+	.item.dragging { opacity: .3; }
+	.item.invalid { border-inline-color: var(--danger); }
+	.item-number { font-weight: 650; color: var(--accent); }
+	.grip { grid-column: 1; grid-row: 1; display: grid; width: 2.75rem; min-height: 2.75rem; place-items: center; border: 1px solid transparent; border-radius: 4px; color: var(--fg-muted); background: transparent; cursor: grab; touch-action: none; user-select: none; }
 	.grip:active { cursor: grabbing; }
 	.grip:disabled { opacity: .35; cursor: default; }
-	.item-details { display: grid; min-width: 0; gap: .5rem; padding: .5rem; border: 1px solid transparent; border-radius: 4px; background: transparent; color: var(--fg); text-align: left; cursor: pointer; }
-	.item-details:hover:not(:focus-visible), .grip:hover:not(:disabled):not(:focus-visible) { background: var(--bg-hover); }
-	.item-details:focus-visible, .grip:focus-visible { outline: none; border-color: var(--field-focus-border); box-shadow: 0 0 0 3px var(--field-focus-halo); }
-	.identity { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; font-size: .875rem; }
-	.ordinal { color: var(--fg-subtle); font-size: .75rem; }
-	.rate { margin-left: auto; font-variant-numeric: tabular-nums; }
-	.description { display: -webkit-box; overflow: hidden; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow-wrap: anywhere; line-height: 1.5; }
-	.amounts { display: flex; flex-wrap: wrap; gap: .5rem 1.5rem; }
-	.amounts > span { display: grid; gap: .125rem; }
-	.amounts b { color: var(--fg); font-weight: 500; font-variant-numeric: tabular-nums; }
-	.row-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: end; gap: .125rem; }
+	.grip:hover:not(:disabled):not(:focus-visible) { background: var(--bg-hover); }
+	.grip:focus-visible { position: relative; z-index: 1; outline: none; border-color: var(--field-focus-border); box-shadow: 0 0 0 3px var(--field-focus-halo); }
+	.row-actions { grid-column: 3; grid-row: 1; display: flex; align-items: flex-start; justify-content: end; }
+	.row-actions :global(button) { min-width: 2.75rem; min-height: 2.75rem; }
+	.edit-icon { display: inline-flex; width: 1.125rem; height: 1.125rem; }
+	.entry-cell :global([data-slot='form-item']) { min-width: 0; }
+	.entry-cell :global([data-slot='currency-input'] > [data-slot='form-item']) { grid-template-columns: minmax(0, 1fr); }
+	.entry-cell :global([data-slot='form-item'] > :not(label)) { min-width: 0; }
+	.entry-cell :global([data-slot='form-item'] > label), .entry-cell :global(p[id$='-atc-description']) { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+	.number-cell { display: grid; align-content: center; text-align: end; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+	.withheld-cell { font-weight: 650; }
+	.row-error { grid-column: 1 / -1; }
+	.mobile-label { display: none; }
+	.drag-preview { position: fixed; top: 0; left: 0; z-index: 100; pointer-events: none; border: 1px solid var(--accent); box-shadow: 0 12px 32px rgb(0 0 0 / .25); }
+	.preview-content { grid-column: 2 / -1; display: flex; flex-wrap: wrap; gap: .375rem 1rem; align-content: center; padding: .5rem; }
+	@container return-fields (max-width: 42rem) {
+		.column-head { display: none; }
+		.items { border-top: 1px solid var(--border); }
+		.item { grid-template-columns: 38px minmax(0, 1fr) auto; }
+		.item .line-cells { grid-column: 1 / -1; grid-template-columns: repeat(2, minmax(0, 1fr)); padding: .625rem .75rem; gap: .5rem .75rem; }
+		.line-cells > * { padding: 0; border: 0; }
+		.line-cells > :last-child { border: 0; }
+		.item-number { grid-column: 1 / -1; }
+		.item-number > .mobile-label { margin-inline-end: .25em; }
+		.mobile-label { display: inline; }
+		.entry-cell > .mobile-label, .number-cell > .mobile-label { display: block; margin-bottom: .25rem; color: var(--fg-muted); font-size: .75rem; }
+		.entry-cell :global([data-slot='form-item'] > div:has(> input)) { min-height: 38px; padding-block: .25rem; }
+		.entry-cell :global([role='combobox']) { min-height: 38px; }
+		.entry-cell :global(input), .entry-cell :global([role='combobox']) { font-size: 14px; }
+		.grip { width: 38px; }
+		.grip, .row-actions :global(button), .add-row :global(button), .empty :global(button) { min-width: 38px; min-height: 38px; }
+		.grip, .row-actions { grid-row: 2; }
+		.number-cell { text-align: start; }
+		@media (pointer: coarse) {
+			.entry-cell :global(input) { font-size: 16px; }
+		}
+	}
+	@container return-fields (max-width: 22rem) {
+		.entry-cell, .withheld-cell { grid-column: 1 / -1; }
+	}
 	.add-row { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem; margin-top: .875rem; }
 	.add-row .help { margin: 0; }
 	.error { color: var(--danger); font-size: .8rem; }
 	.editor-fields { display: grid; gap: var(--form-field-row-gap); min-width: 0; margin: 0; padding: 1.25rem; border: 0; }
 	.editor-actions { display: flex; justify-content: end; gap: .5rem; }
-	@media (forced-colors: active) { .item-details:focus-visible, .grip:focus-visible { outline: 2px solid Highlight; box-shadow: none; } }
+	@media (forced-colors: active) { .grip:focus-visible { outline: 2px solid Highlight; box-shadow: none; } }
 </style>

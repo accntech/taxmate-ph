@@ -15,9 +15,13 @@ test.beforeEach(async ({ page }) => {
 	});
 	await page.goto(formPath);
 	await expect(list(page).getByRole('listitem')).toHaveCount(2);
+	await expect(list(page).getByRole('listitem').first()).toHaveCSS('display', 'grid');
+	await expect(page.getByRole('region', { name: 'Return period' })).toHaveCSS('display', 'grid');
 });
 
 async function dragSecondUp(page: Page) {
+	await expect.poll(async () => (await list(page).boundingBox())?.height).toBeLessThan(165);
+	await page.evaluate(() => document.fonts.ready);
 	await list(page).scrollIntoViewIfNeeded();
 	const source = await page.getByRole('button', { name: 'Drag line item 2', exact: true }).boundingBox();
 	const target = await page.getByRole('button', { name: 'Drag line item 1', exact: true }).boundingBox();

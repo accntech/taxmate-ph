@@ -11,6 +11,51 @@ async function selectAtc(page: Page, code: string) {
 	await page.getByRole('option', { name: new RegExp(`^${code} `) }).click();
 }
 
+test('numbered tax rows reflow and update the return directly', async ({ page }, testInfo) => {
+	await page.setViewportSize({ width: 1440, height: 960 });
+	await seedWorkspace(page);
+	await page.goto(formPath);
+	const period = page.getByRole('region', { name: 'Return period' });
+	const taxpayer = page.getByRole('region', { name: 'Taxpayer information' });
+	await expect(taxpayer.getByText('8', { exact: true })).toBeVisible();
+	expect((await taxpayer.boundingBox())!.y).toBeGreaterThanOrEqual((await period.boundingBox())!.y + (await period.boundingBox())!.height);
+	const row = items(page).getByRole('listitem').first();
+	const atc = row.getByRole('combobox', { name: 'Item 13 ATC', exact: true });
+	const base = row.getByRole('textbox', { name: 'Item 13 Tax base', exact: true });
+	const rate = row.getByLabel('Item 13 Tax rate', { exact: true });
+	await expect(atc).toHaveText('WI120');
+	await expect(base).toBeVisible();
+	expect((await base.boundingBox())!.x).toBeGreaterThan((await atc.boundingBox())!.x);
+	await base.fill('200000');
+	await expect(summary(page)).toContainText('₱2,765.44');
+	await expect(editor(page)).toBeHidden();
+	await page.screenshot({ path: testInfo.outputPath('1601eq-form-desktop.png'), fullPage: true });
+
+	await page.setViewportSize({ width: 390, height: 844 });
+	expect((await rate.boundingBox())!.y).toBeGreaterThan((await base.boundingBox())!.y);
+	await expect.poll(async () => {
+		const height = (await base.locator('..').boundingBox())?.height ?? 0;
+		return height >= 36 && height <= 40;
+	}).toBe(true);
+	expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+	await expect(summary(page)).toContainText('₱2,765.44');
+	await page.screenshot({ path: testInfo.outputPath('1601eq-form-phone.png'), fullPage: true });
+	await atc.click();
+	await page.getByPlaceholder('Search code or income', { exact: true }).fill('WI010');
+	await page.getByRole('option', { name: /^WI010 / }).click();
+	await expect(summary(page)).toContainText('₱8,765.44');
+	await page.setViewportSize({ width: 320, height: 700 });
+	await base.fill('999999999.99');
+	await base.blur();
+	await expect(base).toHaveValue('999,999,999.99');
+	expect(await base.evaluate(input => input.scrollWidth)).toBeLessThanOrEqual(await base.evaluate(input => input.clientWidth) + 1);
+	await page.getByRole('button', { name: 'Save draft', exact: true }).click();
+	await expect(page).toHaveURL(/\/forms$/);
+	const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('ebirforms-created-returns-v1')!).returns[0].values);
+	expect(saved['frm1601EQ:txtATC13']).toBe('WI010');
+	expect(saved['frm1601EQ:txtTaxBase13']).toBe('999999999.99');
+});
+
 test('new and edited line drafts leave totals unchanged until committed', async ({ page }) => {
 	await seedWorkspace(page);
 	await page.goto(formPath);
@@ -66,9 +111,14 @@ test('drag and keyboard reordering persist whole rows through save and reopen', 
 		localStorage.setItem('ebirforms-created-returns-v1', JSON.stringify(data));
 	});
 	await page.goto(formPath);
+	await expect(items(page).getByRole('listitem').first()).toHaveCSS('display', 'grid');
+	await expect(page.getByRole('region', { name: 'Return period' })).toHaveCSS('display', 'grid');
+	await expect.poll(async () => (await items(page).boundingBox())?.height).toBeLessThan(165);
+	await page.evaluate(() => document.fonts.ready);
+	await items(page).scrollIntoViewIfNeeded();
 	await page.getByRole('button', { name: 'Drag line item 2', exact: true }).dragTo(page.getByRole('button', { name: 'Drag line item 1', exact: true }));
 	await expect(items(page).getByRole('listitem').first()).toContainText('WI010');
-	await expect(items(page).getByRole('listitem').first()).toContainText('₱20,000.00');
+	await expect(items(page).getByRole('listitem').first().getByRole('textbox', { name: 'Item 13 Tax base' })).toHaveValue('20,000.00');
 	await expect(summary(page)).toContainText('₱1,765.44');
 	await page.getByRole('button', { name: 'Drag line item 1', exact: true }).press('ArrowDown');
 	await expect(items(page).getByRole('listitem').first()).toContainText('WI120');

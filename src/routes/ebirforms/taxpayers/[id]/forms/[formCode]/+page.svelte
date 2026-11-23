@@ -67,11 +67,13 @@
 	{:else if recordError}
 		<p role="alert" class={stylex.attrs(styles.error).class}>{recordError}</p>
 	{:else}
-		<section class="eq-workspace" aria-label={`BIR Form ${params.formCode} workspace`}>
-			<header class="eq-header">
+		<section class={['eq-workspace', { 'paper-workspace': params.formCode === '1601EQ' }]} aria-label={`BIR Form ${params.formCode} workspace`}>
+			<header class={['eq-header', { 'paper-status': params.formCode === '1601EQ' }]}>
 				<div class="eq-heading">
 					<div class="eq-title-row">
-						<h1>BIR Form {params.formCode}</h1>
+						{#if params.formCode !== '1601EQ'}
+							<h1>BIR Form {params.formCode}</h1>
+						{/if}
 						<Badge tone={workspace.currentReturnStatus === 'Submitted' ? 'success' : workspace.currentReturnStatus === 'Final' ? 'info' : 'neutral'}>
 							{workspace.currentReturnStatus}
 						</Badge>
@@ -79,11 +81,18 @@
 							<span class="eq-muted">Unsaved changes</span>
 						{/if}
 					</div>
-					<p class="eq-description">{workspace.selectedForm?.title}</p>
+					{#if params.formCode !== '1601EQ'}
+						<p class="eq-description">{workspace.selectedForm?.title}</p>
+					{/if}
 				</div>
 			</header>
 			{#if workspace.selectedForm}
-				<ReturnTaxpayerInformation formCode={workspace.selectedForm.code} values={workspace.formValues} profile={workspace.profile} taxpayerHref={`/ebirforms/taxpayers/${params.id}/edit`} />
+				{#snippet taxpayerInformation()}
+					<ReturnTaxpayerInformation formCode={params.formCode} values={workspace.formValues} profile={workspace.profile} taxpayerHref={`/ebirforms/taxpayers/${params.id}/edit`} />
+				{/snippet}
+				{#if workspace.selectedForm.code !== '1601EQ'}
+					{@render taxpayerInformation()}
+				{/if}
 				{#if Object.keys(workspace.validationErrors).length}
 					<div class="eq-errors">
 						<ReturnErrors definition={workspace.selectedForm} errors={workspace.validationErrors} taxpayerHref={`/ebirforms/taxpayers/${params.id}/edit`} />
@@ -92,7 +101,7 @@
 				<fieldset disabled={busy} class="eq-form-controls">
 					<legend class={stylex.attrs(styles.visuallyHidden).class}>BIR form details</legend>
 					{#if workspace.selectedForm.code === '1601EQ'}
-						<Form1601EQ definition={workspace.selectedForm} bind:values={workspace.formValues} errors={workspace.validationErrors} onvaluechange={(patch) => workspace.updateFormValues(patch)} />
+						<Form1601EQ definition={workspace.selectedForm} bind:values={workspace.formValues} errors={workspace.validationErrors} onvaluechange={(patch) => workspace.updateFormValues(patch)} {taxpayerInformation} />
 					{:else if getWithholdingDefinition(workspace.selectedForm.code)}
 						<WithholdingEditor definition={getWithholdingDefinition(workspace.selectedForm.code)!} values={workspace.formValues} errors={workspace.validationErrors} taxpayerHref={`/ebirforms/taxpayers/${params.id}/edit`} onvaluechange={(patch) => workspace.updateFormValues(patch)} />
 					{/if}
@@ -111,3 +120,11 @@
 		</section>
 	{/if}
 </Page>
+
+<style>
+	.paper-status { min-height: 0; }
+	@container return-workspace (max-width: 28rem) {
+		.paper-workspace .eq-action-bar { gap: .375rem; padding-block: .5rem; }
+		.paper-workspace .eq-actions :global(button) { min-height: 38px; }
+	}
+</style>

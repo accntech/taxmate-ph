@@ -1,5 +1,6 @@
 <script lang="ts">
 	import '../form-editor-layout.css';
+	import type { Snippet } from 'svelte';
 	import type { FormDefinition } from '$lib/forms';
 	import Form1601EQEditor from './form-1601-eq-editor.svelte';
 
@@ -8,9 +9,10 @@
 		values: Record<string, string>;
 		errors?: Record<string, string>;
 		onvaluechange?: (patch: Record<string, string>) => void;
+		taxpayerInformation?: Snippet;
 	};
 
-	let { definition, values = $bindable(), errors = {}, onvaluechange }: Props = $props();
+	let { definition, values = $bindable(), errors = {}, onvaluechange, taxpayerInformation }: Props = $props();
 </script>
 
-<Form1601EQEditor {definition} bind:values {errors} {onvaluechange} />
+<Form1601EQEditor {definition} bind:values {errors} {onvaluechange} {taxpayerInformation} />

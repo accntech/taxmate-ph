@@ -22,7 +22,7 @@ test('form command filters, handles no matches, and creates with the keyboard', 
 	await search.press('ArrowDown');
 	await search.press('ArrowUp');
 	await search.press('Enter');
-	await expect(page.getByRole('heading', { name: 'BIR Form 1601EQ', exact: true })).toBeVisible();
+	await expect(page.getByRole('heading', { name: /^Quarterly Remittance Return/ })).toBeVisible();
 	await page.getByRole('link', { name: '← Back to forms', exact: true }).click();
 	await expect(page.getByRole('row')).toHaveCount(2);
 });
@@ -66,7 +66,7 @@ for (const theme of ['light', 'dark']) {
 			await trigger.click();
 			await expect(search).toHaveValue('');
 			await page.getByRole('option').first().click();
-			await expect(page.getByRole('heading', { name: 'BIR Form 1601EQ', exact: true })).toBeVisible();
+			await expect(page.getByRole('heading', { name: /^Quarterly Remittance Return/ })).toBeVisible();
 		});
 	}
 }

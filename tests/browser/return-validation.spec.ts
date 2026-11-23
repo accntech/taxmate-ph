@@ -34,7 +34,7 @@ for (const scenario of ['no ATC', 'zero tax base']) {
 		await editor.getByRole('textbox', { name: 'Tax Base', exact: true }).fill('200000');
 		await editor.getByRole('button', { name: scenario === 'no ATC' ? 'Add' : 'Update', exact: true }).click();
 		await expect(editor).toBeHidden();
-		await expect(page.getByRole('button', { name: 'Edit line item 1', exact: true })).toContainText('₱200,000.00');
+		await expect(page.getByRole('textbox', { name: 'Item 13 Tax base', exact: true })).toHaveValue('200,000.00');
 		await page.getByRole('button', { name: 'Save draft', exact: true }).click();
 		await expect(page).toHaveURL(`/ebirforms/taxpayers/${taxpayerId}/forms`);
 		const values = await page.evaluate(() => JSON.parse(localStorage.getItem('ebirforms-created-returns-v1')!).returns[0].values);

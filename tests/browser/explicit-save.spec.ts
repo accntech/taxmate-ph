@@ -10,7 +10,7 @@ for (const exit of ['Cancel', 'Back'] as const) {
   const before = await page.evaluate(() => localStorage.getItem('ebirforms-created-returns-v1'));
   await page.getByRole('button', { name: 'Create return', exact: true }).click();
   await page.getByRole('option').filter({ hasText: '1601EQ' }).click();
-  await expect(page.getByRole('heading', { name: 'BIR Form 1601EQ', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /^Quarterly Remittance Return/ })).toBeVisible();
   if (exit === 'Cancel') await page.getByRole('button', { name: 'Cancel', exact: true }).click();
   else await page.getByRole('link', { name: '← Back to forms', exact: true }).click();
   await expect(page).toHaveURL(formsPath);
@@ -24,7 +24,7 @@ test('Save creates a new form and updates it only when saved again', async ({ pa
  const before = await page.evaluate(() => localStorage.getItem('ebirforms-created-returns-v1'));
  await page.getByRole('button', { name: 'Create return', exact: true }).click();
  await page.getByRole('option').filter({ hasText: '1601EQ' }).click();
- await expect(page.getByRole('heading', { name: 'BIR Form 1601EQ', exact: true })).toBeVisible();
+ await expect(page.getByRole('heading', { name: /^Quarterly Remittance Return/ })).toBeVisible();
  expect(await page.evaluate(() => localStorage.getItem('ebirforms-created-returns-v1'))).toBe(before);
  await page.getByRole('button', { name: 'Save draft', exact: true }).click();
  await expect(page).toHaveURL(formsPath);

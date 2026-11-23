@@ -30,7 +30,9 @@ test('all supported returns show only basic taxpayer information', async ({ page
 		for (const value of ['Example Services Corporation', '001-234-567-00008', '040', '123 Example Street', 'Example City']) {
 			await expect(information).toContainText(value);
 		}
-		await expect(information.locator('dt')).toHaveText(['Taxpayer name', 'TIN and branch code', 'RDO code', 'Registered address']);
+		await expect(information.locator('dt')).toHaveText(form.code === '1601EQ'
+			? ['6 TIN and branch code', '7 RDO code', '8 Taxpayer name', '9 Registered address']
+			: ['Taxpayer name', 'TIN and branch code', 'RDO code', 'Registered address']);
 		await expect(information.getByRole('link', { name: 'Edit taxpayer information' })).toHaveAttribute('href', `/ebirforms/taxpayers/${taxpayerId}/edit`);
 	}
 	for (const theme of ['light', 'dark']) {
