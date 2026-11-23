@@ -97,3 +97,19 @@ test('summary reads from the calculation breakdown to the final amount', async (
 	expect(total!.y).toBeGreaterThanOrEqual(breakdown!.y + breakdown!.height);
 	await expect(summary).toContainText('₱765.44');
 });
+
+test('currency amounts align right while resting and editing', async ({ page }) => {
+	await seedWorkspace(page);
+	await page.goto(formPath);
+	const remittance = page.getByRole('textbox', { name: 'First month', exact: true });
+	const taxBase = page.getByRole('textbox', { name: 'Item 13 Tax base', exact: true });
+	await expect(remittance).toHaveValue('1,234.56');
+	await expect(remittance).toHaveCSS('text-align', 'right');
+	await expect(taxBase).toHaveCSS('text-align', 'right');
+
+	await page.setViewportSize({ width: 390, height: 844 });
+	await remittance.focus();
+	await expect(remittance).toHaveValue('1234.56');
+	await expect(remittance).toHaveCSS('text-align', 'right');
+	await expect(taxBase).toHaveCSS('text-align', 'right');
+});

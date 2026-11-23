@@ -48,7 +48,7 @@
 		error={formatError || error}
 		type="text"
 		inputmode="decimal"
-		class={[stylex.attrs(wrapperStyles.control).class, className].filter(Boolean).join(' ')}
+		class={className}
 		onfocus={(event) => {
 			if (!readonly) {
 				// PCSTI focuses the ungrouped amount and selects it for replacement.
@@ -72,3 +72,10 @@
 		{#snippet leading()}<span aria-hidden="true" class={stylex.attrs(wrapperStyles.symbol).class}>₱</span>{/snippet}
 	</Input>
 </div>
+
+<style>
+	[data-slot='currency-input'] :global(input) {
+		text-align: right;
+		font-variant-numeric: tabular-nums;
+	}
+</style>
