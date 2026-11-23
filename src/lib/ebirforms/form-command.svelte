@@ -22,7 +22,7 @@
 	const matches = $derived(forms.filter(form => {
 		const text = `BIR Form ${form.code} ${form.title} ${form.category}`.toLowerCase();
 		return query.trim().toLowerCase().split(/\s+/).every(word => text.includes(word));
-	}));
+	}).sort((a, b) => a.code.localeCompare(b.code, 'en', { numeric: true })));
 	const available = $derived(matches.filter(form => form.status === 'ready'));
 	const active = $derived(available.find(form => form.code === activeCode) ?? available[0]);
 

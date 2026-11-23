@@ -3,19 +3,26 @@ import { seedWorkspace, taxpayerId } from './fixtures';
 
 const tablePath = `/ebirforms/taxpayers/${taxpayerId}/forms`;
 
-test('form command classifies Form 0605 as Payment', async ({ page }) => {
+test('form command lists forms in ascending form number order', async ({ page }) => {
 	await seedWorkspace(page);
 	await page.goto(tablePath);
 	await page.getByRole('button', { name: 'Create return', exact: true }).click();
 	const search = page.getByRole('combobox', { name: 'Search BIR forms' });
 	const paymentForm = page.getByRole('option', { name: /BIR Form 0605/ });
+	const formNumbers = page.getByRole('listbox', { name: 'BIR forms' })
+		.getByText(/^BIR Form \w+$/);
+	await expect(formNumbers.first()).toHaveText('BIR Form 0605');
+	const allForms = await formNumbers.allTextContents();
+	expect(allForms).toEqual([...allForms].sort());
 
 	await search.fill('0605');
 	await expect(paymentForm.getByText('Payment', { exact: true })).toBeVisible();
 
 	await search.fill('withholding tax');
 	await expect(paymentForm).toHaveCount(0);
-	await expect(page.getByRole('option', { name: /BIR Form 0619E/ })).toBeVisible();
+	await expect(formNumbers.first()).toHaveText('BIR Form 0619E');
+	const withholdingForms = await formNumbers.allTextContents();
+	expect(withholdingForms).toEqual([...withholdingForms].sort());
 });
 
 test('form command filters, handles no matches, and creates with the keyboard', async ({ page }) => {
@@ -33,9 +40,14 @@ test('form command filters, handles no matches, and creates with the keyboard', 
 	await expect(page.getByText('No matching forms')).toBeVisible();
 	await search.press('Enter');
 	await expect(page.getByRole('dialog')).toBeVisible();
-	await search.fill('1601');
+	await search.fill('withholding tax');
+	const selectedForm = page.getByRole('option', { selected: true });
+	await expect(selectedForm).toHaveAccessibleName(/^BIR Form 0619E\b/);
 	await search.press('ArrowDown');
+	await expect(selectedForm).toHaveAccessibleName(/^BIR Form 0619F\b/);
 	await search.press('ArrowUp');
+	await expect(selectedForm).toHaveAccessibleName(/^BIR Form 0619E\b/);
+	await search.fill('1601eq');
 	await search.press('Enter');
 	await expect(page.getByRole('heading', { name: /^Quarterly Remittance Return/ })).toBeVisible();
 	await page.getByRole('link', { name: '← Back to forms', exact: true }).click();
@@ -80,7 +92,7 @@ for (const theme of ['light', 'dark']) {
 			await expect(trigger).toBeFocused();
 			await trigger.click();
 			await expect(search).toHaveValue('');
-			await page.getByRole('option').first().click();
+			await page.getByRole('option', { name: /^BIR Form 1601EQ\b/ }).click();
 			await expect(page.getByRole('heading', { name: /^Quarterly Remittance Return/ })).toBeVisible();
 		});
 	}
