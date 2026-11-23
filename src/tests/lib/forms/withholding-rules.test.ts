@@ -59,6 +59,20 @@ describe("packaged withholding arithmetic", () => {
     expect(r["frm1601E:txtTaxbeWithHeld1"]).toBe("2000.00");
     expect(r["frm1601E:txtTax18"]).toBe("1600.00");
   });
+  it("excludes retained 1601FQ draft schedules from No-withholding totals and validation", () => {
+    const values = {
+      ...createWithholdingValues("1601FQ"),
+      "frm1601FQ:treaty:1:income": "1000",
+      "frm1601FQ:treaty:1:rate": "5",
+      "frm1601FQ:txtAtcCode1": "old draft ATC",
+    };
+    const result = calculateWithholding("1601FQ", values);
+    expect(result["frm1601FQ:txtTax22"]).toBe("0.00");
+    expect(result["frm1601FQ:treaty:1:income"]).toBe("1000");
+    const errors = validateWithholding("1601FQ", values);
+    expect(Object.keys(errors).filter(id => /treaty|txtAtcCode|optWithheld/i.test(id))).toEqual([]);
+    expect(calculateWithholding("1601FQ", { ...values, "frm1601FQ:optWithheld": "Y" })["frm1601FQ:txtTax22"]).toBe("50.00");
+  });
   it("retains positive penalties when PT/VT tax is overremitted", () => {
     for (const code of ["1600PTv2018", "1600VTv2018"])
       expect(

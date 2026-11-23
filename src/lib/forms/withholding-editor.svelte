@@ -6,7 +6,7 @@
 	import AtcPicker from './atc-picker.svelte';
 	import { CalculatedValue, CurrencyInput, DateInput, Input, NumberInput, RadioGroup, Select } from '$lib/components/ui';
 	import { normalizeCurrencyInput } from '$lib/components/ui/currency-input/currency';
-	import { withholdingSchedules, type WithholdingDefinition, type WithholdingField, type WithholdingSchedule } from './withholding-definitions';
+	import { withholdingSchedules, withholdingSchedulesEnabled, type WithholdingDefinition, type WithholdingField, type WithholdingSchedule } from './withholding-definitions';
 	import { calculateWithholding } from './withholding-rules';
 	import ScheduleItems from './schedule-items.svelte';
 	import './withholding-layout.css';
@@ -21,7 +21,8 @@
 		taxpayerHref: string;
 	} = $props();
 	const calculated = $derived(calculateWithholding(definition.code, values));
-	const schedules = $derived(withholdingSchedules(definition, values));
+	const schedulesEnabled = $derived(withholdingSchedulesEnabled(definition, values));
+	const schedules = $derived(schedulesEnabled ? withholdingSchedules(definition, values) : []);
 	const layout = $derived(getWithholdingPaperLayout(definition.code));
 	const annual = $derived(definition.period === 'year');
 	const propertyReturn = $derived(definition.code === '1606');
@@ -210,6 +211,9 @@
 
 	<section class="form-paper-part-two" aria-labelledby="computation-title">
 		<h2 class="form-paper-heading" id="computation-title">Part II · {layout.computation ?? 'Computation of Tax'}</h2>
+		{#if !schedulesEnabled}
+			<p class="eq-muted form-paper-feedback">No taxes withheld this quarter.</p>
+		{/if}
 		{#if annual}
 			<aside class="form-paper-summary" aria-label="Summary">
 				{#each schedules as schedule (`${definition.code}:${schedule.id}`)}

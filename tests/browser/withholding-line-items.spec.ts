@@ -37,6 +37,25 @@ function scheduleList(page: Page, schedule: WithholdingSchedule) {
 	return page.getByRole('list', { name: `${schedule.title} line items`, exact: true });
 }
 
+test('1601FQ hides withholding schedules on No and restores draft items on Yes', async ({ page }) => {
+	const schedule = await seededSchedule(page, '1601FQ', 'treaty', [['TT01', 'WI202', '1000', '5', '50']]);
+	const withheld = page.getByRole('radiogroup', { name: 'Any tax withheld?', exact: true });
+	const atcHeading = page.locator('summary').getByText('Computation by ATC', { exact: true });
+	await expect(scheduleList(page, schedule)).toContainText('TT01');
+	await withheld.getByRole('radio', { name: 'No', exact: true }).check();
+	await expect(page.getByText('No taxes withheld this quarter.', { exact: true })).toBeVisible();
+	await expect(atcHeading).toHaveCount(0);
+	await expect(scheduleList(page, schedule)).toHaveCount(0);
+	await page.getByRole('button', { name: 'Save draft', exact: true }).click();
+	await expect(page).toHaveURL(/\/forms$/);
+	await page.getByRole('link', { name: 'Edit', exact: true }).click();
+	await expect(withheld.getByRole('radio', { name: 'No', exact: true })).toBeChecked();
+	await withheld.getByRole('radio', { name: 'Yes', exact: true }).check();
+	await openSchedule(page, schedule.title);
+	await expect(scheduleList(page, schedule)).toContainText('TT01');
+	await expect(atcHeading).toBeVisible();
+});
+
 test('an empty schedule has no extra divider above its totals', async ({ page }) => {
 	const schedule = await seededSchedule(page, '1602Qv2018', 'interest', []);
 	const panel = page.locator('details').filter({ has: page.getByText(schedule.title, { exact: true }) });
@@ -228,6 +247,9 @@ for (const definition of withholdingDefinitions.filter(definition => definition.
 		await seedWorkspace(page);
 		await page.goto(`/ebirforms/taxpayers/${taxpayerId}/forms/${definition.code}?new=true`);
 		await expect(page.getByRole('region', { name: `BIR Form ${definition.code} workspace`, exact: true }).getByRole('heading', { level: 1 })).toBeVisible();
+		if (definition.code === '1601FQ') {
+			await page.getByRole('radiogroup', { name: 'Any tax withheld?', exact: true }).getByRole('radio', { name: 'Yes', exact: true }).check();
+		}
 		for (const schedule of definition.schedules) {
 			await openSchedule(page, schedule.title);
 			const add = page.getByRole('button', { name: `Add line item to ${schedule.title}`, exact: true });

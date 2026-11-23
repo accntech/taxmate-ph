@@ -5550,3 +5550,25 @@ export function withholdingRowCountKey(
 ): string {
   return d.prefix + "__rows:" + scheduleId;
 }
+
+export function withholdingSchedulesEnabled(
+  d: WithholdingDefinition,
+  values: Record<string, string>,
+): boolean {
+  return d.code !== "1601FQ" || values[d.prefix + "optWithheld"] !== "N";
+}
+
+/** Exclude inactive schedule data from return output while preserving the saved draft. */
+export function withoutInactiveWithholdingScheduleValues(
+  d: WithholdingDefinition,
+  values: Record<string, string>,
+): Record<string, string> {
+  if (withholdingSchedulesEnabled(d, values)) return values;
+  const activeValues = { ...values };
+  for (const schedule of withholdingSchedules(d, values)) {
+    delete activeValues[withholdingRowCountKey(d, schedule.id)];
+    for (const row of schedule.rows)
+      for (const field of row.fields) delete activeValues[field.id];
+  }
+  return activeValues;
+}

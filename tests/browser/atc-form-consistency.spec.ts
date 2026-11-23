@@ -53,6 +53,9 @@ for (const definition of atcForms) {
   await seedWorkspace(page);
   await page.goto(`/ebirforms/taxpayers/${taxpayerId}/forms/${definition.code}?new=true`);
   await expect(page.getByRole('region', { name: `BIR Form ${definition.code} workspace`, exact: true }).getByRole('heading', { level: 1 })).toBeVisible();
+  if (definition.code === '1601FQ') {
+   await page.getByRole('radiogroup', { name: 'Any tax withheld?', exact: true }).getByRole('radio', { name: 'Yes', exact: true }).check();
+  }
   let exercised = 0;
   const standalone = await page.getByRole('combobox', { name: 'ATC', exact: true }).evaluateAll(elements => elements.map(element => element.id));
   for (const id of standalone) {

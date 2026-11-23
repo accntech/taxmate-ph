@@ -5,7 +5,9 @@ import {
   getWithholdingAtcs,
   withholdingFields,
   withholdingSchedules,
+  withholdingSchedulesEnabled,
   withholdingRowCountKey,
+  withoutInactiveWithholdingScheduleValues,
   type WithholdingDefinition,
   type WithholdingField,
 } from "./withholding-definitions";
@@ -114,10 +116,11 @@ export function calculateWithholding(code: string, values: Values): Values {
       else r[p + "dtSched:TotaltaxWithheld"] = money(total);
     }
     if (schedule.id === "treaty") {
+      const enabled = withholdingSchedulesEnabled(d, values);
       for (const row of schedule.rows) {
         const [, , amount, rate, tax] = row.fields;
         r[tax.id] = money(
-          (number(values[amount.id]) * number(values[rate.id])) / 100,
+          enabled ? (number(values[amount.id]) * number(values[rate.id])) / 100 : 0,
         );
         treatyTotal += number(r[tax.id]);
       }
@@ -434,12 +437,13 @@ export function withholdingReturnPeriod(code: string, values: Values): string {
 }
 export function validateWithholding(
   code: string,
-  values: Values,
+  draftValues: Values,
   now = new Date(),
 ): Values {
   const d = definition(code),
     p = d.prefix,
     errors: Values = {};
+  const values = withoutInactiveWithholdingScheduleValues(d, draftValues);
   const fields = withholdingFields(d, values);
   const text = (k: string) => (values[p + k] ?? "").trim();
   for (const f of fields) {
