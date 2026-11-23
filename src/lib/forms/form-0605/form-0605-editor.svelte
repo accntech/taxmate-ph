@@ -151,6 +151,7 @@
 
 <style>
 	.period-grid, .payment-choices, .penalties { display: grid; grid-template-columns: minmax(0, 1fr); }
+	.period-grid { border-bottom: 1px solid var(--border); }
 	.year-ended { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); align-items: start; gap: .5rem; }
 	.tax-type-field { display: grid; min-width: 0; gap: var(--form-label-gap); }
 	.required-mark { margin-inline-start: .25rem; color: var(--danger); }
@@ -195,15 +196,19 @@
 	.payment-feedback { margin: 0; padding: .75rem .875rem; border-top: 1px solid var(--border); }
 
 	@container paper-form (min-width: 36rem) {
-		.period-grid, .payment-choices { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-		.period-grid > .payment-cell:nth-child(-n + 2) { border-top: 0; }
-		.period-grid > .payment-cell:nth-child(even), .payment-choices > div + div { border-inline-start: 1px solid var(--border); }
+		.payment-choices { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+		.payment-choices > div + div { border-inline-start: 1px solid var(--border); }
 		.penalties { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 		.penalties > .payment-cell + .payment-cell { border-inline-start: 1px solid var(--border); }
 		.basic-tax :global([data-slot="currency-input"] > [data-slot="form-item"]) {
 			grid-template-columns: minmax(0, 1fr) minmax(10rem, 16rem);
 			align-items: center;
 		}
+	}
+	@container paper-form (36rem <= width < 62rem) {
+		.period-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+		.period-grid > .payment-cell:nth-child(-n + 2) { border-top: 0; }
+		.period-grid > .payment-cell:nth-child(even) { border-inline-start: 1px solid var(--border); }
 	}
 	@container paper-form (min-width: 62rem) {
 		.period-grid {

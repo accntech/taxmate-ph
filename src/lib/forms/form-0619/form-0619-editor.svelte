@@ -120,7 +120,7 @@
 </div>
 
 <style>
-	.remittance-period { display: grid; grid-template-columns: minmax(0, 1fr); }
+	.remittance-period { display: grid; grid-template-columns: minmax(0, 1fr); border-bottom: 1px solid var(--border); }
 	.period-cell, .remittance-row {
 		display: grid;
 		grid-template-columns: 1.75rem minmax(0, 1fr);
@@ -130,6 +130,7 @@
 		padding: .75rem .875rem;
 		border-bottom: 1px solid var(--border);
 	}
+	.period-cell:last-child { border-bottom: 0; }
 	.month-year { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); gap: .5rem; }
 	.period-cell :global([data-slot="form-item"]), .remittance-row :global([data-slot="form-item"]) {
 		grid-template-columns: minmax(0, 1fr);

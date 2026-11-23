@@ -16,13 +16,14 @@
 	import { activeScheduleRows, isReorderableSchedule, nextScheduleDraft, scheduleItemValues, validateScheduleDraft, writeScheduleItems } from './schedule-items';
 
 	type Values = Record<string, string>;
-	let { definition, schedule, values, errors = {}, onchange, totals }: {
+	let { definition, schedule, values, errors = {}, onchange, totals, printedRange }: {
 		definition: WithholdingDefinition;
 		schedule: WithholdingSchedule;
 		values: Values;
 		errors?: Values;
 		onchange: (patch: Values) => void;
 		totals?: Snippet;
+		printedRange?: readonly [number, number];
 	} = $props();
 
 	const uid = $props.id();
@@ -297,7 +298,15 @@
 {/snippet}
 
 {#snippet rowSummary(row: WithholdingRow, index: number)}
-	<span class="identity"><span class="ordinal">{index + 1}</span><strong>{rowTitle(row)}</strong></span>
+	{@const position = schedule.rows.findIndex(candidate => candidate.id === row.id)}
+	{@const item = printedRange && position >= 0 && printedRange[0] + position <= printedRange[1]
+		? printedRange[0] + position : undefined}
+	{@const title = rowTitle(row)}
+	{@const ordinal = item !== undefined ? `Item ${item}` : String(index + 1)}
+	<span class="identity">
+		{#if ordinal !== title}<span class="ordinal">{ordinal}</span>{/if}
+		<strong>{title}</strong>
+	</span>
 	<span class="amounts">
 		{#each row.fields.filter(field => visible(field)) as field (field.id)}
 			<span><span>{displayLabel(field.label)}</span><b>{display(field, calculated[field.id] ?? values[field.id] ?? '')}</b></span>
@@ -416,4 +425,8 @@
 	.editor-row { display: grid; gap: var(--form-field-row-gap); min-width: 0; margin: 0; padding: 0; border: 0; }
 	.editor-actions { display: flex; justify-content: end; gap: .5rem; }
 	@media (forced-colors: active) { .item-details:focus-visible, .grip:focus-visible { outline: 2px solid Highlight; box-shadow: none; } }
+	@container paper-form (max-width: 27rem) {
+		.amounts { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .5rem .625rem; }
+		.amounts > span { overflow-wrap: anywhere; }
+	}
 </style>

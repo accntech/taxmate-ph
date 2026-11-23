@@ -1,16 +1,21 @@
 <script lang="ts">
+	import type { Snippet } from 'svelte';
 	import { ButtonLink } from '$lib/components/ui';
 	import Icon from '$lib/components/ui/icon/icon.svelte';
 	import { glyphs } from '$lib/components/ui/icons';
 	import type { TaxpayerProfile } from '$lib/profiles/profile';
 	import { formatTinInput } from '$lib/profiles/profile';
 	import { getWithholdingDefinition } from './withholding-definitions';
+	import { compareFormItems, type TaxpayerItemKey } from './withholding-paper-layout';
 
-	let { formCode, values, profile, taxpayerHref }: {
+	let { formCode, values, profile, taxpayerHref, itemNumbers, extraItems = [], extraField }: {
 		formCode: string;
 		values: Record<string, string>;
 		profile: TaxpayerProfile;
 		taxpayerHref: string;
+		itemNumbers?: Partial<Record<TaxpayerItemKey, string>>;
+		extraItems?: { id: string; item: string }[];
+		extraField?: Snippet<[string]>;
 	} = $props();
 
 	const legacyFields: Partial<Record<keyof TaxpayerProfile, string>> = {
@@ -31,11 +36,29 @@
 	const payment = $derived(formCode === '0605');
 	const remittance = $derived(formCode === '0619E' || formCode === '0619F');
 	const remittanceTinItem = $derived(formCode === '0619F' ? 6 : 7);
-	const paper = $derived(formCode === '1601EQ' || payment || remittance);
+	const paper = $derived(formCode === '1601EQ' || payment || remittance || !!itemNumbers);
 	const classification = $derived(value('taxpayerClassification'));
 	const category = $derived(value('category'));
 	const tin = $derived(formatTinInput({ tin1: value('tin1'), tin2: value('tin2'), tin3: value('tin3'), branchCode: value('branchCode') }));
 	const address = $derived([value('address'), value('address2')].filter(Boolean).join(', '));
+	const profileLabels: Partial<Record<TaxpayerItemKey, string>> = {
+		tin: 'TIN and branch code', rdoCode: 'RDO code', taxpayerName: 'Withholding agent’s name',
+		address: 'Registered address', zipCode: 'ZIP code', category: 'Category of withholding agent',
+		contactNumber: 'Contact number', email: 'Email address', lineOfBusiness: 'Line of business / occupation'
+	};
+
+	const paperRows = $derived([
+		...Object.entries(itemNumbers ?? {}).map(([rawKey, item]) => {
+			const key = rawKey as TaxpayerItemKey;
+			const content = key === 'tin' ? tin : key === 'address' ? address :
+				key === 'category' ? category === 'P' ? 'Private' : category === 'G' ? 'Government' : '' : value(key);
+			const label = formCode === '1606' && key === 'taxpayerName' ? 'Buyer’s name' :
+				formCode === '1606' && key === 'address' ? 'Buyer’s registered address' : profileLabels[key] ?? key;
+			return { key, item, label, content, fieldId: undefined };
+		}),
+		...extraItems.map(({ id, item }) => ({ key: id, item, fieldId: id, label: '', content: '' }))
+	].sort((a, b) => compareFormItems(a.item, b.item)));
+
 	const details = $derived(remittance ? [
 		{ item: remittanceTinItem, label: 'TIN and branch code', content: tin },
 		{ item: remittanceTinItem + 1, label: 'RDO code', content: value('rdoCode') },
@@ -59,21 +82,39 @@
 	]);
 </script>
 
-<section class={['eq-section taxpayer-information', { paper, payment, remittance }]} aria-label="Taxpayer information">
+<section class={['eq-section taxpayer-information', { paper, payment, remittance, 'mapped-paper': !!itemNumbers }]} aria-label="Taxpayer information">
 	<header class="eq-section-header">
 		<h2>{paper ? 'Part I · Background Information' : 'Taxpayer information'}</h2>
 		<ButtonLink href={taxpayerHref} variant="ghost" size="icon" aria-label="Edit taxpayer information" title="Edit taxpayer information">
 			<span class="edit-icon"><Icon icon={glyphs.pencil} /></span>
 		</ButtonLink>
 	</header>
-	<dl>
-		{#each (paper && !remittance ? [...details].sort((a, b) => Number(a.item) - Number(b.item)) : details) as { item, label, content } (item)}
-			<div>
-			<dt>{#if paper}<span class="taxpayer-item">{item}</span>{/if} {label}</dt>
-				<dd>{content || '—'}</dd>
-			</div>
-		{/each}
-	</dl>
+	{#if itemNumbers}
+		<div class="profile-grid">
+			{#each paperRows as row (row.key)}
+				{#if row.fieldId && extraField}
+					<div class="profile-extra">
+						<span class="taxpayer-item" aria-hidden="true">{row.item}</span>
+						{@render extraField(row.fieldId)}
+					</div>
+				{:else}
+					<dl data-profile-key={row.key}>
+						<dt><span class="taxpayer-item">{row.item}</span> {row.label}</dt>
+						<dd>{row.content || '—'}</dd>
+					</dl>
+				{/if}
+			{/each}
+		</div>
+	{:else}
+		<dl>
+			{#each (paper && !remittance ? [...details].sort((a, b) => Number(a.item) - Number(b.item)) : details) as { item, label, content } (item)}
+				<div>
+				<dt>{#if paper}<span class="taxpayer-item">{item}</span>{/if} {label}</dt>
+					<dd>{content || '—'}</dd>
+				</div>
+			{/each}
+		</dl>
+	{/if}
 </section>
 
 <style>
@@ -90,9 +131,9 @@
 	.paper dl > div { padding: .75rem .875rem; border-top: 1px solid var(--border); }
 	.taxpayer-item { margin-inline-end: .5rem; color: var(--fg); font-weight: 650; }
 	@container paper-form (min-width: 36rem) {
-		.paper:not(.payment, .remittance) dl { grid-template-columns: minmax(0, 1.2fr) minmax(0, .6fr) minmax(0, 2fr); }
-		.paper:not(.payment, .remittance) dl > div:nth-child(n + 2):nth-child(-n + 3) { border-inline-start: 1px solid var(--border); }
-		.paper:not(.payment, .remittance) dl > div:last-child { grid-column: 1 / -1; }
+		.paper:not(.payment, .remittance, .mapped-paper) dl { grid-template-columns: minmax(0, 1.2fr) minmax(0, .6fr) minmax(0, 2fr); }
+		.paper:not(.payment, .remittance, .mapped-paper) dl > div:nth-child(n + 2):nth-child(-n + 3) { border-inline-start: 1px solid var(--border); }
+		.paper:not(.payment, .remittance, .mapped-paper) dl > div:last-child { grid-column: 1 / -1; }
 		.payment dl { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 		.payment dl > div:nth-child(even) { border-inline-start: 1px solid var(--border); }
 		.remittance dl { grid-template-columns: repeat(4, minmax(0, 1fr)); }
@@ -111,5 +152,30 @@
 	}
 	@container return-workspace (min-width: 60rem) {
 		dl { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+	}
+	.mapped-paper > .eq-section-header, .profile-grid { border-block-start: 1px solid var(--border); }
+	.profile-grid {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 1px;
+		background: var(--border);
+	}
+	.profile-grid > dl, .profile-extra {
+		display: block;
+		flex: 1 0 var(--profile-cell-width, 100%);
+		min-width: 0;
+		padding: .75rem .875rem;
+		background: var(--bg-elev);
+	}
+	.profile-extra { display: grid; grid-template-columns: 1.75rem minmax(0, 1fr); gap: .375rem; align-items: start; }
+	.profile-extra > .taxpayer-item { margin-inline-end: 0; font-size: .8rem; }
+	.profile-extra :global([data-slot="form-item"]) { grid-template-columns: minmax(0, 1fr); }
+	@container paper-form (min-width: 36rem) {
+		.profile-grid { --profile-cell-width: calc((100% - 1px) / 2); }
+		.profile-grid > [data-profile-key="address"] { --profile-cell-width: 100%; }
+	}
+	@container paper-form (min-width: 58rem) {
+		.profile-grid { --profile-cell-width: calc((100% - 3px) / 4); }
+		.profile-grid > [data-profile-key="address"] { --profile-cell-width: calc((100% - 1px) / 2); }
 	}
 </style>

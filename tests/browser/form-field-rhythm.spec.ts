@@ -68,9 +68,7 @@ for (const definition of withholdingDefinitions) {
 		await seedWorkspace(page);
 		await page.routeWebSocket('**/*', socket => socket.close());
 		await page.goto(`/ebirforms/taxpayers/${taxpayerId}/forms/${definition.code}?new=true`);
-		const heading = definition.code === '0605' ? 'Payment Form' : ['0619E', '0619F'].includes(definition.code)
-			? /Monthly Remittance Form/ : `BIR Form ${definition.code}`;
-		await expect(page.getByRole('heading', { name: heading, exact: true })).toBeVisible();
+		await expect(page.getByRole('region', { name: `BIR Form ${definition.code} workspace`, exact: true }).getByRole('heading', { level: 1 })).toBeVisible();
 		const assertLabels = async (selector: string) => {
 			await expect.poll(() => page.locator(selector).evaluateAll(elements => {
 				if (!elements.length) return ['No form labels found'];

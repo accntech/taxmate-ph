@@ -52,8 +52,7 @@ async function create(page: Page, code: string) {
 	await page.getByRole('button', { name: 'Create return', exact: true }).click();
 	await page.getByRole('combobox', { name: 'Search BIR forms' }).fill(code);
 	await page.getByRole('option', { name: new RegExp(`^BIR Form ${code} `) }).click();
-	const heading = code === '0605' ? 'Payment Form' : ['0619E', '0619F'].includes(code) ? /Monthly Remittance Form/ : `BIR Form ${code}`;
-	await expect(page.getByRole('heading', { name: heading, exact: true })).toBeVisible();
+	await expect(page.getByRole('region', { name: `BIR Form ${code} workspace`, exact: true }).getByRole('heading', { level: 1 })).toBeVisible();
 }
 
 test('0619E follows the PDF field order in a centered paper form', async ({ page }, testInfo) => {

@@ -15,6 +15,8 @@ async function openScheduleEditor(page: Page, title: string) {
 }
 
 async function exercisePicker(page: Page, picker: Locator) {
+ await page.evaluate(() => document.fonts.ready);
+ await picker.evaluate(element => element.scrollIntoView({ block: 'center', behavior: 'instant' }));
  await picker.click();
  const search = page.getByPlaceholder('Search code or income', { exact: true });
  await expect(search).toBeFocused();
@@ -50,7 +52,7 @@ for (const definition of atcForms) {
  test(`${definition.code} ATC fields share search, custom entry and empty-text handling`, async ({ page }) => {
   await seedWorkspace(page);
   await page.goto(`/ebirforms/taxpayers/${taxpayerId}/forms/${definition.code}?new=true`);
-  await expect(page.getByRole('heading', { name: `BIR Form ${definition.code}`, exact: true })).toBeVisible();
+  await expect(page.getByRole('region', { name: `BIR Form ${definition.code} workspace`, exact: true }).getByRole('heading', { level: 1 })).toBeVisible();
   let exercised = 0;
   const standalone = await page.getByRole('combobox', { name: 'ATC', exact: true }).evaluateAll(elements => elements.map(element => element.id));
   for (const id of standalone) {
@@ -84,7 +86,7 @@ for (const category of ['P', 'G']) {
    };
   }, category);
   await page.goto(`/ebirforms/taxpayers/${taxpayerId}/forms/1602?new=true`);
-  await expect(page.getByRole('heading', { name: 'BIR Form 1602', exact: true })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'BIR Form 1602 workspace', exact: true }).getByRole('heading', { level: 1 })).toBeVisible();
   await openScheduleEditor(page, getWithholdingDefinition('1602')!.schedules.find(schedule => schedule.rows[0].fields.some(field => field.label === 'ATC'))!.title);
   await page.getByRole('combobox', { name: 'ATC', exact: true }).first().click();
   const search = page.getByPlaceholder('Search code or income', { exact: true });
@@ -100,7 +102,7 @@ for (const category of ['P', 'G']) {
 test('revised 1602Q searches both descriptions for shared interest codes', async ({ page }) => {
  await seedWorkspace(page);
  await page.goto(`/ebirforms/taxpayers/${taxpayerId}/forms/1602Qv2018?new=true`);
- await expect(page.getByRole('heading', { name: 'BIR Form 1602Qv2018', exact: true })).toBeVisible();
+ await expect(page.getByRole('region', { name: 'BIR Form 1602Qv2018 workspace', exact: true }).getByRole('heading', { level: 1 })).toBeVisible();
  await openScheduleEditor(page, getWithholdingDefinition('1602Qv2018')!.schedules.find(schedule => schedule.rows[0].fields.some(field => field.label === 'ATC'))!.title);
  await page.getByRole('combobox', { name: 'ATC', exact: true }).first().click();
  await page.getByPlaceholder('Search code or income', { exact: true }).fill('deposit substitutes');

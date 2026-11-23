@@ -37,6 +37,20 @@ function scheduleList(page: Page, schedule: WithholdingSchedule) {
 	return page.getByRole('list', { name: `${schedule.title} line items`, exact: true });
 }
 
+test('an empty schedule has no extra divider above its totals', async ({ page }) => {
+	const schedule = await seededSchedule(page, '1602Qv2018', 'interest', []);
+	const panel = page.locator('details').filter({ has: page.getByText(schedule.title, { exact: true }) });
+	const emptyState = panel.locator('.empty');
+	const totals = panel.locator('.wh-schedule-totals');
+	for (const width of [1440, 390]) {
+		await page.setViewportSize({ width, height: 960 });
+		await expect(emptyState).toBeVisible();
+		await expect(emptyState).toHaveCSS('border-bottom-style', 'dashed');
+		await expect(totals).toBeVisible();
+		await expect(totals).toHaveCSS('border-top-width', '0px');
+	}
+});
+
 for (const definition of withholdingDefinitions.filter(definition => definition.schedules.some(schedule => schedule.id === 'atc'))) {
 	test(`${definition.code} commits a valid ATC only after Add and discards edited drafts`, async ({ page }) => {
 		await seedWorkspace(page);
@@ -76,7 +90,10 @@ for (const [code, scheduleId, tuples] of [
 		await page.setViewportSize({ width: 1440, height: 1100 });
 		const schedule = await seededSchedule(page, code, scheduleId, tuples.map(tuple => [...tuple]));
 		const list = scheduleList(page, schedule);
-		await list.scrollIntoViewIfNeeded();
+		await expect(page.getByRole('region', { name: 'Return period' }).locator('> div').first()).toHaveCSS('flex-basis', '0px');
+		await page.evaluate(() => document.fonts.ready);
+		await list.evaluate(element => element.scrollIntoView({ block: 'center', behavior: 'instant' }));
+		await page.evaluate(() => new Promise(requestAnimationFrame));
 		const original = await list.getByRole('listitem').first().elementHandle();
 		const source = await list.getByRole('button', { name: 'Drag line item 2', exact: true }).boundingBox();
 		const target = await list.getByRole('button', { name: 'Drag line item 1', exact: true }).boundingBox();
@@ -160,7 +177,10 @@ test('schedule pointer previews cancel on Escape and reduced motion skips reorde
 	await page.setViewportSize({ width: 1440, height: 1100 });
 	const schedule = await seededSchedule(page, '1601E', 'atc', [['WI120', '100000', '2', '2000'], ['WI010', '20000', '10', '2000']]);
 	const list = scheduleList(page, schedule);
-	await list.scrollIntoViewIfNeeded();
+	await expect(page.getByRole('region', { name: 'Return period' }).locator('> div').first()).toHaveCSS('flex-basis', '0px');
+	await page.evaluate(() => document.fonts.ready);
+	await list.evaluate(element => element.scrollIntoView({ block: 'center', behavior: 'instant' }));
+	await page.evaluate(() => new Promise(requestAnimationFrame));
 	const second = await list.getByRole('button', { name: 'Drag line item 2', exact: true }).boundingBox();
 	const first = await list.getByRole('button', { name: 'Drag line item 1', exact: true }).boundingBox();
 	await page.mouse.move(second!.x + 10, second!.y + 10);
@@ -207,7 +227,7 @@ for (const definition of withholdingDefinitions.filter(definition => definition.
 	test(`${definition.code} schedule adds use an isolated draft editor`, async ({ page }) => {
 		await seedWorkspace(page);
 		await page.goto(`/ebirforms/taxpayers/${taxpayerId}/forms/${definition.code}?new=true`);
-		await expect(page.getByRole('heading', { name: `BIR Form ${definition.code}`, exact: true })).toBeVisible();
+		await expect(page.getByRole('region', { name: `BIR Form ${definition.code} workspace`, exact: true }).getByRole('heading', { level: 1 })).toBeVisible();
 		for (const schedule of definition.schedules) {
 			await openSchedule(page, schedule.title);
 			const add = page.getByRole('button', { name: `Add line item to ${schedule.title}`, exact: true });

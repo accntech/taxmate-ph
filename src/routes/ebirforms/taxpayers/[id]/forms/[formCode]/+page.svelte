@@ -20,7 +20,6 @@
 	let recordError = $state('');
 	const recordId = $derived(page.url.searchParams.get('return'));
 	const busy = $derived(workspace.isSavingDraft || workspace.isSubmitting || workspace.isPersisting);
-	const paper = $derived(params.formCode === '1601EQ' || params.formCode === '0605' || params.formCode === '0619E' || params.formCode === '0619F');
 	onMount(() => {
 		void Promise.all([workspace.loadCreatedReturns(), workspace.loadTaxpayerProfiles()]).then(() => { ready = true; openRequestedReturn(); });
 	});
@@ -70,13 +69,10 @@
 	{:else if recordError}
 		<p role="alert" class={stylex.attrs(styles.error).class}>{recordError}</p>
 	{:else}
-		<section class={['eq-workspace', { 'paper-workspace': paper }]} aria-label={`BIR Form ${params.formCode} workspace`}>
-			<header class={['eq-header', { 'paper-status': paper }]}>
+		<section class="eq-workspace paper-workspace" aria-label={`BIR Form ${params.formCode} workspace`}>
+			<header class="eq-header paper-status">
 				<div class="eq-heading">
 					<div class="eq-title-row">
-						{#if !paper}
-							<h1>BIR Form {params.formCode}</h1>
-						{/if}
 						<Badge tone={workspace.currentReturnStatus === 'Submitted' ? 'success' : workspace.currentReturnStatus === 'Final' ? 'info' : 'neutral'}>
 							{workspace.currentReturnStatus}
 						</Badge>
@@ -84,18 +80,12 @@
 							<span class="eq-muted">Unsaved changes</span>
 						{/if}
 					</div>
-					{#if !paper}
-						<p class="eq-description">{workspace.selectedForm?.title}</p>
-					{/if}
 				</div>
 			</header>
 			{#if workspace.selectedForm}
 				{#snippet taxpayerInformation()}
 					<ReturnTaxpayerInformation formCode={params.formCode} values={workspace.formValues} profile={workspace.profile} taxpayerHref={`/ebirforms/taxpayers/${params.id}/edit`} />
 				{/snippet}
-				{#if !paper}
-					{@render taxpayerInformation()}
-				{/if}
 				{#if Object.keys(workspace.validationErrors).length}
 					<div class="eq-errors">
 						<ReturnErrors definition={workspace.selectedForm} errors={workspace.validationErrors} taxpayerHref={`/ebirforms/taxpayers/${params.id}/edit`} />
@@ -110,7 +100,7 @@
 					{:else if workspace.selectedForm.code === '0619E' || workspace.selectedForm.code === '0619F'}
 						<Form0619Editor code={workspace.selectedForm.code} values={workspace.formValues} errors={workspace.validationErrors} onvaluechange={(patch) => workspace.updateFormValues(patch)} {taxpayerInformation} />
 					{:else if getWithholdingDefinition(workspace.selectedForm.code)}
-						<WithholdingEditor definition={getWithholdingDefinition(workspace.selectedForm.code)!} values={workspace.formValues} errors={workspace.validationErrors} taxpayerHref={`/ebirforms/taxpayers/${params.id}/edit`} onvaluechange={(patch) => workspace.updateFormValues(patch)} />
+						<WithholdingEditor definition={getWithholdingDefinition(workspace.selectedForm.code)!} values={workspace.formValues} errors={workspace.validationErrors} profile={workspace.profile} taxpayerHref={`/ebirforms/taxpayers/${params.id}/edit`} onvaluechange={(patch) => workspace.updateFormValues(patch)} />
 					{/if}
 				</fieldset>
 			{/if}
