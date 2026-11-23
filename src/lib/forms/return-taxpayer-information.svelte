@@ -28,16 +28,24 @@
 		// Saved blanks are meaningful; only absent return values fall back to the profile.
 		return (field ? values[field] : undefined) ?? profile[key] ?? '';
 	}
+	const payment = $derived(formCode === '0605');
+	const paper = $derived(formCode === '1601EQ' || payment);
+	const classification = $derived(value('taxpayerClassification'));
 	const details = $derived([
-		{ item: 8, label: 'Taxpayer name', content: value('taxpayerName') },
-		{ item: 6, label: 'TIN and branch code', content: formatTinInput({ tin1: value('tin1'), tin2: value('tin2'), tin3: value('tin3'), branchCode: value('branchCode') }) },
-		{ item: 7, label: 'RDO code', content: value('rdoCode') },
-		{ item: 9, label: 'Registered address', content: [value('address'), value('address2')].filter(Boolean).join(', ') }
+		{ item: payment ? 13 : 8, label: 'Taxpayer name', content: value('taxpayerName') },
+		{ item: payment ? 9 : 6, label: 'TIN and branch code', content: formatTinInput({ tin1: value('tin1'), tin2: value('tin2'), tin3: value('tin3'), branchCode: value('branchCode') }) },
+		{ item: payment ? 10 : 7, label: 'RDO code', content: value('rdoCode') },
+		{ item: payment ? 15 : 9, label: 'Registered address', content: [value('address'), value('address2')].filter(Boolean).join(', ') },
+		...(payment ? [
+			{ item: 11, label: 'Taxpayer classification', content: classification === 'I' ? 'Individual' : classification === 'N' ? 'Non-individual' : '' },
+			{ item: 12, label: 'Line of business / occupation', content: value('lineOfBusiness') },
+			{ item: 14, label: 'Telephone number', content: value('contactNumber') },
+			{ item: 16, label: 'ZIP code', content: value('zipCode') }
+		] : [])
 	]);
-	const paper = $derived(formCode === '1601EQ');
 </script>
 
-<section class={['eq-section taxpayer-information', { paper }]} aria-label="Taxpayer information">
+<section class={['eq-section taxpayer-information', { paper, payment }]} aria-label="Taxpayer information">
 	<header class="eq-section-header">
 		<h2>{paper ? 'Part I · Background Information' : 'Taxpayer information'}</h2>
 		<ButtonLink href={taxpayerHref} variant="ghost" size="icon" aria-label="Edit taxpayer information" title="Edit taxpayer information">
@@ -47,7 +55,7 @@
 	<dl>
 		{#each (paper ? [...details].sort((a, b) => a.item - b.item) : details) as { item, label, content } (item)}
 			<div>
-				<dt>{#if paper}<span class="taxpayer-item">{item}</span>{' '}{/if}{label}</dt>
+			<dt>{#if paper}<span class="taxpayer-item">{item}</span>{/if} {label}</dt>
 				<dd>{content || '—'}</dd>
 			</div>
 		{/each}
@@ -68,9 +76,16 @@
 	.paper dl > div { padding: .75rem .875rem; border-top: 1px solid var(--border); }
 	.taxpayer-item { margin-inline-end: .5rem; color: var(--fg); font-weight: 650; }
 	@container paper-form (min-width: 36rem) {
-		.paper dl { grid-template-columns: minmax(0, 1.2fr) minmax(0, .6fr) minmax(0, 2fr); }
-		.paper dl > div:nth-child(n + 2):nth-child(-n + 3) { border-left: 1px solid var(--border); }
-		.paper dl > div:last-child { grid-column: 1 / -1; }
+		.paper:not(.payment) dl { grid-template-columns: minmax(0, 1.2fr) minmax(0, .6fr) minmax(0, 2fr); }
+		.paper:not(.payment) dl > div:nth-child(n + 2):nth-child(-n + 3) { border-inline-start: 1px solid var(--border); }
+		.paper:not(.payment) dl > div:last-child { grid-column: 1 / -1; }
+		.payment dl { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+		.payment dl > div:nth-child(even) { border-inline-start: 1px solid var(--border); }
+	}
+	@container paper-form (min-width: 56rem) {
+		.payment dl { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+		.payment dl > div:nth-child(n + 2):nth-child(-n + 4) { border-inline-start: 1px solid var(--border); }
+		.payment dl > div:nth-child(5), .payment dl > div:nth-child(7) { grid-column: span 3; }
 	}
 	@container return-workspace (min-width: 32rem) {
 		dl { grid-template-columns: repeat(2, minmax(0, 1fr)); }

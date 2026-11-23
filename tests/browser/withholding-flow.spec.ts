@@ -52,7 +52,7 @@ async function create(page: Page, code: string) {
 	await page.getByRole('button', { name: 'Create return', exact: true }).click();
 	await page.getByRole('combobox', { name: 'Search BIR forms' }).fill(code);
 	await page.getByRole('option', { name: new RegExp(`^BIR Form ${code} `) }).click();
-	await expect(page.getByRole('heading', { name: `BIR Form ${code}`, exact: true })).toBeVisible();
+	await expect(page.getByRole('heading', { name: code === '0605' ? 'Payment Form' : `BIR Form ${code}`, exact: true })).toBeVisible();
 }
 
 test('0619E saves and reloads calculations, finalizes and simulates submission without BIR requests', async ({ page }, testInfo) => {
@@ -199,10 +199,41 @@ test('annual withholding exports its original layout with all monthly rows', asy
 });
 
 for (const width of [1440, 390]) {
- test(`0605 autoloads period and accepts searched or typed ATCs at ${width}px`, async ({ page }, testInfo) => {
+ test(`0605 paper editor follows the numbered form and supports ATCs at ${width}px`, async ({ page }, testInfo) => {
   await page.setViewportSize({ width, height: 960 });
-  await seedWorkspace(page);
+  await seedWorkspace(page, width === 1440 ? 'dark' : 'light');
   await create(page, '0605');
+  const title = page.getByRole('heading', { name: 'Payment Form', exact: true });
+  const header = title.locator('..');
+  await expect(header.getByText('Kawanihan ng Rentas Internas', { exact: true })).toBeVisible();
+  const titleBox = (await title.boundingBox())!;
+  const headerBox = (await header.boundingBox())!;
+  expect(Math.abs(titleBox.x + titleBox.width / 2 - headerBox.x - headerBox.width / 2)).toBeLessThan(1);
+  await expect(title).toHaveCSS('text-align', 'center');
+  const numberBox = (await header.getByText('0605', { exact: true }).boundingBox())!;
+  if (width === 1440) {
+   expect(numberBox.x).toBeGreaterThanOrEqual(titleBox.x + titleBox.width - 1);
+  } else {
+   expect(numberBox.y).toBeGreaterThanOrEqual(titleBox.y + titleBox.height - 1);
+  }
+  const period = page.getByRole('region', { name: 'Return period' });
+  const background = page.getByRole('region', { name: 'Taxpayer information' });
+  const computation = page.getByRole('region', { name: 'Part II · Computation of Tax' });
+  await expect(period).toBeVisible();
+  await expect(background.locator('dt')).toHaveText([
+   '9 TIN and branch code', '10 RDO code', '11 Taxpayer classification', '12 Line of business / occupation',
+   '13 Taxpayer name', '14 Telephone number', '15 Registered address', '16 ZIP code'
+  ]);
+  const boxes = await Promise.all([period, background, computation].map(region => region.boundingBox()));
+  expect(boxes[1]!.y).toBeGreaterThanOrEqual(boxes[0]!.y + boxes[0]!.height);
+  expect(boxes[2]!.y).toBeGreaterThan(boxes[1]!.y + boxes[1]!.height);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+  for (const id of ['frm0605:dueDate', 'frm0605:date']) {
+   const date = dateControl(page, id);
+   const year = (await date.getByRole('spinbutton', { name: 'Year', exact: true }).boundingBox())!;
+   const picker = (await date.getByRole('button', { name: /calendar/i }).boundingBox())!;
+   expect(year.x + year.width).toBeLessThanOrEqual(picker.x);
+  }
   await expect(field(page, 'frm0605:txtYearEnded')).toHaveValue(String(new Date().getFullYear()));
   await expect(field(page, 'frm0605:itemYearEndMonth')).toBeEnabled();
   const atc = field(page, 'frm0605:txtATCCode');
@@ -221,6 +252,67 @@ for (const width of [1440, 390]) {
   await page.screenshot({ path: testInfo.outputPath('0605-period-atc.png'), fullPage: true });
  });
 }
+
+test('0605 keeps payment choices and calculated amounts when a draft is reopened', async ({ page }) => {
+ await seedWorkspace(page);
+ await create(page, '0605');
+ const quarter = page.getByRole('combobox', { name: 'Quarter', exact: true });
+ await quarter.click();
+ await page.getByRole('option', { name: '2nd', exact: true }).click();
+ const sheets = page.getByRole('textbox', { name: 'Sheets attached', exact: true });
+ await sheets.fill('3');
+ const mode = field(page, 'frm0605:itemModeOfPayment');
+ const installment = field(page, 'frm0605:txtNumOfInstallment');
+ await expect(installment).toHaveCount(0);
+ await mode.click();
+ await page.getByRole('option', { name: 'Installment', exact: true }).click();
+ await installment.fill('2');
+ await field(page, 'frm0605:txtTax19').fill('15000');
+ await field(page, 'frm0605:txtTax20A').fill('50.25');
+ await field(page, 'frm0605:txtTax20B').fill('12.30');
+ await field(page, 'frm0605:txtTax20C').fill('7.45');
+ await expect(field(page, 'frm0605:txtTax20D')).toHaveText('₱70.00');
+ await expect(field(page, 'frm0605:txtTax21')).toHaveText('₱15,070.00');
+ await field(page, 'frm0605:txtTax20C').fill('invalid');
+ await expect(field(page, 'frm0605:txtTax21')).toHaveText('—');
+ await field(page, 'frm0605:txtTax20C').fill('7.45');
+ await page.getByRole('button', { name: 'Save draft', exact: true }).click();
+ await expect(page).toHaveURL(/\/forms$/);
+ const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('ebirforms-created-returns-v1')!).returns.find((record: { formCode: string }) => record.formCode === '0605'));
+ expect(saved.values['frm0605:txtNumOfInstallment']).toBe('2');
+ await page.getByRole('row').filter({ hasText: '0605' }).getByRole('link', { name: 'Edit', exact: true }).click();
+ await expect(quarter).toHaveText('2nd');
+ await expect(sheets).toHaveValue('3');
+ await expect(installment).toHaveValue('2');
+ await expect(field(page, 'frm0605:txtTax21')).toHaveText('₱15,070.00');
+});
+
+test('0605 searches named tax types and uses the selected code in its PDF', async ({ page }) => {
+ await seedWorkspace(page);
+ await create(page, '0605');
+ const taxType = field(page, 'frm0605:txtTaxTypeCode');
+ await expect(taxType).toHaveAttribute('role', 'combobox', { timeout: 3000 });
+ await taxType.click();
+ const search = page.getByPlaceholder('Search tax type code or name', { exact: true });
+ await search.fill('income tax');
+ await expect(page.getByRole('option', { name: /IT.*Income Tax/ })).toBeVisible();
+ await search.press('Enter');
+ await expect(taxType).toContainText('IT');
+ await expect(taxType).toContainText('Income Tax');
+ await page.getByRole('button', { name: 'Save draft', exact: true }).click();
+ await expect(page).toHaveURL(/\/forms$/);
+ const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('ebirforms-created-returns-v1')!).returns.find((record: { formCode: string }) => record.formCode === '0605'));
+ expect(saved.values['frm0605:txtTaxTypeCode']).toBe('IT');
+ const html = await page.evaluate(async values => {
+  const base = '/src/lib';
+  const { getFormDefinition } = await import(`${base}/forms/index.ts`);
+  const { buildReturnReport } = await import(`${base}/printing/return-report.ts`);
+  return buildReturnReport(getFormDefinition('0605'), values, 'Draft', 'long');
+ }, saved.values);
+ const printed = await page.context().newPage();
+ await printed.setContent(html);
+ await expect(field(printed, 'txtTaxTypeCode')).toHaveValue('IT');
+});
 
 test('individual 0605 locks December and calendar basis', async ({ page }) => {
  await seedWorkspace(page);

@@ -22,7 +22,7 @@ test.beforeEach(async ({ page }) => {
 	}, { codes: forms.map(form => form.code) });
 });
 
-test('all supported returns show only basic taxpayer information', async ({ page }, testInfo) => {
+test('all supported returns show their taxpayer information', async ({ page }, testInfo) => {
 	for (const form of forms) {
 		await page.goto(`/ebirforms/taxpayers/${taxpayerId}/forms/${form.code}?return=info-${form.code}`);
 		const information = page.getByRole('region', { name: 'Taxpayer information', exact: true });
@@ -32,6 +32,8 @@ test('all supported returns show only basic taxpayer information', async ({ page
 		}
 		await expect(information.locator('dt')).toHaveText(form.code === '1601EQ'
 			? ['6 TIN and branch code', '7 RDO code', '8 Taxpayer name', '9 Registered address']
+			: form.code === '0605'
+				? ['9 TIN and branch code', '10 RDO code', '11 Taxpayer classification', '12 Line of business / occupation', '13 Taxpayer name', '14 Telephone number', '15 Registered address', '16 ZIP code']
 			: ['Taxpayer name', 'TIN and branch code', 'RDO code', 'Registered address']);
 		await expect(information.getByRole('link', { name: 'Edit taxpayer information' })).toHaveAttribute('href', `/ebirforms/taxpayers/${taxpayerId}/edit`);
 	}
@@ -52,6 +54,6 @@ test('final returns show their saved identity and preserve blank saved fields', 
 	const information = page.getByRole('region', { name: 'Taxpayer information', exact: true });
 	await expect(information).toContainText('Original Filed Name');
 	await expect(information).not.toContainText('Example Services Corporation');
-	await expect(information.locator('div').filter({ has: page.locator('dt', { hasText: /^Registered address$/ }) }).locator('dd')).toHaveText('Example City');
-	await expect(information.locator('dt')).toHaveCount(4);
+	await expect(information.locator('div').filter({ has: page.locator('dt', { hasText: /^15 Registered address$/ }) }).locator('dd')).toHaveText('Example City');
+	await expect(information.locator('div').filter({ has: page.locator('dt', { hasText: /^11 Taxpayer classification$/ }) }).locator('dd')).toHaveText('Individual');
 });

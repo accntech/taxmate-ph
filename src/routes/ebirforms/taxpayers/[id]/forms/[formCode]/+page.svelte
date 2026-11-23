@@ -7,6 +7,7 @@
 	import { afterNavigate, beforeNavigate, goto } from '$app/navigation';
 	import WithholdingEditor from '$lib/forms/withholding-editor.svelte';
 	import { getWithholdingDefinition } from '$lib/forms/withholding-definitions';
+	import Form0605Editor from '$lib/forms/form-0605/form-0605-editor.svelte';
 	import Form1601EQ from '$lib/forms/form-1601-eq/form-1601-eq.svelte';
 	import ReturnErrors from '$lib/forms/return-errors.svelte';
 	import ReturnTaxpayerInformation from '$lib/forms/return-taxpayer-information.svelte';
@@ -18,6 +19,7 @@
 	let recordError = $state('');
 	const recordId = $derived(page.url.searchParams.get('return'));
 	const busy = $derived(workspace.isSavingDraft || workspace.isSubmitting || workspace.isPersisting);
+	const paper = $derived(params.formCode === '1601EQ' || params.formCode === '0605');
 	onMount(() => {
 		void Promise.all([workspace.loadCreatedReturns(), workspace.loadTaxpayerProfiles()]).then(() => { ready = true; openRequestedReturn(); });
 	});
@@ -67,11 +69,11 @@
 	{:else if recordError}
 		<p role="alert" class={stylex.attrs(styles.error).class}>{recordError}</p>
 	{:else}
-		<section class={['eq-workspace', { 'paper-workspace': params.formCode === '1601EQ' }]} aria-label={`BIR Form ${params.formCode} workspace`}>
-			<header class={['eq-header', { 'paper-status': params.formCode === '1601EQ' }]}>
+		<section class={['eq-workspace', { 'paper-workspace': paper }]} aria-label={`BIR Form ${params.formCode} workspace`}>
+			<header class={['eq-header', { 'paper-status': paper }]}>
 				<div class="eq-heading">
 					<div class="eq-title-row">
-						{#if params.formCode !== '1601EQ'}
+						{#if !paper}
 							<h1>BIR Form {params.formCode}</h1>
 						{/if}
 						<Badge tone={workspace.currentReturnStatus === 'Submitted' ? 'success' : workspace.currentReturnStatus === 'Final' ? 'info' : 'neutral'}>
@@ -81,7 +83,7 @@
 							<span class="eq-muted">Unsaved changes</span>
 						{/if}
 					</div>
-					{#if params.formCode !== '1601EQ'}
+					{#if !paper}
 						<p class="eq-description">{workspace.selectedForm?.title}</p>
 					{/if}
 				</div>
@@ -90,7 +92,7 @@
 				{#snippet taxpayerInformation()}
 					<ReturnTaxpayerInformation formCode={params.formCode} values={workspace.formValues} profile={workspace.profile} taxpayerHref={`/ebirforms/taxpayers/${params.id}/edit`} />
 				{/snippet}
-				{#if workspace.selectedForm.code !== '1601EQ'}
+				{#if !paper}
 					{@render taxpayerInformation()}
 				{/if}
 				{#if Object.keys(workspace.validationErrors).length}
@@ -102,6 +104,8 @@
 					<legend class={stylex.attrs(styles.visuallyHidden).class}>BIR form details</legend>
 					{#if workspace.selectedForm.code === '1601EQ'}
 						<Form1601EQ definition={workspace.selectedForm} bind:values={workspace.formValues} errors={workspace.validationErrors} onvaluechange={(patch) => workspace.updateFormValues(patch)} {taxpayerInformation} />
+					{:else if workspace.selectedForm.code === '0605'}
+						<Form0605Editor values={workspace.formValues} errors={workspace.validationErrors} onvaluechange={(patch) => workspace.updateFormValues(patch)} {taxpayerInformation} />
 					{:else if getWithholdingDefinition(workspace.selectedForm.code)}
 						<WithholdingEditor definition={getWithholdingDefinition(workspace.selectedForm.code)!} values={workspace.formValues} errors={workspace.validationErrors} taxpayerHref={`/ebirforms/taxpayers/${params.id}/edit`} onvaluechange={(patch) => workspace.updateFormValues(patch)} />
 					{/if}

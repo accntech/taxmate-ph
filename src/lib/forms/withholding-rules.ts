@@ -638,6 +638,8 @@ export function validateWithholding(
     if (amount <= 0) errors[p + key] = "Enter withholding greater than zero.";
   }
   if (code === "0605") {
+    if (text("txtNoOfSheets") && !/^\d{1,2}$/.test(text("txtNoOfSheets")))
+      errors[p + "txtNoOfSheets"] = "Enter a number of sheets from 0 to 99.";
     if (
       [
         "Preliminary/final assessment / deficiency",
