@@ -25,7 +25,7 @@
 	const penaltyFields = ['txtSurcharge', 'txtInterest', 'txtCompromise'];
 	const invalidAmounts = $derived([...creditFields, ...penaltyFields, ...(withheld ? lines.map(line => 'txtTaxBase' + line) : [])].some(id => normalizeCurrencyInput(values[prefix + id] || '') === null));
 	const hasPenalties = $derived(penaltyFields.some(id => Number(values[prefix + id] || 0) !== 0 || errors[prefix + id]));
-	const yesNo = [{ value: 'N', label: 'No' }, { value: 'Y', label: 'Yes' }];
+	const yesNo = [{ value: 'Y', label: 'Yes' }, { value: 'N', label: 'No' }];
 	const currency = new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' });
 	function change(patch: Record<string, string>) {
 		if (onvaluechange) onvaluechange(patch);

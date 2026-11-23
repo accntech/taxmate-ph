@@ -30,10 +30,12 @@ test('quarter select shows full labels and preserves keyboard navigation and con
 
 test('Yes/No radios reveal applicable fields and preserve withheld entries across toggles and draft saving', async ({ page }) => {
 	const amended = page.getByRole('radiogroup', { name: 'Amended return?' });
+	await expect(amended.getByRole('radio').first()).toHaveAccessibleName('Yes');
 	await expect(amended.getByRole('radio', { name: 'No', exact: true })).toBeChecked();
 	await amended.getByRole('radio', { name: 'Yes', exact: true }).check();
 	await expect(page.getByLabel('Previously filed return', { exact: true })).toBeVisible();
 	const withheld = page.getByRole('radiogroup', { name: 'Any taxes withheld?' });
+	await expect(withheld.getByRole('radio').first()).toHaveAccessibleName('Yes');
 	await expect(withheld.getByRole('radio', { name: 'Yes', exact: true })).toBeChecked();
 	await withheld.getByRole('radio', { name: 'No', exact: true }).check();
 	await expect(page.getByRole('list', { name: 'ATC line items', exact: true })).toHaveCount(0);
