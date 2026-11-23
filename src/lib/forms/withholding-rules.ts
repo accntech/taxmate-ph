@@ -404,7 +404,7 @@ export function calculateWithholding(code: string, values: Values): Values {
       else if (type === "Installment sale") base = n("txtInstallment");
       else if (type === "Exempt" || type === "Others") base = n("txtOthers28E");
       set("txtTax", base);
-      set("txtTaxR", (base * n("txtTaxRate")) / 100);
+      set("txtTaxR", type === "Exempt" ? 0 : (base * n("txtTaxRate")) / 100);
       set("txtTaxDue", n("txtTaxR") - n("txtLess"));
       penalty(
         "txtSurcharge",
@@ -417,6 +417,12 @@ export function calculateWithholding(code: string, values: Values): Values {
     }
   }
   return r;
+}
+
+/** Accept contiguous digits or the printed three-digit TIN groups and a branch. */
+function parseTin(value: string): RegExpMatchArray | null {
+  const tin = value.match(/^(\d{9}|\d{3}[- ]\d{3}[- ]\d{3})(?:[- ]?(\d{3,5}))?$/);
+  return tin && /[1-9]/.test(tin[1]) ? tin : null;
 }
 
 function validDate(value: string): boolean {
@@ -497,6 +503,8 @@ export function validateWithholding(
       }
     }
   }
+  if (text("txtSheets") && !/^\d+$/.test(text("txtSheets").replaceAll(",", "")))
+    errors[p + "txtSheets"] = "Enter a nonnegative whole number of sheets.";
   if (d.period !== "date") {
     const year = Number(values[d.yearField]);
     const maximum = d.maxYear ?? now.getFullYear();
@@ -545,7 +553,9 @@ export function validateWithholding(
       errors[withholdingRowCountKey(d, s.id)] =
         "This return supports up to 1,000 rows per schedule.";
   const atcs = getWithholdingAtcs(code, text("optCategory"));
+  const requiresMainAtc = d.schedules.some((s) => s.id === "payees");
   let activeTaxRows = 0;
+  let validMainAtc = false;
   for (const schedule of withholdingSchedules(d, values)) {
     for (const row of schedule.rows) {
       const editable = row.fields.filter((f) => !f.readonly);
@@ -580,10 +590,18 @@ export function validateWithholding(
             "Choose a supported ATC for this form and withholding-agent category.";
         if (number(values[baseField.id]) <= 0)
           errors[baseField.id] = "Enter a tax base greater than zero.";
-        if (schedule.id === "payees")
-          for (const f of editable.slice(0, 2))
-            if (!(values[f.id] ?? "").trim())
-              errors[f.id] = `${f.label} is required for this payee.`;
+        if (schedule.id === "atc" && editable.every((f) => !errors[f.id]))
+          validMainAtc = true;
+        if (schedule.id === "payees") {
+          const [tinField, nameField] = editable;
+          const tin = (values[tinField.id] ?? "").trim();
+          if (!tin)
+            errors[tinField.id] = "Payee TIN is required for this payee.";
+          else if (!parseTin(tin))
+            errors[tinField.id] = "Enter a valid nine-digit payee TIN with an optional 3–5 digit branch code.";
+          if (!(values[nameField.id] ?? "").trim())
+            errors[nameField.id] = "Payee name is required for this payee.";
+        }
       }
       if (schedule.id.startsWith("remittances-")) {
         for (const f of editable)
@@ -619,10 +637,12 @@ export function validateWithholding(
   if (
     text("optWithheld") === "Y" &&
     d.schedules.some((s) => ["atc", "fringe", "interest"].includes(s.id)) &&
-    activeTaxRows === 0
+    (requiresMainAtc ? !validMainAtc : activeTaxRows === 0)
   )
     errors[p + "optWithheld"] =
-      "Enter at least one withholding computation row.";
+      requiresMainAtc
+        ? "Enter at least one valid row in the withholding computation schedule."
+        : "Enter at least one withholding computation row.";
   if (
     text("optWithheld") === "N" &&
     activeTaxRows > 0 &&
@@ -669,8 +689,8 @@ export function validateWithholding(
     )
       errors[p + "txtNumOfInstallment"] =
         "Enter an installment number from 1 to 20.";
-    const year = number(values[d.yearField]);
-    if (year < 1904 || year > 3000)
+    const year = Number(text("txtYearEnded"));
+    if (!/^\d{4}$/.test(text("txtYearEnded")) || year < 1904 || year > 3000)
       errors[d.yearField] = "Enter a year from 1904 to 3000.";
     if (
       validDate(text("date")) &&
@@ -679,20 +699,29 @@ export function validateWithholding(
     )
       errors[p + "date"] = "Return period cannot be after the year ended.";
   }
+  if (
+    (code === "1604C" || code === "1604CF") &&
+    text("releasedOfFunds") === "Y" &&
+    validDate(text("refundDate")) &&
+    new Date(text("refundDate") + "T00:00:00") > now
+  )
+    errors[p + "refundDate"] = "Enter a refund date no later than today.";
   if (code === "1606") {
+    const sellerTin = text("sellerTin");
+    const seller = parseTin(sellerTin);
+    const buyerTin = text("txtTIN1") + text("txtTIN2") + text("txtTIN3");
+    const buyerBranch = text("txtBranchCode");
     if (
-      text("sellerTin").replace(/\D/g, "") ===
-      text("txtTIN1") +
-        text("txtTIN2") +
-        text("txtTIN3") +
-        text("txtBranchCode")
+      seller &&
+      seller[1].replace(/[- ]/g, "") === buyerTin &&
+      (seller[2] ?? "").padStart(5, "0") === buyerBranch.padStart(5, "0")
     )
       errors[p + "sellerTin"] = "Buyer and seller TINs must differ.";
-    if (
-      text("sellerTin") &&
-      !/^\d{9}(?:\d{3,5})?$/.test(text("sellerTin").replace(/[- ]/g, ""))
-    )
-      errors[p + "sellerTin"] = "Enter the seller TIN and branch code.";
+    else if (sellerTin && !seller?.[2])
+      errors[p + "sellerTin"] = "Enter a valid nine-digit seller TIN and 3–5 digit branch code.";
+    for (const rdo of ["sellerRdo", "propertyRdo"])
+      if (text(rdo) && !isPackagedRdoCode(text(rdo)))
+        errors[p + rdo] = "Enter a supported RDO code.";
   }
   const priorRemittance: Record<string, string> = {
     "0619E": "txtTax15",
@@ -769,6 +798,17 @@ export function validateWithholding(
     }
   }
   const computed = calculateWithholding(code, values);
+  if (code === "1606" && text("optWithheld") === "Y" && number(computed[p + "txtTax"]) <= 0) {
+    const baseFields: Record<string, string> = {
+      "Cash sale": "txtGross",
+      "Foreclosure sale": "txtBid",
+      "Installment sale": "txtInstallment",
+      Others: "txtOthers28E",
+    };
+    const baseField = baseFields[text("transactionType")];
+    if (baseField && !errors[p + baseField])
+      errors[p + baseField] = "Enter an applicable taxable base greater than zero.";
+  }
   const enteredWithholding: Record<string, string[]> = {
     "0619E": ["txtTax14"],
     "0619F": ["txtTax13", "txtTax14"],

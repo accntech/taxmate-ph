@@ -49,7 +49,7 @@ export function validateScheduleDraft(definition: WithholdingDefinition, schedul
 	const runtimeRow = allocatedSchedule(definition, schedule, candidate).rows.find(item => item.id === row.id) ?? row;
 	const validation = validateWithholding(definition.code, candidate);
 	const relevant = new Set(runtimeRow.fields.map(field => field.id));
-	if (!schedule.id.startsWith('remittances-') && schedule.id !== 'interest-books') relevant.add(definition.prefix + 'optWithheld');
+	if (!schedule.id.startsWith('remittances-') && !['interest-books', 'payees'].includes(schedule.id)) relevant.add(definition.prefix + 'optWithheld');
 	if (['treaty', 'interest-treaty', 'interest-preferential'].includes(schedule.id)) relevant.add(definition.prefix + 'optRelief');
 	const errors = Object.fromEntries(Object.entries(validation).filter(([id]) => relevant.has(id)));
 	if (!activeScheduleRows({ ...schedule, rows: [runtimeRow] }, candidate).length) {

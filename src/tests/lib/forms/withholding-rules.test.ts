@@ -626,3 +626,113 @@ describe("1606 multiple-property declaration", () => {
     ).toBeDefined();
   });
 });
+
+describe("withholding validation safeguards", () => {
+  it.each(["1600", "1600WP", "1600PTv2018", "1600VTv2018"])(
+    "requires a valid main computation row on %s even with a valid payee",
+    (code) => {
+      const d = getWithholdingDefinition(code)!;
+      const atc = getWithholdingAtcs(code, "P").find((entry) => entry.code !== "N/A")!;
+      const main = d.schedules.find((schedule) => schedule.id === "atc")!.rows[0];
+      const payee = d.schedules.find((schedule) => schedule.id === "payees")!.rows[0];
+      const values = {
+        [d.prefix + "optCategory"]: "P",
+        [d.prefix + "optWithheld"]: "Y",
+        ...Object.fromEntries(payee.fields.slice(0, 4).map((field, i) => [field.id, ["123-456-789-000", "Payee", atc.code, "100"][i]])),
+      };
+      expect(validateWithholding(code, values)[d.prefix + "optWithheld"]).toMatch(/computation/i);
+      const mainValues = { ...values, [main.fields[0].id]: atc.code, [main.fields[1].id]: "100" };
+      expect(validateWithholding(code, mainValues)[d.prefix + "optWithheld"]).toBeUndefined();
+      expect(validateWithholding(code, { ...mainValues, [main.fields[1].id]: "1,00" })[d.prefix + "optWithheld"]).toMatch(/computation/i);
+    },
+  );
+
+  it("rejects malformed payee TINs", () => {
+    const code = "1600";
+    const d = getWithholdingDefinition(code)!;
+    const tin = d.schedules.find((schedule) => schedule.id === "payees")!.rows[0].fields[0].id;
+    const values = { [d.prefix + "optWithheld"]: "Y" };
+    expect(validateWithholding(code, { ...values, [tin]: "123x456789" })[tin]).toMatch(/TIN/);
+    for (const valid of ["123456789", "123-456-789-000", "12345678900000"])
+      expect(validateWithholding(code, { ...values, [tin]: valid })[tin]).toBeUndefined();
+  });
+
+  it("rejects an all-zero TIN for payees and sellers", () => {
+    const payeeTin = "frm1600:dtSched:txtTin1";
+    const sellerTin = "frm1606:sellerTin";
+    const value = "000-000-000-00000";
+    expect(validateWithholding("1600", { "frm1600:optWithheld": "Y", [payeeTin]: value })[payeeTin]).toMatch(/TIN/);
+    expect(validateWithholding("1606", { [sellerTin]: value })[sellerTin]).toMatch(/TIN/);
+  });
+
+  it.each(["1604C", "1604CF"])("rejects future enabled refund dates on %s", (code) => {
+    const prefix = getWithholdingDefinition(code)!.prefix;
+    const now = new Date(2025, 0, 15, 12);
+    const date = prefix + "refundDate";
+    const release = prefix + "releasedOfFunds";
+    expect(validateWithholding(code, { [release]: "Y", [date]: "2025-01-16" }, now)[date]).toMatch(/today/);
+    expect(validateWithholding(code, { [release]: "Y", [date]: "2025-01-15" }, now)[date]).toBeUndefined();
+    expect(validateWithholding(code, { [release]: "N", [date]: "2025-01-16" }, now)[date]).toBeUndefined();
+  });
+
+  it("requires a four-digit 0605 year", () => {
+    const year = "frm0605:txtYearEnded";
+    for (const invalid of ["2025.0", "2,025", "1903", "3001"])
+      expect(validateWithholding("0605", { [year]: invalid })[year]).toMatch(/1904 to 3000/);
+    expect(validateWithholding("0605", { [year]: "2025" })[year]).toBeUndefined();
+  });
+
+  it("requires nonnegative whole shared sheet counts", () => {
+    const sheets = "frm1600:txtSheets";
+    for (const invalid of ["0.5", "-1", "1.0"])
+      expect(validateWithholding("1600", { [sheets]: invalid })[sheets]).toBeDefined();
+    for (const valid of ["0", "12", "1,000"])
+      expect(validateWithholding("1600", { [sheets]: valid })[sheets]).toBeUndefined();
+  });
+
+  it("compares normalized 1606 buyer and seller TINs", () => {
+    const buyer = {
+      "frm1606:txtTIN1": "123", "frm1606:txtTIN2": "456", "frm1606:txtTIN3": "789",
+      "frm1606:txtBranchCode": "000",
+    };
+    const seller = "frm1606:sellerTin";
+    for (const duplicate of ["123-456-789-00000", "1234567890000", "123456789"])
+      expect(validateWithholding("1606", { ...buyer, [seller]: duplicate })[seller]).toMatch(/must differ/);
+  });
+
+  it("requires a supported seller TIN and branch format on 1606", () => {
+    const seller = "frm1606:sellerTin";
+    expect(validateWithholding("1606", { [seller]: "987654321" })[seller]).toMatch(/branch/);
+    expect(validateWithholding("1606", { [seller]: "987-654-321-000" })[seller]).toBeUndefined();
+  });
+
+  it("validates both 1606 property and seller RDO codes", () => {
+    for (const rdo of ["frm1606:sellerRdo", "frm1606:propertyRdo"]) {
+      expect(validateWithholding("1606", { [rdo]: "999" })[rdo]).toMatch(/supported RDO/);
+      expect(validateWithholding("1606", { [rdo]: "040" })[rdo]).toBeUndefined();
+    }
+  });
+
+  it.each([
+    ["Cash sale", "txtGross"],
+    ["Foreclosure sale", "txtBid"],
+    ["Installment sale", "txtInstallment"],
+    ["Others", "txtOthers28E"],
+  ])("requires a positive applicable 1606 tax base for %s", (type, key) => {
+    const values = { "frm1606:transactionType": type, "frm1606:optWithheld": "Y", "frm1606:txtTaxRate": "3" };
+    const field = "frm1606:" + key;
+    expect(validateWithholding("1606", values)[field]).toMatch(/greater than zero/);
+    expect(validateWithholding("1606", { ...values, [field]: "100" })[field]).toBeUndefined();
+  });
+
+  it("calculates no 1606 withholding for exempt transactions", () => {
+    const values = {
+      "frm1606:transactionType": "Exempt",
+      "frm1606:optWithheld": "N",
+      "frm1606:txtOthers28E": "100",
+      "frm1606:txtTaxRate": "3",
+    };
+    expect(calculateWithholding("1606", values)["frm1606:txtTaxR"]).toBe("0.00");
+    expect(validateWithholding("1606", values)["frm1606:optWithheld"]).toBeUndefined();
+  });
+});

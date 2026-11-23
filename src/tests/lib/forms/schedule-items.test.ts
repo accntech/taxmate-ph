@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { getWithholdingDefinition, withholdingDefinitions, withholdingSchedules } from '$lib/forms/withholding-definitions';
+import { getWithholdingDefinition, withholdingDefinitions, withholdingSchedules, getWithholdingAtcs } from '$lib/forms/withholding-definitions';
 import { createWithholdingValues } from '$lib/forms/withholding-rules';
 import { activeScheduleRows, isReorderableSchedule, nextScheduleDraft, scheduleItemValues, validateScheduleDraft, writeScheduleItems } from '$lib/forms/schedule-items';
 
@@ -64,6 +64,17 @@ describe('schedule line-item mapping', () => {
 		const draft = { 'frm1601E:txtAtcCode1': 'WI120', 'frm1601E:txtTaxBase1': '100000' };
 		expect(validateScheduleDraft(definition, schedule, row, draft, values)).toEqual({});
 		expect(validateScheduleDraft(definition, schedule, row, draft, { ...values, 'frm1601E:optWithheld': 'N' })).toHaveProperty('frm1601E:optWithheld');
+	});
+	it('accepts a valid payee draft before withholding computation is entered', () => {
+		const definition = getWithholdingDefinition('1600')!;
+		const schedule = definition.schedules.find(({ id }) => id === 'payees')!;
+		const row = schedule.rows[0];
+		const atc = getWithholdingAtcs(definition.code, 'P').find(({ code }) => code !== 'N/A')!;
+		const values = { ...createWithholdingValues(definition.code), 'frm1600:optCategory': 'P', 'frm1600:optWithheld': 'Y' };
+		const [tin, name, code, amount] = row.fields;
+		const draft = { [tin.id]: '123456789', [name.id]: 'Sample Payee', [code.id]: atc.code, [amount.id]: '1000' };
+		expect(validateScheduleDraft(definition, schedule, row, draft, values)).toEqual({});
+		expect(validateScheduleDraft(definition, schedule, row, { ...draft, [tin.id]: '123ABC789' }, values)[tin.id]).toMatch(/TIN/);
 	});
 	it('preserves editable special-law rates when committing and recalculates the withheld amount', () => {
 		const definition = getWithholdingDefinition('1601E')!;
