@@ -124,7 +124,8 @@ const forms: FormDefinition[] = [
 for (const definition of withholdingDefinitions) {
  const allFields = [...definition.sections.flatMap(section => section.fields),
   ...definition.schedules.flatMap(schedule => [...schedule.rows.flatMap(row => row.fields), ...(schedule.totals ?? [])])];
- forms.push({ code: definition.code, title: definition.title, category: 'Withholding Tax', status: 'ready',
+ const category = definition.code === '0605' ? 'Payment' : 'Withholding Tax';
+ forms.push({ code: definition.code, title: definition.title, category, status: 'ready',
   fields: allFields.map(field => ({ id: field.id, label: field.label,
    type: field.type === 'money' ? 'number' : field.type === 'date' ? 'text' : field.type,
    required: field.required, profileKey: field.profileKey, options: field.options?.map(option => option.value) })) });

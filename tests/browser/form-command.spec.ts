@@ -3,6 +3,21 @@ import { seedWorkspace, taxpayerId } from './fixtures';
 
 const tablePath = `/ebirforms/taxpayers/${taxpayerId}/forms`;
 
+test('form command classifies Form 0605 as Payment', async ({ page }) => {
+	await seedWorkspace(page);
+	await page.goto(tablePath);
+	await page.getByRole('button', { name: 'Create return', exact: true }).click();
+	const search = page.getByRole('combobox', { name: 'Search BIR forms' });
+	const paymentForm = page.getByRole('option', { name: /BIR Form 0605/ });
+
+	await search.fill('0605');
+	await expect(paymentForm.getByText('Payment', { exact: true })).toBeVisible();
+
+	await search.fill('withholding tax');
+	await expect(paymentForm).toHaveCount(0);
+	await expect(page.getByRole('option', { name: /BIR Form 0619E/ })).toBeVisible();
+});
+
 test('form command filters, handles no matches, and creates with the keyboard', async ({ page }) => {
 	await seedWorkspace(page);
 	await page.goto(tablePath);
