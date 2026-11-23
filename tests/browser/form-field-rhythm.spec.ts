@@ -68,15 +68,18 @@ for (const definition of withholdingDefinitions) {
 		await seedWorkspace(page);
 		await page.routeWebSocket('**/*', socket => socket.close());
 		await page.goto(`/ebirforms/taxpayers/${taxpayerId}/forms/${definition.code}?new=true`);
-		const heading = ['0619E', '0619F'].includes(definition.code) ? /Monthly Remittance Form/ : `BIR Form ${definition.code}`;
+		const heading = definition.code === '0605' ? 'Payment Form' : ['0619E', '0619F'].includes(definition.code)
+			? /Monthly Remittance Form/ : `BIR Form ${definition.code}`;
 		await expect(page.getByRole('heading', { name: heading, exact: true })).toBeVisible();
 		const assertLabels = async (selector: string) => {
-			const labels = await page.locator(selector).evaluateAll(elements => elements.map(element => {
-				const style = getComputedStyle(element);
-				return [style.fontSize, style.lineHeight, style.fontWeight];
-			}));
-			expect(labels.length).toBeGreaterThan(0);
-			for (const label of labels) expect(label).toEqual(['12px', '18.75px', '500']);
+			await expect.poll(() => page.locator(selector).evaluateAll(elements => {
+				if (!elements.length) return ['No form labels found'];
+				return elements.flatMap(element => {
+					const { fontSize, lineHeight, fontWeight } = getComputedStyle(element);
+					return fontSize === '12px' && lineHeight === '18.75px' && fontWeight === '500'
+						? [] : [{ label: element.textContent, fontSize, lineHeight, fontWeight }];
+				});
+			})).toEqual([]);
 		};
 		await assertLabels('.eq-workspace [data-slot="label"], .eq-workspace [data-slot="radio-group"] > legend');
 		for (const schedule of definition.schedules) {
