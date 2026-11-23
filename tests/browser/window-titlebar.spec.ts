@@ -71,6 +71,17 @@ for (const platform of ['macos', 'windows', 'linux']) {
 }
 
 for (const platform of ['macos', 'windows', 'linux']) {
+	test(`${platform} uses the expected vertical overscroll behavior`, async ({ page }) => {
+		await configure(page, platform);
+		await page.goto('/');
+		const root = page.locator('html');
+		await expect(root).toHaveAttribute('data-tauri-platform', platform);
+		await expect(root).toHaveCSS('overscroll-behavior-y', platform === 'macos' ? 'auto' : 'none');
+		await expect(root).toHaveCSS('overscroll-behavior-x', 'auto');
+	});
+}
+
+for (const platform of ['macos', 'windows', 'linux']) {
 	test(`${platform} keeps the skip link off the caption until keyboard focus`, async ({ page }) => {
 		await configure(page, platform);
 		await page.goto('/');

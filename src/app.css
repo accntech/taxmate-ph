@@ -8,6 +8,11 @@ html[data-tauri-platform] {
 	--desktop-titlebar-height: 48px;
 }
 
+html[data-tauri-platform='windows'],
+html[data-tauri-platform='linux'] {
+	overscroll-behavior-y: none;
+}
+
 html[data-tauri-platform='macos']:not([data-tauri-fullscreen]) {
 	--desktop-titlebar-left-inset: 88px;
 }
