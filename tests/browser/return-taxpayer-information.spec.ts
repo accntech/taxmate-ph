@@ -34,7 +34,11 @@ test('all supported returns show their taxpayer information', async ({ page }, t
 			? ['6 TIN and branch code', '7 RDO code', '8 Taxpayer name', '9 Registered address']
 			: form.code === '0605'
 				? ['9 TIN and branch code', '10 RDO code', '11 Taxpayer classification', '12 Line of business / occupation', '13 Taxpayer name', '14 Telephone number', '15 Registered address', '16 ZIP code']
-			: ['Taxpayer name', 'TIN and branch code', 'RDO code', 'Registered address']);
+			: form.code === '0619E'
+				? ['7 TIN and branch code', '8 RDO code', '9 Withholding agent’s name', '10 Registered address', '10A ZIP code', '11 Contact number', '12 Category of withholding agent', '13 Email address']
+				: form.code === '0619F'
+					? ['6 TIN and branch code', '7 RDO code', '8 Withholding agent’s name', '9 Registered address', '9A ZIP code', '10 Contact number', '11 Category of withholding agent', '12 Email address']
+					: ['Taxpayer name', 'TIN and branch code', 'RDO code', 'Registered address']);
 		await expect(information.getByRole('link', { name: 'Edit taxpayer information' })).toHaveAttribute('href', `/ebirforms/taxpayers/${taxpayerId}/edit`);
 	}
 	for (const theme of ['light', 'dark']) {

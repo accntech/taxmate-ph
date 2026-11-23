@@ -1,9 +1,10 @@
 <script lang="ts">
-	let { number, revision, title, subtitle }: {
+	let { number, revision, title, subtitle, englishAgency = false }: {
 		number: string;
 		revision: string;
 		title: string;
 		subtitle?: string;
+		englishAgency?: boolean;
 	} = $props();
 </script>
 
@@ -11,9 +12,15 @@
 	<div class="agency">
 		<img src="/legacy/img/withholding/original-1d5df704be8f0f62.gif" alt="" width="42" height="42" />
 		<div>
-			<span>Republika ng Pilipinas</span>
-			<span>Kagawaran ng Pananalapi</span>
-			<span>Kawanihan ng Rentas Internas</span>
+			{#if englishAgency}
+				<span>Republic of the Philippines</span>
+				<span>Department of Finance</span>
+				<span>Bureau of Internal Revenue</span>
+			{:else}
+				<span>Republika ng Pilipinas</span>
+				<span>Kagawaran ng Pananalapi</span>
+				<span>Kawanihan ng Rentas Internas</span>
+			{/if}
 		</div>
 	</div>
 	<h1>

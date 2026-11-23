@@ -52,8 +52,105 @@ async function create(page: Page, code: string) {
 	await page.getByRole('button', { name: 'Create return', exact: true }).click();
 	await page.getByRole('combobox', { name: 'Search BIR forms' }).fill(code);
 	await page.getByRole('option', { name: new RegExp(`^BIR Form ${code} `) }).click();
-	await expect(page.getByRole('heading', { name: code === '0605' ? 'Payment Form' : `BIR Form ${code}`, exact: true })).toBeVisible();
+	const heading = code === '0605' ? 'Payment Form' : ['0619E', '0619F'].includes(code) ? /Monthly Remittance Form/ : `BIR Form ${code}`;
+	await expect(page.getByRole('heading', { name: heading, exact: true })).toBeVisible();
 }
+
+test('0619E follows the PDF field order in a centered paper form', async ({ page }, testInfo) => {
+	await seedWorkspace(page);
+	await page.goto(`${listPath}/0619E?new=true`);
+	const title = page.getByRole('heading', { name: /Monthly Remittance Form/ });
+	await expect(title).toBeVisible({ timeout: 3000 });
+	const header = title.locator('..');
+	await expect(header.getByText('0619-E', { exact: true })).toBeVisible();
+	await expect(header.getByText('January 2018', { exact: true })).toBeVisible();
+	const period = page.getByRole('region', { name: 'Return period', exact: true });
+	const taxpayer = page.getByRole('region', { name: 'Taxpayer information', exact: true });
+	const remittance = page.getByRole('region', { name: 'Part II · Tax Remittance', exact: true });
+	await expect(period).toContainText('WME10');
+	await expect(period).toContainText('WE');
+	await expect(taxpayer.locator('dt')).toHaveText([
+		'7 TIN and branch code', '8 RDO code', '9 Withholding agent’s name', '10 Registered address',
+		'10A ZIP code', '11 Contact number', '12 Category of withholding agent', '13 Email address'
+	]);
+	await page.getByRole('radiogroup', { name: 'Amended return?', exact: true }).getByLabel('Yes', { exact: true }).check();
+	await field(page, 'frm0619E:txtTax14').fill('10000');
+	await field(page, 'frm0619E:txtTax15').fill('2000');
+	await field(page, 'frm0619E:txtTax17A').fill('300');
+	await expect(field(page, 'frm0619E:txtTax16')).toHaveText('₱8,000.00');
+	await expect(field(page, 'frm0619E:txtTax18')).toHaveText('₱8,300.00');
+
+	for (const width of [1440, 390, 320]) {
+		await page.setViewportSize({ width, height: 960 });
+		await page.evaluate(() => document.fonts.ready);
+		const [heading, masthead, periodBox, taxpayerBox, remittanceBox] = await Promise.all(
+			[title, header, period, taxpayer, remittance].map(locator => locator.boundingBox())
+		);
+		expect(Math.abs(heading!.x + heading!.width / 2 - masthead!.x - masthead!.width / 2)).toBeLessThan(1);
+		await expect(title).toHaveCSS('text-align', 'center');
+		expect(periodBox!.y).toBeLessThan(taxpayerBox!.y);
+		expect(taxpayerBox!.y).toBeLessThan(remittanceBox!.y);
+		expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+		await page.screenshot({ path: testInfo.outputPath(`0619e-paper-${width}.png`), fullPage: true });
+	}
+	await page.getByRole('button', { name: 'Save draft', exact: true }).click();
+	await expect(page).toHaveURL(/\/forms$/);
+	await page.getByRole('row').filter({ hasText: '0619E' }).getByRole('link', { name: 'Edit', exact: true }).click();
+	await expect(field(page, 'frm0619E:txtTax15')).toHaveValue('2,000.00');
+	await expect(field(page, 'frm0619E:txtTax18')).toHaveText('₱8,300.00');
+});
+
+test('0619F follows the final withholding PDF and reopens the saved tax type and amounts', async ({ page }, testInfo) => {
+	await seedWorkspace(page);
+	await page.goto(`${listPath}/0619F?new=true`);
+	const title = page.getByRole('heading', { name: 'Monthly Remittance Form of Final Income Taxes Withheld', exact: true });
+	await expect(title).toBeVisible({ timeout: 3000 });
+	const header = title.locator('..');
+	await expect(header.getByText('0619-F', { exact: true })).toBeVisible();
+	await expect(header.getByText('January 2018', { exact: true })).toBeVisible();
+	const period = page.getByRole('region', { name: 'Return period', exact: true });
+	const taxpayer = page.getByRole('region', { name: 'Taxpayer information', exact: true });
+	const remittance = page.getByRole('region', { name: 'Part II · Tax Remittance', exact: true });
+	const taxType = period.getByRole('combobox', { name: 'Tax type', exact: true });
+	await taxType.click();
+	await expect(page.getByRole('option', { name: /^WB —/ })).toBeVisible();
+	await page.getByRole('option', { name: /^WF —/ }).click();
+	await expect(taxpayer.locator('dt')).toHaveText([
+		'6 TIN and branch code', '7 RDO code', '8 Withholding agent’s name', '9 Registered address',
+		'9A ZIP code', '10 Contact number', '11 Category of withholding agent', '12 Email address'
+	]);
+	await expect(remittance.getByLabel(/^WMF10/)).toBeVisible();
+	await expect(remittance.getByLabel(/^WMF20/)).toBeVisible();
+	await page.getByRole('radiogroup', { name: 'Any tax withheld?', exact: true }).getByLabel('Yes', { exact: true }).check();
+	await page.getByRole('radiogroup', { name: 'Amended return?', exact: true }).getByLabel('Yes', { exact: true }).check();
+	await field(page, 'frm0619F:txtTax14').fill('2500.25');
+	await field(page, 'frm0619F:txtTax16').fill('500');
+	await field(page, 'frm0619F:txtTax18B').fill('10');
+	await expect(field(page, 'frm0619F:txtTax15')).toHaveText('₱2,500.25');
+	await expect(field(page, 'frm0619F:txtTax17')).toHaveText('₱2,000.25');
+	await expect(field(page, 'frm0619F:txtTax19')).toHaveText('₱2,010.25');
+
+	for (const width of [1440, 390, 320]) {
+		await page.setViewportSize({ width, height: 960 });
+		await page.evaluate(() => document.fonts.ready);
+		const [heading, masthead, periodBox, taxpayerBox, remittanceBox] = await Promise.all(
+			[title, header, period, taxpayer, remittance].map(locator => locator.boundingBox())
+		);
+		expect(Math.abs(heading!.x + heading!.width / 2 - masthead!.x - masthead!.width / 2)).toBeLessThan(1);
+		await expect(title).toHaveCSS('text-align', 'center');
+		expect(periodBox!.y).toBeLessThan(taxpayerBox!.y);
+		expect(taxpayerBox!.y).toBeLessThan(remittanceBox!.y);
+		expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+		await page.screenshot({ path: testInfo.outputPath(`0619f-paper-${width}.png`), fullPage: true });
+	}
+
+	await page.getByRole('button', { name: 'Save draft', exact: true }).click();
+	await expect(page).toHaveURL(/\/forms$/);
+	await page.getByRole('row').filter({ hasText: '0619F' }).getByRole('link', { name: 'Edit', exact: true }).click();
+	await expect(taxType).toContainText('WF');
+	await expect(field(page, 'frm0619F:txtTax14')).toHaveValue('2,500.25');
+	await expect(field(page, 'frm0619F:txtTax19')).toHaveText('₱2,010.25');
+});
 
 test('0619E saves and reloads calculations, finalizes and simulates submission without BIR requests', async ({ page }, testInfo) => {
 	await page.setViewportSize({ width: 1440, height: 1100 });
@@ -67,9 +164,7 @@ test('0619E saves and reloads calculations, finalizes and simulates submission w
 	await fillDate(page, 'frm0619E:dueDate', '2025-03-10');
 	await page.getByRole('radiogroup', { name: 'Amended return?' }).getByLabel('Yes', { exact: true }).check();
 	await field(page, 'frm0619E:txtTax14').fill('10000');
-	await openDisclosure(page, 'Remittances and credits');
 	await field(page, 'frm0619E:txtTax15').fill('2000');
-	await openDisclosure(page, 'Penalties');
 	await field(page, 'frm0619E:txtTax17A').fill('300');
 	await page.getByRole('radiogroup', { name: 'Any tax withheld?' }).getByLabel('Yes', { exact: true }).check();
 	await expect(field(page, 'frm0619E:txtTax18')).toContainText('8,300.00');

@@ -8,6 +8,7 @@
 	import WithholdingEditor from '$lib/forms/withholding-editor.svelte';
 	import { getWithholdingDefinition } from '$lib/forms/withholding-definitions';
 	import Form0605Editor from '$lib/forms/form-0605/form-0605-editor.svelte';
+	import Form0619Editor from '$lib/forms/form-0619/form-0619-editor.svelte';
 	import Form1601EQ from '$lib/forms/form-1601-eq/form-1601-eq.svelte';
 	import ReturnErrors from '$lib/forms/return-errors.svelte';
 	import ReturnTaxpayerInformation from '$lib/forms/return-taxpayer-information.svelte';
@@ -19,7 +20,7 @@
 	let recordError = $state('');
 	const recordId = $derived(page.url.searchParams.get('return'));
 	const busy = $derived(workspace.isSavingDraft || workspace.isSubmitting || workspace.isPersisting);
-	const paper = $derived(params.formCode === '1601EQ' || params.formCode === '0605');
+	const paper = $derived(params.formCode === '1601EQ' || params.formCode === '0605' || params.formCode === '0619E' || params.formCode === '0619F');
 	onMount(() => {
 		void Promise.all([workspace.loadCreatedReturns(), workspace.loadTaxpayerProfiles()]).then(() => { ready = true; openRequestedReturn(); });
 	});
@@ -106,6 +107,8 @@
 						<Form1601EQ definition={workspace.selectedForm} bind:values={workspace.formValues} errors={workspace.validationErrors} onvaluechange={(patch) => workspace.updateFormValues(patch)} {taxpayerInformation} />
 					{:else if workspace.selectedForm.code === '0605'}
 						<Form0605Editor values={workspace.formValues} errors={workspace.validationErrors} onvaluechange={(patch) => workspace.updateFormValues(patch)} {taxpayerInformation} />
+					{:else if workspace.selectedForm.code === '0619E' || workspace.selectedForm.code === '0619F'}
+						<Form0619Editor code={workspace.selectedForm.code} values={workspace.formValues} errors={workspace.validationErrors} onvaluechange={(patch) => workspace.updateFormValues(patch)} {taxpayerInformation} />
 					{:else if getWithholdingDefinition(workspace.selectedForm.code)}
 						<WithholdingEditor definition={getWithholdingDefinition(workspace.selectedForm.code)!} values={workspace.formValues} errors={workspace.validationErrors} taxpayerHref={`/ebirforms/taxpayers/${params.id}/edit`} onvaluechange={(patch) => workspace.updateFormValues(patch)} />
 					{/if}
