@@ -1,6 +1,31 @@
 import { expect, test } from '@playwright/test';
 import { seedWorkspace, taxpayerId } from './fixtures';
 
+test('tax returns search uses the standard field focus halo', async ({ page }) => {
+	await seedWorkspace(page, 'dark');
+	await page.addInitScript(() => localStorage.setItem('taxmate-ph-palette', 'catppuccin'));
+	await page.goto(`/ebirforms/taxpayers/${taxpayerId}/forms`);
+	const search = page.getByRole('searchbox', { name: 'Search tax returns' });
+	const frame = page.locator('label').filter({ has: search });
+	await search.focus();
+	await page.keyboard.press('Shift+Tab');
+	await page.keyboard.press('Tab');
+	await expect(search).toBeFocused();
+	const expectedHalo = await frame.evaluate(el => {
+		const sample = document.createElement('span');
+		sample.style.boxShadow = '0 0 0 3px var(--field-focus-halo)';
+		el.append(sample);
+		const halo = getComputedStyle(sample).boxShadow;
+		sample.remove();
+		return halo;
+	});
+	await expect(frame).toHaveCSS('box-shadow', expectedHalo);
+	await expect(search).toHaveCSS('box-shadow', 'none');
+	await page.emulateMedia({ forcedColors: 'active' });
+	await expect(frame).toHaveCSS('outline-style', 'solid');
+	await expect(search).toHaveCSS('outline-style', 'none');
+});
+
 for (const { palette, input, header, hover } of [
 	{ palette: 'catppuccin', input: 'rgb(21, 21, 32)', header: 'rgb(30, 30, 46)', hover: 'rgb(35, 35, 53)' },
 	{ palette: 'teal', input: 'rgb(20, 22, 21)', header: 'rgb(28, 31, 30)', hover: 'rgb(36, 40, 38)' }

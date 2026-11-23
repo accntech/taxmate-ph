@@ -343,8 +343,8 @@
     box-shadow: none;
   }
   .search:focus-within {
-    border-color: color-mix(in oklch, var(--accent) 60%, var(--border));
-    box-shadow: 0 0 0 3px var(--ring);
+    border-color: var(--field-focus-border);
+    box-shadow: 0 0 0 3px var(--field-focus-halo);
   }
   @media (forced-colors: active) {
     .search:focus-within {
