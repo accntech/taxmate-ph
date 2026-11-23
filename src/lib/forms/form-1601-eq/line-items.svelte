@@ -387,7 +387,7 @@
 	kbd { margin-left: .4rem; color: var(--fg-subtle); font-family: var(--font-sans); font-size: .7rem; }
 	.help { margin-bottom: .75rem; }
 	.tax-lines { min-width: 0; }
-	.eq-section-header { flex-wrap: wrap; margin: 0; padding: .625rem .875rem; border-block: 1px solid var(--border); background: var(--bg-hover); }
+	.eq-section-header { flex-wrap: wrap; margin: 0; padding: .625rem .875rem; border-block: 1px solid var(--border); background: var(--paper-section-background, var(--bg-hover)); }
 	.tax-lines > .help, .tax-lines > .add-row, .tax-lines > .eq-muted, .tax-lines > .eq-undo, .tax-lines > .error { margin: .75rem .875rem; }
 	.empty, .items, .column-head { margin-inline: .875rem; }
 	.items { margin-block: 0; padding: 0; list-style: none; }

@@ -8,12 +8,12 @@ export const textarea = stylex.create({
     borderStyle: "solid",
     borderWidth: "1px",
     borderColor: {
-      default: "var(--border)",
+      default: "var(--field-border)",
       ":focus-visible": "var(--field-focus-border, color-mix(in oklch,var(--accent) 60%,var(--border)))",
       ':is([data-invalid="true"])':
         "var(--field-error-border, color-mix(in oklch,var(--danger) 60%,var(--border))) !important",
       ":hover:not(:focus-visible)":
-        "color-mix(in oklch,var(--fg-subtle) 30%,var(--border))",
+        "color-mix(in oklch,var(--fg-subtle) 30%,var(--field-border))",
     },
     backgroundColor: {
       default: "var(--bg-input)",

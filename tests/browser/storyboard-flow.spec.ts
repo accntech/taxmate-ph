@@ -1,6 +1,24 @@
 import { expect, test } from '@playwright/test';
 import { seedWorkspace, taxpayerId } from './fixtures';
 
+for (const { palette, input, header, hover } of [
+	{ palette: 'catppuccin', input: 'rgb(21, 21, 32)', header: 'rgb(30, 30, 46)', hover: 'rgb(35, 35, 53)' },
+	{ palette: 'teal', input: 'rgb(20, 22, 21)', header: 'rgb(28, 31, 30)', hover: 'rgb(36, 40, 38)' }
+]) {
+	test(`${palette} returns table uses matching dark surfaces`, async ({ page }) => {
+		await seedWorkspace(page, 'dark');
+		await page.addInitScript(value => localStorage.setItem('taxmate-ph-palette', value), palette);
+		await page.goto(`/ebirforms/taxpayers/${taxpayerId}/forms`);
+		const search = page.getByRole('searchbox', { name: 'Search tax returns' });
+		await expect(page.locator('label').filter({ has: search })).toHaveCSS('background-color', input);
+		const table = page.getByRole('table');
+		await expect(table.locator('thead')).toHaveCSS('background-color', header);
+		const row = table.getByRole('row').filter({ hasText: 'BIR Form 1601EQ' });
+		await row.hover();
+		await expect(row).toHaveCSS('background-color', hover);
+	});
+}
+
 test('forms storyboard supports cancel, create, open, and back navigation', async ({ page }) => {
 	await seedWorkspace(page);
 	await page.goto(`/ebirforms/taxpayers/${taxpayerId}/forms`);

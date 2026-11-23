@@ -33,10 +33,10 @@ export const numberInput = stylex.create({
     borderStyle: "solid",
     borderWidth: "1px",
     borderColor: {
-      default: "var(--border)",
+      default: "var(--field-border)",
       ":focus-within": "color-mix(in oklch,var(--accent) 60%,var(--border))",
       ":hover:not(:focus-within)":
-        "color-mix(in oklch,var(--fg-subtle) 30%,var(--border))",
+        "color-mix(in oklch,var(--fg-subtle) 30%,var(--field-border))",
       ':is([data-invalid="true"])':
         "color-mix(in oklch,var(--danger) 60%,var(--border)) !important",
     },

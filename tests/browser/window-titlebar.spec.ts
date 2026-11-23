@@ -65,7 +65,7 @@ for (const platform of ['macos', 'windows', 'linux']) {
 		await expect.poll(() => page.evaluate(() => {
 			const state = (window as unknown as { __chromeTest: { calls: { command: string; args: Record<string, unknown> }[] } }).__chromeTest;
 			return state.calls.find(call => call.command === 'window_ready')?.args;
-		})).toEqual({ dark: true, color: '#0c1422', followSystem: false });
+		})).toEqual({ dark: true, color: '#15171b', followSystem: false });
 		await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
 	});
 }
@@ -150,7 +150,7 @@ test('macOS scroll backing follows dark and light app backgrounds', async ({ pag
 		await expect.poll(() => page.evaluate(() => {
 			const calls = (window as unknown as { __chromeTest: { calls: { command: string; args: { color?: string } }[] } }).__chromeTest.calls;
 			return calls.filter(call => call.command === 'window_background_sync').at(-1)?.args.color;
-		})).toBe(theme === 'dark' ? '#0c1422' : '#f1f8fc');
+		})).toBe(theme === 'dark' ? '#15171b' : '#f1f8fc');
 	}
 });
 

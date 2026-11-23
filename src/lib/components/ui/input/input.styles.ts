@@ -14,9 +14,9 @@ export const input = stylex.create({
       ":focus-within": "var(--bg-elev)",
     },
     borderColor: {
-      default: "var(--border)",
+      default: "var(--field-border)",
       ":hover:not(:focus-within)":
-        "color-mix(in oklch, var(--fg-subtle) 30%, var(--border))",
+        "color-mix(in oklch, var(--fg-subtle) 30%, var(--field-border))",
       ":focus-within": "var(--field-focus-border, color-mix(in oklch, var(--accent) 60%, var(--border)))",
     },
     boxShadow: {

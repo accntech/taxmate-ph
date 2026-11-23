@@ -11,7 +11,7 @@ export const wrapperStyles = stylex.create({
     "borderRadius": "var(--radius-md)",
     "borderStyle": "var(--sx-border-style)",
     "borderWidth": "1px",
-    "borderColor": "var(--border)",
+    "borderColor": "var(--field-border)",
     "backgroundColor": "var(--bg-input)",
     "paddingInline": "calc(var(--spacing) * 3)",
     "paddingBlock": "calc(var(--spacing) * 1.5)",

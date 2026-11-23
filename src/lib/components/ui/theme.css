@@ -58,6 +58,7 @@
 	--form-label-gap: .5rem;
 	--form-field-row-gap: 1.125rem;
 	--form-field-column-gap: 1.25rem;
+	--field-border: var(--border);
 	--field-focus-border: color-mix(in oklch, var(--accent) 60%, var(--border));
 	--field-focus-halo: color-mix(in oklch, var(--accent) 18%, transparent);
 	--field-error-border: color-mix(in oklch, var(--danger) 60%, var(--border));
@@ -76,37 +77,50 @@
 
 :root[data-theme='dark'] {
 	color-scheme: dark;
-	--bg: #0c1422;
-	--workspace-background: linear-gradient(180deg, #14283f 0%, #10202d 32%, #0c1422 50%, #211b29 72%, #302030 100%);
-	--bg-elev: #121e31;
-	--bg-elev-2: #192840;
-	--bg-hover: #21324a;
-	--bg-input: #0f192a;
-	--border: #374c66;
+	--dark-ebirforms-bg: #15171b;
+	--dark-teal-bg: #101211;
+	--dark-catppuccin-bg: #11111b;
+	--dark-ebirforms-panel: #191b1e;
+	--dark-teal-panel: #171918;
+	--dark-catppuccin-panel: #181825;
+	--dark-ebirforms-accent: #a7bfdf;
+	--dark-teal-accent: #94e2d5;
+	--dark-catppuccin-accent: #cba6f7;
+	--dark-ebirforms-border: #3c4149;
+	--dark-teal-border: #373b39;
+	--dark-catppuccin-border: #393b4c;
+	--bg: var(--dark-ebirforms-bg);
+	--workspace-background: none;
+	--workspace-background-attachment: scroll;
+	--bg-elev: var(--dark-ebirforms-panel);
+	--bg-elev-2: #1e2024;
+	--paper-section-background: var(--bg-elev-2);
+	--bg-hover: #292c32;
+	--bg-input: #191c21;
+	--border: var(--dark-ebirforms-border);
+	--field-border: #69717d;
 	--border-soft: color-mix(in oklch, var(--border) 70%, transparent);
-	--fg: #f4f6fc;
-	--fg-muted: #c0cbe0;
-	--fg-subtle: #aabbd4;
-	--fg-inverse: #0c1422;
-	--accent: #83c9ff;
-	--accent-hover: #b1dfff;
-	--accent-soft: #163a54;
-	--accent-fg: #10243b;
-	--success: #8ee3c5;
-	--success-soft: #12362e;
-	--warn: #e0ac47;
-	--warn-soft: #3d2c12;
-	--danger: #ff8b82;
-	--danger-soft: #3f1b18;
-	--info: #9cc8ff;
-	--info-soft: #1a2c43;
-	--ring: color-mix(in oklch, var(--accent) 28%, transparent);
+	--fg: #d9dce3;
+	--fg-muted: #b5bac4;
+	--fg-subtle: #a3a9b4;
+	--fg-inverse: var(--bg);
+	--accent: var(--dark-ebirforms-accent);
+	--accent-hover: #bacde6;
+	--accent-soft: #202329;
+	--accent-fg: var(--bg);
+	--success: #a0c8b8;
+	--success-soft: #1d302b;
+	--warn: #cfb57f;
+	--warn-soft: #30291e;
+	--danger: #d9a4a4;
+	--danger-soft: #362528;
+	--info: #aabddd;
+	--info-soft: #242f42;
+	--ring: color-mix(in oklch, var(--accent) 60%, transparent);
 }
 
-/* Palette and color mode are independent. eBIRForms follows the classic blue/cyan/white/red application background.
- * Teal preserves the original app palette.
- * Catppuccin colors: https://catppuccin.com/palette/ (Latte / Mocha).
- * Status colors remain shared across all palettes. */
+/* Dark palettes keep slate, sage and plum tints subtle across charcoal surfaces.
+ * Catppuccin accents are based on Latte and Mocha. */
 :root {
 	--chart-1: var(--accent);
 	--chart-2: #cc1737;
@@ -115,12 +129,12 @@
 	--chart-5: #be123c;
 }
 :root[data-theme='dark'] {
-	--chart-2: #8ba7ed;
-	--chart-3: #ff8696;
-	--chart-4: #60a5fa;
-	--chart-5: #fb7185;
+	--chart-2: #afaad8;
+	--chart-3: #dbaab9;
+	--chart-4: #8faebf;
+	--chart-5: #d9ad9d;
 }
-:root[data-palette='teal'] {
+:root[data-palette='teal']:not([data-theme='dark']) {
 	--bg: #f5f7f3;
 	--bg-elev: #ffffff;
 	--bg-elev-2: #edf2ea;
@@ -139,24 +153,23 @@
 	--chart-3: #c2410c;
 }
 :root[data-theme='dark'][data-palette='teal'] {
-	--bg: #111511;
-	--bg-elev: #181e18;
-	--bg-elev-2: #212a21;
-	--bg-hover: #293329;
-	--bg-input: #131a13;
-	--border: #354235;
-	--fg: #f2f4ef;
-	--fg-muted: #bac5bb;
-	--fg-subtle: #8d988f;
-	--fg-inverse: #121411;
-	--accent: #42d6bd;
-	--accent-hover: #71e3ce;
-	--accent-soft: #173f38;
-	--accent-fg: #071916;
-	--chart-2: #a78bfa;
-	--chart-3: #fb923c;
+	--bg: var(--dark-teal-bg);
+	--bg-elev: var(--dark-teal-panel);
+	--bg-elev-2: #1c1f1e;
+	--bg-hover: #242826;
+	--bg-input: #141615;
+	--border: var(--dark-teal-border);
+	--field-border: #69756f;
+	--fg: #dce0dc;
+	--fg-muted: #b9beb8;
+	--fg-subtle: #a7ada6;
+	--accent: var(--dark-teal-accent);
+	--accent-hover: #aaeade;
+	--accent-soft: #1c2522;
+	--chart-2: #b6a8d5;
+	--chart-3: #d5b299;
 }
-:root[data-palette='catppuccin'] {
+:root[data-palette='catppuccin']:not([data-theme='dark']) {
 	--bg: #eff1f5;
 	--bg-elev: #ffffff;
 	--bg-elev-2: #e6e9ef;
@@ -176,29 +189,28 @@
 	--chart-5: #ac267e;
 }
 :root[data-theme='dark'][data-palette='catppuccin'] {
-	--bg: #171722;
-	--bg-elev: #222332;
-	--bg-elev-2: #2c2e40;
-	--bg-hover: #37394d;
-	--bg-input: #13131d;
-	--border: #4a4d63;
-	--fg: #cdd6f4;
-	--fg-muted: #bac2de;
-	--fg-subtle: #bac2de;
-	--fg-inverse: #171722;
-	--accent: #cba6f7;
-	--accent-hover: #b4befe;
-	--accent-soft: #35304b;
-	--accent-fg: #171722;
-	--chart-2: #89b4fa;
-	--chart-3: #fab387;
-	--chart-4: #94e2d5;
-	--chart-5: #f5c2e7;
+	--bg: var(--dark-catppuccin-bg);
+	--bg-elev: var(--dark-catppuccin-panel);
+	--bg-elev-2: #1e1e2e;
+	--bg-hover: #232335;
+	--bg-input: #151520;
+	--border: var(--dark-catppuccin-border);
+	--field-border: #6c7086;
+	--fg: #e0d8dc;
+	--fg-muted: #c0b7bc;
+	--fg-subtle: #aea3a9;
+	--accent: var(--dark-catppuccin-accent);
+	--accent-hover: #d6b7fa;
+	--accent-soft: #242036;
+	--chart-2: #a2b9db;
+	--chart-3: #d7b19a;
+	--chart-4: #a0c8be;
+	--chart-5: #d4a8c5;
 }
 
 
-/* Other palettes retain their original, quiet workspace background. */
-:root:is([data-palette='teal'], [data-palette='catppuccin']) {
+/* Alternate light palettes use a subtle accent wash. */
+:root:not([data-theme='dark']):is([data-palette='teal'], [data-palette='catppuccin']) {
 	--workspace-background: linear-gradient(180deg, color-mix(in oklch, var(--accent-soft) 30%, transparent), transparent 17rem);
 	--workspace-background-attachment: scroll;
 }

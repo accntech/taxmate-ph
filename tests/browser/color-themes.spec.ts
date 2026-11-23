@@ -1,9 +1,9 @@
 import { expect, test } from '@playwright/test';
 
 const palettes = [
-	{ value: 'ebirforms', label: 'eBIRForms', light: '#f1f8fc', dark: '#0c1422' },
-	{ value: 'teal', label: 'Teal', light: '#f5f7f3', dark: '#111511' },
-	{ value: 'catppuccin', label: 'Catppuccin', light: '#eff1f5', dark: '#171722' }
+	{ value: 'ebirforms', label: 'eBIRForms', light: '#f1f8fc', dark: '#15171b', darkAccent: '#a7bfdf', darkPanel: '#191b1e' },
+	{ value: 'teal', label: 'Teal', light: '#f5f7f3', dark: '#101211', darkAccent: '#94e2d5', darkPanel: '#171918' },
+	{ value: 'catppuccin', label: 'Catppuccin', light: '#eff1f5', dark: '#11111b', darkAccent: '#cba6f7', darkPanel: '#181825' }
 ] as const;
 
 for (const palette of palettes) {
@@ -77,11 +77,33 @@ function contrast(a: string, b: string) {
 	return (Math.max(...values) + .05) / (Math.min(...values) + .05);
 }
 
-test('new palettes keep small text and primary actions readable', async ({ page }, testInfo) => {
+test('dark field outlines distinguish entry areas from their cards', async ({ page }) => {
+	await page.emulateMedia({ reducedMotion: 'reduce' });
+	await page.addInitScript(() => localStorage.setItem('taxmate-ph-theme', 'dark'));
+	await page.goto('/design-system');
+	const notes = page.getByRole('textbox', { name: 'Reviewer notes' });
+	const root = page.locator('html');
+	await expect(root).toHaveCSS('--field-border', /^#[\da-f]{6}$/i);
+	for (const { value, label } of palettes) {
+		await page.evaluate(palette => { document.documentElement.dataset.palette = palette; }, value);
+		const fieldBorder = await root.evaluate(root =>
+			getComputedStyle(root).getPropertyValue('--field-border').trim());
+		await expect(notes).toHaveCSS('border-top-color', hexRgb(fieldBorder));
+		const colors = await notes.evaluate(field => {
+			const card = field.closest('section')!;
+			return [getComputedStyle(field).borderTopColor, getComputedStyle(card).backgroundColor]
+				.map(color => '#' + color.match(/\d+/g)!.slice(0, 3)
+					.map(channel => Number(channel).toString(16).padStart(2, '0')).join(''));
+		});
+		expect(contrast(colors[0], colors[1]), `${label} field outline on its card`).toBeGreaterThanOrEqual(3);
+	}
+});
+
+test('palette text and primary actions stay readable', async ({ page }, testInfo) => {
 	await page.goto('/settings');
-	for (const palette of palettes.filter(p => p.value !== 'teal')) {
+	for (const palette of palettes) {
 		await page.getByRole('radio', { name: palette.label, exact: true }).check();
-		for (const mode of ['Light', 'Dark']) {
+		for (const mode of palette.value === 'teal' ? ['Dark'] : ['Light', 'Dark']) {
 			await page.getByRole('radio', { name: mode, exact: true }).check();
 			const tokens = await page.evaluate(() => {
 				const css = getComputedStyle(document.documentElement);
@@ -119,7 +141,7 @@ test('appearance keeps working when preference storage fails', async ({ page }) 
 	await page.getByRole('radio', { name: 'Catppuccin', exact: true }).check();
 	await page.getByRole('radio', { name: 'Dark', exact: true }).check();
 	await expect(page.locator('html')).toHaveAttribute('data-palette', 'catppuccin');
-	await expect(page.locator('html')).toHaveCSS('background-color', 'rgb(23, 23, 34)');
+	await expect(page.locator('html')).toHaveCSS('background-color', hexRgb('#11111b'));
 });
 
 test('appearance synchronizes between windows without changing status colors', async ({ page, context }) => {
@@ -160,16 +182,14 @@ for (const width of [320, 768, 1280]) {
 }
 
 
-test('eBIRForms follows the classic blue/red reference while Teal preserves its original palette', async ({ page }) => {
+test('light workspaces retain their existing backgrounds and palette accents', async ({ page }) => {
 	await page.goto('/settings');
+	await page.getByRole('radio', { name: 'Light', exact: true }).check();
 	for (const choice of [
-		{ label: 'eBIRForms', mode: 'Light', accent: '#2269b5', soft: '#dff5ff' },
-		{ label: 'eBIRForms', mode: 'Dark', accent: '#83c9ff', soft: '#163a54' },
-		{ label: 'Teal', mode: 'Light', accent: '#00796b', soft: '#dff3eb' },
-		{ label: 'Teal', mode: 'Dark', accent: '#42d6bd', soft: '#173f38' }
+		{ label: 'eBIRForms', accent: '#2269b5', soft: '#dff5ff' },
+		{ label: 'Teal', accent: '#00796b', soft: '#dff3eb' }
 	]) {
 		await page.getByRole('radio', { name: choice.label, exact: true }).check();
-		await page.getByRole('radio', { name: choice.mode, exact: true }).check();
 		await expect.poll(() => page.evaluate(() => {
 			const css = getComputedStyle(document.documentElement);
 			return [css.getPropertyValue('--accent').trim(), css.getPropertyValue('--accent-soft').trim()];
@@ -177,10 +197,55 @@ test('eBIRForms follows the classic blue/red reference while Teal preserves its 
 		if (choice.label === 'eBIRForms') {
 			await expect(page.locator('body')).toHaveCSS('background-attachment', /^fixed(?:, fixed)*$/);
 			await expect(page.locator('body')).toHaveCSS('background-image', /linear-gradient.*rgb/);
-			expect(await page.locator('body').evaluate(el => getComputedStyle(el).backgroundImage)).toContain(choice.mode === 'Light' ? 'rgb(242, 174, 186)' : 'rgb(48, 32, 48)');
+			expect(await page.locator('body').evaluate(el => getComputedStyle(el).backgroundImage)).toContain('rgb(242, 174, 186)');
 		} else {
 			await expect(page.locator('body')).toHaveCSS('background-attachment', /^scroll(?:, scroll)*$/);
 		}
+	}
+});
+
+test('dark palettes use separate charcoal tones and matching Settings previews', async ({ page }) => {
+	await page.goto('/settings');
+	const appearanceCard = page.locator('main > section > section').filter({
+		has: page.getByRole('heading', { name: 'Appearance', exact: true })
+	});
+	await page.getByRole('radio', { name: 'Dark', exact: true }).check();
+	for (const palette of palettes) {
+		const preview = page.locator(`[data-palette="${palette.value}"][data-mode="dark"] .palette-preview`);
+		await expect(preview).toHaveCSS('background-color', hexRgb(palette.dark));
+		await expect(preview).toHaveCSS('background-image', 'none');
+		await expect(preview.locator('.preview-panel')).toHaveCSS('background-color', hexRgb(palette.darkPanel));
+		await expect(preview.locator('.preview-mark')).toHaveCSS('background-color', hexRgb(palette.darkAccent));
+
+		await page.getByRole('radio', { name: palette.label, exact: true }).check();
+		await expect(page.locator('body')).toHaveCSS('background-color', hexRgb(palette.dark));
+		await expect(page.locator('body')).toHaveCSS('background-image', /^none(?:, none)*$/);
+		await expect(page.locator('html')).toHaveCSS('--accent', palette.darkAccent);
+		await expect(page.locator('html')).toHaveCSS('--bg-elev', palette.darkPanel);
+		await expect(appearanceCard).toHaveCSS('background-color', hexRgb(palette.darkPanel));
+		const surfaces = await page.evaluate(() => {
+			const css = getComputedStyle(document.documentElement);
+			return ['bg-input', 'bg-elev', 'bg-elev-2', 'bg-hover'].map(name =>
+				css.getPropertyValue(`--${name}`).trim());
+		});
+		for (const surface of surfaces) {
+			expect(luminance(surface)).toBeLessThan(0.035);
+		}
+	}
+});
+
+test('Teal and Catppuccin dark borders follow their palette', async ({ page }) => {
+	await page.goto('/settings');
+	await page.getByRole('radio', { name: 'Dark', exact: true }).check();
+	for (const { value, label, border } of [
+		{ value: 'teal', label: 'Teal', border: '#373b39' },
+		{ value: 'catppuccin', label: 'Catppuccin', border: '#393b4c' }
+	]) {
+		const option = page.locator(`[data-palette="${value}"][data-mode="dark"]`);
+		await expect(option.locator('.palette-preview')).toHaveCSS('border-top-color', hexRgb(border));
+		await page.getByRole('radio', { name: label, exact: true }).check();
+		await expect(page.locator('html')).toHaveCSS('--border', border);
+		await expect(option).toHaveCSS('box-shadow', 'none');
 	}
 });
 

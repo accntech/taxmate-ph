@@ -63,7 +63,7 @@
 	dt { color: var(--fg-muted); font-size: .75rem; }
 	dd { margin: .25rem 0 0; font-size: .875rem; overflow-wrap: anywhere; }
 	.paper { padding: 0; border-bottom: 0; }
-	.paper .eq-section-header { margin: 0; padding: .375rem .875rem; background: var(--bg-hover); }
+	.paper .eq-section-header { margin: 0; padding: .375rem .875rem; background: var(--paper-section-background, var(--bg-hover)); }
 	.paper dl { gap: 0; }
 	.paper dl > div { padding: .75rem .875rem; border-top: 1px solid var(--border); }
 	.taxpayer-item { margin-inline-end: .5rem; color: var(--fg); font-weight: 650; }

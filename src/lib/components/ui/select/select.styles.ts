@@ -27,10 +27,10 @@ export const select = stylex.create({
     borderStyle: "solid",
     borderWidth: "1px",
     borderColor: {
-      default: "var(--border)",
+      default: "var(--field-border)",
       "@media (hover: hover)": {
         default: null,
-        ":hover": "color-mix(in oklch,var(--fg-subtle) 30%,var(--border))",
+        ":hover": "color-mix(in oklch,var(--fg-subtle) 30%,var(--field-border))",
       },
       ":focus-visible": "var(--field-focus-border, color-mix(in oklch,var(--accent) 60%,var(--border)))",
     },

@@ -1,6 +1,19 @@
 import { expect, test } from '@playwright/test';
 import { formPath, seedWorkspace } from './fixtures';
 
+test('dark 1601EQ section headings use the raised surface color', async ({ page }) => {
+	await seedWorkspace(page, 'dark');
+	await page.goto(formPath);
+	const root = page.locator('html');
+	await expect(root).toHaveCSS('--bg-elev-2', /^#[\da-f]{6}$/i);
+	const sectionFill = await root.evaluate(root =>
+		getComputedStyle(root).getPropertyValue('--bg-elev-2').trim());
+	const rgb = `rgb(${[1, 3, 5].map(i => parseInt(sectionFill.slice(i, i + 2), 16)).join(', ')})`;
+	for (const name of ['Taxpayer information', 'Taxes withheld']) {
+		await expect(page.getByRole('region', { name, exact: true }).locator('header')).toHaveCSS('background-color', rgb);
+	}
+});
+
 for (const width of [1440, 1100, 960, 768, 560, 390, 320]) {
 	test(`1601EQ workspace at ${width}px keeps actions together and summary readable`, async ({ page }, testInfo) => {
 		await page.setViewportSize({ width, height: 960 });
