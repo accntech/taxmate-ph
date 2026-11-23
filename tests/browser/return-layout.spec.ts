@@ -33,6 +33,18 @@ for (const width of [1440, 1100, 960, 768, 560, 390, 320]) {
 		const taxBounds = await taxItems.boundingBox();
 		expect(summary!.y).toBeGreaterThanOrEqual(taxBounds!.y + taxBounds!.height - 1);
 		await expect(page.getByText('1601-EQ', { exact: true })).toBeVisible();
+		const heading = page.getByRole('heading', { name: /^Quarterly Remittance Return/ });
+		const masthead = heading.locator('..');
+		await expect(masthead.getByText('Kawanihan ng Rentas Internas', { exact: true })).toBeVisible();
+		const [title, number] = await Promise.all([heading.boundingBox(), masthead.getByText('1601-EQ', { exact: true }).boundingBox()]);
+		const header = (await masthead.boundingBox())!;
+		expect(Math.abs(title!.x + title!.width / 2 - header.x - header.width / 2)).toBeLessThan(1);
+		await expect(heading).toHaveCSS('text-align', 'center');
+		if (header.width < 600) {
+			expect(number!.y).toBeGreaterThanOrEqual(title!.y + title!.height - 1);
+		} else {
+			expect(number!.x).toBeGreaterThanOrEqual(title!.x + title!.width - 1);
+		}
 		await expect.poll(() => page.locator('.paper-sheet').evaluate((sheet) => {
 			const frame = sheet.getBoundingClientRect();
 			const problems: string[] = [];

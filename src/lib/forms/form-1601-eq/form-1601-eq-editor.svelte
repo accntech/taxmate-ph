@@ -6,6 +6,7 @@
 	import type { FormDefinition } from '$lib/forms';
 	import { calculate1601EQ } from './form-1601-eq-rules';
 	import LineItems from './line-items.svelte';
+	import PaperFormHeader from '../paper-form-header.svelte';
 
 	let { definition, values = $bindable(), errors = {}, onvaluechange, taxpayerInformation }: {
 		definition: FormDefinition;
@@ -52,14 +53,8 @@
 {/snippet}
 
 <div class="paper-sheet">
-	<header class="paper-form-header">
-		<div class="paper-form-number">
-			<span>BIR Form No.</span>
-			<strong>1601-EQ</strong>
-			<span>January 2018</span>
-		</div>
-		<h1>Quarterly Remittance Return <span>of Creditable Income Taxes Withheld (Expanded)</span></h1>
-	</header>
+	<PaperFormHeader number="1601-EQ" revision="January 2018" title="Quarterly Remittance Return"
+		subtitle="of Creditable Income Taxes Withheld (Expanded)" />
 	<section aria-label="Return period" class="paper-period">
 		<div class="paper-period-field">
 			<span class="paper-item-number" aria-hidden="true">1</span>
@@ -134,18 +129,10 @@
 </div>
 
 <style>
-	.paper-sheet { min-width: 0; margin: 1rem; border: 1px solid var(--border); background: var(--bg-elev); container: paper-form / inline-size; }
-	.paper-form-header { display: grid; grid-template-columns: auto minmax(0, 1fr); border-bottom: 1px solid var(--border); }
-	.paper-form-number { display: grid; align-content: center; gap: .125rem; padding: .875rem 1rem; border-right: 1px solid var(--border); }
-	.paper-form-number span { color: var(--fg-muted); font-size: .75rem; }
-	.paper-form-number strong { font-size: 1.75rem; font-weight: 700; line-height: 1.1; letter-spacing: -.03em; }
-	.paper-form-header h1 { align-self: center; margin: 0; padding: .875rem 1rem; font-size: 1.125rem; font-weight: 650; line-height: 1.35; }
-	.paper-form-header h1 span { display: block; margin-top: .125rem; font-size: .875rem; font-weight: 500; }
 	.paper-period { display: grid; grid-template-columns: minmax(0, 1fr); }
 	.paper-period-field { display: grid; grid-template-columns: 1rem minmax(0, 1fr); align-items: start; gap: .375rem; min-width: 0; padding: .875rem; border-bottom: 1px solid var(--border); }
 	.paper-period-field :global([data-slot="form-item"]), .paper-amount-row :global([data-slot="form-item"]) { grid-template-columns: minmax(0, 1fr); }
 	.paper-period-field :global(input:not([type="radio"])), .paper-amount-row :global(input) { width: 100%; min-width: 0; }
-	.paper-item-number { font-size: .8rem; font-weight: 650; font-variant-numeric: tabular-nums; }
 	.paper-period-field > .paper-item-number { padding-top: .125rem; }
 	.paper-computation { min-width: 0; container: return-fields / inline-size; }
 	.paper-summary { min-width: 0; border-top: 1px solid var(--border); }
@@ -179,10 +166,6 @@
 		.paper-period-field:last-child { grid-column: auto; border-right: 0; }
 	}
 	@container return-workspace (max-width: 28rem) {
-		.paper-sheet { margin: .5rem; }
-		.paper-form-header { grid-template-columns: minmax(0, 1fr); }
-		.paper-form-number { border-right: 0; padding-bottom: .25rem; }
-		.paper-form-header h1 { padding-top: .25rem; }
 		.paper-period-field, .paper-amount-row { padding: .625rem .75rem; }
 		.paper-period-field :global([data-slot="form-item"] > div:has(> input)),
 		.paper-amount-row :global([data-slot="form-item"] > div:has(> input)) {
