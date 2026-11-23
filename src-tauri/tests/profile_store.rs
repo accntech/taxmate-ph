@@ -57,6 +57,19 @@ fn lists_saved_taxpayer_profiles_from_disk() {
 }
 
 #[test]
+fn reloads_email_containing_legacy_field_markers() {
+    let root = tempfile::tempdir().expect("temp app data root");
+    let mut profile = sample_profile();
+    profile.email = "email=lineOfBusiness=taxpayer%41@example.com".into();
+    profile.line_of_business = "Accounting".into();
+    save_taxpayer_profile_to_root(root.path(), profile.clone()).expect("save profile");
+
+    let profiles = list_taxpayer_profiles_from_root(root.path()).expect("list profiles");
+
+    assert_eq!(profiles, vec![profile]);
+}
+
+#[test]
 fn retains_business_and_tax_classification_in_profile_xml() {
     let root = tempfile::tempdir().expect("temp app data root");
     let mut data = serde_json::to_value(sample_profile()).expect("profile JSON");

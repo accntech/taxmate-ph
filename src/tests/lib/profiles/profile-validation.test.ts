@@ -58,6 +58,7 @@ describe('taxpayer profile save validation', () => {
 		['unsupported taxpayer size', { taxpayerSize: 'I' }],
 		['nonnumeric PSIC code', { psicCode: '01AB' }],
 		['malformed optional email', { email: 'name@' }],
+		['email with a filename delimiter', { email: 'a#b@example.com' }],
 		['malformed optional ZIP', { zipCode: '12345' }]
 	])('rejects %s before saving', async (_name, fields) => {
 		Object.assign(workspace.profile, fields);

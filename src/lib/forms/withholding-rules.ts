@@ -1,4 +1,4 @@
-import type { TaxpayerProfile } from "$lib/profiles/profile";
+import { taxpayerEmailError, type TaxpayerProfile } from "$lib/profiles/profile";
 import { isPackagedRdoCode } from "$lib/profiles/rdo-codes";
 import {
   getWithholdingDefinition,
@@ -487,8 +487,10 @@ export function validateWithholding(
         errors[f.id] = "Enter a supported RDO code.";
       if (f.profileKey === "zipCode" && !/^\d{4}$/.test(v))
         errors[f.id] = "Enter a four-digit ZIP code.";
-      if (f.profileKey === "email" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v))
-        errors[f.id] = "Enter a valid email address.";
+      if (f.profileKey === "email") {
+        const emailError = taxpayerEmailError(v);
+        if (emailError) errors[f.id] = emailError;
+      }
     }
   }
   if (d.period !== "date") {

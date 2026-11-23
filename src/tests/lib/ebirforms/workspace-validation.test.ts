@@ -38,6 +38,30 @@ describe('return validation at filing boundaries', () => {
   expect(submit).not.toHaveBeenCalled();
   expect(workspace.validationErrors['frm1601EQ:txtATC13']).toBeTruthy();
  });
+ it('highlights email characters that the 1601EQ package filename cannot use', async () => {
+  workspace.formValues = createInitialFormValues({
+   ...initialProfile, address: '123 Example Street', zipCode: '0123',
+   contactNumber: '09171234567', email: 'a#b@example.com'
+  });
+  Object.assign(workspace.formValues, {
+   'frm1601EQ:txtYear': '2025', 'frm1601EQ:optTaxesWithheld': 'N'
+  });
+
+  await workspace.submitCurrentReturn();
+
+  expect(workspace.validationErrors.txtEmail).toBeTruthy();
+  expect(submit).not.toHaveBeenCalled();
+ });
+
+ it('shows the email error before assembling a draft XML package', async () => {
+  workspace.formValues.txtEmail = 'a/b@example.com';
+
+  await workspace.saveDraft();
+
+  expect(workspace.validationErrors.txtEmail).toBeTruthy();
+  expect(submit).not.toHaveBeenCalled();
+ });
+
  it('preserves unfinished monetary input when saving a draft', async () => {
   submit.mockResolvedValue({status:'drafted', finalFlag:'2', message:'Draft saved'});
   workspace.formValues['frm1601EQ:txtRemittanceFirstMonth'] = '12.';

@@ -1,4 +1,4 @@
-import type { TaxpayerProfile } from '$lib/profiles/profile';
+import { buildTaxpayerProfileFormValues, taxpayerEmailError, type TaxpayerProfile } from '$lib/profiles/profile';
 import type { CreatedReturnStatus } from '$lib/ebirforms/created-returns';
 import { calculate1601EQ, validate1601EQ } from './form-1601-eq/form-1601-eq-rules';
 import { getWithholdingDefinition } from './withholding-definitions';
@@ -9,7 +9,11 @@ export function calculateReturn(code: string, values: Record<string, string>): R
  return code === '1601EQ' ? calculate1601EQ(normalized) : calculateWithholding(code, normalized);
 }
 export function validateReturnValues(code: string, values: Record<string, string>): Record<string, string> {
- return code === '1601EQ' ? validate1601EQ(values) : validateWithholding(code, values);
+ if (code === '1601EQ') return validate1601EQ(values);
+ const errors = validateWithholding(code, values);
+ const emailId = getReturnEmailFieldId(code);
+ if (!values[emailId]?.trim()) errors[emailId] = taxpayerEmailError('', true);
+ return errors;
 }
 export function getReturnPeriod(code: string, values: Record<string, string>): string {
  return code === '1601EQ' ? `${values['frm1601EQ:txtYear'] || 'YYYY'}${values['frm1601EQ:optQuarter'] || 'Q'}` : withholdingReturnPeriod(code, values);
@@ -24,20 +28,24 @@ export function getReturnTin(code: string, values: Record<string, string>, profi
  return { tin1: values[`${prefix}txtTIN1`] || profile.tin1, tin2: values[`${prefix}txtTIN2`] || profile.tin2,
   tin3: values[`${prefix}txtTIN3`] || profile.tin3, branchCode: values[`${prefix}txtBranchCode`] || profile.branchCode };
 }
+export function getReturnEmailFieldId(code: string): string {
+ return getWithholdingDefinition(code)?.sections.flatMap(section => section.fields)
+  .find(field => field.profileKey === 'email')?.id ?? 'txtEmail';
+}
 export function getReturnEmail(code: string, values: Record<string, string>, profile: TaxpayerProfile): string {
- if (code === '1601EQ') return (values.txtEmail ?? profile.email).toLowerCase();
- const emailField = getWithholdingDefinition(code)?.sections.flatMap(section => section.fields).find(field => field.profileKey === 'email');
- return (emailField ? values[emailField.id] ?? '' : profile.email).toLowerCase();
+ const id = getReturnEmailFieldId(code);
+ return (values[id] ?? (id === 'txtEmail' ? profile.email : '')).trim().toLowerCase();
 }
 
 /** Editable drafts follow profile corrections; finalized copies retain their saved identity. */
 export function getManagedTaxpayerValues(code: string, profile: TaxpayerProfile, status: CreatedReturnStatus = 'Draft'): Record<string, string> {
  if (status !== 'Draft') return {};
+ if (code === '1601EQ') return buildTaxpayerProfileFormValues(profile);
  const definition = getWithholdingDefinition(code);
  if (!definition) return {};
  const managed = Object.fromEntries(definition.sections.flatMap(section => section.fields).flatMap(field => {
   const key = field.profileKey;
-  return key ? [[field.id, key === 'email' ? (profile.email ?? '').toLowerCase() : profile[key] ?? '']] : [];
+  return key ? [[field.id, key === 'email' ? (profile.email ?? '').trim().toLowerCase() : profile[key] ?? '']] : [];
  }));
  if (code === '0605' && profile.taxpayerClassification === 'I') {
   managed[definition.prefix + 'itemYearEndMonth'] = '12';

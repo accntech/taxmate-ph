@@ -38,6 +38,17 @@ export type ProfileValidationErrors = Partial<
 	Record<'taxpayerName' | 'tin' | 'rdoCode' | 'category' | 'zipCode' | 'email' | 'taxpayerClassification' | 'psicCode' | 'taxpayerSize', string>
 >;
 
+export function taxpayerEmailError(value: string, required = false): string {
+	const email = value.trim();
+	if (!email) return required ? 'Enter an email address in the taxpayer details.' : '';
+	if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+		return 'Enter a valid email address, such as name@example.com.';
+	}
+	// The native return package uses the address between two # separators in a filename.
+	if (/[#\/\\]/.test(email)) return 'Use an email address without #, /, or backslash.';
+	return '';
+}
+
 export function validateTaxpayerProfile(
 	profile: TaxpayerProfileInput & { id?: string },
 	rawTin?: string,
@@ -72,9 +83,8 @@ export function validateTaxpayerProfile(
 	if (profile.zipCode.trim() && !/^\d{4}$/.test(profile.zipCode.trim())) {
 		errors.zipCode = 'Enter a 4-digit ZIP code.';
 	}
-	if (profile.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(profile.email.trim())) {
-		errors.email = 'Enter a valid email address, such as name@example.com.';
-	}
+	const emailError = taxpayerEmailError(profile.email);
+	if (emailError) errors.email = emailError;
 	if (profile.taxpayerClassification && !['I', 'N'].includes(profile.taxpayerClassification)) {
 		errors.taxpayerClassification = 'Choose Individual or Non-individual.';
 	}
@@ -158,7 +168,7 @@ export function upsertTaxpayerProfile(
 	const profileIndex = existing ? profiles.indexOf(existing) : -1;
 	const profile = {
 		...input,
-		email: (input.email ?? '').toLowerCase(),
+		email: (input.email ?? '').trim().toLowerCase(),
 		// Keep legacy filenames and saved-return links when only branch padding changes.
 		id: profileIndex === -1 ? normalizedId : profiles[profileIndex].id
 	};
@@ -183,6 +193,6 @@ export function buildTaxpayerProfileFormValues(profile: TaxpayerProfile): Record
 		'frm1601EQ:txtZipCode': profile.zipCode,
 		'frm1601EQ:txtTelNum': profile.contactNumber,
 		'frm1601EQ:optCategory': profile.category,
-		txtEmail: (profile.email ?? '').toLowerCase()
+		txtEmail: (profile.email ?? '').trim().toLowerCase()
 	};
 }

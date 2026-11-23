@@ -245,6 +245,14 @@ fn parse_profile_xml(xml: &str) -> Result<TaxpayerProfile, ProfileStoreError> {
 
 fn read_field(xml: &str, key: &str) -> String {
     let marker = format!("{key}=");
+    // Field values can contain a marker such as "email=" as literal text.
+    if let Some((_, field)) = xml.split_once(&format!("<div>{marker}")) {
+        if let Some((value, _)) = field.split_once(&format!("{marker}</div>")) {
+            return value.to_string();
+        }
+    }
+
+    // Accept legacy files that use the original delimiters without the div wrapper.
     let mut parts = xml.splitn(3, &marker);
     let Some(_) = parts.next() else {
         return String::new();

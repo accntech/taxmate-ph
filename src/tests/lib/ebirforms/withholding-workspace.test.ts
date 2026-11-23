@@ -94,11 +94,41 @@ it('refreshes corrected profile address and contact details when reopening a dra
  expect(workspace.formValues['frm0619E:txtAddress']).toBe('Corrected registered address');
  expect(workspace.formValues['frm0619E:txtTelNum']).toBe('09171234567');
 });
+it('can finalize a reopened 1601EQ draft after correcting its taxpayer email', async () => {
+ const profile = { ...workspace.profiles[0], email: '' };
+ workspace.profiles = [profile];
+ const id = workspace.createReturn(profile.id, '1601EQ')!;
+ workspace.updateFormValues({ 'frm1601EQ:txtYear': '2025', 'frm1601EQ:optTaxesWithheld': 'N' });
+ await workspace.saveActiveReturn();
+ await workspace.markFinalCopy();
+ expect(workspace.validationErrors.txtEmail).toBeTruthy();
+
+ workspace.profiles = [{ ...profile, email: 'corrected@example.com' }];
+ expect(workspace.openReturn(id)).toBe(true);
+ await workspace.markFinalCopy();
+
+ expect(workspace.createdReturns.find(record => record.id === id)).toMatchObject({
+  status: 'Final', values: { txtEmail: 'corrected@example.com' }
+ });
+});
+
+it('highlights a missing email on a legacy return before preparing a package', async () => {
+ const profile = { ...workspace.profiles[0], email: '', lineOfBusiness: 'Professional services' };
+ workspace.profiles = [profile];
+ workspace.createReturn(profile.id, '1601E');
+ settings.updatePrefs({ submissionMode: 'dry_run' });
+
+ await workspace.submitCurrentReturn();
+
+ expect(workspace.validationErrors['frm1601E:txtEmail']).toBeTruthy();
+ expect(submit).not.toHaveBeenCalled();
+});
+
 it('keeps final and simulated taxpayer snapshots unchanged when deriving profile refresh values', () => {
  const changedProfile = { ...workspace.profiles[0], lineOfBusiness: 'New business', taxpayerClassification: 'I' as const };
  expect(getManagedTaxpayerValues('0605', changedProfile, 'Final')).toEqual({});
  expect(getManagedTaxpayerValues('0605', changedProfile, 'Simulated')).toEqual({});
- expect(getManagedTaxpayerValues('1601EQ', changedProfile, 'Draft')).toEqual({});
+ expect(getManagedTaxpayerValues('1601EQ', changedProfile, 'Final')).toEqual({});
 });
 it('uses the saved form email consistently instead of a subsequently changed profile email', () => {
  const changedProfile = { ...workspace.profiles[0], email: 'new@example.com' };

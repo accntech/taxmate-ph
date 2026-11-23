@@ -1,6 +1,6 @@
 import { loadCreatedReturnsData, saveCreatedReturnsData, type CreatedReturn, type CreatedReturnStatus } from './created-returns';
 import { getFormDefinition, listForms } from '$lib/forms';
-import { calculateReturn, validateReturnValues, getReturnPeriod, getReturnTin, getManagedTaxpayerValues, getReturnEmail } from '$lib/forms/form-runtime';
+import { calculateReturn, validateReturnValues, getReturnPeriod, getReturnTin, getManagedTaxpayerValues, getReturnEmail, getReturnEmailFieldId } from '$lib/forms/form-runtime';
 import { createWithholdingValues } from '$lib/forms/withholding-rules';
 import { createWorkingReturnsClient } from '$lib/tauri/working-returns';
 import { settings } from '$lib/settings.svelte';
@@ -14,6 +14,7 @@ import {
 	normalizeTinNumber,
 	normalizeTinParts,
 	findMatchingTaxpayerProfile,
+	taxpayerEmailError,
 	upsertTaxpayerProfile,
 	validateTaxpayerProfile,
 	type TaxpayerProfile
@@ -442,6 +443,14 @@ class EbirformsWorkspace {
 	async saveDraft() {
 		if (this.isSavingDraft || this.isSubmitting || this.isPersisting) return;
 		if (this.activeReturnId && !await this.saveActiveReturn('Draft')) return;
+		const code = this.selectedForm?.code ?? '1601EQ';
+		const email = getReturnEmail(code, this.formValues, this.profile);
+		const emailError = taxpayerEmailError(email, true);
+		if (emailError) {
+			this.validationErrors = { ...this.validationErrors, [getReturnEmailFieldId(code)]: emailError };
+			this.statusMessage = 'Correct the taxpayer email before preparing the draft package.';
+			return;
+		}
 		const draftId = this.activeReturnId;
 		const taxpayerId = this.selectedProfileId;
 		const draftValues = { ...this.formValues };
@@ -454,13 +463,13 @@ class EbirformsWorkspace {
 			const receipt = await submitReturn({
 				xml: serializeLegacyXml({
 					...this.formValues,
-					txtEmail: getReturnEmail(this.selectedForm?.code ?? '1601EQ', this.formValues, this.profile),
+					txtEmail: email,
 					txtFinalFlag: '2'
 				}),
 				returnFilename: this.returnFilename,
-				formCode: this.selectedForm?.code ?? '1601EQ',
+				formCode: code,
 				tin: this.dispatcherTin,
-				email: getReturnEmail(this.selectedForm?.code ?? '1601EQ', this.formValues, this.profile),
+				email,
 				mode: 'dry_run',
 				dispatcher: undefined,
 				fetchDispatcher: false

@@ -1,4 +1,5 @@
 import { normalizeCurrencyInput } from '$lib/components/ui/currency-input/currency';
+import { taxpayerEmailError } from '$lib/profiles/profile';
 import { isPackagedRdoCode } from '$lib/profiles/rdo-codes';
 import { get1601EQATCs, get1601EQRate, malformed1601EQATCs } from './form-1601-eq-atcs';
 
@@ -113,8 +114,8 @@ export function validate1601EQ(values: Record<string, string>, now = new Date())
 	if (text(values, 'txtTelNum') && !/^\d{1,20}$/.test(text(values, 'txtTelNum'))) {
 		errors[id('txtTelNum')] = 'Enter a contact number using up to 20 digits. Update the taxpayer details.';
 	}
-	const email = (values.txtEmail ?? '').trim();
-	if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errors.txtEmail = 'Enter a valid email address in the taxpayer details.';
+	const emailError = taxpayerEmailError(values.txtEmail ?? '', true);
+	if (emailError) errors.txtEmail = emailError;
 	for (const [name, allowed] of [
 		['optAmendedReturn', ['Y', 'N']], ['optTaxesWithheld', ['Y', 'N']], ['optCategory', ['P', 'G']]
 	] as const) {
