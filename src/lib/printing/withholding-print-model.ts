@@ -426,6 +426,11 @@ function printDate(value: string): string {
     : value;
 }
 
+const reliefScheduleIds = new Set(["treaty", "interest-treaty", "interest-preferential"]);
+const withholdingScheduleIds = new Set([
+  "atc", "payees", "fringe", "interest", "interest-books", ...reliefScheduleIds,
+]);
+
 export function createWithholdingPrintModel(
   code: string,
   rawValues: Values,
@@ -433,8 +438,40 @@ export function createWithholdingPrintModel(
 ) {
   const definition = getWithholdingDefinition(code);
   if (!definition) throw new Error(`No print model for ${code}`);
-  const values = calculateWithholding(code, rawValues);
   const prefix = definition.prefix;
+  const allSchedules = withholdingSchedules(definition, rawValues);
+  const inactiveSchedules = new Set(allSchedules.filter(({ id }) =>
+    (rawValues[prefix + "optWithheld"] === "N" && withholdingScheduleIds.has(id)) ||
+    (rawValues[prefix + "optRelief"] === "N" && reliefScheduleIds.has(id)),
+  ));
+  const fields = withholdingFields(definition, rawValues);
+  const inactiveFields = new Set(fields.flatMap(({ id, showWhen }) =>
+    showWhen && rawValues[showWhen.field] !== showWhen.value ? [id] : [],
+  ));
+  if (rawValues[prefix + "optWithheld"] === "N") {
+    if (code === "0619E" || code === "0619F") inactiveFields.add(prefix + "txtTax14");
+    if (code === "0619F") inactiveFields.add(prefix + "txtTax13");
+  }
+  if (code === "1606") {
+    const transaction = rawValues[prefix + "transactionType"];
+    if (transaction !== "Exempt" && transaction !== "Others")
+      inactiveFields.add(prefix + "txtOthers20");
+    if (transaction !== "Installment sale") {
+      for (const name of ["txtSelling", "txtCost", "txtMortgage", "txtTotalP", "txtAmount", "txtTotalN"])
+        inactiveFields.add(prefix + name);
+    }
+  }
+  for (const schedule of inactiveSchedules) {
+    for (const row of schedule.rows) {
+      for (const field of row.fields) {
+        // Prescribed rates and codes are part of the printed form.
+        if (!field.readonly || field.defaultValue === undefined) inactiveFields.add(field.id);
+      }
+    }
+  }
+  const printValues = { ...rawValues };
+  for (const id of inactiveFields) printValues[id] = "";
+  const values = calculateWithholding(code, printValues);
   const mapped = new Set<string>();
   const text: Values = {};
   const checks: Record<string, boolean> = {};
@@ -451,6 +488,11 @@ export function createWithholdingPrintModel(
   for (const binding of bindings) {
     const result = resolve(binding);
     if (result) mapped.add(result.key);
+    if (result && inactiveFields.has(result.key)) {
+      text[binding.id] = "";
+      if (binding.choice !== undefined) checks[binding.id] = false;
+      continue;
+    }
     let value = result?.value ?? binding.fallback ?? "";
     const nature = binding.id.match(
       /(?:dtSched:naturePayment|txtNatIncPayment)(\d+)$/,
@@ -474,13 +516,6 @@ export function createWithholdingPrintModel(
       mapped.add(prefix + "txtAddress2");
     }
     value = binding.options?.[value] ?? value;
-    if (
-      code === "1601E" &&
-      binding.id === prefix + "j_id402" &&
-      values[prefix + "optRelief"] !== "Y"
-    ) {
-      value = "";
-    }
     value = printDate(value);
     if (binding.moneyPart !== undefined)
       value = (Number(value.replaceAll(",", "")) || 0).toFixed(2).split(".")[
@@ -531,7 +566,7 @@ export function createWithholdingPrintModel(
       if (/:(?:divisor|rate)(?:320|330|360)$/.test(field.id))
         mapped.add(field.id);
   if (code === "1602Qv2018") mapped.add(prefix + "txtSched1TaxRate15");
-  const schedules = withholdingSchedules(definition, values);
+  const schedules = allSchedules.filter(schedule => !inactiveSchedules.has(schedule));
   const toRow = (row: {
     id: string;
     label: string;
@@ -544,8 +579,9 @@ export function createWithholdingPrintModel(
         ?.description ?? "",
     cells: row.fields.map((field) => ({
       ...field,
-      value:
-        field.type === "date"
+      value: inactiveFields.has(field.id)
+        ? ""
+        : field.type === "date"
           ? printDate(values[field.id] ?? "")
           : (values[field.id] ?? ""),
     })),
@@ -569,7 +605,8 @@ export function createWithholdingPrintModel(
   for (const row of atcRows) for (const cell of row.cells) mapped.add(cell.id);
   const treatyRows =
     code === "1601F"
-      ? (schedules.find((schedule) => schedule.id === "treaty")?.rows ?? [])
+      // The 1601F template needs its ten printed slots even when they are blank.
+      ? (allSchedules.find((schedule) => schedule.id === "treaty")?.rows ?? [])
           .slice(0, 10)
           .map(toRow)
       : [];
@@ -621,15 +658,16 @@ export function createWithholdingPrintModel(
       });
     }
   }
-  const notOnForm = withholdingFields(definition, values)
+  const notOnForm = fields
     .filter(
       (field) => field.profileKey && !mapped.has(field.id) && values[field.id],
     )
     .map((field) => field.id);
-  const unmapped = withholdingFields(definition, values)
+  const unmapped = fields
     .filter(
       (field) =>
         values[field.id] &&
+        !inactiveFields.has(field.id) &&
         !["0", "0.00"].includes(values[field.id]) &&
         !mapped.has(field.id) &&
         !attached.includes(field.id) &&
