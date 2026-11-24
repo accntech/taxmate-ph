@@ -24,7 +24,7 @@
   let error = $state("");
   let archivedNotice = $state<{ id: string; name: string } | null>(null);
   const columns = [
-    { key: "name", label: "Taxpayer", locked: true },
+    { key: "name", label: "Taxpayer", locked: true, minWidth: "200px" },
     { key: "tin", label: "TIN / branch" },
     { key: "rdo", label: "RDO" },
     { key: "category", label: "Category" },

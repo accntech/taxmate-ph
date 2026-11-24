@@ -7,6 +7,7 @@
     currentSort: string;
     dir: "asc" | "desc";
     align?: "start" | "end";
+    minWidth?: string;
     class?: string;
   } & (
     { href: string; onclick?: never } | { href?: never; onclick: () => void }
@@ -17,6 +18,7 @@
     currentSort,
     dir,
     align = "start",
+    minWidth,
     href,
     onclick,
     class: className = "",
@@ -30,6 +32,7 @@
 <th
   scope="col"
   aria-sort={ariaSort}
+  style:min-width={minWidth}
   class={["taxmate-sort-header", align === "end" && "align-end", className]}
 >
   {#snippet content()}

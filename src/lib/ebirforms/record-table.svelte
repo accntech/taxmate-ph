@@ -5,6 +5,7 @@
     label: string;
     locked?: boolean;
     numeric?: boolean;
+    minWidth?: string;
   };
   export type RecordFilter = {
     key: string;
@@ -250,6 +251,7 @@
               currentSort={sortKey}
               dir={sortDirection === "ascending" ? "asc" : "desc"}
               align={column.numeric ? "end" : "start"}
+              minWidth={column.minWidth}
               onclick={() => sort(column.key)}
             />
           {/each}
