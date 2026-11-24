@@ -1,4 +1,4 @@
-/* Original 1601EQ geometry and type overrides. Shared primitives load first. */
+/* Form 1601-EQ geometry and typography override the shared print styles. */
 .legacy-container {
 		--withholding-print-font: 'Arimo', Arial, Helvetica, sans-serif;
 		font-size: 12px;

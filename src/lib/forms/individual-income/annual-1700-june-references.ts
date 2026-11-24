@@ -26,7 +26,7 @@ function connect(
 	}];
 }
 
-// June 2013 BIR-Form1700.hta: Part II cites Part IV Items 14, 19, 22 and 27.
+// June 2013 Form 1700 Part II cites Part IV Items 14, 19, 22 and 27.
 // Part IV explicitly returns these amounts to Part II, including Item 28 → Item 31.
 // The Part IV headings identify column A as Tax Filer and column B as Spouse.
 connect('txtPg1Pt2I23FilerTaxDue', '23', 'txtPg2Pt4I14C1', '14A', 'Taxpayer');

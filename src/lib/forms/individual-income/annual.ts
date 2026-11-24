@@ -1,7 +1,4 @@
-/** Exact field mappings and formula chains from BIR-Form1701(.v2018).hta.
- * Both templates match the supplied 7.9.6.2 resources after BOM normalization.
- * Whole-peso results retain the saved return’s decimal string format.
- */
+/** Whole-peso results retain the saved return’s decimal string format. */
 import { roundWholePeso } from '$lib/components/ui/currency-input/currency';
 import { incomeIncludesSpouse } from "./profile-fields";
 

@@ -1,5 +1,4 @@
-// Form 0605 entries from eBIRForms v7.9.6.0 xml/taxTypeCodes.xml.
-// Records 38 and 39 are also tagged for 0605, despite the catalogue's stale count of 37.
+// Tax types selectable for Form 0605.
 const taxTypes = [
 	['CG', 'Capital Gains Tax – Real Property'],
 	['CS', 'Capital Gains Tax – Stocks'],

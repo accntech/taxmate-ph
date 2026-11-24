@@ -8,7 +8,7 @@ export function filterATCOptions(category: string, query: string, selected = '')
 		.filter(option => terms.every(term => `${option.value} ${option.description}`.toLocaleLowerCase().includes(term)));
 }
 
-/** Legacy 1602 Sec. B/C choices from packaged atcCodes.xml records 483–497. */
+/** ATC choices for Sections B and C of legacy Form 1602. */
 const legacyInterestOptions = [
   {
     "value": "WI440",

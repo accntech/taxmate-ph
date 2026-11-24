@@ -1,8 +1,4 @@
-/** Packaged 1601EQ code/category/rate catalogue, not a current-law rate table.
- * Source: docs/research/ebirforms-v7.9.6.0/evidence/atc-rates.json.
- * Mirrors HTA loadATC and category equality filter (lines 1639 and 2654).
- * Unreached and malformed records are deliberately excluded.
- */
+/** Local Form 1601-EQ ATC catalogue. Verify rate applicability before filing. */
 type ATCRecord = { code: string; description: string; rate: string; category: string };
 const records: readonly ATCRecord[] = [
 	{"code": "WI010", "description": "PROFESSIONAL (LAWYERS, CPAS, ENGINEERS, ETC.) - IF GROSS INCOME FOR THE CURRENT YEAR DID NOT EXCEED P 3M", "rate": "5.0", "category": "P"},
@@ -228,7 +224,7 @@ export function get1601EQATCDescription(code: string, category: string): string 
 	return selectedRecord(code, category)?.description ?? code;
 }
 
-/** Original changeATCRate branches, HTA 2665–2689; percentages, not fractions. */
+/** Return a percentage rate for the selected code, category, and year. */
 export function get1601EQRate(code: string, category: string, year: number): string | undefined {
 	const record = selectedRecord(code, category);
 	if (!record) return undefined;

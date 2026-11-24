@@ -3,9 +3,7 @@ import { taxpayerEmailError } from '$lib/profiles/profile';
 import { isPackagedRdoCode } from '$lib/profiles/rdo-codes';
 import { get1601EQATCs, get1601EQRate, malformed1601EQATCs } from './form-1601-eq-atcs';
 
-/** Rules traced to docs/research/ebirforms-v7.9.6.0/withholding/1601eq.md.
- * Packaged ATC membership does not establish current-law applicability of a rate.
- */
+/** Withholding rows used in Form 1601-EQ. */
 export const form1601EQRows = [13, 14, 15, 16, 17, 18] as const;
 export const form1601EQPaymentFields = [
 	'txtRemittanceFirstMonth', 'txtRemittanceSecondMonth',
@@ -107,7 +105,7 @@ export function validate1601EQ(values: Record<string, string>, now = new Date())
 	if (text(values, 'txtRDOCode') && !isPackagedRdoCode(text(values, 'txtRDOCode'))) {
 		errors[id('txtRDOCode')] = 'Enter a supported RDO code, such as 040 or 17A. Update the taxpayer details.';
 	}
-	// Enforce the packaged input handlers at final validation too, including imports.
+	// Apply field constraints to imported values during final validation.
 	if (text(values, 'txtZipCode') && !/^\d{1,12}$/.test(text(values, 'txtZipCode'))) {
 		errors[id('txtZipCode')] = 'Enter a ZIP code using up to 12 digits. Update the taxpayer details.';
 	}

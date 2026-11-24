@@ -1,4 +1,4 @@
-/** Quarterly item chains and filing options from the packaged 1701Q HTAs. */
+/** Calculations and filing options for quarterly Form 1701Q. */
 type Values = Record<string, string>;
 const prefix = 'frm1701q:';
 const field = (name: string) => prefix + name;

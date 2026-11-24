@@ -19,9 +19,8 @@ copies by reporting period. The eBIRForms workspace covers **31 form versions**,
 including **23 payment and withholding versions** and **8 individual income tax
 versions**.
 
-TaxMate PH is an independent proof of concept that grew out of the need for a
-cross-platform alternative to the legacy Windows eBIRForms utility. For filing
-requirements and accepted forms, refer to the Bureau of Internal Revenue.
+TaxMate PH is a cross-platform proof of concept. For filing requirements and
+accepted forms, refer to the Bureau of Internal Revenue.
 
 ![Form 1601-EQ editor showing taxpayer details, an ATC line item, and calculated tax withheld](.github/assets/return-editor.png)
 

@@ -1,4 +1,4 @@
-/* Shared source primitives and export mechanics. Original per-form geometry stays in overrides. */
+/* Shared print and export rules. Each form defines its own geometry. */
 @layer withholding-inline-important, withholding-normalization, withholding-original-source;
 .legacy-container,
 .legacy-container * {
@@ -59,7 +59,7 @@
  .pdf-print-rendered:has(.withholding-print) .print-preview-active { margin: 0 !important; }
  .pdf-print-rendered:has(.withholding-page-header) > .pdf-report-header, .pdf-print-rendered:has(.withholding-page-footer) > .pdf-report-footer { display: none !important; }
 }
-/* Identical leading rules from original styles.css, before form-specific declarations. */
+/* Base print styles load before form-specific declarations. */
 @layer withholding-original-source {
 /* Match the legacy text-control base in both WebView measurement and Chromium output.
    Original per-control fonts and source footer rules retain their precedence. */
@@ -663,7 +663,7 @@
  .withholding-print[data-form-code] [id^="Page"] { display: block !important; }
 }
 
-/* Original printme() frame treatment; OCR artwork already contains its own edge. */
+/* Add a frame only to forms without a border in their print artwork. */
 .withholding-print[data-form-code]:not([data-form-code="0619E"]):not([data-form-code="0619F"]) #formPaper { border: 3px solid #000; }
 .withholding-print[data-form-code="1604F"] #formPaper { border-width: 1px; }
 .withholding-print[data-form-code="0619E"] #formPaper, .withholding-print[data-form-code="0619F"] #formPaper { border: 0; }

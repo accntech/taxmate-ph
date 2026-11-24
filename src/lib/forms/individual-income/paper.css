@@ -64,7 +64,7 @@
 	opacity: 1;
 }
 
-/* The packaged IE text boxes under-size short identifiers in Chromium. */
+/* Widen short identifier fields in Chromium. */
 .individual-income-sheet input[id$='TIN1'],
 .individual-income-sheet input[id$='TIN2'],
 .individual-income-sheet input[id$='TIN3'] { min-width: 30px; }

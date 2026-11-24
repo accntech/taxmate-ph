@@ -1,9 +1,4 @@
-/** RDO options packaged with eBIRForms v7.9.6.0; not a live registration lookup.
- * Source: xml/rdo.xml, documented in
- * docs/research/ebirforms-v7.9.6.0/rates-and-reference-data.md.
- * SHA-256: 17c85ca0ae23dd096c28a240fcfaf047c9244b041d8bae65352a9260f6c8c925.
- * All 138 records include 1601EQ; the dropdown's placeholder 000 is excluded.
- */
+/** Local RDO validation list. The dropdown placeholder 000 is excluded. */
 const packagedRdoCodes: ReadonlySet<string> = new Set([
 	'001', '002', '003', '004', '005', '006', '007', '008', '009', '010',
 	'011', '012', '013', '014', '015', '016', '17A', '17B', '018', '019',

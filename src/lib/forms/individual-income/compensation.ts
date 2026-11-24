@@ -1,7 +1,7 @@
 import { roundWholePeso as whole } from '$lib/components/ui/currency-input/currency';
 import { isValidPsocCode } from '../../profiles/profile';
 
-/** Exact computation IDs from the packaged 1700 templates. */
+/** Saved values for Form 1700 calculations. */
 type Values = Record<string, string>;
 const p = 'frm1700:';
 export const legacy1700FirstYear = 2013;

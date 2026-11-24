@@ -85,7 +85,7 @@ const aliases: Record<string, string> = {
   txtrdocodes: "sellerRdo",
   txtrdocode16a: "propertyRdo",
 };
-/** Resolve normalized saved values to the packaged form's original field identifiers. */
+/** Map normalized saved values to the print template’s field identifiers. */
 export function originalFieldValue(
   code: string,
   id: string,

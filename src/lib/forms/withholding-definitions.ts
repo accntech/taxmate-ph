@@ -1,9 +1,6 @@
 import type { TaxpayerProfile } from "$lib/profiles/profile";
 
-/** Application field IDs follow the packaged identifiers for computation fields.
- * Radio groups and split calendar dates are represented by a single value.
- * Source: docs/research/ebirforms-v7.9.6.0/withholding/ (static package, not current law).
- */
+/** Each radio group and split calendar date is represented by a single saved value. */
 export type WithholdingField = {
   id: string;
   label: string;
@@ -458,7 +455,6 @@ for (const code of ["0619E", "0619F"]) {
   );
   if (!e)
     d.sections[0].fields.push(
-      // Descriptions from the packaged xml/taxTypeCodes.xml catalogue.
       select(p, "txtTaxTypeCode", "Tax type", [
         { value: "WB", label: "WB — Withholding tax — banks and other financial institutions" },
         { value: "WF", label: "WF — Final withholding tax" },
