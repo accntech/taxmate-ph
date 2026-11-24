@@ -1,4 +1,4 @@
-export type PrintPaperSize = 'letter' | 'a4' | 'long'
+export type PrintPaperSize = 'letter' | 'a4' | 'long' | 'legal'
 
 export type PrintProfile = {
 	size: PrintPaperSize
@@ -37,6 +37,15 @@ export const printProfiles: PrintProfile[] = [
 		margin: '0.55in 0.45in',
 		scale: '0.82',
 		cssClass: 'print-paper-long'
+	},
+	{
+		size: 'legal',
+		label: 'Legal',
+		width: '8.5in',
+		height: '14in',
+		margin: '0.55in 0.45in',
+		scale: '0.82',
+		cssClass: 'print-paper-legal'
 	}
 ]
 

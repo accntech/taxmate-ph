@@ -1,4 +1,5 @@
 import { browser } from '$app/environment';
+import type { PrintPaperSize } from '$lib/printing/profiles';
 import type { SubmissionMode } from '$lib/tauri/submission';
 
 export type ColorTheme = 'ebirforms' | 'teal' | 'catppuccin';
@@ -6,7 +7,7 @@ export type ColorTheme = 'ebirforms' | 'teal' | 'catppuccin';
 export type ThemeMode = 'light' | 'dark' | 'system';
 type ResolvedTheme = 'light' | 'dark';
 
-export type PaperSize = 'a4' | 'letter' | 'long';
+export type PaperSize = PrintPaperSize;
 
 export type Prefs = {
 	submissionMode: SubmissionMode;

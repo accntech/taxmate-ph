@@ -4,13 +4,14 @@ import { getPrintProfile, printProfiles, type PrintPaperSize } from '$lib/printi
 
 describe('print profiles', () => {
 	test('defines the supported paper sizes in UI order', () => {
-		expect(printProfiles.map((profile) => profile.size)).toEqual(['letter', 'a4', 'long'])
+		expect(printProfiles.map((profile) => profile.size)).toEqual(['letter', 'a4', 'long', 'legal'])
 	})
 
 	test.each([
 		['letter', '8.5in', '11in', '0.75'],
 		['a4', '210mm', '297mm', '0.74'],
-		['long', '8.5in', '13in', '0.82']
+		['long', '8.5in', '13in', '0.82'],
+		['legal', '8.5in', '14in', '0.82']
 	] satisfies [PrintPaperSize, string, string, string][])(
 		'maps %s to exact PDF dimensions',
 		(size, width, height, scale) => {

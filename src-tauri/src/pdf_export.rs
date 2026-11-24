@@ -76,7 +76,7 @@ pub fn validate_export_request(request: &PdfExportRequest) -> Result<(), PdfExpo
         )));
     }
 
-    if !matches!(request.paper_size.as_str(), "letter" | "a4" | "long") {
+    if !matches!(request.paper_size.as_str(), "letter" | "a4" | "long" | "legal") {
         return Err(PdfExportError::new(format!(
             "Unsupported paper size: {}",
             request.paper_size

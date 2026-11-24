@@ -18,10 +18,24 @@ fn validate_export_request_accepts_1601eq_long_html() {
 }
 
 #[test]
-fn validate_export_request_rejects_unsupported_paper_size() {
+fn validate_export_request_accepts_legal_html() {
     let request = PdfExportRequest {
         form_code: "1601EQ".into(),
         paper_size: "legal".into(),
+        html: "<!doctype html><html><body>1601EQ</body></html>".into(),
+        suggested_filename: "1601EQ.pdf".into(),
+        output_path: None,
+        job_id: None,
+    };
+
+    assert!(validate_export_request(&request).is_ok());
+}
+
+#[test]
+fn validate_export_request_rejects_unsupported_paper_size() {
+    let request = PdfExportRequest {
+        form_code: "1601EQ".into(),
+        paper_size: "tabloid".into(),
         html: "<!doctype html><html><body>1601EQ</body></html>".into(),
         suggested_filename: "1601EQ.pdf".into(),
         output_path: None,

@@ -34,7 +34,8 @@
 	const paperOptions: { value: PaperSize; label: string; meta: string }[] = [
 		{ value: 'a4', label: 'A4', meta: '210 × 297 mm' },
 		{ value: 'letter', label: 'Letter', meta: '8.5 × 11 in' },
-		{ value: 'long', label: 'Long / Folio', meta: '8.5 × 13 in' }
+		{ value: 'long', label: 'Long / Folio', meta: '8.5 × 13 in' },
+		{ value: 'legal', label: 'Legal', meta: '8.5 × 14 in' }
 	];
 
 	const birLinks = [
@@ -213,6 +214,7 @@
 	<Select
 		value={settings.prefs.paperSize}
 		options={paperOptions}
+		placeholder="Paper size"
 		onchange={(value) => settings.updatePrefs({ paperSize: value })}
 		class={stylex.attrs(styles.select).class}
 	/>
