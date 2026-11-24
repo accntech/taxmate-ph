@@ -192,10 +192,8 @@
 			<div class="property-rdo-control">
 				<Input id={field.id} label={label} maxlength={3} required={field.required ?? false} value={values[field.id] ?? ''} error={errors[field.id] ?? ''} oninput={(event) => change(field.id, event.currentTarget.value.toUpperCase())} />
 			</div>
-		{:else if field.type === 'money' && field.allowNegative}
-			<Input id={field.id} label={label} inputmode="decimal" required={field.required ?? false} value={values[field.id] ?? ''} error={displayLabel(errors[field.id] ?? '')} oninput={(event) => change(field.id, event.currentTarget.value)} />
 		{:else if field.type === 'money'}
-			<CurrencyInput id={field.id} label={label} required={field.required ?? false} value={values[field.id] ?? ''} error={displayLabel(errors[field.id] ?? '')} onchange={(value) => change(field.id, value)} />
+			<CurrencyInput allowNegative={field.allowNegative} id={field.id} label={label} required={field.required ?? false} value={values[field.id] ?? ''} error={displayLabel(errors[field.id] ?? '')} onchange={(value) => change(field.id, value)} />
 		{:else if field.type === 'number'}
 			<NumberInput id={field.id} label={label} required={field.required ?? false} value={values[field.id] ?? ''} error={displayLabel(errors[field.id] ?? '')}
 				decimal={propertyReturn && shortName(field) === 'txtArea'} min={field.id === definition.yearField ? definition.minYear : 0}

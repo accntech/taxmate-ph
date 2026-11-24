@@ -55,3 +55,10 @@ describe('currency editing commit', () => {
   for (const value of ['', '12.', '1,00', 'junk']) expect(commitCurrencyInput(value)).toBe(value);
  });
 });
+
+it('displays grouped whole pesos and supports signed amounts when configured', () => {
+ const body = render(UI.CurrencyInput, { props: { value: '-1234.50', decimals: 0, allowNegative: true } }).body;
+ expect(body).toContain('value="-1,235"');
+ expect(commitCurrencyInput('-.50', 0, true)).toBe('-1');
+ expect(formatCurrencyInput('-0.49', 0, true)).toBe('0');
+});

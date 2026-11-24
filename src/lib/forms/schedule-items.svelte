@@ -325,10 +325,8 @@
 			<div class="schedule-tin">
 				<TinInput id={field.id} label={displayLabel(field.label)} value={draft[field.id] ?? ''} error={draftErrors[field.id] ?? ''} onchange={(value) => changeDraft(field, value)} />
 			</div>
-		{:else if field.type === 'money' && !field.allowNegative}
-			<CurrencyInput id={field.id} label={displayLabel(field.label)} required={field.required ?? false} value={draft[field.id] ?? ''} error={draftErrors[field.id] ?? ''} onchange={(value) => changeDraft(field, value)} />
 		{:else if field.type === 'money'}
-			<Input id={field.id} label={displayLabel(field.label)} inputmode="decimal" required={field.required ?? false} value={draft[field.id] ?? ''} error={draftErrors[field.id] ?? ''} oninput={(event) => changeDraft(field, event.currentTarget.value)} />
+			<CurrencyInput allowNegative={field.allowNegative} id={field.id} label={displayLabel(field.label)} required={field.required ?? false} value={draft[field.id] ?? ''} error={draftErrors[field.id] ?? ''} onchange={(value) => changeDraft(field, value)} />
 		{:else if field.type === 'number'}
 			<NumberInput id={field.id} label={displayLabel(field.label)} required={field.required ?? false} value={draft[field.id] ?? ''} error={draftErrors[field.id] ?? ''} decimal={!/year|sheet|count|number|month|day/i.test(field.id)} onchange={(value) => changeDraft(field, value)} />
 		{:else if field.type === 'select'}

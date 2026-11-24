@@ -3,12 +3,14 @@
 	import { wrapperStyles } from './currency-input-wrapper.styles';
 	import type { ComponentProps } from 'svelte';
 	import Input from '../input/input.svelte';
-	import { commitCurrencyInput, currencyInputError, formatCurrencyInput, normalizeCurrencyInput } from './currency';
+	import { commitCurrencyInput, currencyInputError, formatCurrencyInput, type CurrencyDecimals } from './currency';
 
 	let {
 		value = $bindable(''),
 		label = '',
 		error = '',
+		decimals = 2,
+		allowNegative = false,
 		onchange,
 		onfocus,
 		oninput,
@@ -20,21 +22,23 @@
 		value?: string;
 		label?: string;
 		error?: string;
+		decimals?: CurrencyDecimals;
+		allowNegative?: boolean;
 		onchange?: (value: string) => void;
 	} & Omit<ComponentProps<typeof Input>, 'value' | 'onchange' | 'type' | 'inputmode' | 'leading' | 'trailing'> = $props();
 
 	let draft = $state<string | null>(null);
-	const display = $derived(draft ?? formatCurrencyInput(value));
-	const formatError = $derived(currencyInputError(value));
+	const display = $derived(draft ?? formatCurrencyInput(value, decimals, allowNegative));
+	const formatError = $derived(currencyInputError(value, allowNegative));
 
 	function update(next: string) {
-		value = normalizeCurrencyInput(next) ?? next;
+		value = commitCurrencyInput(next, decimals, allowNegative);
 		onchange?.(value);
 	}
 
 	function blur() {
 		if (readonly) return;
-		update(commitCurrencyInput(value));
+		update(value);
 		draft = null;
 	}
 </script>
@@ -52,8 +56,7 @@
 		onfocus={(event) => {
 			if (!readonly) {
 				// Select the ungrouped amount for replacement.
-				// Keep our exact decimal string instead of converting through Number.
-				draft = normalizeCurrencyInput(value) ?? value;
+				draft = commitCurrencyInput(value, decimals, allowNegative);
 				const input = event.currentTarget;
 				input.value = draft;
 				queueMicrotask(() => input.select());
