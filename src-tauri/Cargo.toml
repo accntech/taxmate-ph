@@ -23,6 +23,7 @@ base64 = "0.22"
 chrono = { version = "0.4", default-features = false, features = ["clock"] }
 dotenvy = "0.15"
 flate2 = "1"
+getrandom = "0.4"
 pbkdf2 = "0.12"
 sha1 = "0.10"
 sha2 = "0.10"
@@ -36,11 +37,21 @@ ureq = { version = "2", features = ["json"] }
 tauri-plugin-dialog = "2"
 tempfile = "3"
 
+[target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
+arboard = { version = "3.7", default-features = false, features = ["wayland-data-control"] }
+http-body-util = "0.1"
+hyper = { version = "1", features = ["http1", "server"] }
+hyper-util = { version = "0.1", features = ["tokio"] }
+rmcp = { version = "1.8", default-features = false, features = ["server", "transport-streamable-http-server"] }
+subtle = "2"
+tokio = { version = "1", features = ["macros", "net", "rt", "sync", "time"] }
+tokio-util = "0.7"
+
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"
 
 [target.'cfg(target_os = "windows")'.dependencies]
-tokio = { version = "1", features = ["sync"] }
+hmac = "0.12"
 windows = { version = "0.61.3", features = ["Foundation", "Graphics", "UI"] }
 windows-core = "0.61.2"
 windows-future = "0.2.1"
@@ -57,3 +68,6 @@ windows-sys = { version = "0.61.2", features = [
 
 [target.'cfg(target_os = "windows")'.dev-dependencies]
 windows-sys = { version = "0.61.2", features = ["Win32_System_Ole"] }
+
+[dev-dependencies]
+hmac = "0.12"

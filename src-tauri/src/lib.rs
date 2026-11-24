@@ -1,4 +1,4 @@
-#[cfg(all(desktop, unix))]
+#[cfg(desktop)]
 mod agent_bridge;
 pub mod pdf_export;
 pub mod profile_store;
@@ -61,7 +61,7 @@ fn window_ready(
 pub fn run() {
     window_chrome::initialize();
     let builder = tauri::Builder::default();
-    #[cfg(all(desktop, unix))]
+    #[cfg(desktop)]
     let builder = builder
         .manage(agent_bridge::AgentBridge::default())
         .setup(|app| {
@@ -87,11 +87,13 @@ pub fn run() {
             working_returns::load_working_returns,
             working_returns::save_working_returns,
             return_history::list_submitted_returns,
-            #[cfg(all(desktop, unix))]
+            #[cfg(desktop)]
             agent_bridge::taxmate_ui_agent_status,
-            #[cfg(all(desktop, unix))]
+            #[cfg(desktop)]
             agent_bridge::taxmate_ui_agent_set_enabled,
-            #[cfg(all(desktop, unix))]
+            #[cfg(desktop)]
+            agent_bridge::taxmate_ui_agent_copy_access_token,
+            #[cfg(desktop)]
             agent_bridge::taxmate_ui_agent_reply
         ])
         .build(tauri::generate_context!())
@@ -104,7 +106,7 @@ pub fn run() {
             }
         }
         tauri::RunEvent::Exit => {
-            #[cfg(all(desktop, unix))]
+            #[cfg(desktop)]
             agent_bridge::stop(app);
             window_chrome::shutdown();
         }

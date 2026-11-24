@@ -69,6 +69,43 @@ export const styles = stylex.create({
     "lineHeight": "calc(var(--spacing) * 5)",
     "color": "var(--fg-muted)"
   },
+  "agentBridgeHeading": {
+    "display": "grid",
+    "gridTemplateColumns": "auto minmax(0, 1fr) auto",
+    "alignItems": "center"
+  },
+  "agentSetup": {
+    "display": "grid",
+    "gap": "calc(var(--spacing) * 3)",
+    "paddingTop": "calc(var(--spacing) * 3)"
+  },
+  "agentEndpoint": {
+    "display": "flex",
+    "alignItems": "baseline",
+    "flexWrap": "wrap",
+    "columnGap": "calc(var(--spacing) * 3)",
+    "rowGap": "calc(var(--spacing) * 1)",
+    "paddingBlock": "calc(var(--spacing) * 2)",
+    "paddingInline": "calc(var(--spacing) * 3)",
+    "borderRadius": "var(--radius-md)",
+    "backgroundColor": "var(--bg-elev-2)"
+  },
+  "agentEndpointLabel": {
+    "fontSize": "0.8125rem",
+    "fontWeight": 500,
+    "color": "var(--fg-muted)"
+  },
+  "agentSetupActions": {
+    "display": "flex",
+    "flexWrap": "wrap",
+    "gap": "calc(var(--spacing) * 2)"
+  },
+  "agentServerUrl": {
+    "fontSize": "0.875rem",
+    "color": "var(--fg)",
+    "overflowWrap": "anywhere",
+    "userSelect": "text"
+  },
   "settingControl": {
     "justifySelf": {
       "default": null,

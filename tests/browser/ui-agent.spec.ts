@@ -198,3 +198,80 @@ test('the agent bridge is off by default and its desktop setting requires a dire
 	await page.reload();
 	await expect(setting).toHaveAttribute('aria-checked', 'false');
 });
+
+test('MCP setup copies a client-neutral prompt and protects access-token copying', async ({ page }) => {
+	await page.setViewportSize({ width: 390, height: 844 });
+	await seedWorkspace(page, 'light', 'loaded', {}, undefined, { uiAgent: true });
+	await page.goto('/settings');
+	const copy = page.getByRole('button', { name: 'Copy access token', exact: true });
+	const copyPrompt = page.getByRole('button', { name: 'Copy setup prompt', exact: true });
+	const setting = page.getByRole('switch', { name: 'Enable agent bridge', exact: true });
+	const copyCount = () => page.evaluate(() => Reflect.get(window, 'agentTokenCopyCount') ?? 0);
+
+	await expect(copy).toBeVisible({ timeout: 10000 });
+	await expect(copy).toBeDisabled();
+	await expect(copyPrompt).toBeDisabled();
+	await setting.click();
+	await expect(copy).toBeEnabled();
+	await expect(page.getByText('http://127.0.0.1:42171/mcp', { exact: true })).toBeVisible();
+	await page.evaluate(() => {
+		Object.defineProperty(navigator.clipboard, 'writeText', {
+			value: async (text: string) => { Reflect.set(window, 'agentSetupPrompt', text); }
+		});
+	});
+	await copyPrompt.click({ timeout: 5000 });
+	await expect(page.getByRole('status').filter({ hasText: 'Setup prompt copied.' })).toBeVisible();
+	const prompt = await page.evaluate(() => Reflect.get(window, 'agentSetupPrompt'));
+	expect(prompt).toContain('http://127.0.0.1:42171/mcp');
+	expect(prompt).toContain('Streamable HTTP');
+	expect(prompt).toContain('Bearer token');
+	expect(prompt).toContain('credential settings');
+	expect(prompt).toContain('taxmate_ui_query with the text "Settings"');
+	await expect(page.getByRole('button', { name: 'Copy Codex config' })).toHaveCount(0);
+	await expect.poll(() => page.evaluate(() => Reflect.get(window, 'uiAgentReady'))).toBe(true);
+	await expect(request(page, { method: 'query', text: 'Copy access token' })).resolves.toMatchObject({
+		result: { controls: [{ actions: [], requiresUserConsent: true }] }
+	});
+	await expect(request(page, { method: 'act', target: 'Copy access token', action: 'press' })).resolves.toMatchObject({ ok: false });
+	await copy.evaluate(button => (button as HTMLElement).click());
+	await expect.poll(copyCount).toBe(0);
+
+	await page.evaluate(() => Reflect.set(window, 'failAgentTokenCopy', true));
+	await copy.press('Enter');
+	await expect(page.getByRole('alert')).toHaveText('Could not copy the access token. Try again.');
+	await page.evaluate(() => Reflect.set(window, 'failAgentTokenCopy', false));
+	await copy.click();
+	await expect(page.getByRole('status').filter({ hasText: 'Access token copied.' })).toBeVisible();
+	await expect.poll(copyCount).toBe(2);
+	await expect(page.getByRole('alert')).toHaveCount(0);
+	await setting.click();
+	await expect(copy).toBeDisabled();
+	await expect(copyPrompt).toBeDisabled();
+	await expect(page.getByText('http://127.0.0.1:42171/mcp', { exact: true })).toHaveCount(0);
+});
+
+
+test('agent setup keeps the URL above the copy actions across window sizes', async ({ page }) => {
+	await seedWorkspace(page, 'light', 'loaded', {}, undefined, { uiAgent: true });
+	await page.goto('/settings');
+	await page.getByRole('switch', { name: 'Enable agent bridge', exact: true }).click();
+	const url = page.getByText('http://127.0.0.1:42171/mcp', { exact: true });
+	const prompt = page.getByRole('button', { name: 'Copy setup prompt', exact: true });
+	const token = page.getByRole('button', { name: 'Copy access token', exact: true });
+
+	for (const width of [390, 760, 1280]) {
+		await page.setViewportSize({ width, height: 900 });
+		const [urlBox, promptBox, tokenBox] = await Promise.all([
+			url.boundingBox(), prompt.boundingBox(), token.boundingBox()
+		]);
+		expect(urlBox).not.toBeNull();
+		expect(promptBox).not.toBeNull();
+		expect(tokenBox).not.toBeNull();
+		expect(promptBox!.y).toBeGreaterThan(urlBox!.y + urlBox!.height);
+		expect(tokenBox!.y).toBeGreaterThanOrEqual(promptBox!.y);
+		for (const box of [urlBox!, promptBox!, tokenBox!]) {
+			expect(box.x + box.width).toBeLessThanOrEqual(width);
+		}
+		await expect(url).toHaveText('http://127.0.0.1:42171/mcp');
+	}
+});

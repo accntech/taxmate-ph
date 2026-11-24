@@ -37,7 +37,7 @@ accepted forms, refer to the Bureau of Internal Revenue.
 | PDF export | Generate printable copies in A4, Letter, Long / Folio, or Legal. Supported withholding schedules can continue on additional pages. |
 | Return packages and history | Prepare packages locally, use desktop sending for eligible 1601-EQ returns, and review locally recorded results and submission logs. |
 | Workspace preferences | Choose an eBIRForms, Teal, or Catppuccin palette, set light, dark, or system appearance, and save a default paper size. |
-| AI agent integration | Connect Codex or another local MCP client to navigate the app, edit return fields, and save drafts through the desktop UI. |
+| AI agent integration | Connect a local MCP client to navigate the app, edit return fields, and save drafts through the desktop UI. |
 
 ## App tour
 
@@ -168,30 +168,34 @@ regular VAT returns are outside the current forms catalog.
 
 ## AI agent integration
 
-TaxMate PH exposes its desktop controls through a local Model Context Protocol
-(MCP) server on macOS and Linux. An agent can inspect the active screen, navigate
-to a taxpayer’s returns, edit fields, and verify saved drafts.
+TaxMate PH hosts a local Model Context Protocol (MCP) server inside the
+desktop app on Windows, macOS, and Linux. An agent can inspect the active
+screen, navigate to a taxpayer’s returns, edit fields, and verify saved
+drafts.
 
-### Connect an agent
+### Connect an AI agent
 
-1. Install Node.js and keep a checkout of this repository for the MCP server script.
-2. In the TaxMate desktop app, turn on **Settings → Agent bridge → Enable agent
-   bridge**. The bridge is off by default. It starts immediately and stays enabled
-   across app restarts. Turn the setting off to disconnect local agents.
-3. With the Codex CLI installed, run the command below from the repository root.
-   Keep TaxMate open and start a new Codex chat to use the tools.
+In TaxMate, open **Settings → Agent bridge**, enable the bridge, and click
+**Copy setup prompt**. Paste the prompt into your AI agent. Use **Copy access
+token** separately when your client asks for the credential.
 
-```sh
-codex mcp add taxmate-ui \
-  --env "TAXMATE_UI_AGENT_SOCKET=$HOME/.codex/taxmate-ui/agent.sock" \
-  -- "$(command -v node)" "$PWD/scripts/taxmate-ui-mcp.mjs"
-```
+> Connect to the TaxMate MCP server at http://127.0.0.1:42171/mcp using
+> Streamable HTTP and Bearer token authentication. If you need me to register
+> the server, tell me which settings to open. Guide me to enter my TaxMate
+> access token in your credential settings. Once connected, call
+> taxmate_ui_query with the text "Settings" and tell me whether TaxMate responded.
 
-For another local MCP client, register a stdio server named `taxmate-ui` with
-the absolute path to `node` as its command and the absolute path to
-`scripts/taxmate-ui-mcp.mjs` as its argument. The server uses the private Unix
-socket `~/.codex/taxmate-ui/agent.sock` by default. If it cannot connect, check
-that TaxMate is running and look for a bridge error in **Settings**.
+The connection requires a local MCP client that supports Streamable HTTP and
+bearer authentication. Keep TaxMate open while using the tools. Turn off
+**Enable agent bridge** to stop access. A cloud-hosted agent needs a local
+connector to reach TaxMate on your device.
+
+### Use an existing stdio registration
+
+Existing stdio registrations can continue to use `scripts/taxmate-ui-mcp.mjs`
+with Node.js and the same **Enable agent bridge** setting. On macOS and Linux,
+the adapter uses `~/.codex/taxmate-ui/agent.sock` by default. On Windows, it
+reads connection settings from the running app’s local data directory.
 
 ### Use the tools
 
@@ -204,7 +208,7 @@ fields, `select` for native selects, and `key` where the control lists specific
 shortcuts. Supply `args.value` for `set_value` and `select`, or `args.key` for
 `key`. Query again after actions that change the screen.
 
-With a sample taxpayer’s **Tax Returns** open, try this prompt in Codex:
+With a sample taxpayer’s **Tax Returns** open, try this prompt in your agent:
 
 > Open the most recently updated Form 0605 draft. Set Basic tax to 500.00,
 > report the Total amount payable, then save and reopen the draft to verify
@@ -221,8 +225,9 @@ action directly in TaxMate. The bridge can open a delete dialog for review.
 Changing the bridge setting, using native file pickers, and operating external
 application windows also require direct interaction.
 
-For development, `bun run tauri:agent` can start the bridge before the setting
-has been saved. A saved Off setting takes precedence.
+For development on any platform, run `bun run tauri dev` and enable the bridge
+in **Settings**. On macOS and Linux, `bun run tauri:agent` can also start the
+bridge before the setting has been saved. A saved Off setting takes precedence.
 
 ## Run from source
 

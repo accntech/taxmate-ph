@@ -1,17 +1,32 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { createHmac, randomBytes } from 'node:crypto';
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createInterface } from 'node:readline';
 import test from 'node:test';
+import { fileURLToPath } from 'node:url';
 
 const script = new URL('./taxmate-ui-mcp.mjs', import.meta.url);
 
-function startClient(socketPath) {
-  const child = spawn(process.execPath, [script.pathname], {
-    env: { ...process.env, TAXMATE_UI_AGENT_SOCKET: socketPath },
+function startClient(socketPath, appData) {
+  const env = { ...process.env };
+  delete env.TAXMATE_UI_AGENT_SOCKET;
+  let args = [fileURLToPath(script)];
+  if (appData) {
+    env.LOCALAPPDATA = appData;
+    env.TAXMATE_UI_AGENT_SOCKET = join(appData, 'missing.sock');
+    args = ['--input-type=module', '--eval', `
+      Object.defineProperty(process, 'platform', { value: 'win32' });
+      await import(${JSON.stringify(script.href)});
+    `];
+  } else {
+    env.TAXMATE_UI_AGENT_SOCKET = socketPath;
+  }
+  const child = spawn(process.execPath, args, {
+    env,
     stdio: ['pipe', 'pipe', 'pipe'],
   });
   const pending = new Map();
@@ -41,7 +56,7 @@ function startClient(socketPath) {
   };
 }
 
-test('stdio MCP lists UI tools and routes validated calls through the Unix socket', { timeout: 10000 }, async t => {
+test('stdio MCP lists UI tools and routes validated calls through the Unix socket', { timeout: 10000, skip: process.platform === 'win32' }, async t => {
   const directory = await mkdtemp(join(tmpdir(), 'taxmate-mcp-'));
   const socketPath = join(directory, 'agent.sock');
   const requests = [];
@@ -104,7 +119,7 @@ test('stdio MCP lists UI tools and routes validated calls through the Unix socke
   assert.deepEqual((await client.request('ping')).result, {});
 });
 
-test('an unavailable app socket returns a usable tool error', { timeout: 5000 }, async t => {
+test('an unavailable app socket returns a usable tool error', { timeout: 5000, skip: process.platform === 'win32' }, async t => {
   const directory = await mkdtemp(join(tmpdir(), 'taxmate-mcp-'));
   const client = startClient(join(directory, 'missing.sock'));
   t.after(async () => { client.child.kill(); await rm(directory, { recursive: true, force: true }); });
@@ -113,4 +128,70 @@ test('an unavailable app socket returns a usable tool error', { timeout: 5000 },
   const response = await client.request('tools/call', { name: 'taxmate_ui_query', arguments: { text: '' } });
   assert.equal(response.result.isError, true);
   assert.match(response.result.content[0].text, /start.*TaxMate|TaxMate.*running/i);
+});
+
+
+test('Windows MCP discovers the local endpoint and authenticates before sending a request', { timeout: 5000 }, async t => {
+  const appData = await mkdtemp(join(tmpdir(), 'taxmate-win-mcp-'));
+  const directory = join(appData, 'ph.taxmate.desktop');
+  const endpointFile = join(directory, 'agent-bridge-endpoint.json');
+  await mkdir(directory);
+  const key = randomBytes(32);
+  const serverNonce = randomBytes(32);
+  const requests = [];
+  let trustedServer = true;
+  let closeUntrusted;
+  const untrustedClosed = new Promise(resolve => { closeUntrusted = resolve; });
+  let untrustedBytes = 0;
+  const server = createServer(socket => {
+    let buffer = Buffer.alloc(0);
+    let clientNonce;
+    const trusted = trustedServer;
+    if (!trusted) socket.on('close', closeUntrusted);
+    socket.on('data', chunk => {
+      if (!trusted) untrustedBytes += chunk.length;
+      buffer = Buffer.concat([buffer, chunk]);
+      if (!clientNonce && buffer.length >= 32) {
+        clientNonce = buffer.subarray(0, 32);
+        buffer = buffer.subarray(32);
+        const proof = trusted
+          ? createHmac('sha256', key).update('server').update(clientNonce).update(serverNonce).digest()
+          : Buffer.alloc(32);
+        socket.write(Buffer.concat([serverNonce, proof]));
+      }
+      if (!trusted || !clientNonce || buffer.length <= 32) return;
+      const end = buffer.indexOf(10, 32);
+      if (end < 0) return;
+      const expected = createHmac('sha256', key).update('client').update(clientNonce).update(serverNonce).digest();
+      assert.deepEqual(buffer.subarray(0, 32), expected);
+      requests.push(JSON.parse(buffer.subarray(32, end).toString('utf8')));
+      socket.end('{"ok":true,"result":[]}\n');
+    });
+  });
+  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+  await writeFile(endpointFile, JSON.stringify({ port: server.address().port, key: key.toString('base64') }));
+  const client = startClient(null, appData);
+  t.after(async () => {
+    client.child.kill();
+    await new Promise(resolve => server.close(resolve));
+    await rm(appData, { recursive: true, force: true });
+  });
+
+  await client.request('initialize', { protocolVersion: '2025-11-25' });
+  const call = () => client.request('tools/call', { name: 'taxmate_ui_query', arguments: { text: 'Save draft' } });
+  const response = await call();
+  assert.equal(response.result.isError, false, response.result.content[0].text);
+  assert.deepEqual(requests, [{ method: 'query', text: 'Save draft' }]);
+
+  trustedServer = false;
+  const rejected = await call();
+  assert.equal(rejected.result.isError, true);
+  assert.match(rejected.result.content[0].text, /authenticate/);
+  await untrustedClosed;
+  assert.equal(untrustedBytes, 32);
+
+  await rm(endpointFile);
+  const disconnected = await call();
+  assert.equal(disconnected.result.isError, true);
+  assert.match(disconnected.result.content[0].text, /enable Agent bridge/);
 });

@@ -22,7 +22,7 @@
 		type?: 'button' | 'submit' | 'reset';
 		class?: string;
 		children?: Snippet;
-		'data-agent-confirm'?: 'delete';
+		'data-agent-confirm'?: 'delete' | 'copy-agent-setup';
 	} & Omit<HTMLButtonAttributes, 'class' | 'type'> = $props();
 	// The source uses intersected anchor/button handlers; this wrapper selects one native element.
 	const SourceButton = BaseButton as unknown as Component<Omit<HTMLButtonAttributes, 'type'> & {

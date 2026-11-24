@@ -5,7 +5,7 @@
 	import { Badge, Button, Card, Dialog, Page, PageHeader, Select } from '$lib/components/ui';
 	import { settings, type ColorTheme, type PaperSize } from '$lib/settings.svelte';
 	import { createSubmissionLogClient, formatSubmissionError, formatSubmissionLog, type SubmissionLog } from '$lib/tauri/submission';
-	import { getAgentBridgeStatus, setAgentBridgeEnabled, type AgentBridgeStatus } from '$lib/tauri/agent-bridge';
+	import { copyAgentAccessToken, getAgentBridgeStatus, setAgentBridgeEnabled, type AgentBridgeStatus } from '$lib/tauri/agent-bridge';
 	import { isTauri } from '@tauri-apps/api/core';
 	import Settings from '@solar-icons/svelte/category/settings/Linear/Settings.svelte';
 	import Palette from '@solar-icons/svelte/category/tools/Linear/Palette.svelte';
@@ -14,6 +14,7 @@
 	import InfoCircle from '@solar-icons/svelte/category/ui/Linear/InfoCircle.svelte';
 	import TrashBin from '@solar-icons/svelte/category/ui/Linear/TrashBinMinimalistic.svelte';
 	import Copy from '@solar-icons/svelte/category/ui/Linear/Copy.svelte';
+	import Key from '@solar-icons/svelte/category/security/Linear/Key.svelte';
 	import Sun from '@solar-icons/svelte/category/weather/Linear/Sun.svelte';
 	import Moon from '@solar-icons/svelte/category/weather/Linear/Moon.svelte';
 	import Monitor from '@solar-icons/svelte/category/devices/Linear/Monitor.svelte';
@@ -48,6 +49,9 @@
 	let agentBridge = $state<AgentBridgeStatus | null>(null);
 	let agentBridgePending = $state(false);
 	let agentBridgeError = $state('');
+	type AgentSetupItem = 'prompt' | 'token';
+	let agentSetupCopy = $state<{ item: AgentSetupItem; status: 'copying' | 'copied' | 'error' } | null>(null);
+	const agentSetupCopyDisabled = $derived(!agentBridge?.mcp_url || agentBridgePending || agentSetupCopy?.status === 'copying');
 
 	onMount(() => {
 		if (isTauri()) void getAgentBridgeStatus().then(status => { agentBridge = status; }).catch(() => {});
@@ -57,12 +61,34 @@
 		if (!agentBridge || agentBridgePending) return;
 		agentBridgePending = true;
 		agentBridgeError = '';
+		agentSetupCopy = null;
 		try {
 			agentBridge = await setAgentBridgeEnabled(!agentBridge.enabled);
 		} catch (error) {
 			agentBridgeError = typeof error === 'string' ? error : 'Could not update the agent bridge setting.';
 		} finally {
 			agentBridgePending = false;
+		}
+	}
+
+	async function copyAgentSetup(item: AgentSetupItem) {
+		const url = agentBridge?.mcp_url;
+		if (!url || agentSetupCopyDisabled) return;
+		agentSetupCopy = { item, status: 'copying' };
+		try {
+			if (item === 'prompt') {
+				const prompt =
+					`Connect to the TaxMate MCP server at ${url} using Streamable HTTP and Bearer token authentication. ` +
+					'If you need me to register the server, tell me which settings to open. ' +
+					'Guide me to enter my TaxMate access token in your credential settings. ' +
+					'Once connected, call taxmate_ui_query with the text "Settings" and tell me whether TaxMate responded.';
+				await navigator.clipboard.writeText(prompt);
+			} else {
+				await copyAgentAccessToken();
+			}
+			agentSetupCopy = { item, status: 'copied' };
+		} catch {
+			agentSetupCopy = { item, status: 'error' };
 		}
 	}
 
@@ -265,7 +291,7 @@
 		class="agent-bridge-switch"
 		aria-label="Enable agent bridge"
 		checked={agentBridge?.enabled ?? false}
-		disabled={agentBridgePending}
+		disabled={agentBridgePending || agentSetupCopy?.status === 'copying'}
 		data-agent-confirm="agent-bridge"
 		onCheckedChange={(_checked, details) => {
 			details.cancel();
@@ -276,6 +302,29 @@
 			<SwitchThumb class="agent-bridge-thumb" data-slot="switch-thumb" />
 		</span>
 	</Switch>
+{/snippet}
+
+{#snippet agentSetupControls()}
+	<div class={stylex.attrs(styles.agentSetupActions).class}>
+		<Button
+			variant="primary"
+			disabled={agentSetupCopyDisabled}
+			data-agent-confirm="copy-agent-setup"
+			onclick={() => void copyAgentSetup('prompt')}
+		>
+			<Copy size={14} color="currentColor" aria-hidden="true" />
+			Copy setup prompt
+		</Button>
+		<Button
+			variant="secondary"
+			disabled={agentSetupCopyDisabled}
+			data-agent-confirm="copy-agent-setup"
+			onclick={() => void copyAgentSetup('token')}
+		>
+			<Key size={14} color="currentColor" aria-hidden="true" />
+			Copy access token
+		</Button>
+	</div>
 {/snippet}
 
 {#snippet resetControl()}
@@ -386,8 +435,49 @@
 
 	{#if agentBridge}
 		<Card variant="panel" padding="lg" class={stylex.attrs(styles.card).class}>
-			{@render sectionTitle('Agent bridge', 'Connect an agent running under your account on this device.', Settings)}
-			{@render row('Enable agent bridge', 'Allow local agents to operate TaxMate. The bridge starts whenever you open TaxMate while enabled.', agentBridgeControl, true)}
+			<div class={stylex.attrs(styles.sectionHeading, styles.agentBridgeHeading).class}>
+				<span class={stylex.attrs(styles.sectionIcon).class} aria-hidden="true">
+					<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" focusable="false">
+						<rect x="4" y="7" width="16" height="13" rx="3" />
+						<path d="M12 3v4M2 12v3m20-3v3M9 16h6" />
+						<circle cx="9" cy="11.5" r=".8" fill="currentColor" stroke="none" />
+						<circle cx="15" cy="11.5" r=".8" fill="currentColor" stroke="none" />
+					</svg>
+				</span>
+				<div class={stylex.attrs(styles.copy).class}>
+					<h2 class={stylex.attrs(styles.sectionTitle).class}>Agent bridge</h2>
+					<p class={stylex.attrs(styles.sectionDescription).class}>Allow local MCP clients to use TaxMate while the app is open.</p>
+				</div>
+				{@render agentBridgeControl()}
+			</div>
+			<section aria-labelledby="ai-agent-connection" class={stylex.attrs(styles.agentSetup).class}>
+				<div>
+					<h3 id="ai-agent-connection" class={stylex.attrs(styles.settingLabel).class}>Connect an AI agent</h3>
+					<p class={stylex.attrs(styles.settingDescription).class}>
+						{agentBridge.mcp_url
+							? 'Paste the setup prompt into your agent. Enter the access token in your client’s credential settings.'
+							: agentBridge.enabled
+								? 'Connection details appear when the MCP server is running.'
+								: 'Enable the bridge to copy the setup prompt and access token.'}
+					</p>
+				</div>
+				{#if agentBridge.mcp_url}
+					<dl class={stylex.attrs(styles.agentEndpoint).class}>
+						<dt class={stylex.attrs(styles.agentEndpointLabel).class}>Server URL</dt>
+						<dd><code class={stylex.attrs(styles.agentServerUrl).class}>{agentBridge.mcp_url}</code></dd>
+					</dl>
+				{/if}
+				{@render agentSetupControls()}
+			</section>
+			{#if agentSetupCopy?.status === 'copied'}
+				<p role="status" class={stylex.attrs(styles.logStatus).class}>
+					{agentSetupCopy.item === 'prompt' ? 'Setup prompt copied.' : 'Access token copied.'}
+				</p>
+			{:else if agentSetupCopy?.status === 'error'}
+				<p role="alert" class={stylex.attrs(styles.copyError).class}>
+					Could not copy the {agentSetupCopy.item === 'prompt' ? 'setup prompt' : 'access token'}. Try again.
+				</p>
+			{/if}
 			{#if agentBridgeError || agentBridge.error}
 				<p role="alert" class={stylex.attrs(styles.logError).class}>{agentBridgeError || agentBridge.error}</p>
 			{/if}

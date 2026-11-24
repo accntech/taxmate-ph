@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
+import { readFile } from 'node:fs/promises';
 import { createConnection } from 'node:net';
 import { homedir } from 'node:os';
 import { isAbsolute, join } from 'node:path';
@@ -65,13 +67,40 @@ function validateArguments(name, args) {
   return { method: name === 'taxmate_ui_query' ? 'query' : 'act', ...args };
 }
 
-function callApp(request) {
-  const socketPath = process.env.TAXMATE_UI_AGENT_SOCKET || join(homedir(), '.codex', 'taxmate-ui', 'agent.sock');
-  if (!isAbsolute(socketPath)) {
-    return Promise.reject(new Error('Set TAXMATE_UI_AGENT_SOCKET to an absolute Unix socket path.'));
+const bridgeUnavailable = 'Open TaxMate and enable Agent bridge in Settings.';
+
+async function connectionSettings() {
+  if (process.platform === 'win32') {
+    const appData = process.env.LOCALAPPDATA;
+    if (!appData || !isAbsolute(appData)) {
+      throw new Error('Run the MCP server under the same Windows account as TaxMate.');
+    }
+    let endpoint;
+    try {
+      endpoint = JSON.parse(await readFile(join(appData, 'ph.taxmate.desktop', 'agent-bridge-endpoint.json'), 'utf8'));
+    } catch (error) {
+      if (error.code === 'ENOENT') throw new Error(bridgeUnavailable);
+      throw new Error('Could not read the local TaxMate agent bridge settings. Check Agent bridge in Settings.');
+    }
+    const { port, key } = endpoint ?? {};
+    if (!Number.isInteger(port) || port < 1 || port > 65535 || typeof key !== 'string' || !/^[A-Za-z0-9+/]{43}=$/.test(key)) {
+      throw new Error('The local TaxMate agent bridge settings are invalid. Restart TaxMate to recreate them.');
+    }
+    return { options: { host: '127.0.0.1', port }, key: Buffer.from(key, 'base64') };
   }
+
+  const path = process.env.TAXMATE_UI_AGENT_SOCKET || join(homedir(), '.codex', 'taxmate-ui', 'agent.sock');
+  if (!isAbsolute(path)) throw new Error('Set TAXMATE_UI_AGENT_SOCKET to an absolute Unix socket path.');
+  return { options: { path } };
+}
+
+async function callApp(request) {
+  const { options, key } = await connectionSettings();
+  const clientNonce = key && randomBytes(32);
+  const message = JSON.stringify(request) + '\n';
   return new Promise((resolve, reject) => {
-    const socket = createConnection({ path: socketPath });
+    const socket = createConnection(options);
+    let authenticated = !key;
     let buffer = Buffer.alloc(0);
     let finished = false;
     const timer = setTimeout(() => finish(new Error('TaxMate did not respond within 15 seconds. Check that its webview is responsive, then query the UI before retrying an action.')), 15000);
@@ -83,12 +112,24 @@ function callApp(request) {
       if (error) reject(error);
       else resolve(value);
     }
-    socket.once('connect', () => socket.write(JSON.stringify(request) + '\n'));
+    socket.once('connect', () => socket.write(clientNonce || message));
     socket.on('data', chunk => {
       buffer = Buffer.concat([buffer, chunk]);
       if (buffer.length > maximumMessageBytes) {
         finish(new Error('TaxMate returned more than 1 MB. Narrow the UI query.'));
         return;
+      }
+      if (!authenticated) {
+        if (buffer.length < 64) return;
+        const serverNonce = buffer.subarray(0, 32);
+        const proof = role => createHmac('sha256', key).update(role).update(clientNonce).update(serverNonce).digest();
+        if (!timingSafeEqual(buffer.subarray(32, 64), proof('server'))) {
+          finish(new Error('Could not authenticate the local TaxMate agent bridge. Restart TaxMate before retrying.'));
+          return;
+        }
+        socket.write(Buffer.concat([proof('client'), Buffer.from(message)]));
+        authenticated = true;
+        buffer = buffer.subarray(64);
       }
       const newline = buffer.indexOf(10);
       if (newline === -1) return;
@@ -106,8 +147,8 @@ function callApp(request) {
     });
     socket.once('error', error => {
       const message = ['ENOENT', 'ECONNREFUSED'].includes(error.code)
-        ? 'Open TaxMate and enable Agent bridge in Settings. If TAXMATE_UI_AGENT_SOCKET is set, verify it points to the running app.'
-        : 'Could not connect to the TaxMate UI agent socket. Check local socket permissions and the running app.';
+        ? (options.path ? `${bridgeUnavailable} If TAXMATE_UI_AGENT_SOCKET is set, verify it points to the running app.` : bridgeUnavailable)
+        : 'Could not connect to the local TaxMate agent bridge. Check Agent bridge in Settings.';
       finish(new Error(message));
     });
     socket.once('close', () => finish(new Error('TaxMate closed the connection before returning a response. Query the current UI before retrying an action.')));

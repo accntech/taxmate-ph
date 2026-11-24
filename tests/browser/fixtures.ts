@@ -83,13 +83,18 @@ export async function seedWorkspace(page: Page, theme = 'light', profileState: '
 				if (command === 'taxmate_ui_agent_enabled') return !!uiAgent;
 			if (uiAgent && command === 'taxmate_ui_agent_status') {
 				const enabled = sessionStorage.getItem('taxmate-test-agent-enabled') === 'true';
-				return { enabled, running: enabled };
+				return { enabled, running: enabled, mcp_url: enabled ? 'http://127.0.0.1:42171/mcp' : null };
 			}
 			if (uiAgent && command === 'taxmate_ui_agent_set_enabled') {
 				const enabled = Reflect.get(args ?? {}, 'enabled') === true;
 				sessionStorage.setItem('taxmate-test-agent-enabled', String(enabled));
-				return { enabled, running: enabled };
+				return { enabled, running: enabled, mcp_url: enabled ? 'http://127.0.0.1:42171/mcp' : null };
 			}
+				if (uiAgent && command === 'taxmate_ui_agent_copy_access_token') {
+					Reflect.set(window, 'agentTokenCopyCount', (Reflect.get(window, 'agentTokenCopyCount') ?? 0) + 1);
+					if (Reflect.get(window, 'failAgentTokenCopy')) throw 'Clipboard unavailable';
+					return;
+				}
 				if (uiAgent && command === 'plugin:event|listen' && args?.event === 'taxmate-ui-agent-request' && args.handler !== undefined) {
 					agentListener = callbacks[args.handler];
 					return 1;
