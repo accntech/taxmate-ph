@@ -5,6 +5,8 @@
 	import { buildTaxpayerRoute } from '$lib/apps/app-shell';
 	import { ebirformsWorkspace as workspace } from '$lib/ebirforms/ebirforms-workspace.svelte';
 	import { ButtonLink, Card, Page, PageHeader } from '$lib/components/ui';
+	import { formatTinInput } from '$lib/profiles/profile';
+	import { describePsoc } from '$lib/profiles/psoc';
 	import CheckCircle from '@solar-icons/svelte/category/ui/Linear/CheckCircle.svelte';
 	import DocumentAdd from '@solar-icons/svelte/category/notes/Linear/DocumentAdd.svelte';
 	import FileText from '@solar-icons/svelte/category/files/Linear/FileText.svelte';
@@ -12,6 +14,35 @@
 
 	let { params } = $props();
 	let formsHref = $derived(`${buildTaxpayerRoute(params.id)}/forms`);
+	let profile = $derived(workspace.profile.id === params.id ? workspace.profile : undefined);
+	let spouse = $derived(profile?.spouse);
+	const dateFormatter = new Intl.DateTimeFormat('en-PH', { dateStyle: 'medium', timeZone: 'UTC' });
+
+	function birthDate(value: string | undefined) {
+		if (!value) return '';
+		const date = new Date(value);
+		return Number.isNaN(date.getTime()) ? '' : dateFormatter.format(date);
+	}
+
+	let personalDetails = $derived([
+		['Civil status', profile?.civilStatus === 'Separated' ? 'Legally separated' : profile?.civilStatus],
+		['Date of birth', birthDate(profile?.birthDate)],
+		['Citizenship', profile?.citizenship],
+		['Occupation code (PSOC)', profile?.taxpayerClassification === 'I' ? describePsoc(profile.psocCode) : undefined]
+	].filter(([, value]) => !!value));
+	let spouseDetails = $derived([
+		['Spouse name', spouse?.taxpayerName],
+		['TIN and branch code', spouse?.tin1 && spouse.tin2 && spouse.tin3 && spouse.branchCode
+			? formatTinInput({ tin1: spouse.tin1, tin2: spouse.tin2, tin3: spouse.tin3, branchCode: spouse.branchCode })
+			: ''],
+		['RDO code', spouse?.rdoCode],
+		['Date of birth', birthDate(spouse?.birthDate)],
+		['Citizenship', spouse?.citizenship],
+		['Address', [spouse?.address, spouse?.address2].filter(Boolean).join(', ')],
+		['ZIP code', spouse?.zipCode],
+		['Email', spouse?.email],
+		['Contact number', spouse?.contactNumber]
+	].filter(([, value]) => !!value));
 
 	onMount(() => {
 		void workspace.loadTaxpayerProfiles().then(() => workspace.selectTaxpayerProfile(params.id));
@@ -21,6 +52,26 @@
 <svelte:head>
 	<title>Taxpayer | eBIRForms</title>
 </svelte:head>
+
+{#snippet details(id: string, title: string, rows: (string | undefined)[][])}
+	<section aria-labelledby={id}>
+		<Card variant="muted" class={stylex.attrs(styles.detailsCard).class}>
+			<h2 id={id} class={stylex.attrs(styles.detailsHeading).class}>{title}</h2>
+			{#if rows.length}
+				<dl class={stylex.attrs(styles.detailsGrid).class}>
+					{#each rows as [label, value] (label)}
+						<div>
+							<dt class={stylex.attrs(styles.summaryLabel).class}>{label}</dt>
+							<dd class={stylex.attrs(styles.detailValue).class}>{value}</dd>
+						</div>
+					{/each}
+				</dl>
+			{:else}
+				<p class={stylex.attrs(styles.detailsEmpty).class}>No spouse details saved.</p>
+			{/if}
+		</Card>
+	</section>
+{/snippet}
 
 <Page size="md">
 	<ButtonLink href="/ebirforms/taxpayers" variant="ghost" size="sm" class={stylex.attrs(styles.backLink).class}>
@@ -54,6 +105,14 @@
 			</Card>
 		{/each}
 	</div>
+
+
+	{#if personalDetails.length}
+		{@render details('personal-details', 'Personal details', personalDetails)}
+	{/if}
+	{#if spouseDetails.length || profile?.civilStatus === 'Married'}
+		{@render details('spouse-details', 'Spouse details', spouseDetails)}
+	{/if}
 
 	<Card variant="muted" class={stylex.attrs(styles.actions).class}>
 		<ButtonLink href={formsHref} size="touch" class={stylex.attrs(styles.action).class}>

@@ -35,7 +35,8 @@ for (const mode of ['new', 'edit']) {
 		await seedWorkspace(page);
 		await page.goto(mode === 'new' ? '/ebirforms/taxpayers/new' : `/ebirforms/taxpayers/${taxpayerId}/edit`);
 		await page.getByRole('textbox', { name: 'Taxpayer name', exact: true }).fill('Updated Example Services');
-		await page.getByRole('textbox', { name: 'TIN and branch code', exact: true }).fill('0012345670008');
+		const tin = mode === 'new' ? '00223456700008' : '00123456700008';
+		await page.getByRole('textbox', { name: 'TIN and branch code', exact: true }).fill(tin);
 		await page.getByRole('textbox', { name: 'RDO code', exact: true }).fill('040');
 		await page.getByRole('button', { name: 'Save profile', exact: true }).click();
 		await expect(page).toHaveURL('/ebirforms/taxpayers');

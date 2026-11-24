@@ -31,7 +31,8 @@
 	function value(key: keyof TaxpayerProfile): string {
 		const field = profileFields[key];
 		// Saved blanks are meaningful; only absent return values fall back to the profile.
-		return (field ? values[field] : undefined) ?? profile[key] ?? '';
+		const current = (field ? values[field] : undefined) ?? profile[key];
+		return typeof current === 'string' ? current : '';
 	}
 	const payment = $derived(formCode === '0605');
 	const remittance = $derived(formCode === '0619E' || formCode === '0619F');

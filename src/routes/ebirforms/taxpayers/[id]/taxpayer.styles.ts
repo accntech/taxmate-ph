@@ -53,6 +53,36 @@ export const styles = stylex.create({
     "fontWeight": 600,
     "color": "var(--fg)"
   },
+  "detailsCard": {
+    "display": "grid",
+    "gap": "calc(var(--spacing) * 3)"
+  },
+  "detailsHeading": {
+    "margin": 0,
+    "fontSize": "0.875rem",
+    "fontWeight": 600
+  },
+  "detailsGrid": {
+    "display": "grid",
+    "gap": "calc(var(--spacing) * 3)",
+    "margin": 0,
+    "gridTemplateColumns": {
+      "default": "minmax(0, 1fr)",
+      "@media (width >= 40rem)": "repeat(2, minmax(0, 1fr))"
+    }
+  },
+  "detailValue": {
+    "margin": 0,
+    "marginTop": "calc(var(--spacing) * 1)",
+    "fontSize": "0.875rem",
+    "color": "var(--fg)",
+    "overflowWrap": "anywhere"
+  },
+  "detailsEmpty": {
+    "margin": 0,
+    "fontSize": "0.875rem",
+    "color": "var(--fg-muted)"
+  },
   "actions": {
     "display": "grid",
     "gap": "calc(var(--spacing) * 3)",

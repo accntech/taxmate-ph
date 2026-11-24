@@ -1,17 +1,37 @@
-import type { Page } from '@playwright/test';
+import { expect, type Page } from '@playwright/test';
+import type { TaxpayerProfileInput } from '../../src/lib/profiles/profile';
+import type { CreatedReturn } from '../../src/lib/ebirforms/created-returns';
 
 export const taxpayerId = '0012345670008';
 export const formPath = `/ebirforms/taxpayers/${taxpayerId}/forms/1601EQ?return=review-return`;
 
+export async function goToReturnPage(page: Page, target: number) {
+	const pager = page.getByRole('navigation', { name: 'Return pages' });
+	const current = pager.locator('[aria-current="page"]');
+	const targetButton = pager.getByRole('button', { name: `Page ${target}`, exact: true });
+	let index = Number(await current.textContent());
+	while (index !== target) {
+		const direction = target > index ? 1 : -1;
+		if (await targetButton.isVisible()) {
+			await targetButton.click();
+			index = target;
+		} else {
+			await pager.getByRole('button', { name: direction === 1 ? 'Next page' : 'Previous page' }).click();
+			index += direction;
+		}
+		await expect(current).toHaveText(String(index));
+	}
+}
+
 /** Isolated browser data: native calls never reach the user's saved profiles. */
-export async function seedWorkspace(page: Page, theme = 'light', profileState: 'loaded' | 'empty' | 'error' = 'loaded') {
-	await page.addInitScript(({ taxpayerId, theme, profileState }) => {
+export async function seedWorkspace(page: Page, theme = 'light', profileState: 'loaded' | 'empty' | 'error' = 'loaded', profileOverrides: Partial<TaxpayerProfileInput> = {}, returns?: CreatedReturn[], options: { persistProfile?: boolean } = {}) {
+	await page.addInitScript(({ taxpayerId, theme, profileState, profileOverrides, returns, persistProfile }) => {
 		localStorage.setItem('taxmate-ph-theme', theme);
 		const profile = {
 			id: taxpayerId, tin1: '001', tin2: '234', tin3: '567', branchCode: '0008',
 			rdoCode: '040', taxpayerName: 'Example Services Corporation',
 			address: '123 Example Street', address2: 'Example City', zipCode: '0123',
-			contactNumber: '09171234567', category: 'P', email: 'example@example.com'
+			contactNumber: '09171234567', category: 'P', email: 'example@example.com', ...profileOverrides
 		};
 		const values = {
 			'frm1601EQ:txtTIN1': profile.tin1, 'frm1601EQ:txtTIN2': profile.tin2,
@@ -26,7 +46,7 @@ export async function seedWorkspace(page: Page, theme = 'light', profileState: '
 			'frm1601EQ:txtTaxBase13': '100000', 'frm1601EQ:txtRemittanceFirstMonth': '1234.56'
 		};
 		localStorage.setItem('ebirforms-created-returns-v1', JSON.stringify({
-			version: 1, archivedTaxpayerIds: [], returns: [{
+			version: 1, archivedTaxpayerIds: [], returns: returns ?? [{
 				id: 'review-return', taxpayerId, formCode: '1601EQ', returnPeriod: '2026Q2',
 				status: 'Draft', updatedAt: 1794441600000, finalFlag: '0', values
 			}]
@@ -38,13 +58,18 @@ export async function seedWorkspace(page: Page, theme = 'light', profileState: '
 				if (command === 'submit_return') return { status: 'drafted', finalFlag: '2', savePath: 'test.xml', sendPath: '', message: 'Package prepared locally.' };
 				if (command === 'list_taxpayer_profiles') {
 					if (profileState === 'error') throw new Error('Disk unavailable for review');
+					const saved = persistProfile && sessionStorage.getItem('ebirforms-test-profile');
+					if (saved) return [JSON.parse(saved)];
 					return profileState === 'empty' ? [] : [profile];
 				}
 				if (command === 'list_submitted_returns') return [];
-				if (command === 'save_taxpayer_profile') return { profile: args?.profile, path: 'test-profile.xml' };
+				if (command === 'save_taxpayer_profile') {
+					if (persistProfile && args?.profile) sessionStorage.setItem('ebirforms-test-profile', JSON.stringify(args.profile));
+					return { profile: args?.profile, path: 'test-profile.xml' };
+				}
 				if (command === 'delete_taxpayer_profile') return undefined;
 				throw new Error(`Unexpected native command in browser review: ${command}`);
 			}
 		} });
-	}, { taxpayerId, theme, profileState });
+	}, { taxpayerId, theme, profileState, profileOverrides, returns, persistProfile: options.persistProfile });
 }

@@ -6,9 +6,11 @@
 	import { resolve } from '$app/paths';
 	import { buildTaxpayerRoute } from '$lib/apps/app-shell';
 	import { ebirformsWorkspace as workspace } from '$lib/ebirforms/ebirforms-workspace.svelte';
-	import { Button, ButtonLink, Card, Input, Page, Select, Textarea, TinInput } from '$lib/components/ui';
-	import { formatTinInput, parseTinInput, validateTaxpayerProfile } from '$lib/profiles/profile';
-	import type { TaxpayerSize } from '$lib/profiles/profile';
+	import { Button, ButtonLink, Card, Combobox, DateInput, FieldErrors, Input, Label, Page, Select, Textarea, TinInput } from '$lib/components/ui';
+	import { formatTinInput, individualTaxpayerTypeOptions, parseTinInput, validateTaxpayerProfile } from '$lib/profiles/profile';
+	import { psocOptions } from '$lib/profiles/psoc';
+	import { psicOptionsForCode } from '$lib/profiles/psic';
+	import type { CivilStatus, TaxpayerSize, TaxpayerSpouse } from '$lib/profiles/profile';
 
 	let { profileId }: { profileId?: string } = $props();
 	let ready = $state(false);
@@ -17,17 +19,56 @@
 		{ value: 'P', label: 'Private', meta: 'individuals, corporations, estates, trusts' },
 		{ value: 'G', label: 'Government', meta: 'national agencies and LGUs' }
 	];
+	const civilStatusOptions = [
+		{ value: '', label: 'Not specified' },
+		{ value: 'Single', label: 'Single' },
+		{ value: 'Married', label: 'Married' },
+		{ value: 'Separated', label: 'Legally separated' },
+		{ value: 'Widowed', label: 'Widowed' }
+	];
+	const spouseFields = [
+		{ key: 'citizenship', label: 'Spouse citizenship' },
+		{ key: 'address', label: 'Spouse address line 1' },
+		{ key: 'address2', label: 'Spouse address line 2' },
+		{ key: 'zipCode', label: 'Spouse ZIP code' },
+		{ key: 'email', label: 'Spouse email' },
+		{ key: 'contactNumber', label: 'Spouse contact number' }
+	] as const;
 
 	let profileForm: HTMLFormElement | undefined = $state();
 	let validationAttempted = $state(false);
 	let isSavingProfile = $state(false);
 	let tinInput = $state(formatTinInput(workspace.profile));
+	let isIndividual = $derived(workspace.profile.taxpayerClassification === 'I');
+	let savedProfile = $derived(workspace.profiles.find((profile) => profile.id === profileId));
+	let taxpayerTypeOptions = $derived(individualTaxpayerTypeOptions.filter(
+		(option) => !('legacy' in option) || option.value === savedProfile?.taxpayerType
+	));
+	let profileToSave = $derived(isIndividual ? workspace.profile : {
+		...workspace.profile,
+		spouse: savedProfile?.spouse
+	});
 	let validationErrors = $derived(
-		validationAttempted ? validateTaxpayerProfile(workspace.profile, tinInput, workspace.profiles) : {}
+		validationAttempted ? validateTaxpayerProfile(profileToSave, tinInput, workspace.profiles) : {}
 	);
 	let activeProfileRoute = $derived(
 		workspace.selectedProfileId ? `${buildTaxpayerRoute(workspace.selectedProfileId)}/forms` : ''
 	);
+	let spouse = $derived(workspace.profile.spouse);
+	let spouseTin = $derived(
+		spouse && (spouse.tin1 || spouse.tin2 || spouse.tin3 || spouse.branchCode)
+			? `${spouse.tin1 ?? ''}${spouse.tin2 ?? ''}${spouse.tin3 ?? ''}${spouse.branchCode ?? ''}`
+			: ''
+	);
+	let showPersonalDetails = $derived(
+		workspace.profile.taxpayerClassification !== 'N' ||
+		!!(workspace.profile.birthDate || workspace.profile.citizenship || workspace.profile.civilStatus || spouse)
+	);
+	let showSpouseDetails = $derived(isIndividual && (workspace.profile.civilStatus === 'Married' || !!spouse));
+	let spouseFieldErrors = $derived({
+		zipCode: validationErrors.spouseZipCode,
+		email: validationErrors.spouseEmail
+	});
 
 	onMount(() => {
 		let active = true;
@@ -57,6 +98,10 @@
 		workspace.profile.branchCode = parts.branchCode;
 	}
 
+	function updateSpouse(patch: TaxpayerSpouse) {
+		workspace.profile.spouse = { ...workspace.profile.spouse, ...patch };
+	}
+
 	async function saveProfile() {
 		if (isSavingProfile) return;
 		validationAttempted = true;
@@ -67,7 +112,7 @@
 		}
 		isSavingProfile = true;
 		try {
-			const saved = await workspace.saveTaxpayerProfile(tinInput);
+			const saved = await workspace.saveTaxpayerProfile(tinInput, profileToSave);
 			if (saved) await goto(resolve('/ebirforms/taxpayers'));
 		} finally {
 			isSavingProfile = false;
@@ -158,25 +203,98 @@
 					</div>
 				</fieldset>
 
+				{#if showPersonalDetails}
+					<fieldset>
+						<legend>Personal details</legend>
+						<div class="field-grid">
+							<Select
+								label="Civil status"
+								options={civilStatusOptions}
+								error={validationErrors.civilStatus}
+								value={workspace.profile.civilStatus ?? ''}
+								onchange={(value) => workspace.profile.civilStatus = value as CivilStatus | ''} />
+							<DateInput
+								id="taxpayer-birth-date"
+								label="Date of birth"
+								error={validationErrors.birthDate}
+								value={workspace.profile.birthDate ?? ''}
+								onchange={(value) => workspace.profile.birthDate = value} />
+							<Input
+								label="Citizenship"
+								value={workspace.profile.citizenship ?? ''}
+								oninput={(event) => workspace.profile.citizenship = event.currentTarget.value} />
+							{#if isIndividual}
+								<div class="classification-picker">
+									<Label for="taxpayer-psoc">Occupation code (PSOC)</Label>
+									<Combobox
+										id="taxpayer-psoc"
+										options={psocOptions}
+										value={workspace.profile.psocCode || null}
+										placeholder="Choose occupation"
+										searchPlaceholder="Search code or occupation"
+										emptyMessage="No matching occupations."
+										invalid={!!validationErrors.psocCode}
+										aria-describedby={validationErrors.psocCode ? 'taxpayer-psoc-error' : undefined}
+										wrapOptions
+										itemHeight={40}
+										maxVisibleItems={6}
+										onValueChange={(value) => workspace.profile.psocCode = typeof value === 'string' ? value : ''} />
+									{#if validationErrors.psocCode}
+										<FieldErrors id="taxpayer-psoc-error" errors={[validationErrors.psocCode]} />
+									{/if}
+								</div>
+							{/if}
+						</div>
+					</fieldset>
+				{/if}
+
 				<fieldset>
 					<legend>Taxpayer information</legend>
 					<div class="field-grid">
+						<div class="full-width">
+							<Input
+								label="Trade name"
+								value={workspace.profile.tradeName ?? ''}
+								oninput={(event) => workspace.profile.tradeName = event.currentTarget.value} />
+						</div>
 						<Input
 							label="Line of business / occupation"
 							value={workspace.profile.lineOfBusiness ?? ''}
 							oninput={(event) => workspace.profile.lineOfBusiness = event.currentTarget.value} />
-							<Input
-								label="PSIC code"
-								inputmode="numeric"
-								error={validationErrors.psicCode}
-								value={workspace.profile.psicCode ?? ''}
-								oninput={(event) => workspace.profile.psicCode = event.currentTarget.value} />
+						<div class="classification-picker">
+							<Label for="taxpayer-psic">PSIC code</Label>
+							<Combobox
+								id="taxpayer-psic"
+								options={psicOptionsForCode(workspace.profile.psicCode)}
+								value={workspace.profile.psicCode || null}
+								placeholder="Choose industry"
+								searchPlaceholder="Search code or industry"
+								emptyMessage="No matching industries."
+								invalid={!!validationErrors.psicCode}
+								aria-describedby={validationErrors.psicCode ? 'taxpayer-psic-error' : undefined}
+								wrapOptions
+								itemHeight={40}
+								maxVisibleItems={6}
+								onValueChange={(value) => workspace.profile.psicCode = typeof value === 'string' ? value : ''} />
+							{#if validationErrors.psicCode}
+								<FieldErrors id="taxpayer-psic-error" errors={[validationErrors.psicCode]} />
+							{/if}
+						</div>
 						<Select
 							label="Tax classification"
 							error={validationErrors.taxpayerClassification}
 							options={[{ value: 'I', label: 'Individual' }, { value: 'N', label: 'Non-individual' }]}
 							value={workspace.profile.taxpayerClassification ?? ''}
 							onchange={(value) => workspace.profile.taxpayerClassification = value as 'I' | 'N' | ''} />
+						{#if isIndividual}
+							<Select
+								label="Taxpayer type"
+								error={validationErrors.taxpayerType}
+								options={taxpayerTypeOptions}
+								value={workspace.profile.taxpayerType ?? ''}
+								onchange={(value) => workspace.profile.taxpayerType = value}
+							/>
+						{/if}
 							<Select
 								label="Taxpayer size classification"
 								error={validationErrors.taxpayerSize}
@@ -224,6 +342,51 @@
 							bind:value={workspace.profile.contactNumber} />
 					</div>
 				</fieldset>
+
+				{#if showSpouseDetails}
+					<fieldset>
+						<legend>Spouse details</legend>
+						<div class="field-grid">
+							<div class="full-width">
+								<Input
+									label="Spouse name"
+									value={spouse?.taxpayerName ?? ''}
+									oninput={(event) => updateSpouse({ taxpayerName: event.currentTarget.value })} />
+							</div>
+							<TinInput
+								label="Spouse TIN and branch code"
+								error={validationErrors.spouseTin}
+								value={spouseTin}
+								onchange={(value) => updateSpouse(parseTinInput(value))}
+								class={stylex.attrs(profileEditor.tin).class} />
+							<Input
+								label="Spouse RDO code"
+								maxlength={3}
+								pattern="[0-9A-Z]{3}"
+								error={validationErrors.spouseRdoCode}
+								value={spouse?.rdoCode ?? ''}
+								oninput={(event) => updateSpouse({ rdoCode: event.currentTarget.value })} />
+							<DateInput
+								id="spouse-birth-date"
+								label="Spouse date of birth"
+								error={validationErrors.spouseBirthDate}
+								value={spouse?.birthDate ?? ''}
+								onchange={(value) => updateSpouse({ birthDate: value })} />
+							{#each spouseFields as { key, label } (key)}
+								<div class={key === 'address' ? 'full-width' : undefined}>
+									<Input
+										{label}
+										type={key === 'email' ? 'email' : key === 'contactNumber' ? 'tel' : 'text'}
+										inputmode={key === 'zipCode' ? 'numeric' : key === 'contactNumber' ? 'tel' : undefined}
+										maxlength={key === 'zipCode' ? 4 : undefined}
+										error={key === 'zipCode' || key === 'email' ? spouseFieldErrors[key] : undefined}
+										value={spouse?.[key] ?? ''}
+										oninput={(event) => updateSpouse({ [key]: event.currentTarget.value })} />
+								</div>
+							{/each}
+						</div>
+					</fieldset>
+				{/if}
 			</div>
 
 			<footer class="editor-footer" aria-label="Taxpayer actions">
@@ -342,6 +505,13 @@
 		overflow-wrap: anywhere;
 		line-height: 1.5;
 	}
+	.classification-picker {
+		display: grid;
+		align-content: start;
+		gap: var(--form-label-gap);
+		min-width: 0;
+	}
+
 	.status-dot {
 		width: 0.5rem;
 		height: 0.5rem;

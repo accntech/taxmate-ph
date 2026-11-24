@@ -6,6 +6,37 @@ use std::{
 use serde::{Deserialize, Serialize};
 use tauri::Manager;
 
+#[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct TaxpayerSpouse {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub taxpayer_name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tin1: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tin2: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tin3: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub branch_code: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub rdo_code: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub birth_date: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub citizenship: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub address: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub address2: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub zip_code: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub contact_number: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub email: Option<String>,
+}
+
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct TaxpayerProfile {
@@ -24,12 +55,26 @@ pub struct TaxpayerProfile {
     pub email: String,
     #[serde(default)]
     pub line_of_business: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub trade_name: Option<String>,
     #[serde(default)]
     pub taxpayer_classification: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub taxpayer_type: Option<String>,
     #[serde(default)]
     pub psic_code: String,
     #[serde(default)]
     pub taxpayer_size: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub psoc_code: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub birth_date: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub citizenship: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub civil_status: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub spouse: Option<TaxpayerSpouse>,
 }
 
 #[derive(Clone, Debug, Serialize, PartialEq, Eq)]
@@ -117,15 +162,16 @@ pub fn delete_taxpayer_profile_from_root(
 
 pub fn save_taxpayer_profile_to_root(
     root: &Path,
-    profile: TaxpayerProfile,
+    mut profile: TaxpayerProfile,
 ) -> Result<TaxpayerProfileSaveReceipt, ProfileStoreError> {
+    normalize_income_details(&mut profile);
     validate_profile(&profile)?;
 
     let profile_dir = root.join("profile");
     fs::create_dir_all(&profile_dir)?;
 
     let path = profile_dir.join(format!("{}.xml", profile.id));
-    fs::write(&path, serialize_profile_xml(&profile))?;
+    fs::write(&path, serialize_profile_xml(&profile)?)?;
 
     Ok(TaxpayerProfileSaveReceipt {
         profile,
@@ -183,12 +229,121 @@ fn validate_profile(profile: &TaxpayerProfile) -> Result<(), ProfileStoreError> 
     if !["", "I", "N"].contains(&profile.taxpayer_classification.as_str()) {
         return Err(ProfileStoreError::new("Choose Individual or Non-individual."));
     }
+    if let Some(taxpayer_type) = &profile.taxpayer_type {
+        if !["compensation", "single-proprietor", "professional", "mixed-income", "estate", "trust"]
+            .contains(&taxpayer_type.as_str())
+        {
+            return Err(ProfileStoreError::new("Choose a supported taxpayer type."));
+        }
+    }
+    if let Some(status) = &profile.civil_status {
+        if !["Single", "Married", "Separated", "Widowed"].contains(&status.as_str()) {
+            return Err(ProfileStoreError::new("Choose a supported civil status."));
+        }
+    }
+    validate_birth_date(profile.birth_date.as_deref(), "taxpayer")?;
+    if profile.psoc_code.as_ref().is_some_and(|code| !is_ascii_digits(code, 4)) {
+        return Err(ProfileStoreError::new("Enter a 4-digit PSOC code."));
+    }
+
+    if let Some(spouse) = &profile.spouse {
+        validate_birth_date(spouse.birth_date.as_deref(), "spouse")?;
+        let tin = [
+            spouse.tin1.as_deref().unwrap_or_default(),
+            spouse.tin2.as_deref().unwrap_or_default(),
+            spouse.tin3.as_deref().unwrap_or_default(),
+        ];
+        let branch = spouse.branch_code.as_deref().unwrap_or_default();
+        if tin.iter().any(|part| !part.is_empty()) || !branch.is_empty() {
+            let valid_tin = tin.iter().all(|part| is_ascii_digits(part, 3));
+            if !valid_tin || !is_ascii_digits(branch, 5) {
+                return Err(ProfileStoreError::new(
+                    "Enter 9 spouse TIN digits and a 5-digit branch code.",
+                ));
+            }
+            if tin == ["000", "000", "000"] {
+                return Err(ProfileStoreError::new("Spouse TIN cannot be all zeros."));
+            }
+        }
+        if spouse.zip_code.as_ref().is_some_and(|zip| !is_ascii_digits(zip, 4)) {
+            return Err(ProfileStoreError::new("Enter a 4-digit spouse ZIP code."));
+        }
+    }
 
     Ok(())
 }
 
-fn serialize_profile_xml(profile: &TaxpayerProfile) -> String {
-    [
+fn is_ascii_digits(value: &str, length: usize) -> bool {
+    value.len() == length && value.bytes().all(|byte| byte.is_ascii_digit())
+}
+
+fn validate_birth_date(value: Option<&str>, person: &str) -> Result<(), ProfileStoreError> {
+    if let Some(value) = value {
+        let valid = chrono::NaiveDate::parse_from_str(value, "%Y-%m-%d")
+            .is_ok_and(|date| {
+                date.format("%Y-%m-%d").to_string() == value
+                    && !value.starts_with("0000-")
+                    && date <= chrono::Local::now().date_naive()
+            });
+        if !valid {
+            return Err(ProfileStoreError::new(format!(
+                "Enter a valid {person} birth date on or before today."
+            )));
+        }
+    }
+    Ok(())
+}
+
+fn normalize_income_details(profile: &mut TaxpayerProfile) {
+    fn trim(field: &mut Option<String>) {
+        *field = field.take().and_then(|value| {
+            let value = value.trim();
+            (!value.is_empty()).then(|| value.to_owned())
+        });
+    }
+
+    trim(&mut profile.birth_date);
+    trim(&mut profile.trade_name);
+    trim(&mut profile.psoc_code);
+    trim(&mut profile.citizenship);
+    trim(&mut profile.civil_status);
+    if profile.taxpayer_classification == "I" {
+        trim(&mut profile.taxpayer_type);
+    } else {
+        profile.taxpayer_type = None;
+    }
+    if let Some(spouse) = &mut profile.spouse {
+        for field in [
+            &mut spouse.taxpayer_name,
+            &mut spouse.tin1,
+            &mut spouse.tin2,
+            &mut spouse.tin3,
+            &mut spouse.branch_code,
+            &mut spouse.rdo_code,
+            &mut spouse.birth_date,
+            &mut spouse.citizenship,
+            &mut spouse.address,
+            &mut spouse.address2,
+            &mut spouse.zip_code,
+            &mut spouse.contact_number,
+            &mut spouse.email,
+        ] {
+            trim(field);
+        }
+        if let Some(email) = &mut spouse.email {
+            *email = email.to_lowercase();
+        }
+        if let Some(rdo) = &mut spouse.rdo_code {
+            rdo.make_ascii_uppercase();
+        }
+        if *spouse == TaxpayerSpouse::default() {
+            profile.spouse = None;
+        }
+    }
+}
+
+fn serialize_profile_xml(profile: &TaxpayerProfile) -> Result<String, ProfileStoreError> {
+    let mut fields = vec![
         "<?xml version='1.0'?>".to_string(),
         "<div>".to_string(),
         field_xml("fn", &escape_legacy_value(&profile.taxpayer_name)),
@@ -207,9 +362,27 @@ fn serialize_profile_xml(profile: &TaxpayerProfile) -> String {
         field_xml("taxpayerClassification", &profile.taxpayer_classification),
         field_xml("psicCode", &escape_legacy_value(&profile.psic_code)),
         field_xml("taxpayerSize", &escape_legacy_value(&profile.taxpayer_size)),
-        "</div>".to_string(),
-    ]
-    .join("\n")
+    ];
+    for (key, value) in [
+        ("taxMateBirthDate", profile.birth_date.as_deref()),
+        ("taxMateTradeName", profile.trade_name.as_deref()),
+        ("taxMatePsocCode", profile.psoc_code.as_deref()),
+        ("taxMateCitizenship", profile.citizenship.as_deref()),
+        ("taxMateCivilStatus", profile.civil_status.as_deref()),
+        ("taxMateTaxpayerType", profile.taxpayer_type.as_deref()),
+    ] {
+        if let Some(value) = value {
+            fields.push(field_xml(key, &escape_legacy_value(value)));
+        }
+    }
+    if let Some(spouse) = &profile.spouse {
+        let value = serde_json::to_string(spouse).map_err(|error| {
+            ProfileStoreError::new(format!("Could not save spouse details: {error}"))
+        })?;
+        fields.push(field_xml("taxMateSpouse", &escape_legacy_value(&value)));
+    }
+    fields.push("</div>".to_string());
+    Ok(fields.join("\n"))
 }
 
 fn field_xml(key: &str, value: &str) -> String {
@@ -221,6 +394,13 @@ fn parse_profile_xml(xml: &str) -> Result<TaxpayerProfile, ProfileStoreError> {
     let tin2 = read_field(xml, "tin2");
     let tin3 = read_field(xml, "tin3");
     let branch_code = read_field(xml, "tin4");
+    let spouse = read_app_profile_field(xml, "taxMateSpouse")?
+        .map(|value| {
+            serde_json::from_str(&value).map_err(|error| {
+                ProfileStoreError::new(format!("Could not load spouse details: {error}"))
+            })
+        })
+        .transpose()?;
 
     Ok(TaxpayerProfile {
         id: format!("{tin1}{tin2}{tin3}{branch_code}"),
@@ -237,10 +417,26 @@ fn parse_profile_xml(xml: &str) -> Result<TaxpayerProfile, ProfileStoreError> {
         category: read_field(xml, "category"),
         email: read_field(xml, "email"),
         line_of_business: unescape_legacy_value(&read_field(xml, "lineOfBusiness"))?,
+        trade_name: read_app_profile_field(xml, "taxMateTradeName")?,
         taxpayer_classification: read_field(xml, "taxpayerClassification"),
+        taxpayer_type: read_app_profile_field(xml, "taxMateTaxpayerType")?,
         psic_code: unescape_legacy_value(&read_field(xml, "psicCode"))?,
         taxpayer_size: unescape_legacy_value(&read_field(xml, "taxpayerSize"))?,
+        birth_date: read_app_profile_field(xml, "taxMateBirthDate")?,
+        psoc_code: read_app_profile_field(xml, "taxMatePsocCode")?,
+        citizenship: read_app_profile_field(xml, "taxMateCitizenship")?,
+        civil_status: read_app_profile_field(xml, "taxMateCivilStatus")?,
+        spouse,
     })
+}
+
+fn read_app_profile_field(xml: &str, key: &str) -> Result<Option<String>, ProfileStoreError> {
+    // TaxMate fields always use the wrapper. Restrict the search so legacy
+    // values containing a similarly named marker cannot become profile data.
+    xml.split_once(&format!("<div>{key}="))
+        .and_then(|(_, field)| field.split_once(&format!("{key}=</div>")))
+        .map(|(value, _)| unescape_legacy_value(value))
+        .transpose()
 }
 
 fn read_field(xml: &str, key: &str) -> String {

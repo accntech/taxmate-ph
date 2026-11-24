@@ -20,9 +20,16 @@ fn sample_profile() -> TaxpayerProfile {
         category: "P".into(),
         email: "taxpayer@example.com".into(),
         line_of_business: String::new(),
+        trade_name: None,
         taxpayer_classification: String::new(),
+        taxpayer_type: None,
         psic_code: String::new(),
         taxpayer_size: String::new(),
+        psoc_code: None,
+        birth_date: None,
+        citizenship: None,
+        civil_status: None,
+        spouse: None,
     }
 }
 
@@ -74,6 +81,7 @@ fn retains_business_and_tax_classification_in_profile_xml() {
     let root = tempfile::tempdir().expect("temp app data root");
     let mut data = serde_json::to_value(sample_profile()).expect("profile JSON");
     data["lineOfBusiness"] = serde_json::json!("Accounting & advisory / services");
+    data["tradeName"] = serde_json::json!("  Álex & Reyes / Advisory  ");
     data["taxpayerClassification"] = serde_json::json!("N");
     data["psicCode"] = serde_json::json!("0123");
     data["taxpayerSize"] = serde_json::json!("small");
@@ -82,6 +90,7 @@ fn retains_business_and_tax_classification_in_profile_xml() {
     let loaded = list_taxpayer_profiles_from_root(root.path()).expect("load profile");
     let result = serde_json::to_value(&loaded[0]).expect("loaded JSON");
     assert_eq!(result["lineOfBusiness"], "Accounting & advisory / services");
+    assert_eq!(result["tradeName"], "Álex & Reyes / Advisory");
     assert_eq!(result["taxpayerClassification"], "N");
     assert_eq!(result["psicCode"], "0123");
     assert_eq!(result["taxpayerSize"], "small");
@@ -98,4 +107,94 @@ fn loads_legacy_profiles_without_business_or_classification() {
     assert_eq!(data["taxpayerClassification"], "");
     assert_eq!(data["psicCode"], "");
     assert_eq!(data["taxpayerSize"], "");
+    for key in ["birthDate", "citizenship", "civilStatus", "spouse", "psocCode", "taxpayerType", "tradeName"] {
+        assert!(data.get(key).is_none(), "{key} is optional in legacy profiles");
+    }
+}
+
+#[test]
+fn saves_individual_taxpayer_type_and_clears_it_for_non_individuals() {
+    let root = tempfile::tempdir().unwrap();
+    let mut data = serde_json::to_value(sample_profile()).unwrap();
+    data["taxpayerClassification"] = serde_json::json!("I");
+    for taxpayer_type in ["professional", "estate", "trust", "compensation", "mixed-income"] {
+        data["taxpayerType"] = serde_json::json!(taxpayer_type);
+        save_taxpayer_profile_to_root(root.path(), serde_json::from_value(data.clone()).unwrap()).unwrap();
+        let loaded = list_taxpayer_profiles_from_root(root.path()).unwrap();
+        assert_eq!(serde_json::to_value(&loaded[0]).unwrap()["taxpayerType"], taxpayer_type);
+    }
+
+    data["taxpayerClassification"] = serde_json::json!("N");
+    save_taxpayer_profile_to_root(root.path(), serde_json::from_value(data).unwrap()).unwrap();
+    let loaded = list_taxpayer_profiles_from_root(root.path()).unwrap();
+    assert!(serde_json::to_value(&loaded[0]).unwrap().get("taxpayerType").is_none());
+}
+
+#[test]
+fn reloads_optional_taxpayer_and_spouse_identity() {
+    let root = tempfile::tempdir().expect("temp app data root");
+    let mut data = serde_json::to_value(sample_profile()).expect("profile JSON");
+    data["birthDate"] = serde_json::json!("1986-12-08");
+    data["citizenship"] = serde_json::json!("Pilipino & Canadian");
+    data["civilStatus"] = serde_json::json!("Married");
+    data["spouse"] = serde_json::json!({
+        "taxpayerName": "Éva Piñon",
+        "tin1": "321", "tin2": "654", "tin3": "987",
+        "branchCode": "00001", "rdoCode": "17A",
+        "birthDate": "1988-04-10", "citizenship": "Pilipino",
+        "address": "Phase 2 & Block 1", "address2": "Makati", "zipCode": "1200",
+        "contactNumber": "09171234568", "email": "spouse@example.com"
+    });
+    let profile: TaxpayerProfile = serde_json::from_value(data.clone()).expect("profile from JSON");
+    save_taxpayer_profile_to_root(root.path(), profile).expect("save profile");
+    let profiles = list_taxpayer_profiles_from_root(root.path()).expect("reload profile");
+    let loaded = serde_json::to_value(&profiles[0]).expect("loaded profile JSON");
+    for key in ["birthDate", "citizenship", "civilStatus", "spouse"] {
+        assert_eq!(loaded[key], data[key], "{key} round trip");
+    }
+}
+
+#[test]
+fn rejects_partial_spouse_tin_before_saving_profile() {
+    let root = tempfile::tempdir().expect("temp app data root");
+    let mut data = serde_json::to_value(sample_profile()).expect("profile JSON");
+    data["spouse"] = serde_json::json!({ "tin1": "321" });
+    let profile: TaxpayerProfile = serde_json::from_value(data).expect("profile from JSON");
+    let error = save_taxpayer_profile_to_root(root.path(), profile).expect_err("partial spouse TIN");
+    assert!(error.message.contains("spouse TIN"));
+    assert!(!root.path().join("profile").exists());
+}
+
+#[test]
+fn saves_and_clears_optional_psoc_code() {
+    let root = tempfile::tempdir().unwrap();
+    let mut data = serde_json::to_value(sample_profile()).unwrap();
+    data["psocCode"] = serde_json::json!("0123");
+    let profile = serde_json::from_value(data.clone()).unwrap();
+    let saved = save_taxpayer_profile_to_root(root.path(), profile).unwrap();
+    assert!(fs::read_to_string(&saved.path)
+        .unwrap()
+        .contains("<div>taxMatePsocCode=0123taxMatePsocCode=</div>"));
+    let loaded = list_taxpayer_profiles_from_root(root.path()).unwrap();
+    assert_eq!(serde_json::to_value(&loaded[0]).unwrap()["psocCode"], "0123");
+
+    data["psocCode"] = serde_json::json!(" ");
+    let profile = serde_json::from_value(data).unwrap();
+    save_taxpayer_profile_to_root(root.path(), profile).unwrap();
+    assert!(!fs::read_to_string(&saved.path).unwrap().contains("taxMatePsocCode="));
+    let loaded = list_taxpayer_profiles_from_root(root.path()).unwrap();
+    assert!(serde_json::to_value(&loaded[0]).unwrap().get("psocCode").is_none());
+}
+
+#[test]
+fn rejects_invalid_psoc_codes_before_saving_profile() {
+    let root = tempfile::tempdir().unwrap();
+    for code in ["123", "12345", "12A4"] {
+        let mut data = serde_json::to_value(sample_profile()).unwrap();
+        data["psocCode"] = serde_json::json!(code);
+        let profile = serde_json::from_value(data).unwrap();
+        let error = save_taxpayer_profile_to_root(root.path(), profile).unwrap_err();
+        assert!(error.message.contains("4-digit PSOC code"));
+    }
+    assert!(!root.path().join("profile").exists());
 }

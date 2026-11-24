@@ -226,3 +226,34 @@ it('does not match a malformed legacy branch by truncating its digits', () => {
  const input = { ...old, id: '', branchCode: '00007', taxpayerName: 'New' };
  expect(upsertTaxpayerProfile([old], input)).toEqual([old, { ...input, id: '12345678900007' }]);
 });
+
+describe('individual profile details', () => {
+	const individual = {
+		tin1: '123', tin2: '456', tin3: '789', branchCode: '00000',
+		rdoCode: '040', taxpayerName: 'Sample Taxpayer', address: '', address2: '',
+		zipCode: '', contactNumber: '', category: 'P', email: '', taxpayerClassification: 'I' as const
+	};
+
+	it('normalizes and saves optional spouse details without requiring a spouse TIN', () => {
+		const [saved] = upsertTaxpayerProfile([], {
+			...individual, citizenship: ' Filipino ', civilStatus: 'Married',
+			spouse: { taxpayerName: ' Sample Spouse ', email: ' SPOUSE@EXAMPLE.COM ', address2: '  ' }
+		});
+		expect(saved).toMatchObject({
+			citizenship: 'Filipino', civilStatus: 'Married',
+			spouse: { taxpayerName: 'Sample Spouse', email: 'spouse@example.com' }
+		});
+		expect(saved.spouse?.address2).toBeUndefined();
+		expect(validateTaxpayerProfile(saved)).toEqual({});
+	});
+
+	it('rejects invalid optional dates and a partly entered spouse TIN', () => {
+		const input = {
+			...individual, birthDate: '2000-02-30', spouse: { tin1: '321', birthDate: '2999-01-01', rdoCode: '999' }
+		};
+		expect(validateTaxpayerProfile(input)).toMatchObject({
+			birthDate: expect.any(String), spouseTin: expect.any(String),
+			spouseBirthDate: expect.any(String), spouseRdoCode: expect.any(String)
+		});
+	});
+});

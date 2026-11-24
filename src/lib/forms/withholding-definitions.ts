@@ -12,7 +12,7 @@ export type WithholdingField = {
   readonly?: boolean;
   options?: { value: string; label: string }[];
   defaultValue?: string;
-  profileKey?: keyof TaxpayerProfile;
+  profileKey?: Exclude<keyof TaxpayerProfile, 'spouse'>;
   group?: "credits" | "penalties" | "attachments";
   showWhen?: { field: string; value: string };
   allowNegative?: boolean;
@@ -164,7 +164,7 @@ function base(
     ["txtEmail", "Email address", "email"],
   ].map(([n, l, k]) =>
     f(prefix, n, l, "text", {
-      profileKey: k as keyof TaxpayerProfile,
+      profileKey: k as Exclude<keyof TaxpayerProfile, 'spouse'>,
       required:
         k !== "address2" &&
         (k !== "email" || revision === "revised" || code.startsWith("0619")),

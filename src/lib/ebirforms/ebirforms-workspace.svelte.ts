@@ -394,13 +394,13 @@ class EbirformsWorkspace {
 		this.statusMessage = 'Ready for a new taxpayer profile.';
 	}
 
-	async saveTaxpayerProfile(rawTin?: string) {
-		if (Object.keys(validateTaxpayerProfile(this.profile, rawTin, this.profiles)).length > 0) {
+	async saveTaxpayerProfile(rawTin?: string, profileToSave = this.profile) {
+		if (Object.keys(validateTaxpayerProfile(profileToSave, rawTin, this.profiles)).length > 0) {
 			this.statusMessage = 'Profile not saved. Correct the highlighted details and try again.';
 			return false;
 		}
-		const profiles = upsertTaxpayerProfile(this.profiles, this.profile);
-		const profile = { ...findMatchingTaxpayerProfile(profiles, this.profile)! };
+		const profiles = upsertTaxpayerProfile(this.profiles, profileToSave);
+		const profile = { ...findMatchingTaxpayerProfile(profiles, profileToSave)! };
 		const id = profile.id;
 		try {
 			const store = createProfileStoreClient();

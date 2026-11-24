@@ -15,6 +15,32 @@ export type ReturnFilenameInput = TinParts & {
 
 export type TaxpayerSize = 'micro' | 'small' | 'medium' | 'large' | '';
 
+export const individualTaxpayerTypeOptions = [
+	{ value: '', label: 'Not specified' },
+	{ value: 'single-proprietor', label: 'Single' },
+	{ value: 'professional', label: 'Professional' },
+	{ value: 'estate', label: 'Estate' },
+	{ value: 'trust', label: 'Trust' },
+	{ value: 'compensation', label: 'Compensation earner', legacy: true },
+	{ value: 'mixed-income', label: 'Mixed income earner', legacy: true }
+] as const;
+export type IndividualTaxpayerType = (typeof individualTaxpayerTypeOptions)[number]['value'];
+
+const civilStatuses = ['Single', 'Married', 'Separated', 'Widowed'] as const;
+export type CivilStatus = (typeof civilStatuses)[number];
+
+export type TaxpayerSpouse = Partial<TinParts & {
+	taxpayerName: string;
+	rdoCode: string;
+	birthDate: string;
+	citizenship: string;
+	address: string;
+	address2: string;
+	zipCode: string;
+	contactNumber: string;
+	email: string;
+}>;
+
 export type TaxpayerProfileInput = TinParts & {
 	rdoCode: string;
 	taxpayerName: string;
@@ -24,10 +50,17 @@ export type TaxpayerProfileInput = TinParts & {
 	contactNumber: string;
 	category: string;
 	email: string;
+	tradeName?: string;
 	lineOfBusiness?: string;
 	taxpayerClassification?: 'I' | 'N' | '';
+	taxpayerType?: IndividualTaxpayerType;
 	psicCode?: string;
+	psocCode?: string;
 	taxpayerSize?: TaxpayerSize;
+	birthDate?: string;
+	citizenship?: string;
+	civilStatus?: CivilStatus | '';
+	spouse?: TaxpayerSpouse;
 };
 
 export type TaxpayerProfile = TaxpayerProfileInput & {
@@ -35,8 +68,25 @@ export type TaxpayerProfile = TaxpayerProfileInput & {
 };
 
 export type ProfileValidationErrors = Partial<
-	Record<'taxpayerName' | 'tin' | 'rdoCode' | 'category' | 'zipCode' | 'email' | 'taxpayerClassification' | 'psicCode' | 'taxpayerSize', string>
+	Record<
+		'taxpayerName' | 'tin' | 'rdoCode' | 'category' | 'zipCode' | 'email' | 'taxpayerClassification' | 'taxpayerType' | 'psicCode' | 'psocCode' | 'taxpayerSize' |
+		'birthDate' | 'civilStatus' | 'spouseTin' | 'spouseRdoCode' | 'spouseBirthDate' | 'spouseZipCode' | 'spouseEmail',
+		string
+	>
 >;
+
+export function isValidPsocCode(value: string): boolean {
+	return /^\d{4}$/.test(value.trim());
+}
+
+function isValidBirthDate(value: string): boolean {
+	if (!/^\d{4}-\d{2}-\d{2}$/.test(value) || value.startsWith('0000-')) return false;
+	const date = new Date(`${value}T00:00:00Z`);
+	if (Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== value) return false;
+	const today = new Date();
+	const todayInUtc = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate());
+	return date.getTime() <= todayInUtc;
+}
 
 export function taxpayerEmailError(value: string, required = false): string {
 	const email = value.trim();
@@ -88,11 +138,48 @@ export function validateTaxpayerProfile(
 	if (profile.taxpayerClassification && !['I', 'N'].includes(profile.taxpayerClassification)) {
 		errors.taxpayerClassification = 'Choose Individual or Non-individual.';
 	}
+	if (profile.taxpayerClassification === 'I' && profile.taxpayerType &&
+		!individualTaxpayerTypeOptions.some(({ value }) => value === profile.taxpayerType)) {
+		errors.taxpayerType = 'Choose a supported taxpayer type.';
+	}
 	if (profile.psicCode && !/^\d+$/.test(profile.psicCode)) {
 		errors.psicCode = 'Enter a PSIC code using digits only.';
 	}
+	if (profile.psocCode?.trim() && !isValidPsocCode(profile.psocCode)) {
+		errors.psocCode = 'Enter a four-digit PSOC code.';
+	}
 	if (profile.taxpayerSize && !['micro', 'small', 'medium', 'large'].includes(profile.taxpayerSize)) {
 		errors.taxpayerSize = 'Choose Micro, Small, Medium, or Large.';
+	}
+	const birthDate = profile.birthDate?.trim();
+	if (birthDate && !isValidBirthDate(birthDate)) {
+		errors.birthDate = 'Enter a valid birth date on or before today.';
+	}
+	if (profile.civilStatus && !civilStatuses.includes(profile.civilStatus)) {
+		errors.civilStatus = 'Choose a supported civil status.';
+	}
+	if (profile.spouse) {
+		const { tin1, tin2, tin3, branchCode, rdoCode, birthDate, zipCode, email } = profile.spouse;
+		const tinParts = [tin1, tin2, tin3].map((part) => part?.trim() ?? '');
+		const branch = branchCode?.trim() ?? '';
+		if (tinParts.some(Boolean) || branch) {
+			if (!tinParts.every((part) => /^\d{3}$/.test(part)) || !/^\d{5}$/.test(branch)) {
+				errors.spouseTin = 'Enter 9 spouse TIN digits and a 5-digit branch code.';
+			} else if (tinParts.join('') === '000000000') {
+				errors.spouseTin = 'Spouse TIN cannot be all zeros.';
+			}
+		}
+		if (rdoCode?.trim() && !isPackagedRdoCode(rdoCode.trim().toUpperCase())) {
+			errors.spouseRdoCode = 'Enter a supported spouse RDO code, such as 040 or 17A.';
+		}
+		if (birthDate?.trim() && !isValidBirthDate(birthDate.trim())) {
+			errors.spouseBirthDate = 'Enter a valid spouse birth date on or before today.';
+		}
+		if (zipCode?.trim() && !/^\d{4}$/.test(zipCode.trim())) {
+			errors.spouseZipCode = 'Enter a 4-digit spouse ZIP code.';
+		}
+		const spouseEmailError = taxpayerEmailError(email ?? '');
+		if (spouseEmailError) errors.spouseEmail = spouseEmailError;
 	}
 	return errors;
 }
@@ -166,9 +253,24 @@ export function upsertTaxpayerProfile(
 	const normalizedId = normalizeTinParts(input);
 	const existing = findMatchingTaxpayerProfile(profiles, input);
 	const profileIndex = existing ? profiles.indexOf(existing) : -1;
+	const { birthDate, citizenship, civilStatus, psocCode, spouse, taxpayerType, tradeName, ...base } = input;
+	const spouseDetails = Object.fromEntries(
+		Object.entries(spouse ?? {}).flatMap(([key, value]) => {
+			const trimmed = value?.trim();
+			if (!trimmed) return [];
+			return [[key, key === 'email' ? trimmed.toLowerCase() : key === 'rdoCode' ? trimmed.toUpperCase() : trimmed]];
+		})
+	);
 	const profile = {
-		...input,
+		...base,
 		email: (input.email ?? '').trim().toLowerCase(),
+		...(tradeName?.trim() ? { tradeName: tradeName.trim() } : {}),
+		...(birthDate?.trim() ? { birthDate: birthDate.trim() } : {}),
+		...(citizenship?.trim() ? { citizenship: citizenship.trim() } : {}),
+		...(civilStatus ? { civilStatus } : {}),
+		...(psocCode?.trim() ? { psocCode: psocCode.trim() } : {}),
+		...(input.taxpayerClassification === 'I' && taxpayerType ? { taxpayerType } : {}),
+		...(Object.keys(spouseDetails).length ? { spouse: spouseDetails } : {}),
 		// Keep legacy filenames and saved-return links when only branch padding changes.
 		id: profileIndex === -1 ? normalizedId : profiles[profileIndex].id
 	};
