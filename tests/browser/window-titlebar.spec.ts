@@ -40,11 +40,11 @@ async function configure(page: Page, platform: string, extended = true, theme = 
 				invoke: async (command: string, args: Record<string, unknown> = {}) => {
 					state.calls.push({ command, args });
 					if (command === 'desktop_platform') return platform;
-					if (command === 'window_ready' || command === 'plugin:window|set_theme') {
+					if (command === 'window_ready' || (command === 'window_appearance_sync' && args.mode)) {
 						const before = matchesDark();
 						state.nativeTheme = command === 'window_ready'
 							? (args.followSystem ? null : args.dark ? 'dark' : 'light')
-							: args.value as 'light' | 'dark' | null;
+							: args.mode === 'system' ? null : args.mode as 'light' | 'dark';
 						notify(before);
 					}
 					if (command === 'plugin:window|is_fullscreen') return state.fullscreen;
@@ -147,9 +147,30 @@ test('macOS native appearance follows the selected app theme', async ({ page }) 
 	await expect(page.getByRole('banner', { name: 'Window title bar' })).toBeVisible();
 	await page.evaluate(() => { document.documentElement.dataset.theme = 'dark'; });
 	await expect.poll(() => page.evaluate(() => {
-		const calls = (window as unknown as { __chromeTest: { calls: { command: string; args: { value?: string } }[] } }).__chromeTest.calls;
-		return calls.filter(call => call.command === 'plugin:window|set_theme').at(-1)?.args.value;
+		const calls = (window as unknown as { __chromeTest: { calls: { command: string; args: { mode?: string } }[] } }).__chromeTest.calls;
+		return calls.filter(call => call.command === 'window_appearance_sync').at(-1)?.args.mode;
 	})).toBe('dark');
+});
+
+test('macOS applies a theme switch in one native update', async ({ page }) => {
+	await configure(page, 'macos');
+	await page.goto('/settings');
+	const appearanceCalls = () => page.evaluate(() => {
+		const calls = (window as unknown as { __chromeTest: { calls: { command: string; args: Record<string, unknown> }[] } }).__chromeTest.calls;
+		return calls.filter(({ command }) => [
+			'window_appearance_sync', 'window_background_sync', 'plugin:window|set_theme'
+		].includes(command));
+	});
+	await expect.poll(() => page.evaluate(() => {
+		const calls = (window as unknown as { __chromeTest: { calls: { command: string }[] } }).__chromeTest.calls;
+		return calls.some(({ command }) => command === 'plugin:window|is_fullscreen');
+	})).toBe(true);
+	const startupCalls = await appearanceCalls();
+	await page.getByRole('radio', { name: 'Dark', exact: true }).check();
+	await expect.poll(appearanceCalls).toEqual([
+		{ command: 'window_appearance_sync', args: { mode: 'dark', color: '#15171b' } }
+	]);
+	expect(startupCalls).toEqual([]);
 });
 
 test('macOS scroll backing follows dark and light app backgrounds', async ({ page }) => {
@@ -160,7 +181,7 @@ test('macOS scroll backing follows dark and light app backgrounds', async ({ pag
 		await page.evaluate(theme => { document.documentElement.dataset.theme = theme; }, theme);
 		await expect.poll(() => page.evaluate(() => {
 			const calls = (window as unknown as { __chromeTest: { calls: { command: string; args: { color?: string } }[] } }).__chromeTest.calls;
-			return calls.filter(call => call.command === 'window_background_sync').at(-1)?.args.color;
+			return calls.filter(call => call.command === 'window_appearance_sync').at(-1)?.args.color;
 		})).toBe(theme === 'dark' ? '#15171b' : '#f1f8fc');
 	}
 });
@@ -179,9 +200,9 @@ test('macOS scroll backing follows palette changes within light mode', async ({ 
 	await expect(page.locator('html')).toHaveAttribute('data-tauri-platform', 'macos');
 	await page.getByRole('radio', { name: 'Catppuccin', exact: true }).check();
 	await expect.poll(() => page.evaluate(() => {
-		const calls = (window as unknown as { __chromeTest: { calls: { command: string; args: { color?: string } }[] } }).__chromeTest.calls;
-		return calls.filter(call => call.command === 'window_background_sync').at(-1)?.args.color;
-	})).toBe('#eff1f5');
+		const calls = (window as unknown as { __chromeTest: { calls: { command: string; args: { mode?: string; color?: string } }[] } }).__chromeTest.calls;
+		return calls.filter(call => call.command === 'window_appearance_sync').at(-1)?.args;
+	})).toEqual({ mode: null, color: '#eff1f5' });
 });
 
 

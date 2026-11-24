@@ -8,6 +8,17 @@ interface WindowChrome {
   rightInset: number;
 }
 
+function readNativeAppearance(root: HTMLElement, platform: string) {
+  const mode = root.dataset.themeMode === "system"
+    ? "system"
+    : root.dataset.theme === "dark" ? "dark" : "light";
+  // Match the native backing exposed by macOS overscroll to the page.
+  const color = platform === "macos"
+    ? getComputedStyle(root).getPropertyValue("--bg").trim() || null
+    : null;
+  return { mode, color };
+}
+
 let lifecycleGeneration = 0;
 
 /** Owns the Windows caption lifecycle; unsupported hosts retain their standard frame. */
@@ -209,8 +220,7 @@ export function startWindowChrome(): () => void {
   let observer: MutationObserver | undefined;
   let settled: number | undefined;
   let revision = 0;
-  let nativeTheme: "light" | "dark" | null | undefined;
-  let themeUpdate = Promise.resolve();
+  let appearanceUpdate = Promise.resolve();
 
   async function syncMacFullscreen() {
     const current = ++revision;
@@ -221,28 +231,6 @@ export function startWindowChrome(): () => void {
     } catch {
       // Keep the reserved traffic-light space when native state is unavailable.
     }
-  }
-
-  function syncNativeTheme() {
-    const desired = root.dataset.themeMode === "system"
-      ? null
-      : root.dataset.theme === "dark" ? "dark" : "light";
-    if (nativeTheme !== desired) {
-      nativeTheme = desired;
-      // Serialize overrides so a slower previous choice cannot replace System.
-      themeUpdate = themeUpdate.then(async () => {
-        if (active && nativeTheme === desired) await appWindow.setTheme(desired);
-      }).catch(() => {
-        if (nativeTheme === desired) nativeTheme = undefined;
-      });
-    }
-    if (root.dataset.tauriPlatform !== "macos") return;
-    // Native backing can show through when macOS rubber-bands the web content.
-    const background = getComputedStyle(root).getPropertyValue("--bg").trim();
-    if (background)
-      void invoke("window_background_sync", { color: background }).catch((error) => {
-        console.warn("Unable to sync native window background", error);
-      });
   }
 
   void (async () => {
@@ -256,18 +244,33 @@ export function startWindowChrome(): () => void {
       await new Promise<void>((resolve) => window.setTimeout(resolve, 0));
       if (!active) return;
       void root.offsetHeight;
+      let applied = readNativeAppearance(root, platform);
       await invoke("window_ready", {
         dark: root.dataset.theme === "dark",
-        followSystem: root.dataset.themeMode === "system",
-        color: getComputedStyle(root).getPropertyValue("--bg").trim(),
+        followSystem: applied.mode === "system",
+        color: applied.color ?? getComputedStyle(root).getPropertyValue("--bg").trim(),
       });
       if (!active) return;
-      observer = new MutationObserver(syncNativeTheme);
+      function syncAppearance() {
+        // Read the latest selection when the previous native update has finished.
+        appearanceUpdate = appearanceUpdate.then(async () => {
+          if (!active) return;
+          const desired = readNativeAppearance(root, platform);
+          const mode = desired.mode === applied.mode ? null : desired.mode;
+          const color = desired.color === applied.color ? null : desired.color;
+          if (!mode && !color) return;
+          await invoke("window_appearance_sync", { mode, color });
+          applied = desired;
+        }).catch((error) => {
+          console.warn("Unable to sync native window appearance", error);
+        });
+      }
+      observer = new MutationObserver(syncAppearance);
       observer.observe(root, {
         attributes: true,
         attributeFilter: ["data-theme", "data-theme-mode", "data-palette"],
       });
-      syncNativeTheme();
+      syncAppearance();
       if (platform === "windows") {
         stopWindows = startWindowsChrome();
         return;

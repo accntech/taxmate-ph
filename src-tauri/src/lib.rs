@@ -64,7 +64,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             desktop_platform,
             window_ready,
-            window_chrome::window_background_sync,
+            window_chrome::window_appearance_sync,
             window_chrome::window_chrome_sync,
             window_chrome::window_chrome_pointer_enter,
             pdf_export::export_form_pdf,

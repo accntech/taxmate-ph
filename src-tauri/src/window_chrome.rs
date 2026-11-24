@@ -66,20 +66,38 @@ pub fn prepare(window: &tauri::WebviewWindow, dark: bool) {
     }
 }
 
-/// Keep the window and WebKit overscroll backing on the same explicit color.
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum AppearanceMode {
+    Light,
+    Dark,
+    System,
+}
+
+/// Apply backing and native appearance together on the UI thread.
 #[tauri::command]
-pub fn window_background_sync(
+pub fn window_appearance_sync(
     window: tauri::WebviewWindow,
-    color: tauri::window::Color,
+    mode: Option<AppearanceMode>,
+    color: Option<tauri::window::Color>,
 ) -> Result<(), String> {
     if window.label() != "main" {
-        return Err("Window background is available only to the main window".into());
+        return Err("Window appearance is available only to the main window".into());
     }
-    // The bundled JS background setters and locked core disagree on the IPC
-    // argument name. Use the typed Rust API so neither layer receives None.
-    window
-        .set_background_color(Some(color))
-        .map_err(|error| error.to_string())
+    if let Some(color) = color {
+        window
+            .set_background_color(Some(color))
+            .map_err(|error| error.to_string())?;
+    }
+    if let Some(mode) = mode {
+        let theme = match mode {
+            AppearanceMode::Light => Some(tauri::Theme::Light),
+            AppearanceMode::Dark => Some(tauri::Theme::Dark),
+            AppearanceMode::System => None,
+        };
+        window.set_theme(theme).map_err(|error| error.to_string())?;
+    }
+    Ok(())
 }
 
 #[tauri::command]
