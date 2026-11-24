@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { seedWorkspace, taxpayerId } from './fixtures';
+import { captureTestPdfs, seedWorkspace, taxpayerId } from './fixtures';
 
 const cases = [
 	{ status: 'Draft', paperSize: 'long' },
@@ -59,7 +59,9 @@ for (const { status, paperSize } of cases) {
 			await expect(watermark).toHaveText('DRAFT');
 			await expect(watermark).toBeVisible();
 		}
-		await page.pdf({ path: testInfo.outputPath('1601eq.pdf'), preferCSSPageSize: true, printBackground: true });
-		await page.screenshot({ path: testInfo.outputPath('1601eq.png'), fullPage: true });
+		if (captureTestPdfs) {
+			await page.pdf({ path: testInfo.outputPath('1601eq.pdf'), preferCSSPageSize: true, printBackground: true });
+			await page.screenshot({ path: testInfo.outputPath('1601eq.png'), fullPage: true });
+		}
 	});
 }

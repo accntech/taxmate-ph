@@ -1,7 +1,7 @@
 import { execFileSync } from 'node:child_process';
 import { writeFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
-import { seedWorkspace, taxpayerId } from './fixtures';
+import { captureTestPdfs, seedWorkspace, taxpayerId } from './fixtures';
 
 async function printForm(page: Page, code: string, paper = 'long', hostile = false, status = 'Draft', name = 'PRINT GEOMETRY TEST', overrides: Record<string, string> = {}) {
 	await seedWorkspace(page);
@@ -205,7 +205,7 @@ test('0605 Letter retains EQ profile scale and uniform PDF value typography', as
 
 	const scale = await print.locator('.withholding-print-page').first().evaluate(element => Number((element as HTMLElement).style.getPropertyValue('--withholding-page-scale')));
 	expect(scale).toBeCloseTo(0.75, 5);
-	const pdf = await print.pdf({path:'/tmp/withholding-native0605-letter.pdf', preferCSSPageSize: true, printBackground: true});
+	const pdf = await print.pdf({ preferCSSPageSize: true, printBackground: true });
 	const sizes = JSON.parse(execFileSync('python3', ['-c', 'import sys,io,json,pdfplumber\nwith pdfplumber.open(io.BytesIO(sys.stdin.buffer.read())) as pdf: print(json.dumps([w["size"] for w in pdf.pages[0].extract_words(extra_attrs=["size"]) if w["text"] in ("PRINT", "001")]))'], {input:pdf}).toString());
 	expect(sizes.length).toBeGreaterThanOrEqual(2);
 	for (const size of sizes) expect(size).toBeCloseTo(7.38, 2);
@@ -619,8 +619,13 @@ for (const code of printCodes.filter(code => !['1601EQ', '0619E', '0619F'].inclu
 			return issues;
 		}));
 		expect(issues).toEqual([]);
-		const pdf = await print.pdf({ path: testInfo.outputPath(`${code}-headers.pdf`), preferCSSPageSize: true, printBackground: true });
-		if (paper === 'long') writeFileSync(testInfo.outputPath(`${code}-header.png`), execFileSync('pdftoppm', ['-f', '1', '-singlefile', '-r', '140', '-x', '0', '-y', '90', '-W', '1300', '-H', '380', '-png', '-'], { input: pdf }));
+		if (captureTestPdfs) {
+			const pdf = await print.pdf({ path: testInfo.outputPath(`${code}-headers.pdf`), preferCSSPageSize: true, printBackground: true });
+			if (paper === 'long') {
+				const header = execFileSync('pdftoppm', ['-f', '1', '-singlefile', '-r', '140', '-x', '0', '-y', '90', '-W', '1300', '-H', '380', '-png', '-'], { input: pdf });
+				writeFileSync(testInfo.outputPath(`${code}-header.png`), header);
+			}
+		}
 		await print.close();
 	});
 }

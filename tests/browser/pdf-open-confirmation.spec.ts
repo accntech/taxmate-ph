@@ -1,10 +1,14 @@
 import { expect, test, type Page } from '@playwright/test';
+import type { PdfExportRequest } from '../../src/lib/tauri/pdf-export';
 import { seedWorkspace, taxpayerId } from './fixtures';
+
+const formsPath = `/ebirforms/taxpayers/${taxpayerId}/forms`;
+const savedReturns = (page: Page) => page.evaluate(() => localStorage.getItem('ebirforms-created-returns-v1'));
 
 async function preparePdf(page: Page, outcome: 'success' | 'cancel' | 'export-error' | 'open-error' | 'pending' = 'success', theme = 'light') {
 	await seedWorkspace(page, theme);
-	await page.goto(`/ebirforms/taxpayers/${taxpayerId}/forms`);
-	await expect(page.getByRole('link', { name: 'Edit', exact: true })).toBeVisible();
+	await page.goto(formsPath);
+	await expect(page.getByRole('link', { name: 'Edit', exact: true })).toBeVisible({ timeout: 15_000 });
 	await page.evaluate((outcome) => {
 		const state = window as any;
 		state.openedPdfs = [];
@@ -19,6 +23,7 @@ async function preparePdf(page: Page, outcome: 'success' | 'cancel' | 'export-er
 				return true;
 			}
 			if (command === 'export_form_pdf') {
+				state.pdfRequest = args.request;
 				state.pdfJobId = args.request.jobId;
 				state.reportPdfProgress = (completedSteps: number, stage: string) => args.onProgress?.onmessage({ completedSteps, totalSteps: 7, stage });
 				state.reportPdfProgress(5, 'Rendering PDF');
@@ -34,8 +39,34 @@ async function preparePdf(page: Page, outcome: 'success' | 'cancel' | 'export-er
 			return previous(command, args);
 		};
 	}, outcome);
+	const before = await savedReturns(page);
 	await page.getByRole('button', { name: /^More actions for BIR Form/ }).click();
 	await page.getByRole('menuitem', { name: 'Generate PDF', exact: true }).click();
+	return before;
+}
+
+async function expectReturnUnchanged(page: Page, before: string | null) {
+	await expect(page).toHaveURL(formsPath);
+	expect(await savedReturns(page)).toBe(before);
+	await expect(page.getByRole('button', { name: /^More actions for BIR Form/ })).toBeEnabled();
+}
+
+async function expectExportRequest(page: Page) {
+	const report = await page.evaluate(() => {
+		const request = (window as Window & { pdfRequest?: PdfExportRequest }).pdfRequest;
+		if (!request) return null;
+		const document = new DOMParser().parseFromString(request.html, 'text/html');
+		return {
+			paperSize: request.paperSize,
+			values: Array.from(document.querySelectorAll('input'), input => input.value),
+			watermark: document.querySelector('.pdf-draft-watermark')?.textContent
+		};
+	});
+	expect(report).toMatchObject({
+		paperSize: 'long',
+		values: expect.arrayContaining(['Example Services Corporation', '100,000.00', 'WI120', '1,234.56']),
+		watermark: 'DRAFT'
+	});
 }
 
 test('opens the generated PDF only after confirmation', async ({ page }, testInfo) => {
@@ -52,23 +83,33 @@ test('opens the generated PDF only after confirmation', async ({ page }, testInf
 
 for (const dismiss of ['Not now', 'Escape']) {
 	test(`keeps the PDF saved without opening when dismissed with ${dismiss}`, async ({ page }) => {
-		await preparePdf(page);
+		const before = await preparePdf(page);
 		const dialog = page.getByRole('dialog', { name: 'Open generated PDF?' });
 		await expect(dialog).toBeVisible();
 		if (dismiss === 'Escape') await page.keyboard.press('Escape');
 		else await dialog.getByRole('button', { name: dismiss, exact: true }).click();
 		await expect(dialog).not.toBeVisible();
 		expect(await page.evaluate(() => (window as any).openedPdfs)).toEqual([]);
-		await expect(page.locator('[data-slot="toast"]').filter({ hasText: 'PDF saved to /tmp/generated return.pdf' })).toBeVisible();
+		await expect(page.getByRole('status').and(page.locator('[data-slot="toast"]')).filter({ hasText: 'PDF saved to /tmp/generated return.pdf' })).toBeVisible();
+		if (dismiss === 'Not now') {
+			await expect(page.locator('main p[role="status"]:visible')).toHaveCount(0);
+			await expectReturnUnchanged(page, before);
+			await expectExportRequest(page);
+		}
 	});
 }
 
 for (const outcome of ['cancel', 'export-error'] as const) {
 	test(`does not offer to open a PDF after ${outcome}`, async ({ page }) => {
-		await preparePdf(page, outcome);
-		await expect(page.locator('[data-slot="toast"]').filter({ hasText: outcome === 'cancel' ? 'PDF export canceled.' : 'PDF export failed: Renderer unavailable' })).toBeVisible();
+		const before = await preparePdf(page, outcome);
+		const role = outcome === 'cancel' ? 'status' : 'alert';
+		const message = outcome === 'cancel' ? 'PDF export canceled.' : 'PDF export failed: Renderer unavailable';
+		const toast = page.getByRole(role).and(page.locator('[data-slot="toast"]')).filter({ hasText: message });
+		await expect(toast).toBeVisible();
 		await expect(page.getByRole('dialog', { name: 'Open generated PDF?' })).not.toBeVisible();
 		expect(await page.evaluate(() => (window as any).openedPdfs)).toEqual([]);
+		await expectReturnUnchanged(page, before);
+		if (outcome === 'export-error') await expectExportRequest(page);
 	});
 }
 
@@ -112,10 +153,3 @@ test(`shows cancellable generation and a toast on ${mobile ? 'mobile dark' : 'de
 	await page.screenshot({ path: testInfo.outputPath('pdf-canceled-toast.png'), animations: 'disabled' });
 });
 }
-
-test('reports a successful export in a toast without status below the table', async ({ page }) => {
-	await preparePdf(page);
-	await page.getByRole('dialog', { name: 'Open generated PDF?' }).getByRole('button', { name: 'Not now' }).click();
-	await expect(page.locator('[data-slot="toast"]')).toContainText('PDF saved to /tmp/generated return.pdf');
-	await expect(page.locator('main p[role="status"]:visible')).toHaveCount(0);
-});

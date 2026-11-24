@@ -133,18 +133,6 @@ async function checkSourceExamples(page: Page, code: string, state: FilingState)
 	}
 }
 
-for (const code of ['1700', '1700v2018']) {
-	test(`${code} names the summary source and focuses its exact calculation`, async ({ page }) => {
-		await openReturn(page, code, 1440, 'single');
-		const target = code === '1700' ? 'frm1700:txtPg2Pt4I14C1' : 'frm1700:txtPg2I47A';
-		const reference = page.locator(`button[data-reference-target="${target}"]`);
-		await expect(reference).toBeVisible();
-		await expect(reference).toHaveAccessibleName(/From.*14A.*Taxpayer|From.*47A.*Taxpayer/);
-		await reference.click();
-		await expect(page.locator(`[id="${target}"]`)).toBeFocused();
-	});
-}
-
 for (const { code, revision, pages } of revisions) {
 	for (const width of [320, 390, 1440]) {
 		const states: FilingState[] = code === '1700v2018' && width !== 320

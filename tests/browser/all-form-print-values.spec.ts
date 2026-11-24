@@ -1,6 +1,6 @@
 import { execFileSync } from 'node:child_process';
 import { expect, test } from '@playwright/test';
-import { seedWorkspace, taxpayerId } from './fixtures';
+import { captureTestPdfs, seedWorkspace, taxpayerId } from './fixtures';
 
 const codes = ['0605','0619E','0619F','1600','1600PTv2018','1600VTv2018','1600WP','1601C','1601Cv2018','1601E','1601EQ','1601F','1601FQ','1602','1602Qv2018','1603','1603Qv2018','1604C','1604CF','1604E','1604Ev2018','1604F','1606'];
 for (const code of codes) {
@@ -34,11 +34,16 @@ for (const code of codes) {
   const emailForms = ['0619E','0619F','1600PTv2018','1600VTv2018','1601Cv2018','1601EQ','1601FQ','1602Qv2018','1603Qv2018','1604C','1604Ev2018','1604F'];
   expect(emailValues.length).toBe(emailForms.includes(code) ? 1 : 0);
   for(const value of emailValues) expect(value).toBe('mixed.case@example.com');
-  const pdf = await print.pdf({path:testInfo.outputPath(`${code}.pdf`),preferCSSPageSize:true,printBackground:true});
-  if(emailValues.length) {
-   const text = execFileSync('pdftotext',['-','-'],{input:pdf,encoding:'utf8'});
-   expect(text).toContain('mixed.case@example.com');
-   expect(text).not.toContain('MIXED.CASE@EXAMPLE.COM');
+  if (emailValues.length || captureTestPdfs) {
+   const pdf = await print.pdf({
+    path: captureTestPdfs ? testInfo.outputPath(`${code}.pdf`) : undefined,
+    preferCSSPageSize: true, printBackground: true
+   });
+   if (emailValues.length) {
+    const text = execFileSync('pdftotext', ['-', '-'], { input: pdf, encoding: 'utf8' });
+    expect(text).toContain('mixed.case@example.com');
+    expect(text).not.toContain('MIXED.CASE@EXAMPLE.COM');
+   }
   }
   const root=print.locator('.withholding-print, .legacy-container').first();
   await expect(root).toHaveCSS('text-transform','none');

@@ -184,3 +184,7 @@ bun run test:run
 bunx playwright install chromium
 bun run test:browser
 ```
+
+Set `EBIRFORMS_CAPTURE_TEST_PDFS=1` to capture extra print previews in the
+Playwright output directory. PDF fidelity tests also place their verified
+PDFs and diagnostics there.

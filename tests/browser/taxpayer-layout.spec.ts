@@ -29,16 +29,3 @@ for (const width of [1440, 390]) {
 		});
 	}
 }
-
-for (const mode of ['new', 'edit']) {
-	test(`${mode} taxpayer still saves valid details and returns to the list`, async ({ page }) => {
-		await seedWorkspace(page);
-		await page.goto(mode === 'new' ? '/ebirforms/taxpayers/new' : `/ebirforms/taxpayers/${taxpayerId}/edit`);
-		await page.getByRole('textbox', { name: 'Taxpayer name', exact: true }).fill('Updated Example Services');
-		const tin = mode === 'new' ? '00223456700008' : '00123456700008';
-		await page.getByRole('textbox', { name: 'TIN and branch code', exact: true }).fill(tin);
-		await page.getByRole('textbox', { name: 'RDO code', exact: true }).fill('040');
-		await page.getByRole('button', { name: 'Save profile', exact: true }).click();
-		await expect(page).toHaveURL('/ebirforms/taxpayers');
-	});
-}

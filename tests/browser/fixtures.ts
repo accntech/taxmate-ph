@@ -4,6 +4,7 @@ import type { CreatedReturn } from '../../src/lib/ebirforms/created-returns';
 
 export const taxpayerId = '0012345670008';
 export const formPath = `/ebirforms/taxpayers/${taxpayerId}/forms/1601EQ?return=review-return`;
+export const captureTestPdfs = process.env.EBIRFORMS_CAPTURE_TEST_PDFS === '1';
 
 export async function openDesignSystemFixture(page: Page) {
 	await page.goto('/');

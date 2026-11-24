@@ -6,10 +6,9 @@ import { seedWorkspace, taxpayerId } from './fixtures';
 
 const codes = ['0605','0619E','0619F','1600','1600PTv2018','1600VTv2018','1600WP','1601C','1601Cv2018','1601E','1601EQ','1601F','1601FQ','1602','1602Qv2018','1603','1603Qv2018','1604C','1604CF','1604E','1604Ev2018','1604F','1606'];
 const papers = ['long', 'letter', 'a4'] as const;
-const outputRoot = path.resolve('docs/verification/withholding-pdfs');
 
 for (const code of codes) {
- test(`${code} preserves its original form on each supported paper`, async ({ page, context }) => {
+ test(`${code} preserves its original form on each supported paper`, async ({ page, context }, testInfo) => {
   test.setTimeout(90000);
   await seedWorkspace(page);
   await page.goto(`/ebirforms/taxpayers/${taxpayerId}/forms`);
@@ -52,9 +51,10 @@ for (const code of codes) {
    const diagnostics = component ? (await import(`${browserModuleRoot}/printing/withholding-print-model.ts`)).createWithholdingPrintModel(code, values, component.printBindings).diagnostics : null;
    return {values, diagnostics, rendered:Object.fromEntries(rendered)};
   }, code);
-  await mkdir(path.join(outputRoot,code), {recursive:true});
-  await writeFile(path.join(outputRoot,code,'values.json'),JSON.stringify(result.values,null,2));
-  await writeFile(path.join(outputRoot,code,'diagnostics.json'),JSON.stringify(result.diagnostics,null,2));
+  const output = testInfo.outputPath(code);
+  await mkdir(output, {recursive:true});
+  await writeFile(path.join(output,'values.json'),JSON.stringify(result.values,null,2));
+  await writeFile(path.join(output,'diagnostics.json'),JSON.stringify(result.diagnostics,null,2));
   if (result.diagnostics) {
    expect(result.diagnostics.unmapped, `${code} source mappings`).toEqual([]);
    expect(result.diagnostics.attached, `${code} first-row values belong on the original form`).toEqual([]);
@@ -85,16 +85,17 @@ for (const code of codes) {
      await expect(frames.nth(index).locator('.withholding-print-draft')).toHaveCount(1);
     }
    }
-   await writeFile(path.join(outputRoot,code,`${paper}.html`),html);
-   await printPage.pdf({path:path.join(outputRoot,code,`${paper}.pdf`),preferCSSPageSize:true,printBackground:true});
+   const pdfPath = path.join(output,`${paper}.pdf`);
+   await writeFile(path.join(output,`${paper}.html`),html);
+   await printPage.pdf({path:pdfPath,preferCSSPageSize:true,printBackground:true});
    metrics[paper] = await printPage.evaluate(() => ({width:document.documentElement.scrollWidth,height:document.documentElement.scrollHeight,images:[...document.images].map(image=>({complete:image.complete,width:image.naturalWidth})),text:document.body.innerText}));
-   const info = execFileSync('pdfinfo', [path.join(outputRoot,code,`${paper}.pdf`)], {encoding:'utf8'});
+   const info = execFileSync('pdfinfo', [pdfPath], {encoding:'utf8'});
    expect(Number(info.match(/^Pages:\s+(\d+)/m)?.[1]), `${code}/${paper} physical pages`).toBe(result.diagnostics?.pages ?? 1);
    const images = await printPage.evaluate(() => [...document.images].every(image => image.complete && image.naturalWidth > 0));
    expect(images, `${code}/${paper} embedded assets`).toBe(true);
    expect(external).toEqual([]);
    await printPage.close();
   }
-  await writeFile(path.join(outputRoot,code,'metrics.json'),JSON.stringify(metrics,null,2));
+  await writeFile(path.join(output,'metrics.json'),JSON.stringify(metrics,null,2));
  });
 }
