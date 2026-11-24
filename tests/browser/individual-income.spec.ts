@@ -409,15 +409,46 @@ test('June 2013 Form 1701 keeps employer fields and historical tax regime amount
 	await expect(regimes.locator('[id="frm1701:txtPg12Pt9I1SalesC1"]')).toHaveCSS('text-align', 'right');
 	await expect(regimes.locator('[id="frm1701:txtPg12Pt9I1SalesC2"]')).toHaveAttribute('inputmode', 'decimal');
 	const output = process.env.INCOME_PREVIEW_DIR;
+	const screenshotStyle = '[aria-label="Window title bar"] { visibility: hidden; }';
 	if (output) {
 		mkdirSync(output, { recursive: true });
-		await regimes.screenshot({ path: resolve(output, '1701-2013-tax-regimes.png'), animations: 'disabled' });
+		await regimes.screenshot({
+			path: resolve(output, '1701-2013-tax-regimes.png'), animations: 'disabled', style: screenshotStyle
+		});
 	}
 	await page.setViewportSize({ width: 390, height: 920 });
 	const viewport = page.getByRole('region', { name: 'Taxpayer tax regimes' });
 	await expect(viewport).toBeVisible();
-	expect(await viewport.evaluate(el => el.scrollWidth > el.clientWidth)).toBe(true);
+	const sales = regimes.locator('tr[data-income-item="1"]');
+	const amounts = sales.locator('td.summary-value');
+	const amountLabels = ['Regular', 'Special', 'Exempt', 'Total'];
+	for (const [index, label] of amountLabels.entries()) {
+		await expect(amounts.nth(index).getByText(label, { exact: true })).toBeVisible();
+	}
+	const [heading, regular, special, exempt, total] = await Promise.all([
+		sales.getByRole('rowheader').boundingBox(),
+		...amountLabels.map((_, index) => amounts.nth(index).boundingBox())
+	]);
+	expect(regular!.y).toBeGreaterThanOrEqual(heading!.y + heading!.height);
+	expect(special!.y).toBe(regular!.y);
+	expect(exempt!.y).toBeGreaterThan(regular!.y);
+	expect(total!.y).toBe(exempt!.y);
+	expect(await viewport.evaluate(el => el.scrollWidth - el.clientWidth)).toBe(0);
 	expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+	const specialAmount = sales.locator('[id="frm1701:txtPg12Pt9I1SalesC2"]');
+	await specialAmount.fill('123456789');
+	await specialAmount.blur();
+	await expect(specialAmount).toHaveValue('123,456,789');
+	if (output) {
+		await regimes.screenshot({
+			path: resolve(output, '1701-2013-tax-regimes-mobile.png'), animations: 'disabled', style: screenshotStyle
+		});
+	}
+	await page.setViewportSize({ width: 320, height: 920 });
+	expect(await viewport.evaluate(el => el.scrollWidth - el.clientWidth)).toBe(0);
+	expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(320);
+	await sales.getByRole('button', { name: /From Part IV, Item 50A/ }).click();
+	await expect(page.locator('[id="frm1701:txtPg2Pt4I50NetSalesC1"]')).toBeFocused();
 });
 
 test('revised 1701 resets the deduction when the ATC switches to 8%', async ({ page }) => {

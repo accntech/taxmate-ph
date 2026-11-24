@@ -911,12 +911,11 @@
 {/snippet}
 
 {#snippet historicalRegimeSchedule(scheduleFields: IncomeEditorField[])}
-	<p class="regime-scroll-hint">Scroll sideways to see all tax regime amounts.</p>
 	{#each schedulePeople as person, personIndex (person)}
 		{@const title = person === 'spouse' ? 'Spouse tax regimes' : 'Taxpayer tax regimes'}
-		<!-- svelte-ignore a11y_no_noninteractive_tabindex (Keyboard access to the scrollable table) -->
-		<div class="regime-viewport" role="region" aria-label={title} tabindex="0">
-			<table class="tax-summary annual-schedule historical-regimes" aria-label={title}>
+		<section class="historical-regime-section" aria-label={title}>
+			<!-- svelte-ignore a11y_no_redundant_roles (Preserve table semantics when CSS reflows the rows) -->
+			<table class="tax-summary annual-schedule historical-regimes" role="table" aria-label={title}>
 				<caption>{title}</caption>
 				<colgroup>
 					<col class="summary-number" />
@@ -927,26 +926,28 @@
 				</colgroup>
 				<thead>
 					<tr>
-						<th scope="col">Item</th>
-						<th scope="col">Description</th>
+						<th role="columnheader" scope="col">Item</th>
+						<th role="columnheader" scope="col">Description</th>
 						{#each historicalRegimes as regime (regime)}
-							<th scope="col" class="summary-value">{regime}</th>
+							<th role="columnheader" scope="col" class="summary-value">{regime}</th>
 						{/each}
 					</tr>
 				</thead>
-				<tbody>
+				<!-- svelte-ignore a11y_no_redundant_roles (The mobile row group uses block layout) -->
+				<tbody role="rowgroup">
 					{#each incomeEditorRows(scheduleFields) as row (row.key)}
 						{@const label = row.fields[0].label.replace(/^\d+\s+| · (?:Taxpayer|Spouse)$/g, '')}
-						<tr data-income-item={row.item}>
-							<td>{row.item}</td>
-							<th scope="row">
+						<!-- svelte-ignore a11y_no_redundant_roles (The mobile row uses grid layout) -->
+						<tr role="row" data-income-item={row.item}>
+							<td role="cell" class="regime-item">{row.item}</td>
+							<th role="rowheader" scope="row">
 								{label}
 								{@render annualReferences(row.fields.filter(field => historicalRegimes.some((_, index) => field.id.endsWith(`C${personIndex * 4 + index + 1}`))))}
 							</th>
 							{#each historicalRegimes as regime, index (regime)}
 								{@const field = row.fields.find(field => field.id.endsWith(`C${personIndex * 4 + index + 1}`))}
-								<td class="summary-value" class:summary-input={field && !computed.has(field.id)}>
-									{#if field}<span class="cell-column-caption" aria-hidden="true">{regime}</span>{/if}
+								<td role="cell" class="summary-value" class:summary-input={field && !computed.has(field.id)}>
+									<span class="cell-column-caption" aria-hidden="true">{regime}</span>
 									{#if !field}
 										<span aria-label="Not applicable">—</span>
 									{:else if computed.has(field.id)}
@@ -960,7 +961,7 @@
 					{/each}
 				</tbody>
 			</table>
-		</div>
+		</section>
 	{/each}
 {/snippet}
 
@@ -2248,29 +2249,28 @@
 	.annual-schedule .schedule-total { background: var(--paper-section-background, var(--bg-hover)); }
 	.annual-schedule .schedule-total th { font-weight: 700; }
 	.regime-viewport { max-inline-size: 100%; overflow-x: auto; }
-	.regime-scroll-hint { margin: 0; padding: .5rem .625rem; color: var(--fg-muted); font-size: .75rem; }
 	.schedule-scroll-hint { margin: 0; padding: .5rem .625rem; color: var(--fg-muted); font-size: .75rem; }
 	@container paper-form (width >= 58rem) {
-		.regime-scroll-hint, .schedule-scroll-hint:not(.wide-schedule) { display: none; }
+		.schedule-scroll-hint:not(.wide-schedule) { display: none; }
 	}
 	.regime-viewport + .regime-viewport { border-top: 1px solid var(--border); }
 	:is(.regime-viewport, .joint-schedule-viewport):focus-visible { outline: 2px solid var(--field-focus-border, var(--accent)); outline-offset: -2px; }
-	.historical-regimes { min-inline-size: 58rem; }
+	.historical-regime-section + .historical-regime-section { border-top: 1px solid var(--border); }
 	.historical-regimes caption { text-align: start; padding: .45rem .625rem; font-weight: 650; border-bottom: 1px solid var(--border); }
 	.historical-regimes .summary-number { width: 2.5rem; }
 	.historical-regimes .summary-amount { width: 10.75rem; }
 	.column-schedule, .historical-regimes { border-collapse: separate; border-spacing: 0; }
 	:is(.historical-regimes, .column-schedule) th { background: var(--bg-elev); }
-	.historical-regimes tr > :first-child,
-	.historical-regimes tr > :nth-child(2),
 	.column-schedule tr > :first-child {
 		position: sticky;
 		inset-inline-start: 0;
 		z-index: 1;
 		background: var(--bg-elev);
 	}
-	.historical-regimes tr > :nth-child(2) { inset-inline-start: 2.5rem; }
-	.historical-regimes tr > :nth-child(2), .column-schedule th[scope="row"] { border-inline-end: 1px solid var(--border); }
+	.column-schedule th[scope="row"] { border-inline-end: 1px solid var(--border); }
+	@container paper-form (width >= 58rem) {
+		.historical-regimes tr > :nth-child(2) { border-inline-end: 1px solid var(--border); }
+	}
 	.column-schedule {
 		--schedule-description-width: 14rem;
 		--schedule-value-width: 10.25rem;
@@ -2439,15 +2439,63 @@
 	@container paper-form (width < 36rem) {
 		.full-annual-editor .tax-summary .summary-amount { width: 11rem; }
 		.quarterly-editor .tax-summary .summary-amount { width: 11.25rem; }
-		.full-annual-editor .historical-regimes .summary-amount { width: 10.75rem; }
 		.column-schedule { --schedule-description-width: 9rem; }
-		.historical-regimes { min-inline-size: 52rem; }
-		.historical-regimes :is(th, td) { padding-inline: .375rem; }
 		.full-annual-editor :global(.profile-grid > [data-profile-key]) { padding-block: .5rem; }
 		.full-annual-editor :global(.profile-grid > :is([data-profile-key="rdoCode"], [data-profile-key="zipCode"],
 			[data-profile-key="contactNumber"], [data-profile-key="civilStatus"], [data-profile-key="tin"])) {
 			--profile-cell-width: calc((100% - 1px) / 2);
 		}
+	}
+	@container paper-form (width < 58rem) {
+		.historical-regimes,
+		.historical-regimes caption,
+		.historical-regimes tbody { display: block; }
+		.historical-regimes colgroup { display: none; }
+		.historical-regimes thead {
+			position: absolute;
+			inline-size: 1px;
+			block-size: 1px;
+			overflow: hidden;
+			clip-path: inset(50%);
+		}
+		.historical-regimes tbody tr {
+			position: relative;
+			display: grid;
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+			align-items: start;
+			gap: .625rem .75rem;
+			padding: .75rem;
+		}
+		.historical-regimes tbody tr + tr { border-top: 1px solid var(--border); }
+		.historical-regimes tbody tr > :is(th, td) { padding: 0; border: 0; }
+		.historical-regimes .regime-item {
+			position: absolute;
+			inset-block-start: .75rem;
+			inset-inline-start: .75rem;
+			color: var(--fg-muted);
+		}
+		.historical-regimes th[scope="row"] {
+			grid-column: 1 / -1;
+			padding-inline-start: 1.625rem;
+			font-weight: 650;
+		}
+		.historical-regimes .cell-column-caption {
+			display: block;
+			margin-block-end: .25rem;
+			color: var(--fg-muted);
+			font-size: .75rem;
+			text-align: start;
+		}
+		.historical-regimes .summary-value:last-child .cell-column-caption { font-weight: 650; }
+		.historical-regimes output { padding-inline-end: 0; }
+		.historical-regimes .summary-input :global(div:has(> input[inputmode="decimal"])) {
+			min-block-size: 2.75rem;
+			gap: .25rem;
+			padding-inline: .5rem;
+		}
+	}
+	@container paper-form (44rem <= width < 58rem) {
+		.historical-regimes tbody tr { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 	}
 	.legacy-quarterly-editor .annual-schedule .summary-number { width: 4rem; }
 	.income-control :global(input:not([type="checkbox"]):not([type="radio"])) { min-width: 0; max-width: 100%; }
