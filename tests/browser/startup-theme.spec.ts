@@ -23,3 +23,47 @@ for (const scenario of [
 			? 'rgb(21, 23, 27)' : 'rgb(241, 248, 252)');
 	});
 }
+
+test('reload waits for StyleX before showing the app', async ({ page }) => {
+	await page.addInitScript(() => {
+		localStorage.setItem('taxmate-ph-theme', 'dark');
+		localStorage.setItem('taxmate-ph-palette', 'catppuccin');
+		function sampleFirstVisibleFrame() {
+			const row = document.querySelector('.sidebar a[aria-current="page"]');
+			if (row?.getClientRects().length && getComputedStyle(row).visibility === 'visible') {
+				document.documentElement.dataset.firstNavDisplay = getComputedStyle(row).display;
+				return;
+			}
+			requestAnimationFrame(sampleFirstVisibleFrame);
+		}
+		requestAnimationFrame(sampleFirstVisibleFrame);
+	});
+	await page.goto('/');
+	const navigation = page.locator('.sidebar a[aria-current="page"]');
+	await expect(navigation).toHaveCSS('display', 'grid', { timeout: 15_000 });
+	await expect(page.locator('html')).toHaveAttribute('data-first-nav-display', 'grid');
+
+	let releaseStyles = () => {};
+	const stylesReady = new Promise<void>(resolve => { releaseStyles = resolve; });
+	const isStyleX = (url: URL) => url.pathname === '/virtual:stylex.css';
+	await page.route(isStyleX, async route => {
+		await stylesReady;
+		await route.continue();
+	});
+
+	try {
+		const stylesheetRequested = page.waitForRequest(request => isStyleX(new URL(request.url())));
+		await page.reload({ waitUntil: 'commit' });
+		await stylesheetRequested;
+		// Give the app a paint opportunity while the stylesheet is still held.
+		await page.evaluate(() => new Promise(resolve =>
+			requestAnimationFrame(() => requestAnimationFrame(resolve))));
+		await expect(page.locator('html')).toHaveCSS('background-color', 'rgb(17, 17, 27)');
+		await expect(page.locator('main')).toBeHidden();
+	} finally {
+		releaseStyles();
+	}
+
+	await expect(page.locator('html')).toHaveAttribute('data-first-nav-display', 'grid');
+	await expect(page.getByRole('heading', { name: 'Tax workspaces' })).toBeVisible();
+});
