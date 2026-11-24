@@ -318,7 +318,7 @@
 {#snippet control(field: WithholdingField)}
 	{#if visible(field, editorValues)}
 		{#if field.readonly}
-			<CalculatedValue id={field.id} label={displayLabel(field.label)} value={draftInvalidAmounts && field.type === 'money' ? '' : display(field, draftCalculated[field.id] ?? draft[field.id] ?? '')} error={draftErrors[field.id] ?? ''} />
+			<CalculatedValue id={field.id} label={displayLabel(field.label)} value={draftInvalidAmounts && field.type === 'money' ? '' : display(field, draftCalculated[field.id] ?? draft[field.id] ?? '')} error={draftErrors[field.id] ?? ''} amountColumn={field.type === 'money'} />
 		{:else if displayLabel(field.label) === 'ATC'}
 			<AtcPicker id={field.id} label={displayLabel(field.label)} formCode={definition.code} fieldOptions={field.options ?? []} category={editorValues[definition.prefix + 'optCategory'] ?? ''} year={Number(editorValues[definition.yearField])} required={field.required ?? false} value={draft[field.id] ?? ''} error={draftErrors[field.id] ?? ''} onchange={(value) => changeDraft(field, value)} />
 		{:else if schedule.id === 'payees' && /:dtSched:txtTin\d+$/.test(field.id)}

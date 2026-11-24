@@ -7,7 +7,7 @@ const values = (fields: Record<string, string>) => Object.fromEntries(Object.ent
 
 describe('quarterly individual income returns', () => {
  it('calculates cumulative graduated tax and prior payments using the return-year table', () => {
-  const input = values({ txtYear: '2024', optTaxRate: 'Graduated', optMethodOfDeduction: 'I', txt36A: '400000', txt42A: '200000', txt55A: '40000' });
+  const input = values({ txtYear: '2024', optATC: 'II012', optTaxRate: 'Graduated', optMethodOfDeduction: 'I', txt36A: '400000', txt42A: '200000', txt55A: '40000' });
   const result = calculateReturn('1701Qv2018', input);
   expect(result[p + 'txt45A']).toBe('600000.00');
   expect(result[p + 'txt46A']).toBe('62500.00');
@@ -32,7 +32,7 @@ describe('quarterly individual income returns', () => {
   expect(result[p+'txt41C']).toBe('11900.00');
  });
  it('requires a quarter and rejects impossible birthday and excessive 8% subtraction', () => {
-  const errors = validateReturnValues('1701Qv2018', values({ txtYear: '2024', DateQuarter: '4', txtBirthMonth: '02', txtBirthDay: '30', txtBirthYear: '1980', optTaxRate: 'Percentage', txt52A: '250001' }));
+  const errors = validateReturnValues('1701Qv2018', values({ txtYear: '2024', DateQuarter: '4', txtBirthMonth: '02', txtBirthDay: '30', txtBirthYear: '1980', optATC: 'II015', optTaxRate: 'Percentage', txt52A: '250001' }));
   expect(errors[p+'DateQuarter']).toBeTruthy();
   expect(errors[p+'txtBirthDay']).toBeTruthy();
   expect(errors[p+'txt52A']).toBeTruthy();

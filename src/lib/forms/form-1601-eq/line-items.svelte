@@ -372,7 +372,7 @@
 			<CurrencyInput id={prefix + 'txtTaxBase' + line} label="Tax Base" required value={draft[prefix + 'txtTaxBase' + line] || ''}
 				error={draftErrors[prefix + 'txtTaxBase' + line] || ''} onchange={(value) => update({ [prefix + 'txtTaxBase' + line]: value })} />
 			<CalculatedValue id={prefix + 'txtTaxRate' + line} label="Rate (%)" source="From ATC" value={draftCalculated[prefix + 'txtTaxRate' + line] ? `${draftCalculated[prefix + 'txtTaxRate' + line]}%` : ''} />
-			<CalculatedValue id={prefix + 'txtTaxWithheld' + line} label="Tax withheld" for={prefix + 'txtTaxBase' + line} value={normalizeCurrencyInput(draft[prefix + 'txtTaxBase' + line] || '') === null ? '' : money(draftCalculated[prefix + 'txtTaxWithheld' + line])} />
+			<CalculatedValue id={prefix + 'txtTaxWithheld' + line} label="Tax withheld" for={prefix + 'txtTaxBase' + line} value={normalizeCurrencyInput(draft[prefix + 'txtTaxBase' + line] || '') === null ? '' : money(draftCalculated[prefix + 'txtTaxWithheld' + line])} amountColumn />
 		</fieldset>
 	{/if}
 	{#snippet footer()}<div class="editor-actions"><Button variant="secondary" onclick={close}>Cancel</Button><Button onclick={commit}>{isNew ? 'Add' : 'Update'}</Button></div>{/snippet}
@@ -429,13 +429,14 @@
 		.item-number > .mobile-label { margin-inline-end: .25em; }
 		.mobile-label { display: inline; }
 		.entry-cell > .mobile-label, .number-cell > .mobile-label { display: block; margin-bottom: .25rem; color: var(--fg-muted); font-size: .75rem; }
-		.entry-cell :global([data-slot='form-item'] > div:has(> input)) { min-height: 38px; padding-block: .25rem; }
+		.entry-cell :global([data-slot='form-item'] > div:has(> input)) { min-height: 38px; }
 		.entry-cell :global([role='combobox']) { min-height: 38px; }
 		.entry-cell :global(input), .entry-cell :global([role='combobox']) { font-size: 14px; }
 		.grip { width: 38px; }
 		.grip, .row-actions :global(button), .add-row :global(button), .empty :global(button) { min-width: 38px; min-height: 38px; }
 		.grip, .row-actions { grid-row: 2; }
 		.number-cell { text-align: start; }
+		.withheld-cell output { text-align: end; }
 		@media (pointer: coarse) {
 			.entry-cell :global(input) { font-size: 16px; }
 		}

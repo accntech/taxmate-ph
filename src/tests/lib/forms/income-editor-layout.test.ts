@@ -21,7 +21,9 @@ describe('income editor item rows', () => {
 		expect(field('1701MS', 'frm1701MS:txtGrossa').kind).toBe('money');
 		expect(field('1701MS', 'frm1701MS:txtAllowableItemizedDeductionsNo10a').item).toBe('10A');
 		expect(field('1701MS', 'frm1701MS:txtAllowableItemizedDeductionsNo10aSpouse').person).toBe('spouse');
-		expect(field('1701MS', 'frm1701MS:txtTaxRatea').kind).toBe('text');
+		expect(field('1701MS', 'frm1701MS:txtTaxRatea')).toMatchObject({
+			kind: 'percent', item: '16', section: 'Part IV.B1 · Business income at graduated or special rates'
+		});
 		expect(field('1701MS', 'frm1701MS:addOtherCreditsPayments').kind).toBe('text');
 		const credit = fields('1701MS').filter(field => /addOtherCreditsPayments|txtOtherCreditsPaymentsNo9[ab]/.test(field.id));
 		expect(incomeEditorRows(credit)).toHaveLength(1);

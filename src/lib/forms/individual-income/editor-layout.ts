@@ -1,6 +1,7 @@
 import type { IncomeForm } from '.';
 import { legacy1700ScheduleLayout } from './legacy-1700-layout';
 import { legacy1701FieldKind, legacy1701ScheduleLayout } from './legacy-1701-layout';
+import { annual2013EditorLayout } from './annual-2013-editor-layout';
 import { legacy1701Filing } from './annual';
 import { revisedIncomeFieldKind, revisedIncomeScheduleLayout } from './revised-income-layout';
 import fieldData from './templates/fields.json';
@@ -12,6 +13,8 @@ export type IncomeEditorField = {
 	rowKey?: string;
 	optionalSection?: boolean;
 	rowHeading?: string;
+	subheading?: string;
+	column?: string;
 	shortLabel?: string;
 	transaction?: 'A' | 'B';
 	amountColumn?: 'exempt' | 'amount' | 'withheld';
@@ -27,6 +30,19 @@ export type IncomeEditorField = {
 const fieldLabels: Record<string, string> = {
 	'frm1701:txtPg1Pt1I11Month': '11 Date of birth',
 	'frm1701:ddlPg4Pt7I99Month': '99 Spouse date of birth',
+	'frm1701:rdoPg4Pt7I105Itemized': '105 Spouse method of deduction',
+	'frm1701:rdoPg4Pt7I106CashAccOth': '106 Spouse accounting method',
+	'frm1701:txtPg4Pt7I106Others': '106 Other accounting method',
+	'frm1701:rdoPg4Pt7I107YesNo': '107 Spouse has exempt income?',
+	'frm1701:rdoPg4Pt7I108YesNo': '108 Spouse has income subject to a special rate?',
+	'frm1701:rdoPg4Pt7I109CompensationATC': '109 Spouse alphanumeric tax code (ATC)',
+	'frm1701:rdoPg4Pt7I110YesNo': '110 Spouse claiming additional exemptions?',
+	'frm1701:rdoPg2I4ATC': '4 Spouse alphanumeric tax code (ATC)',
+	'frm1701:rdoPg2I8ForeignTaxCredits': '8 Spouse claiming foreign tax credits?',
+	'frm1701:rdoPg2I10IncomeExempt': '10 Spouse has exempt income?',
+	'frm1701:rdoPg2I11IncomeSpecial': '11 Spouse has income subject to a special rate?',
+	'frm1701:rdoPg2I12TaxRate': '12 Spouse tax rate',
+	'frm1701:rdoPg2I12AMethodDeduction': '12A Spouse method of deduction',
 	'frm1701q:txtSheets': '4 Number of sheets attached',
 	'frm1700:txtPg1Pt1I7Psoc': '7 Occupation code (PSOC)',
 	'frm1700:txtPg1Pt1I9AddressChangedInd': '9 Registered address changed',
@@ -311,38 +327,6 @@ const sourceRowLabels: Record<string, Record<string, string>> = {
     "frm1701A:txt65B": "Net Taxable/(Overpayment) (Item 46 OR 56 Less Item 64) (To Part II - Item 22)"
   },
   "1701MS": {},
-  "1701Q": {
-    "frm1701q:txt26A": "Sales/Revenues/Receipts/Fees",
-    "frm1701q:txt26B": "Sales/Revenues/Receipts/Fees",
-    "frm1701q:txt27A": "Add: Amount Rec'd by a partner from General Professional Partnership (except loans)",
-    "frm1701q:txt27B": "Add: Amount Rec'd by a partner from General Professional Partnership (except loans)",
-    "frm1701q:txt29A": "Less: Cost of Sales/Service",
-    "frm1701q:txt29B": "Less: Cost of Sales/Service",
-    "frm1701q:txt30A": "Gross Income from Operation",
-    "frm1701q:txt30B": "Gross Income from Operation",
-    "frm1701q:txt31A": "Add: Other Income",
-    "frm1701q:txt31B": "Add: Other Income",
-    "frm1701q:txt32A": "Total Gross Income",
-    "frm1701q:txt32B": "Total Gross Income",
-    "frm1701q:txt33A": "Less: Deductions",
-    "frm1701q:txt33B": "Less: Deductions",
-    "frm1701q:txt34A": "Taxable Income This Quarter",
-    "frm1701q:txt34B": "Taxable Income This Quarter",
-    "frm1701q:txt35A": "Add: Taxable Income Previous Quarter(s)",
-    "frm1701q:txt35B": "Add: Taxable Income Previous Quarter(s)",
-    "frm1701q:txt36A": "Taxable Income To Date",
-    "frm1701q:txt36B": "Taxable Income To Date",
-    "frm1701q:txt37A": "Tax Due",
-    "frm1701q:txt37B": "Tax Due",
-    "frm1701q:txt38A": "38A/B Prior Years' Excess Credits",
-    "frm1701q:txt38B": "38A/B Prior Years' Excess Credits",
-    "frm1701q:txt39A": "Tax Payable/(Overpayment) (37A less 38M & 37B less 38N)",
-    "frm1701q:txt39B": "Tax Payable/(Overpayment) (37A less 38M & 37B less 38N)",
-    "frm1701q:txt40A": "Add: Penalties Surcharge",
-    "frm1701q:txt40B": "Add: Penalties Surcharge",
-    "frm1701q:txt41A": "Total Amount Payable/(Overpayment) (39A+40G/39B+40H)",
-    "frm1701q:txt41B": "Total Amount Payable/(Overpayment) (39A+40G/39B+40H)"
-  },
   "1701Qv2018": {
     "frm1701q:txtTIN1": "Taxpayer Identification Number (TIN)",
     "frm1701q:txtTIN2": "Taxpayer Identification Number (TIN)",
@@ -374,16 +358,16 @@ const sourceRowLabels: Record<string, Record<string, string>> = {
     "frm1701q:txt40B": "40 Optional Standard Deduction (OSD) (40% of Item 36)",
     "frm1701q:txt41A": "Net Income/(Loss) This Quarter (Item 38 Less Either Item 39 OR 40)",
     "frm1701q:txt41B": "Net Income/(Loss) This Quarter (Item 38 Less Either Item 39 OR 40)",
-    "frm1701q:txt42A": "Add: 42 Taxable Income/(Loss) Previous Quarter/s",
-    "frm1701q:txt42B": "Add: 42 Taxable Income/(Loss) Previous Quarter/s",
+    "frm1701q:txt42A": "Add: Taxable Income/(Loss) Previous Quarter/s",
+    "frm1701q:txt42B": "Add: Taxable Income/(Loss) Previous Quarter/s",
     "frm1701q:txt43A": "43 Non-Operating Income (specify)",
     "frm1701q:txt43B": "43 Non-Operating Income (specify)",
     "frm1701q:txt44A": "44 Amount Received/Share in Income by a Partner from General Professional Partnership (GPP)",
     "frm1701q:txt44B": "44 Amount Received/Share in Income by a Partner from General Professional Partnership (GPP)",
     "frm1701q:txt45A": "Total Taxable Income/(Loss) To Date (Sum of Items 41 to 44)",
     "frm1701q:txt45B": "Total Taxable Income/(Loss) To Date (Sum of Items 41 to 44)",
-    "frm1701q:txt46A": "Tax Due (Item 45 x Applicable Tax Rate based on Tax Table below) (To Part III, Item 26)",
-    "frm1701q:txt46B": "Tax Due (Item 45 x Applicable Tax Rate based on Tax Table below) (To Part III, Item 26)",
+    "frm1701q:txt46A": "Tax due on item 45 at the graduated rates for the filing year (to Part III, Item 26)",
+    "frm1701q:txt46B": "Tax due on item 45 at the graduated rates for the filing year (to Part III, Item 26)",
     "frm1701q:txt47A": "Sales/Revenues/Receipts/Fees (net of sales returns, allowances and discounts)",
     "frm1701q:txt47B": "Sales/Revenues/Receipts/Fees (net of sales returns, allowances and discounts)",
     "frm1701q:txt48A": "Add: Non-Operating Income (specify)",
@@ -469,6 +453,7 @@ const revisionLabels: Record<string, Record<string, string>> = {
 		'frm1700:txtPg1Pt1I16TaxSpouseLastName': '16 Spouse last name',
 		'frm1700:txtPg1Pt1I16TaxSpouseFirstName': '16 Spouse first name',
 		'frm1700:txtPg1Pt1I16TaxSpouseMiddleName': '16 Spouse middle name',
+		'frm1700:txtPg1Pt1I18SpouseContactNumber': '18 Spouse contact number',
 		'frm1700:txtPg1Pt1I19SpouseDOB': '19 Spouse date of birth',
 		'frm1700:txtPg1Pt1I20SpouseEmailAddress': '20 Spouse email address',
 		'frm1700:txtPg1Pt2I31': '31 Total amount payable upon filing'
@@ -501,7 +486,8 @@ const revisionLabels: Record<string, Record<string, string>> = {
 		'frm1701q:txt13BirthYear': '13 Birth year', 'frm1701q:txt14zip': '14 ZIP code',
 		'frm1701q:txt15Telno': '15 Contact number', 'frm1701q:txt16BirthMonth': '16 Spouse birth month',
 		'frm1701q:txt16BirthDay': '16 Spouse birth day', 'frm1701q:txt16BirthYear': '16 Spouse birth year',
-		'frm1701q:txt28A': '28 Total sales and partnership income', 'frm1701q:txt28B': '28 Total sales and partnership income',
+		'frm1701q:j_id217': '25 Are you availing of tax relief under special law or an international tax treaty?',
+		'frm1701q:txtTaxRelief25': '25 Tax relief type',
 		'frm1701q:txt17': '17 Spouse ZIP code', 'frm1701q:txt18Telno': '18 Spouse contact number',
 		'frm1701q:txt19': '19 Line of business or occupation', 'frm1701q:txt21': '21 Spouse line of business or occupation',
 		'frm1701q:optATC20': '20 Alphanumeric tax code (ATC)', 'frm1701q:optATC22': '22 Spouse alphanumeric tax code (ATC)'
@@ -628,6 +614,25 @@ export function incomeEditorRows(fields: IncomeEditorField[]): { key: string; it
 	return rows;
 }
 
+export function incomeEditorRowGroups(fields: IncomeEditorField[]) {
+	const groups: { columns: string[]; rows: ReturnType<typeof incomeEditorRows> }[] = [];
+	for (const row of incomeEditorRows(fields)) {
+		const columns = [...new Set(row.fields.flatMap(field => field.column ? [field.column] : []))];
+		const previous = groups.at(-1);
+		const sameColumns = previous && (columns.length === 0
+			? previous.columns.length === 0
+			: previous.columns.length > 0 && (columns.every(column => previous.columns.includes(column)) ||
+				previous.columns.every(column => columns.includes(column))));
+		if (sameColumns) {
+			previous.rows.push(row);
+			if (columns.length > previous.columns.length) previous.columns = columns;
+		} else {
+			groups.push({ columns, rows: [row] });
+		}
+	}
+	return groups;
+}
+
 const identityLabels: Record<string, string> = {
 	tin1: 'TIN, first three digits', tin2: 'TIN, middle three digits', tin3: 'TIN, last three digits',
 	branchCode: 'Branch code', rdoCode: 'RDO code', taxpayerName: 'Taxpayer name',
@@ -653,6 +658,53 @@ export const annual1701AScheduleLabels: Record<string, string> = {
 	63: 'Other tax credits or payments', 64: 'Total tax credits and payments', 65: 'Net tax payable or overpayment'
 };
 
+export const legacyQuarterlyComputation = 'Part II · Computation of Tax';
+const legacyQuarterlyAmountLabels: Record<string, string> = {
+	26: 'Sales, revenues, receipts or fees',
+	27: 'Amount received by a partner from a general professional partnership, excluding loans',
+	28: 'Total sales and partnership income',
+	29: 'Less: Cost of sales or services',
+	30: 'Gross income from operations',
+	31: 'Add: Other income',
+	32: 'Total gross income',
+	33: 'Less: Deductions',
+	34: 'Taxable income this quarter',
+	35: 'Add: Taxable income from previous quarters',
+	36: 'Taxable income to date',
+	37: 'Tax due',
+	'38A/B': "Prior years' excess credits",
+	'38C/D': 'Tax payments for previous quarters',
+	'38E/F': 'Creditable tax withheld for previous quarters',
+	'38G/H': 'Creditable tax withheld this quarter per BIR Form 2307',
+	'38I/J': 'Tax paid on the previously filed return, if amended',
+	'38K/L': 'Other payments made (attach proof of payment, BIR Form 0605)',
+	'38M/N': 'Total tax credits and payments',
+	39: 'Tax payable or overpayment',
+	'40A/B': 'Surcharge',
+	'40C/D': 'Interest',
+	'40E/F': 'Compromise',
+	'40G/H': 'Total penalties',
+	41: 'Total amount payable or overpayment',
+	'41C': 'Aggregate amount payable or overpayment'
+};
+
+const revised1700ComputationLabels: Record<string, string> = {
+	42: 'Gross compensation income', 43: 'Less non-taxable or exempt compensation',
+	44: 'Gross taxable compensation', 45: 'Add other taxable non-business or non-professional income',
+	46: 'Total taxable income', 47: 'Tax due at graduated rates',
+	48: 'Gross compensation income', 49: 'Less non-taxable or exempt compensation',
+	50: 'Gross taxable compensation', 51: 'Add other taxable income',
+	52: 'Total taxable income', 53: 'Tax due at the 25% flat rate',
+	54: 'Tax withheld per Form 2316', 55: 'Tax paid on the previously filed return (amended returns)',
+	56: 'Foreign tax credits', 57: 'Other tax credits or payments',
+	58: 'Total tax credits and payments', 59: 'Net tax payable or overpayment'
+};
+const revised1700ComputationSections: Record<string, string> = {
+	'Part V.A': 'Part V.A · Graduated rates',
+	'Part V.B': 'Part V.B · 25% flat rate for nonresident aliens not engaged in trade or business',
+	'Part V.C': 'Part V.C · Tax credits and payments'
+};
+
 export function incomeEditorFields(form: IncomeForm): IncomeEditorField[] {
 	const identities = new Map(Object.entries(form.identity).map(([key, id]) => [id, identityLabels[key]]));
 	return (fieldData[form.code as keyof typeof fieldData] as IncomeEditorField[]).map(sourceField => {
@@ -668,17 +720,15 @@ export function incomeEditorFields(form: IncomeForm): IncomeEditorField[] {
 		const employerAmount = field.id.match(/^frm1700:txtPg2ISched1([cde])_(\d+)(?:REG|CIFR|TW)$/);
 		const employerTotal = field.id.match(/^frm1700:txtPg2ISched1([cde])_5([AB])(?:REG|CIFR|TW)$/);
 		if (form.code === '1700v2018') {
-			const creditLabels: Record<string, string> = {
-				'54': 'Tax withheld per Form 2316', '58': 'Total tax credits and payments', '59': 'Net tax payable or overpayment'
+			const amountItem = field.id.match(/^frm1700:txtPg2I(\d+)[AB]$/)?.[1];
+			if (amountItem && revised1700ComputationLabels[amountItem]) label = `${amountItem} ${revised1700ComputationLabels[amountItem]}`;
+			const descriptionItem = field.id.match(/^frm1700:txtPg2I(45|49|51|57)Desc$/)?.[1];
+			const descriptions: Record<string, string> = {
+				45: 'Other taxable non-business or non-professional income description',
+				49: 'Non-taxable or exempt compensation description',
+				51: 'Other taxable income description', 57: 'Credit or payment description'
 			};
-			const creditItem = field.id.match(/^frm1700:txtPg2I(54|58|59)[AB]$/)?.[1];
-			if (creditItem) label = `${creditItem} ${creditLabels[creditItem]}`;
-			const description = field.id.match(/^frm1700:txtPg2I(45|49|51|57)(Desc|[AB])$/);
-			if (description) {
-				const [, item, part] = description;
-				const descriptions: Record<string, string> = { '45': 'Other taxable income description', '49': 'Exempt compensation description', '51': 'Other taxable income description', '57': 'Credit or payment description' };
-				label = `${item} ${part === 'Desc' ? descriptions[item] : 'Amount'}`;
-			}
+			if (descriptionItem) label = `${descriptionItem} ${descriptions[descriptionItem]}`;
 		}
 		if (employer) {
 			const [, row, name] = employer;
@@ -695,6 +745,8 @@ export function incomeEditorFields(form: IncomeForm): IncomeEditorField[] {
 		if (field.id === form.year && !fieldLabels[field.id]) label = '1 Filing year';
 		const row = employer?.[1] ?? employerAmount?.[2];
 		let section = row ? `Schedule 1 · Employer ${row}` : field.section;
+		if (form.code === '1700v2018') section = revised1700ComputationSections[section.split(' - ')[0]] ?? section;
+		if (form.code === '1701Q' && section === 'Part II') section = legacyQuarterlyComputation;
 		if (form.code === '1701A' && field.page === '2') {
 			const scheduleItem = /^frm1701A:txt(\d{2})(?:[AB]|Desc)$/.exec(field.id)?.[1];
 			if (scheduleItem) {
@@ -702,6 +754,9 @@ export function incomeEditorFields(form: IncomeForm): IncomeEditorField[] {
 			}
 		}
 		const coordinates = fieldCoordinates(form, { ...field, section }, label);
+		if (section === legacyQuarterlyComputation && coordinates.item) {
+			label = legacyQuarterlyAmountLabels[coordinates.item] ?? label;
+		}
 		if (coordinates.item && !/^\d+[A-Z]?(?=\s|$)/.test(label)) label = `${coordinates.item} ${label}`;
 		if (coordinates.person && !new RegExp(coordinates.person, 'i').test(label)) label += ` · ${coordinates.person === 'taxpayer' ? 'Taxpayer' : 'Spouse'}`;
 		const optionalEmployer = form.code === '1700v2018' && !!row && Number(row) > 1;
@@ -711,7 +766,10 @@ export function incomeEditorFields(form: IncomeForm): IncomeEditorField[] {
 			label: `5${employerTotal[2]} ${{ c: 'Graduated-rate compensation', d: '25%-rate compensation', e: 'Tax withheld' }[employerTotal[1]]}`,
 			rowHeading: employerTotal[2] === 'A' ? 'Taxpayer totals' : 'Spouse totals'
 		};
-		if (form.code === '1701') return { ...result, ...legacy1701ScheduleLayout(result) };
+		if (form.code === '1701') {
+			const historical = { ...result, ...legacy1701ScheduleLayout(result) };
+			return { ...historical, ...annual2013EditorLayout(historical) };
+		}
 		if (form.code === '1701v2018' || form.code === '1701MS') return { ...result, ...revisedIncomeScheduleLayout(form.code, result) };
 		return form.code === '1700' && field.page !== '1' ? { ...result, ...legacy1700ScheduleLayout(result) } : result;
 	}).sort((left, right) => {
@@ -726,6 +784,7 @@ export function incomeEditorFields(form: IncomeForm): IncomeEditorField[] {
 }
 
 export function incomeEditorPageTitle(form: IncomeForm, page: string): string {
+	if (form.code === '1701Q' && page === '1') return 'Taxpayer details and tax computation';
 	if (page === '1') return 'Taxpayer details and return summary';
 	if (form.code === '1700') return ({ '2': 'Employers and tax computation', '3': 'Supplemental income', '4': 'Address and dependents' } as Record<string, string>)[page];
 	if (page.endsWith('TYPE')) return `Activity schedule ${parseInt(page)}`;
@@ -745,10 +804,29 @@ export function incomeEditorPageTitle(form: IncomeForm, page: string): string {
 
 export function incomeChoiceLabel(field: IncomeEditorField, value: string, index: number): string {
 	const label = field.choiceLabels[value];
+	if (field.id === 'frm1701q:txtTaxRelief25' && value === '0') return 'Select tax relief type';
 	if (field.id === legacy1701Filing.overpayment) {
 		return ['Refund', 'Tax credit certificate (TCC)', 'Carry over to next year or quarter'][index] ?? value;
 	}
 	if (field.id === legacy1701Filing.type) return value === legacy1701Filing.certificate ? 'Community tax certificate (CTC)' : 'Government-issued ID';
+	if (field.id === 'frm1701:rdoPg1Pt1I7Type' && value === 'Single') return 'Sole proprietor';
+	if (/^frm1701:rdo(?:Pg1Pt1I20Deduction|Pg4Pt7I105Itemized|(?:Pg1I21|Pg2I12)AMethodDeduction)$/.test(field.id)) {
+		if (value === 'OSD') return '40% Optional Standard Deduction (OSD)';
+		if (value === 'Itemized') return 'Itemized deductions';
+	}
+	if (field.id === 'frm1701:rdoPg1Pt1I15Income') return value === 'WithIncome' ? 'Yes' : 'No';
+	if (/^frm1701:rdoPg5Sc1I[1-4]TaxpayerSpouse$/.test(field.id)) return value === '2' ? 'Spouse' : 'Taxpayer';
+	if (/^frm1701:ddlPg11Sc12AI12KindPSCSC[12]$/.test(field.id)) {
+		return ({ PS: 'Preferred shares', CS: 'Common shares' } as Record<string, string>)[value] ?? value;
+	}
+	if (/^frm1701:rdo(?:Pg1Pt1I21Accounting|Pg4Pt7I106CashAccOth)$/.test(field.id) && value === 'Others') return 'Other (specify)';
+	if (/^frm1701:rdo(?:Pg1Pt1I14Status|Pg1I16CivilStatus)$/.test(field.id) && value === 'Widow') return 'Widowed';
+	if (field.id === 'frm1701:rdoPg1m') {
+		return ['One exempt or special-rate activity', 'Two or more exempt or special-rate activities'][index] ?? value;
+	}
+	if (field.id === 'frm1701:rdoPg1Overpayment') {
+		return ({ Refund: 'Refund', TCC: 'Tax credit certificate (TCC)', CarryOver: 'Carry over to next year or quarter' } as Record<string, string>)[value] ?? value;
+	}
 	if (/^methodOfDeduction(?:Main|Standard)$/.test(field.id)) return value.startsWith('osd') ? 'Optional standard deduction (OSD)' : 'Itemized deductions';
 	if (/^frm1700:rdoPg1Pt1I(?:3JointFiling|14ClaimingAdditionalExemptions|21SpouseClaimAdditionalExemption)$/.test(field.id)) {
 		return /Yes(?:Ind)?$/.test(value) ? 'Yes' : 'No';

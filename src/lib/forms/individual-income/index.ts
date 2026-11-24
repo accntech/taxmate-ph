@@ -5,7 +5,8 @@ import { annualAmountField, annualFieldApplies, calculateAnnual, validateAnnual 
 import { compensationAmountField, calculateCompensation, validateCompensation, isLegacy1700ContactValid, legacy1700DependentClaim, legacy1700FirstYear, legacy1700LastYear, revised1700EmployerAssignment, revised1700EmployerHasEntry, revised1700EmployerRows, revised1700FieldApplies } from './compensation';
 import { quarterlyAmountField, calculateQuarterly, quarterlyIncomeFieldApplies, validateQuarterly } from './quarterly';
 import { incomeEditorFields } from './editor-layout';
-import { calculate1701A, calculate1701MS, shortAnnualFieldApplies, validate1701A, validate1701MS } from './annual-short';
+import { annual1701AFilerRate, calculate1701A, calculate1701MS, shortAnnualFieldApplies, validate1701A, validate1701MS } from './annual-short';
+import { annual1701ABaseDetailFields, exportAnnual1701ADetails } from './annual-1701a-income-detail';
 import { incomeIncludesSpouse, incomePersonalValues, incomeProfileFieldList, incomeSpouseFieldIds, incomeTaxpayerTypeValues, legacy1701ProfileIds } from './profile-fields';
 import importedFields from './templates/fields.json';
 
@@ -175,6 +176,15 @@ export function incomeOutputValues(form: IncomeForm, values: Values): Values {
 	const output = { ...values };
 	omitted.add('income:useSavedSpouse');
 	omitted.add(incomeProfileFieldList);
+	if (form.code === '1701A') {
+		if (!annual1701AFilerRate(values, false)) omitted.add('frm1701A:optTaxRate');
+		if (!annual1701AFilerRate(values, true)) omitted.add('frm1701A:optSpouseTaxRate');
+		for (const item of ['42', '51'] as const) {
+			const base = annual1701ABaseDetailFields(item);
+			const active = (['taxpayer', 'spouse'] as const).filter(person => shortAnnualFieldApplies(form.code, base[person], values));
+			exportAnnual1701ADetails(item, output, active);
+		}
+	}
 	if (form.code === '1700') {
 		const claimant = legacy1700DependentClaim(values);
 		const spouseClaim = 'frm1700:rdoPg1Pt1I21SpouseClaimAdditionalExemption';

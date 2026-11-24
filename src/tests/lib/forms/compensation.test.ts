@@ -212,9 +212,19 @@ describe('legacy employer assignment and incomplete optional rows', () => {
     it('requires completion when an optional employer contains any identity detail', () => {
         for (const field of ['txtPg2Pt4I2NameOfEmployer', 'txtPg2Pt4I2EMPTIN1', 'txtPg2Pt4I2EMPTIN2', 'txtPg2Pt4I2EMPTIN3', 'txtPg2Pt4I2EMPTINBranchCode']) {
             const errors = validateCompensation('1700', values({ [field]: '123' }));
-            expect(errors[prefix + 'rdoPg2Pt4I2Employer']).toBeTruthy();
+            expect(errors[prefix + 'rdoPg2Pt4I2Employer']).toBeUndefined();
             expect(errors[prefix + 'txtPg2Pt4I2EMPTIN3']).toBe(field.endsWith('EMPTIN3') ? undefined : 'Enter three digits for Page 2 Item 2 employer TIN.');
+            const jointErrors = validateCompensation('1700', values({ [field]: '123', rdoPg1Pt1I3JointFiling: 'rdoPg1Pt1I3JointFilingYes' }));
+            expect(jointErrors[prefix + 'rdoPg2Pt4I2Employer']).toMatch(/select taxpayer or spouse/i);
         }
+    });
+    it('assigns compensation and withholding from a populated separate-return row to the taxpayer', () => {
+        const draft = values({ txtPg2Pt4I2ComIncomeC1: '420000', txtPg2Pt4I2TaxWithholdC2: '18000', txtPg2Pt4I3ComIncomeC1: '0.00' });
+        const result = calculateCompensation('1700', draft);
+        expect(result[prefix + 'rdoPg2Pt4I2Employer']).toBe(prefix + 'rdoPg2Pt4I2TaxFiler');
+        expect(result[prefix + 'txtPg2Pt4I4AC1']).toBe('420000.00');
+        expect(result[prefix + 'txtPg2Pt4I4AC2']).toBe('18000.00');
+        expect(result[prefix + 'rdoPg2Pt4I3Employer']).toBeUndefined();
     });
     it('does not activate optional employers from default zero amounts and whitespace', () => {
         const errors = validateCompensation('1700', values({ txtPg2Pt4I2ComIncomeC1: '0.00', txtPg2Pt4I2TaxWithholdC2: '0', txtPg2Pt4I2NameOfEmployer: '  ' }));

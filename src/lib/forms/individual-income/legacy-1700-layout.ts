@@ -104,12 +104,12 @@ export function legacy1700ScheduleLayout(field: IncomeEditorField): Partial<Inco
 		if (employer) {
 			const [, row, part] = employer;
 			const section = `Part IV · Employer ${row}`;
-			if (part === 'Employer') return layout(field, section, row, 'Income earner', ':employer');
-			if (part === 'NameOfEmployer') return layout(field, section, row, 'Employer name', ':employer');
+			if (part === 'Employer') return layout(field, section, row, 'Income earner', ':earner');
+			if (part === 'NameOfEmployer') return layout(field, section, row, 'Employer name', ':identity');
 			if (part.startsWith('EMPTIN')) {
 				const label = part === 'EMPTINBranchCode' ? 'Branch code' :
 					`Employer TIN, ${{ '1': 'first', '2': 'middle', '3': 'last' }[part.at(-1)!]} three digits`;
-				return layout(field, section, row, label, ':tin');
+				return layout(field, section, row, label, ':identity');
 			}
 			return layout(field, section, row,
 				part === 'ComIncomeC1' ? 'Compensation income' : 'Tax withheld',
@@ -123,10 +123,10 @@ export function legacy1700ScheduleLayout(field: IncomeEditorField): Partial<Inco
 				'', { person, kind: 'money' });
 		}
 		if (name === 'txtPg2Pt4I12') {
-			return layout(field, 'Part IV · Tax computation', '12', 'Other taxable income description', ':description');
+			return layout(field, 'Part IV · Tax computation', '12', 'Other taxable income description');
 		}
 		if (name === 'txtPg2Pt4I18TC') {
-			return layout(field, 'Part IV · Tax credits', '18', 'Other tax credits or payments description', ':description');
+			return layout(field, 'Part IV · Tax credits', '18', 'Other tax credits or payments description');
 		}
 		const item = name.match(/^txtPg2Pt4I(\d+)(?:C([12]))?$/);
 		if (item && computation[item[1]]) {
@@ -201,7 +201,7 @@ export function legacy1700ScheduleLayout(field: IncomeEditorField): Partial<Inco
 			const row = dependent[3];
 			const section = `Table 2 · Dependent ${row}`;
 			const labels: Record<string, string> = {
-				LastName: 'Last name', FirstName: 'First name', MiddleName: 'Middle name',
+				LastName: 'Last name', FirstName: 'First name', MiddleName: 'Middle initial',
 				DependentDOB: 'Date of birth', MarkIfIncapacitated: 'Mentally or physically incapable of self-support'
 			};
 			const phase = /Name$/.test(part) ? ':name' : ':details';

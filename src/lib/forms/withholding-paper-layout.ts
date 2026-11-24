@@ -8,7 +8,6 @@ type PaperLayout = {
 	title: string;
 	revision: string;
 	subtitle?: string;
-	englishAgency?: boolean;
 	period: ItemNumbers;
 	taxpayer: Partial<Record<TaxpayerItemKey, string>>;
 	background: ItemNumbers;
@@ -41,7 +40,7 @@ const schedulePart = 'Part IV · Schedules';
 const atcComputation = { atc: '' };
 const revisedRelief = { optRelief: '13', reliefDescription: '13A' };
 const legacyRelief = { optRelief: '13', reliefDescription: '13' };
-const revisedAnnual = { title: annualReturn, period: annual, taxpayer: annualTaxpayer, englishAgency: true, computation: 'Summary of Remittances' };
+const revisedAnnual = { title: annualReturn, period: annual, taxpayer: annualTaxpayer, computation: 'Summary of Remittances' };
 
 const layouts: Record<string, PaperLayout> = {
 	1600: {
@@ -52,12 +51,12 @@ const layouts: Record<string, PaperLayout> = {
 	'1600PTv2018': {
 		number: '1600-PT', title: monthlyReturn, subtitle: 'of Other Percentage Taxes Withheld', revision: 'January 2018',
 		period: revisedMonth, taxpayer: monthlyTaxpayer, background: { optRelief: '12', reliefDescription: '12A' },
-		englishAgency: true, inlineSchedules: atcComputation, scheduleItems: { atc: [13, 17] }, schedulePart: 'Schedule 1 · Monthly Alphalist of Payees'
+		inlineSchedules: atcComputation, scheduleItems: { atc: [13, 17] }, schedulePart: 'Schedule 1 · Monthly Alphalist of Payees'
 	},
 	'1600VTv2018': {
 		number: '1600-VT', title: monthlyReturn, subtitle: 'of Value-Added Tax Withheld', revision: 'January 2018',
 		period: revisedMonth, taxpayer: monthlyTaxpayer, background: { optRelief: '12', reliefDescription: '12A' },
-		englishAgency: true, inlineSchedules: atcComputation, scheduleItems: { atc: [13, 17] }, schedulePart: 'Schedule 1 · Monthly Alphalist of Payees'
+		inlineSchedules: atcComputation, scheduleItems: { atc: [13, 17] }, schedulePart: 'Schedule 1 · Monthly Alphalist of Payees'
 	},
 	'1600WP': {
 		number: '1600-WP', title: 'Remittance Return of Percentage Tax',
@@ -71,7 +70,7 @@ const layouts: Record<string, PaperLayout> = {
 		schedulePart: 'Section A · Adjustment of Taxes Withheld on Compensation'
 	},
 	'1601Cv2018': {
-		number: '1601-C', title: monthlyReturn, subtitle: compensation, revision: 'January 2018 (ENCS)', englishAgency: true,
+		number: '1601-C', title: monthlyReturn, subtitle: compensation, revision: 'January 2018 (ENCS)',
 		period: revisedMonth, taxpayer: quarterlyTaxpayer, background: revisedRelief, fixedAtc: { item: '5', inPeriod: true }, schedulePart
 	},
 	'1601E': {
@@ -85,7 +84,7 @@ const layouts: Record<string, PaperLayout> = {
 	},
 	'1601FQ': {
 		number: '1601-FQ', title: quarterlyReturn, subtitle: 'of Final Income Taxes Withheld', revision: 'January 2018',
-		period: revisedQuarter, taxpayer: quarterlyTaxpayer, background: revisedRelief, englishAgency: true,
+		period: revisedQuarter, taxpayer: quarterlyTaxpayer, background: revisedRelief,
 		inlineSchedules: atcComputation, scheduleItems: { atc: [14, 19] }, schedulePart
 	},
 	1602: {
@@ -97,7 +96,7 @@ const layouts: Record<string, PaperLayout> = {
 	},
 	'1602Qv2018': {
 		number: '1602-Q', title: quarterlyReturn, subtitle: 'of Final Taxes Withheld on Interest Paid on Deposits and Deposit Substitutes/Trusts/Etc.',
-		revision: 'January 2018', period: revisedQuarter, taxpayer: quarterlyTaxpayer, background: revisedRelief, englishAgency: true, schedulePart
+		revision: 'January 2018', period: revisedQuarter, taxpayer: quarterlyTaxpayer, background: revisedRelief, schedulePart
 	},
 	1603: {
 		number: '1603', title: 'Quarterly Remittance Return of Final Income Taxes Withheld',
@@ -109,7 +108,7 @@ const layouts: Record<string, PaperLayout> = {
 	'1603Qv2018': {
 		number: '1603-Q', title: quarterlyReturn, subtitle: 'of Final Income Taxes Withheld on Fringe Benefits Paid to Employees Other Than Rank and File',
 		revision: 'January 2018 (ENCS)', period: revisedQuarter, taxpayer: quarterlyTaxpayer, background: revisedRelief,
-		englishAgency: true, schedulePart: 'Part IV · Details of Taxes Withheld'
+		schedulePart: 'Part IV · Details of Taxes Withheld'
 	},
 	'1604C': {
 		...revisedAnnual, number: '1604-C', subtitle: compensation, revision: 'January 2018',

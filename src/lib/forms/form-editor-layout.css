@@ -92,7 +92,14 @@
 	.eq-scroll-hint { display: none; }
 }
 
-.paper-sheet { min-width: 0; margin: 1rem; border: 1px solid var(--border); background: var(--bg-elev); container: paper-form / inline-size; }
+.paper-sheet {
+	--paper-amount-inset: calc(.75rem + 1px);
+	min-width: 0;
+	margin: 1rem;
+	border: 1px solid var(--border);
+	background: var(--bg-elev);
+	container: paper-form / inline-size;
+}
 .paper-item-number { font-size: .8rem; font-weight: 650; font-variant-numeric: tabular-nums; }
 @container return-workspace (max-width: 28rem) {
 	.paper-sheet { margin: .5rem; }

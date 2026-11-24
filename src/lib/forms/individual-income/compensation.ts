@@ -21,6 +21,17 @@ const peso = (value: number) => value.toFixed(2);
 function legacyChecked(values: Values, group: string, id: string): boolean {
     return values[p + group] === p + id || values[p + group] === id;
 }
+function legacy1700EmployerRows(values: Values): Set<number> {
+    return new Set(Object.keys(values).flatMap(key => {
+        const match = key.match(/^frm1700:(?:txt|rdo)Pg2Pt4I(\d+)(?:Employer|NameOfEmployer|EMPTIN[123]|EMPTINBranchCode|ComIncomeC1|TaxWithholdC2)$/);
+        return match ? [Number(match[1])] : [];
+    }));
+}
+function legacy1700EmployerHasEntry(values: Values, row: number): boolean {
+    const field = (part: string) => values[p + `txtPg2Pt4I${row}${part}`]?.trim() ?? '';
+    return ['NameOfEmployer', 'EMPTIN1', 'EMPTIN2', 'EMPTIN3', 'EMPTINBranchCode'].some(part => field(part)) ||
+        ['ComIncomeC1', 'TaxWithholdC2'].some(part => !!field(part) && !/^(?:0+(?:\.0*)?|\.0+)$/.test(field(part).replaceAll(',', '')));
+}
 /** Resolve saved legacy claims deterministically without duplicating a child deduction. */
 export function legacy1700DependentClaim(values: Values): 'taxpayer' | 'spouse' | undefined {
     if (legacyChecked(values, 'rdoPg1Pt1I14ClaimingAdditionalExemptions', 'rdoPg1Pt1I14YesInd'))
@@ -169,16 +180,15 @@ function calculateLegacy(values: Values): Values {
     result[p + 'txtPg1Pt1I15QualifyDependent'] = String(claimant === 'taxpayer' ? dependentCount : 0);
     result[p + 'txtPg1Pt1I22SpouseQualifiedDependentChildren'] = String(claimant === 'spouse' ? dependentCount : 0);
     let taxpayerIncome = 0, taxpayerWithheld = 0, spouseIncome = 0, spouseWithheld = 0;
-    for (const key of Object.keys(values)) {
-        const match = key.match(/^frm1700:rdoPg2Pt4I(\d+)Employer$/);
-        if (!match)
-            continue;
-        const row = match[1];
-        if (legacyChecked(values, `rdoPg2Pt4I${row}Employer`, `rdoPg2Pt4I${row}TaxFiler`)) {
+    for (const row of legacy1700EmployerRows(values)) {
+        const assignment = `rdoPg2Pt4I${row}Employer`;
+        const taxpayer = `rdoPg2Pt4I${row}TaxFiler`;
+        if (!joint && !values[p + assignment]?.trim() && legacy1700EmployerHasEntry(values, row)) result[p + assignment] = p + taxpayer;
+        if (legacyChecked(result, assignment, taxpayer)) {
             taxpayerIncome += n(`txtPg2Pt4I${row}ComIncomeC1`);
             taxpayerWithheld += n(`txtPg2Pt4I${row}TaxWithholdC2`);
         }
-        else if (joint && legacyChecked(values, `rdoPg2Pt4I${row}Employer`, `rdoPg2Pt4I${row}Spouse`)) {
+        else if (joint && legacyChecked(result, assignment, `rdoPg2Pt4I${row}Spouse`)) {
             spouseIncome += n(`txtPg2Pt4I${row}ComIncomeC1`);
             spouseWithheld += n(`txtPg2Pt4I${row}TaxWithholdC2`);
         }
@@ -411,21 +421,12 @@ export function validateCompensation(code: string, values: Values): Values {
                 }
             }
         }
-        const employerRows = Object.keys(values).flatMap(key => {
-            const match = key.match(/^frm1700:(?:txt|rdo)Pg2Pt4I(\d+)(?:Employer|NameOfEmployer|EMPTIN[123]|EMPTINBranchCode|ComIncomeC1|TaxWithholdC2)$/);
-            return match ? [Number(match[1])] : [];
-        });
-        for (const row of new Set([1, 2, 3, ...employerRows])) {
+        for (const row of new Set([1, ...legacy1700EmployerRows(values)])) {
             const assignment = `rdoPg2Pt4I${row}Employer`;
             const assigned = get(assignment);
-            const identity = ['NameOfEmployer', 'EMPTIN1', 'EMPTIN2', 'EMPTIN3', 'EMPTINBranchCode'].some(part => get(`txtPg2Pt4I${row}${part}`));
-            const money = ['ComIncomeC1', 'TaxWithholdC2'].some(part => {
-                const amount = get(`txtPg2Pt4I${row}${part}`).replaceAll(',', '');
-                return amount && !/^(?:0+(?:\.0*)?|\.0+)$/.test(amount);
-            });
-            if (!assigned && !identity && !money && row !== 1)
+            if (!assigned && row !== 1 && !legacy1700EmployerHasEntry(values, row))
                 continue;
-            if (!assigned)
+            if (joint && !assigned)
                 error(assignment, 'Select Taxpayer or Spouse for the employer row.');
             else if (!joint && legacyChecked(values, assignment, `rdoPg2Pt4I${row}Spouse`))
                 error(assignment, 'Spouse employer rows require a joint return.');

@@ -1,10 +1,10 @@
 <script lang="ts">
 	import * as stylex from '@stylexjs/stylex';
 	import { wrapperStyles } from './tin-input-wrapper.styles';
-	// PCSTI TIN editing behavior with TaxMate's 9 + 5 digit identifier format.
+	// Format TaxMate identifiers as nine TIN digits and five branch digits.
 	import type { ComponentProps } from 'svelte';
 	import Input from '../input/input.svelte';
-	import { formatTinValue, getTinDigits } from './tin';
+	import { formatTinValue, getTinDigits, splitTinSegments } from './tin';
 
 	let {
 		value = $bindable(''),
@@ -15,16 +15,27 @@
 		onblur,
 		onkeydown,
 		readonly = false,
+		preserveSegments = false,
 		placeholder = '000-000-000-00000',
 		class: className = '',
 		...rest
 	}: Omit<ComponentProps<typeof Input>, 'value' | 'type' | 'maxlength' | 'onchange'> & {
 		value?: string;
+		preserveSegments?: boolean;
 		onchange?: (value: string) => void;
 	} = $props();
 
 	let focused = $state(false);
-	const display = $derived(focused ? getTinDigits(value) : formatTinValue(value));
+	const display = $derived(displayValue(value, focused));
+
+	function displayValue(next: string, editing: boolean) {
+		const packed = formatTinValue(next);
+		if (preserveSegments && next.includes('-')) {
+			const positioned = splitTinSegments(next).join('-').replace(/-+$/, '');
+			if (positioned !== packed) return positioned;
+		}
+		return editing ? getTinDigits(next) : packed;
+	}
 
 	function update(next: string) {
 		value = next;
@@ -34,7 +45,7 @@
 	function commit(input: HTMLInputElement) {
 		if (readonly) return;
 		focused = false;
-		const formatted = formatTinValue(value);
+		const formatted = displayValue(value, false);
 		input.value = formatted;
 		update(formatted);
 	}
@@ -50,21 +61,22 @@
 	class={[stylex.attrs(wrapperStyles.control).class, className].filter(Boolean).join(' ')}
 	value={display}
 	onbeforeinput={(event) => {
-		if (event.data && /\D/.test(event.data) && event.inputType === 'insertText') event.preventDefault();
+		const invalid = preserveSegments ? /[^\d-]/ : /\D/;
+		if (event.data && invalid.test(event.data) && event.inputType === 'insertText') event.preventDefault();
 		onbeforeinput?.(event);
 	}}
 	oninput={(event) => {
 		if (!readonly) {
-			const digits = getTinDigits(event.currentTarget.value);
-			event.currentTarget.value = digits;
-			update(digits);
+			const edited = displayValue(event.currentTarget.value, true);
+			if (event.currentTarget.value !== edited) event.currentTarget.value = edited;
+			update(edited);
 		}
 		oninput?.(event);
 	}}
 	onfocus={(event) => {
 		if (!readonly) {
 			focused = true;
-			event.currentTarget.value = getTinDigits(value);
+			event.currentTarget.value = displayValue(value, true);
 		}
 		onfocus?.(event);
 	}}

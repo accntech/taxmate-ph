@@ -102,7 +102,7 @@ const computationLabels: Record<string, string> = {
 	50: 'Net sales, revenue, receipts or fees', 51: 'Other taxable operating income', 52: 'Total sales and operating income',
 	53: 'Cost of sales or services', 54: 'Gross business or professional income', 55: 'Non-operating income', 56: 'Total gross income',
 	57: 'Ordinary itemized deductions', 58: 'Special itemized deductions', 59: 'Net operating loss carryover',
-	60: 'Total itemized deductions', 61: 'Optional standard deduction', 62: 'Taxable business or professional income',
+	60: 'Total itemized deductions', 61: '40% Optional Standard Deduction (OSD)', 62: 'Taxable business or professional income',
 	63: 'Net taxable compensation', 64: 'Net taxable income', 65: 'Less excess deductions', 66: 'Total taxable income', 67: 'Regular income tax due',
 	68: 'Regular income tax due', 69: 'Special income tax due', 70: 'Less other government agency share', 71: 'Net special income tax due',
 	72: 'Total income tax due', 73: 'Regular tax credits and payments', 74: 'Special tax credits and payments', 75: 'Exempt tax credits and payments',
@@ -145,6 +145,12 @@ export function legacy1701FieldKind(field: IncomeEditorField): string {
 export function legacy1701ScheduleLayout(field: IncomeEditorField): Partial<IncomeEditorField> {
 	const name = field.id.replace('frm1701:', '');
 	const item = field.item ?? name.match(/I(\d+)/)?.[1] ?? '';
+	const profileCode = name.match(/^txtPg1Pt1I(18PSIC|19PSOC)$/);
+	if (profileCode) {
+		const industry = profileCode[1] === '18PSIC';
+		return layout(field, field.section, industry ? '18' : '19', industry ? 'Industry code (PSIC)' : 'Occupation code (PSOC)');
+	}
+	if (name === 'txtPg1Pt1I21Others') return layout(field, field.section, '21', 'Other accounting method');
 	const computation = name.match(/^txtPg[23]Pt[45]I(\d+)/);
 	if (computation) {
 		const amountItem = computation[1];
@@ -185,6 +191,10 @@ export function legacy1701ScheduleLayout(field: IncomeEditorField): Partial<Inco
 		};
 		const description = /Description|Amortizations/.test(name);
 		const label = scheduleLabels[`${scheduleNumber}:${number}`] || labels[scheduleNumber] || field.label.replace(/^\d+\s*/, '').replace(/ · (?:Taxpayer|Spouse)$/, '');
+		if (scheduleNumber === '7') {
+			const column = description ? 'Description' : /LegalBasis/.test(name) ? 'Legal basis' : name.endsWith('Spouse') ? 'Spouse' : 'Taxpayer';
+			return layout(field, field.section, number, label, { column, person: column === 'Spouse' ? 'spouse' : column === 'Taxpayer' ? 'taxpayer' : undefined });
+		}
 		return layout(field, field.section, number, description ? `${label} description` : /LegalBasis/.test(name) ? 'Legal basis' : label);
 	}
 	const dependent = name.match(/^(?:txt|chk)Pg4Pt7A(LastName|FirstMiddleName|MiddleName|Month|Incapacitated)([1-4])$/);
@@ -220,6 +230,20 @@ export function legacy1701ScheduleLayout(field: IncomeEditorField): Partial<Inco
 		} as Record<string, string>)[number];
 		return layout(field, field.section, number, label, { person: person === 'B' ? 'spouse' : 'taxpayer' });
 	}
+	const carryover = name.match(/^txtPg8Sc8([AB])1I([4-8])(.*)$/);
+	if (carryover) {
+		const [, filer, number, control] = carryover;
+		const person = filer === 'A' ? 'taxpayer' : 'spouse';
+		const section = `Schedule 8${filer}.1 · Loss carryover · ${filer === 'A' ? 'Taxpayer' : 'Spouse'}`;
+		const columns: Record<string, string> = {
+			YearIncurred: 'Year incurred', Amount: 'Net operating loss', AppliedPreviousYear: 'Applied in prior years',
+			NOLCOExpired: 'Expired loss', NOLCOAppliedCurrentYear: 'Applied this year', NetOperatingLoss: 'Available to carry over',
+			TotalNOLCO: 'Applied this year'
+		};
+		return layout(field, section, number, number === '8' ? 'Total loss applied this year' : 'Loss carryover', {
+			column: columns[control], person
+		});
+	}
 	if (/^txtPg8Sc8B/.test(name)) return { person: 'spouse' };
 	if (/^txtPg8Sc8A/.test(name)) return { person: 'taxpayer' };
 	const supplemental = name.match(/^(?:txt|ddl)Pg11Sc12([AB])I(\d+)(.*)$/);
@@ -236,11 +260,15 @@ export function legacy1701ScheduleLayout(field: IncomeEditorField): Partial<Inco
 		let label = (schedule === 'A' ? finalIncomeLabels : exemptIncomeLabels)[number];
 		if (schedule === 'A' && numericItem <= 6) label = /FinalTax/.test(control) ? 'Final tax withheld or paid' : numericItem === 1 && control.endsWith('C1') ? 'Exempt interest' : 'Income amount';
 		if (schedule === 'A' && numericItem === 12) label = name.startsWith('ddl') ? 'Kind of shares' : 'Stock certificate series number';
-		const entryLabel = transaction && numericItem >= 7 && numericItem <= 20 ? `${label} · Entry ${transaction}` : label;
+		const entry = transaction && (schedule === 'A' ? numericItem >= 7 && numericItem <= 20 : numericItem >= 4 && numericItem <= 9);
+		const entryLabel = entry ? `${label} · Entry ${transaction}` : label;
+		const incomeColumn = schedule === 'A' && numericItem <= 6
+			? /FinalTax/.test(control) ? 'Final tax withheld or paid' : numericItem === 1 && control.endsWith('C1') ? 'Exempt amount' : 'Income amount'
+			: undefined;
 		return layout(field, section, number, entryLabel, {
 			person: undefined, optionalSection: numericItem >= 7 && numericItem <= 20,
 			rowHeading: schedule === 'A' && numericItem <= 6 ? finalIncomeLabels[number] : undefined,
-			shortLabel: entryLabel
+			shortLabel: entryLabel, column: incomeColumn
 		});
 	}
 	if (field.page === '12' && /Pt9I/.test(name)) {

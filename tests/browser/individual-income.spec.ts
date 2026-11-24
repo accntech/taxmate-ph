@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Locator } from '@playwright/test';
 import { execFileSync } from 'node:child_process';
 import { mkdirSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -77,7 +77,7 @@ test('legacy 1701 carries the taxpayer details trade name through a new draft an
 	await expect(displayType.locator('dd')).toHaveText('Professional');
 	await expect(tradeName).toHaveCount(0);
 	await expect(page.getByRole('radiogroup', { name: 'Taxpayer type', exact: true })).toHaveCount(0);
-	await expect(page.getByRole('radiogroup', { name: 'Alphanumeric tax code (ATC)', exact: true })).toBeVisible();
+	await expect(page.getByRole('combobox', { name: 'Alphanumeric tax code (ATC)', exact: true })).toBeVisible();
 	await page.getByRole('textbox', { name: 'Filing year' }).fill('2017');
 	if (output) await captureDraft('new-draft', output);
 	await page.getByRole('button', { name: 'Save draft', exact: true }).click();
@@ -124,8 +124,8 @@ test('legacy 1701 fills blank trade name and PSIC fields from the taxpayer profi
 	await page.goto(`${list}/1701?return=historical-1701`);
 	const tradeName = page.getByRole('textbox', { name: 'Trade name', exact: true });
 	await expect(tradeName).toHaveValue('Earlier accounting name');
-	const type = page.getByRole('radiogroup', { name: 'Taxpayer type', exact: true });
-	await expect(type.getByRole('radio', { name: 'Single', exact: true })).toBeChecked();
+	const type = page.getByRole('combobox', { name: 'Taxpayer type', exact: true });
+	await expect(type).toContainText('Sole proprietor');
 	await tradeName.fill('Santos Accounting & Advisory');
 	await expect(tradeName).toBeFocused();
 	await tradeName.fill('Return trade name');
@@ -153,10 +153,11 @@ for (const [code, total] of Object.entries({ 1701: '32', '1701v2018': '32', '170
 		await expect(summary).toBeVisible({ timeout: 15000 });
 		await expect(summary.getByRole('columnheader', { name: 'Spouse', exact: true })).toHaveCount(0);
 		expect(await summary.locator('tbody tr').evaluateAll(rows => rows.every(row => row.children.length === 3))).toBe(true);
-		await expect(summary.getByRole('row', { name: new RegExp(`^${total} .*payable`, 'i') })).toContainText('₱0.00');
+		await expect(summary.getByRole('row', { name: new RegExp(`^${total} .*payable`, 'i') })).toContainText(['1701A', '1701MS', '1701Qv2018'].includes(code) ? '—' : '₱0.00');
 		await page.setViewportSize({ width: 390, height: 920 });
 		await page.keyboard.press('Escape');
-		expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+		await expect.poll(async () => (await page.locator('aside.sidebar').boundingBox())!.x).toBeLessThan(-245);
+		await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
 		const output = process.env.INCOME_PREVIEW_DIR;
 		if (output) {
 			mkdirSync(output, { recursive: true });
@@ -226,7 +227,7 @@ test('1701-MS aligns populated business schedules and clears deductions after ch
 });
 
 test('1701A keeps the ATC selector compact and the filing fields aligned on desktop', async ({ page }) => {
-	await seedWorkspace(page, 'dark', 'loaded', fixture);
+	await seedWorkspace(page, 'dark', 'loaded', { ...fixture, taxpayerType: 'single-proprietor' });
 	await page.setViewportSize({ width: 1440, height: 960 });
 	await page.goto(`${list}/1701A?new=true`);
 	await expect(page.getByRole('combobox', { name: 'Alphanumeric tax code (ATC)', exact: true })).toBeVisible();
@@ -245,12 +246,11 @@ test('1701A keeps the ATC selector compact and the filing fields aligned on desk
 });
 
 test('1701A derives the rate from the ATC and retains the calculated total after reopening', async ({ page }) => {
-	await seedWorkspace(page, 'light', 'loaded', { ...fixture, civilStatus: 'Single' });
+	await seedWorkspace(page, 'light', 'loaded', { ...fixture, civilStatus: 'Single', taxpayerType: 'single-proprietor' });
 	await page.goto(`${list}/1701A?new=true`);
 	await page.getByRole('textbox', { name: /^Filing year/ }).fill('2025');
 	const atc = page.getByRole('combobox', { name: 'Alphanumeric tax code (ATC)', exact: true });
-	await atc.click();
-	await page.getByRole('option', { name: /II012/ }).click();
+	await atc.selectOption('II012');
 	await expect(page.locator('[id="frm1701A:optTaxRate"]')).toContainText('Graduated');
 	await expect(page.getByRole('radiogroup', { name: 'Income tax rate', exact: true })).toHaveCount(0);
 	await page.getByRole('button', { name: 'Next page', exact: true }).click();
@@ -273,15 +273,16 @@ test('1701A derives the rate from the ATC and retains the calculated total after
 });
 
 test('1701A aligns schedule amounts and descriptions on page 2', async ({ page }) => {
-	await seedWorkspace(page, 'light', 'loaded', { ...fixture, civilStatus: 'Single' });
+	await seedWorkspace(page, 'light', 'loaded', { ...fixture, civilStatus: 'Single', taxpayerType: 'single-proprietor' });
 	await page.setViewportSize({ width: 1440, height: 960 });
 	await page.goto(`${list}/1701A?new=true`);
+	await page.getByRole('combobox', { name: 'Alphanumeric tax code (ATC)', exact: true }).selectOption('II012');
 	await page.getByRole('button', { name: 'Next page', exact: true }).click();
 	const graduated = page.getByRole('table', { name: 'IV.A · Graduated income tax' });
 	const flat = page.getByRole('table', { name: 'IV.B · 8% income tax' });
 	const credits = page.getByRole('table', { name: 'IV.C · Tax credits and payments' });
 	await expect(graduated).toBeVisible();
-	await expect(flat).toBeVisible();
+	await expect(flat).toHaveCount(0);
 	await expect(credits).toBeVisible();
 	await expect(graduated.getByRole('columnheader', { name: 'Spouse' })).toHaveCount(0);
 	const description = graduated.getByRole('textbox', { name: 'Item 41 other income description' });
@@ -302,20 +303,20 @@ test('1701A aligns schedule amounts and descriptions on page 2', async ({ page }
 
 test('1701A keeps taxpayer and spouse amounts in the correct columns for mixed rates', async ({ page }) => {
 	await seedWorkspace(page, 'light', 'loaded', {
-		...fixture, civilStatus: 'Married',
+		...fixture, civilStatus: 'Married', taxpayerType: 'single-proprietor',
 		spouse: { taxpayerName: 'SANTOS, JAMIE, CRUZ', tin1: '009', tin2: '876', tin3: '543', branchCode: '00000' }
 	});
 	await page.setViewportSize({ width: 1440, height: 960 });
 	await page.goto(`${list}/1701A?new=true`);
 	const atc = page.getByRole('combobox', { name: 'Alphanumeric tax code (ATC)', exact: true });
-	await atc.click();
-	await page.getByRole('option', { name: /II015/ }).click();
+	await atc.selectOption('II015');
 	await page.getByRole('radiogroup', { name: /spouse has income/i }).getByRole('radio', { name: 'Yes', exact: true }).check();
 	await page.getByRole('radiogroup', { name: 'Filing status', exact: true }).getByRole('radio', { name: /Joint/ }).check();
 	await page.getByRole('button', { name: 'Next page', exact: true }).click();
+	await page.getByRole('radiogroup', { name: 'Spouse taxpayer type', exact: true })
+		.getByRole('radio', { name: 'Single Proprietor', exact: true }).check();
 	const spouseAtc = page.getByRole('combobox', { name: 'Spouse alphanumeric tax code (ATC)', exact: true });
-	await spouseAtc.click();
-	await page.getByRole('option', { name: /II012/ }).click();
+	await spouseAtc.selectOption('II012');
 	await expect(page.getByText('009-876-543-00000', { exact: true })).toBeVisible();
 	await expect(page.getByRole('link', { name: 'Edit spouse details' })).toBeVisible();
 	const graduated = page.getByRole('table', { name: 'IV.A · Graduated income tax' });
@@ -340,7 +341,7 @@ test('June 2013 Form 1701 shows only applicable filing identification and overpa
 	await page.goto(`${list}/1701?new=true`);
 	const identification = page.getByRole('region', { name: 'Filing identification', exact: true });
 	await expect(identification).toBeVisible({ timeout: 20_000 });
-	const refund = page.getByRole('radiogroup', { name: 'Apply overpayment as', exact: true });
+	const refund = page.getByRole('combobox', { name: 'Apply overpayment as', exact: true });
 	await expect(refund).toHaveCount(0);
 	const type = identification.getByRole('radiogroup', { name: 'Identification type', exact: true });
 	await type.getByRole('radio', { name: 'Community tax certificate (CTC)', exact: true }).check();
@@ -367,11 +368,11 @@ test('June 2013 Form 1701 shows only applicable filing identification and overpa
 	await credit.fill('500');
 	await credit.blur();
 	await goToReturnPage(page, 1);
-	await expect(refund.getByRole('radio')).toHaveCount(3);
-	await expect(refund.getByRole('radio', { name: 'Tax credit certificate (TCC)', exact: true })).toBeVisible();
-	await expect(refund.getByRole('radio', { name: 'Carry over to next year or quarter', exact: true })).toBeVisible();
-	const refundOption = refund.getByRole('radio', { name: 'Refund', exact: true });
-	await refundOption.check();
+	await refund.click();
+	await expect(page.getByRole('option')).toHaveCount(3);
+	await expect(page.getByRole('option', { name: 'Tax credit certificate (TCC)', exact: true })).toBeVisible();
+	await expect(page.getByRole('option', { name: 'Carry over to next year or quarter', exact: true })).toBeVisible();
+	await page.getByRole('option', { name: 'Refund', exact: true }).click();
 	await goToReturnPage(page, 9);
 	await credit.fill('0');
 	await credit.blur();
@@ -381,8 +382,8 @@ test('June 2013 Form 1701 shows only applicable filing identification and overpa
 	await credit.fill('500');
 	await credit.blur();
 	await goToReturnPage(page, 1);
-	await expect(refundOption).toBeVisible();
-	await expect(refundOption).not.toBeChecked();
+	await expect(refund).toBeVisible();
+	await expect(refund).not.toContainText('Refund');
 });
 
 test('June 2013 Form 1701 keeps employer fields and historical tax regime amounts in their source groups', async ({ page }) => {
@@ -440,8 +441,7 @@ test('revised 1701Q links the ATC to its applicable schedule and hides unused sp
 	await expect(pager).toBeVisible({ timeout: 20000 });
 	await expect(page.getByText(/BACKGROUND INFORMATION ON SPOUSE/i)).toHaveCount(0);
 	const code = page.getByRole('combobox', { name: 'Alphanumeric tax code (ATC)', exact: true });
-	await code.click();
-	await page.getByRole('option', { name: /II015/ }).click();
+	await code.selectOption('II015');
 	await goToReturnPage(page, 2);
 	await expect(page.locator('[id="frm1701q:txt47A"]')).toBeVisible();
 	await expect(page.locator('[id="frm1701q:txt36A"]')).toHaveCount(0);
@@ -492,8 +492,11 @@ test('1700v2018 uses native fields and retains values while paging and reopening
 	const earnings = employer.getByRole('textbox', { name: 'Graduated-rate compensation', exact: true });
 	const taxWithheld = employer.getByRole('textbox', { name: 'Tax withheld', exact: true });
 	const employerPositions = await Promise.all([employerName.boundingBox(), tin.boundingBox(), earnings.boundingBox(), taxWithheld.boundingBox()]);
-	expect(new Set(employerPositions.map(box => box!.y)).size).toBe(1);
+	expect(employerPositions[0]!.y).toBe(employerPositions[1]!.y);
+	expect(employerPositions[2]!.y).toBe(employerPositions[3]!.y);
 	expect(Math.abs(employerPositions[2]!.width - employerPositions[3]!.width)).toBeLessThan(1);
+	await expectAmountEdge(earnings, page.locator('[id="frm1700:txtPg2ISched1c_5AREG"]'));
+	await expectAmountEdge(taxWithheld, page.locator('[id="frm1700:txtPg2ISched1e_5ATW"]'));
 	await expect(employer.getByRole('textbox', { name: 'Second name line', exact: true })).toHaveCount(0);
 	await tin.fill('32165498700000');
 	await tin.blur();
@@ -507,13 +510,17 @@ test('1700v2018 uses native fields and retains values while paging and reopening
 	}
 	await expect(page.locator('[id="frm1700:txtPg2I47A"]')).toHaveText('₱152,500.00');
 	await expect(page.locator('[id="frm1700:txtPg2I54A"]')).toHaveText('₱100,000.00');
+	await expectAmountEdge(page.locator('[id="frm1700:txtPg2I43A"]'), page.locator('[id="frm1700:txtPg2I47A"]'));
 	await employer.getByRole('textbox', { name: 'Tax withheld', exact: true }).blur();
 	await employer.evaluate(node => node.scrollIntoView({ block: 'center' }));
 	await employer.screenshot({ path: resolve(output, '1700v2018-employer-desktop.png') });
 	const secondEmployer = page.getByRole('region', { name: 'Schedule 1 · Employer 2', exact: true });
 	const secondHeading = secondEmployer.locator('summary').first();
 	await secondHeading.click();
-	await expect(secondEmployer.getByRole('textbox', { name: 'Employer TIN and branch code', exact: true })).toBeVisible();
+	const secondTin = secondEmployer.getByRole('textbox', { name: 'Employer TIN and branch code', exact: true });
+	await secondTin.fill('---00007');
+	await secondTin.blur();
+	await expect(secondTin).toHaveValue('---00007');
 	await expect(secondEmployer.getByRole('textbox', { name: 'Second name line', exact: true })).toHaveCount(0);
 	await employer.getByRole('heading').evaluate(node => node.scrollIntoView({ block: 'center' }));
 	await page.screenshot({ path: resolve(output, '1700v2018-editor-page-2.png') });
@@ -523,6 +530,7 @@ test('1700v2018 uses native fields and retains values while paging and reopening
 	await page.getByRole('button', { name: 'Previous page', exact: true }).click();
 	await expect(year).toHaveValue('2025');
 	await expect(page.locator('[id="frm1700:txtPg1I36"]')).toHaveText('₱52,500.00');
+	await expectAmountEdge(page.locator('[id="frm1700:txtPg1I31A"]'), page.locator('[id="frm1700:txtPg1I36"]'));
 	await page.getByRole('link', { name: /Back to forms/ }).evaluate(node => node.scrollIntoView({ block: 'center' }));
 	await page.screenshot({ path: resolve(output, '1700v2018-editor-page-1.png') });
 	await page.setViewportSize({ width: 390, height: 920 });
@@ -535,6 +543,8 @@ test('1700v2018 uses native fields and retains values while paging and reopening
 	await page.screenshot({ path: resolve(output, '1700v2018-editor-mobile.png') });
 	await page.getByRole('button', { name: 'Next page', exact: true }).click();
 	await expect(tin).toHaveValue('321-654-987-00000');
+	await expectAmountEdge(earnings, page.locator('[id="frm1700:txtPg2ISched1c_5AREG"]'));
+	await expectAmountEdge(taxWithheld, page.locator('[id="frm1700:txtPg2ISched1e_5ATW"]'));
 	expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
 	await employer.screenshot({ path: resolve(output, '1700v2018-employer-mobile.png') });
 	await page.getByRole('button', { name: 'Previous page', exact: true }).click();
@@ -544,6 +554,7 @@ test('1700v2018 uses native fields and retains values while paging and reopening
 	await expect(year).toHaveValue('2025');
 	await page.getByRole('button', { name: 'Next page', exact: true }).click();
 	await expect(employer.getByRole('textbox', { name: 'Second name line', exact: true })).toHaveValue('PAYROLL DIVISION');
+	await expect(secondTin).toHaveValue('---00007');
 });
 
 test('joint Form 1700 uses profile identity, keeps one desktop item row, and paginates below the fields', async ({ page }) => {
@@ -652,7 +663,7 @@ for (const [code, count] of Object.entries(cases)) {
 			await page.goto(`${list}/${code}?new=true`);
 			await expect(page.getByText(`Page 1 of ${count}`, { exact: true })).toBeVisible({ timeout: 20000 });
 			const pager = page.getByRole('navigation', { name: 'Return pages' });
-			if (count > 1) await expect(pager.locator('..')).toHaveClass(/pcsti-pagination/);
+			if (count > 1) await expect(pager.locator('..')).toHaveClass(/taxmate-pagination/);
 			if (count > 4) {
 				await expect(pager.getByRole('button', { name: 'Page 1', exact: true })).toHaveAttribute('aria-current', 'page');
 				await expect(pager.getByRole('button', { name: `Page ${count}`, exact: true })).toBeVisible();
@@ -702,7 +713,11 @@ for (const [code, count] of Object.entries(cases)) {
 				const form = getIndividualIncomeForm(code);
 
 				const values = { ...createIndividualIncomeValues(form, fixture), [form.year]: ['1700', '1701', '1701Q'].includes(code) ? '2017' : '2025' };
-				if (code === '1701A') Object.assign(values, { 'frm1701A:txt36A': '1000000', 'frm1701A:optTaxRate': 'G', 'frm1701A:optATC': 'II012' });
+				if (code === '1701A') Object.assign(values, {
+					'frm1701A:txt36A': '1000000', 'frm1701A:optTaxType': 'S', 'frm1701A:optATC': 'II012',
+					'frm1701A:txtmodalPartIVADesc_1C1': 'Service income adjustment', 'frm1701A:txtmodalPartIVA_1C2': '5000',
+					'frm1701A:txtmodalPartIVADesc_2C1': 'Miscellaneous income', 'frm1701A:txtmodalPartIVA_2C2': '2500'
+				});
 				if (code === '1701v2018') Object.assign(values, {
 					'frm1701:rdoPg1I21TaxRate': 'Graduated',
 					'frm1701:rdoPg1I21AMethodDeduction': 'OSD',
@@ -853,8 +868,11 @@ for (const [code, count] of Object.entries(cases)) {
 			if (code === '1701A') {
 				const text = execFileSync('pdftotext', ['-layout', path, '-'], { encoding: 'utf8' });
 				expect(text).toMatch(/400,?000\.00/);
-				expect(text).toMatch(/600,?000\.00/);
-				expect(text).toMatch(/62,?500\.00/);
+				expect(text).toMatch(/42\s+OTHERS\s+42A\s+7,?500\.00/);
+				expect(text).toMatch(/7,?500\.00/);
+				expect(text).toMatch(/607,?500\.00/);
+				expect(text).toMatch(/20A\s+64,?000\.00/);
+				expect(text).toMatch(/46A\s+64,?000\.00/);
 			}
 			if (process.env.INCOME_PREVIEW_DIR) {
 				const output = resolve(process.env.INCOME_PREVIEW_DIR ?? 'test-results/individual-income-previews');
@@ -916,11 +934,15 @@ test('legacy 1700 summarizes profile fields and reveals the applicable identific
 	const employer = page.getByRole('region', { name: 'Part IV · Employer 1', exact: true });
 	const income = employer.getByRole('textbox', { name: 'Compensation income', exact: true });
 	const withheld = employer.getByRole('textbox', { name: 'Tax withheld', exact: true });
-	await employer.getByRole('radio', { name: 'Taxpayer', exact: true }).check();
+	await expect(employer.getByRole('radiogroup', { name: 'Income earner' })).toHaveCount(0);
 	await employer.getByRole('textbox', { name: 'Employer name', exact: true }).fill('Example Employer');
 	await income.fill('420000');
 	await income.blur();
 	await expect(income).toHaveValue('420,000.00');
+	await withheld.fill('18000');
+	await withheld.blur();
+	await expect(page.locator('[id="frm1700:txtPg2Pt4I4AC1"]')).toHaveText('₱420,000.00');
+	await expect(page.locator('[id="frm1700:txtPg2Pt4I4AC2"]')).toHaveText('₱18,000.00');
 	expect((await income.boundingBox())!.y).toBe((await withheld.boundingBox())!.y);
 	await capture('page-2', employer.getByRole('heading'));
 
@@ -982,6 +1004,10 @@ test('legacy 1700 keeps Part I in order and derives the dependent count from pag
 	const first = page.getByRole('region', { name: 'Table 2 · Dependent 1', exact: true });
 	await first.getByRole('textbox', { name: 'Last name', exact: true }).fill('SANTOS');
 	await first.getByRole('textbox', { name: 'First name', exact: true }).fill('JAMIE');
+	const middleInitial = first.getByRole('textbox', { name: 'Middle initial', exact: true });
+	await middleInitial.pressSequentially('AB');
+	await expect(middleInitial).toHaveValue('A');
+	expect((await middleInitial.boundingBox())!.width).toBeLessThanOrEqual(96);
 	await first.getByRole('spinbutton', { name: 'Month', exact: true }).fill('02');
 	await first.getByRole('spinbutton', { name: 'Day', exact: true }).fill('02');
 	await first.getByRole('spinbutton', { name: 'Year', exact: true }).fill('2011');
@@ -1091,6 +1117,8 @@ test('legacy 1700 shows a compact tax summary on narrow screens', async ({ page 
 	await page.goto(`${list}/1700?new=true`);
 	const summary = page.getByRole('table', { name: 'Calculated tax amounts', exact: true });
 	await expect(summary).toBeVisible({ timeout: 20000 });
+	await page.keyboard.press('Escape');
+	await expect.poll(async () => (await page.locator('aside.sidebar').boundingBox())!.x).toBeLessThan(-245);
 	const row = summary.getByRole('row', { name: /23.*Taxpayer tax due/ });
 	await expect(row.getByRole('cell', { name: '₱0.00', exact: true })).toBeVisible();
 	await expect(summary.getByRole('row', { name: /24.*Spouse/ })).toHaveCount(0);
@@ -1100,9 +1128,7 @@ test('legacy 1700 shows a compact tax summary on narrow screens', async ({ page 
 	expect(amount.x).toBeGreaterThanOrEqual(label.x + label.width);
 	expect(amount.y).toBe(label.y);
 	expect((await row.boundingBox())!.height).toBeLessThan(65);
-	expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
-	await page.keyboard.press('Escape');
-	await expect.poll(async () => (await page.locator('aside.sidebar').boundingBox())!.x).toBeLessThan(-245);
+	await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
 	const profile = page.getByRole('region', { name: 'Taxpayer information', exact: true });
 	await profile.getByRole('radiogroup', { name: 'Claiming additional exemptions?', exact: true })
 		.getByRole('radio', { name: 'Yes', exact: true }).check();
@@ -1162,6 +1188,103 @@ test('legacy 1700 has single section dividers and complete field-grid seams', as
 	await expect(pager).toHaveCSS('border-top-width', '0px');
 });
 
+test('legacy 1700 groups employer TIN entry and preserves each saved segment', async ({ page, context }, testInfo) => {
+	await seedWorkspace(page, 'light', 'loaded', { ...fixture, civilStatus: 'Single' });
+	await page.setViewportSize({ width: 1440, height: 960 });
+	await page.goto(`${list}/1700?new=true`);
+	await goToReturnPage(page, 2);
+	const employer = (number: number) => page.getByRole('region', { name: `Part IV · Employer ${number}`, exact: true });
+	const tin = (number: number) => employer(number).getByRole('textbox', { name: 'Employer TIN and branch code', exact: true });
+	await expect(tin(1)).toBeVisible();
+	await expect(tin(1)).toHaveAttribute('maxlength', '17');
+	await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+	await page.evaluate(() => navigator.clipboard.writeText('001-024-350-00008'));
+	await tin(1).focus();
+	await page.keyboard.press('ControlOrMeta+V');
+	await page.keyboard.press('Tab');
+	await expect(employer(1).getByRole('textbox', { name: 'Compensation income', exact: true })).toBeFocused();
+	await expect(tin(1)).toHaveValue('001-024-350-00008');
+	await employer(2).locator('summary').click();
+	await tin(2).fill('---00007');
+	await tin(2).blur();
+	await expect(tin(2)).toHaveValue('---00007');
+	await employer(3).locator('summary').click();
+	await tin(3).fill('065-043-021-00009');
+	await tin(3).blur();
+
+	for (const width of [1440, 320]) {
+		await page.setViewportSize({ width, height: 960 });
+		if (width === 320) {
+			await page.keyboard.press('Escape');
+			await expect.poll(async () => (await page.locator('aside.sidebar').boundingBox())!.x).toBeLessThan(-245);
+		}
+		const bounds = await tin(1).evaluate(input => {
+			const { left, right } = input.getBoundingClientRect();
+			const style = getComputedStyle(input);
+			const canvas = document.createElement('canvas').getContext('2d')!;
+			canvas.font = `${style.fontSize} ${style.fontFamily}`;
+			const textWidth = canvas.measureText((input as HTMLInputElement).value).width;
+			return { left, right, fits: textWidth <= input.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight) };
+		});
+		expect(bounds.fits).toBe(true);
+		expect(bounds.left).toBeGreaterThanOrEqual(0);
+		expect(bounds.right).toBeLessThanOrEqual(width);
+		if (width === 1440) {
+			for (const [identity, amount] of [['Employer name', 'Compensation income'], ['Employer TIN and branch code', 'Tax withheld']]) {
+				const boxes = await employer(1).getByRole('textbox', { name: identity, exact: true })
+					.or(employer(1).getByRole('textbox', { name: amount, exact: true })).evaluateAll(inputs => inputs.map(input => {
+						const { left, right } = input.parentElement!.getBoundingClientRect();
+						return { left, right };
+					}));
+				expect(boxes[0], `${amount} aligns with ${identity}`).toEqual(boxes[1]);
+			}
+		}
+		await employer(1).screenshot({ path: testInfo.outputPath(`employer-tin-${width}.png`), animations: 'disabled' });
+	}
+
+	await page.getByRole('button', { name: 'Save draft', exact: true }).click();
+	await expect(page).toHaveURL(/\/forms$/);
+	await page.getByRole('row').filter({ hasText: '1700' }).getByRole('link', { name: 'Edit', exact: true }).click();
+	await goToReturnPage(page, 2);
+	await expect(tin(1)).toHaveValue('001-024-350-00008');
+	await expect(tin(2)).toBeVisible();
+	await expect(tin(2)).toHaveValue('---00007');
+
+	const html = await page.evaluate(async () => {
+		const formsModule = '/src/lib/forms/index.ts';
+		const reportModule = '/src/lib/printing/return-report.ts';
+		const { getFormDefinition } = await import(formsModule) as typeof import('../../src/lib/forms');
+		const { buildReturnReport } = await import(reportModule) as typeof import('../../src/lib/printing/return-report');
+		const saved = JSON.parse(localStorage.getItem('ebirforms-created-returns-v1')!) as {
+			returns: { formCode: string; values: Record<string, string> }[];
+		};
+		const draft = saved.returns.find(record => record.formCode === '1700');
+		if (!draft) throw new Error('The saved Form 1700 draft is missing.');
+		return buildReturnReport(getFormDefinition('1700')!, draft.values, 'Draft', 'a4');
+	});
+	const print = await context.newPage();
+	await print.setContent(html);
+	await print.emulateMedia({ media: 'print' });
+	const slot = (number: number, suffix: string) => print.locator(`[data-legacy-print-id="txtPg2Pt4I${number}EMPTIN${suffix}"]`);
+	for (const [suffix, value] of [['1', '001'], ['2', '024'], ['3', '350'], ['BranchCode', '00008']]) {
+		await expect(slot(1, suffix)).toHaveText(value);
+	}
+	await expect(slot(2, '1')).toBeEmpty();
+	await expect(slot(2, 'BranchCode')).toHaveText('00007');
+	await expect(print.locator('[data-legacy-print-id="rdoPg2Pt4I1TaxFiler"]')).toHaveText('X');
+	for (const [suffix, value] of [['1', '065'], ['2', '043'], ['3', '021'], ['BranchCode', '00009']]) {
+		await expect(slot(3, suffix)).toHaveText(value);
+		const first = await slot(1, suffix).evaluate(element => getComputedStyle(element.parentElement!).left);
+		await expect(slot(3, suffix).locator('..'), `Employer 3 ${suffix} uses the same print column as Employer 1`).toHaveCSS('left', first);
+	}
+	const pdf = testInfo.outputPath('employer-tin-draft.pdf');
+	await print.pdf({ path: pdf, preferCSSPageSize: true, printBackground: true });
+	if (process.env.INCOME_PREVIEW_DIR) {
+		execFileSync('pdftoppm', ['-f', '2', '-l', '2', '-r', '105', '-singlefile', '-png', pdf,
+			testInfo.outputPath('employer-tin-pdf-page-2')]);
+	}
+});
+
 test('legacy 1700 pages 2–4 disclose optional schedules and use filing-specific controls', async ({ page }) => {
 	await seedWorkspace(page, 'dark', 'loaded', { ...fixture, civilStatus: 'Single' });
 	await page.setViewportSize({ width: 1440, height: 960 });
@@ -1171,9 +1294,7 @@ test('legacy 1700 pages 2–4 disclose optional schedules and use filing-specifi
 	await goToReturnPage(page, 2);
 	const employer = page.getByRole('region', { name: 'Part IV · Employer 1', exact: true });
 	const earner = employer.getByRole('radiogroup', { name: 'Income earner', exact: true });
-	await expect(earner).toHaveAttribute('aria-required', 'true');
-	await expect(earner.getByRole('radio', { name: 'Spouse', exact: true })).toHaveCount(0);
-	await earner.getByRole('radio', { name: 'Taxpayer', exact: true }).check();
+	await expect(earner).toHaveCount(0);
 	await employer.getByRole('textbox', { name: 'Employer name', exact: true }).fill('Example Employer');
 	const optionalEmployer = page.getByRole('region', { name: 'Part IV · Employer 2', exact: true });
 	await expect(optionalEmployer.getByRole('textbox', { name: 'Employer name', exact: true })).toBeHidden();
@@ -1215,6 +1336,56 @@ test('legacy 1700 pages 2–4 disclose optional schedules and use filing-specifi
 	}
 });
 
+async function expectAmountEdge(input: Locator, total: Locator) {
+	const { edge, fits } = await input.evaluate(element => {
+		const style = getComputedStyle(element);
+		const measure = document.createElement('canvas').getContext('2d')!;
+		measure.font = `${style.fontSize} ${style.fontFamily}`;
+		const width = measure.measureText((element as HTMLInputElement).value).width;
+		const available = element.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+		return { edge: element.getBoundingClientRect().right, fits: width <= available };
+	});
+	const totalEdge = await total.evaluate(element => {
+		const range = document.createRange();
+		range.selectNodeContents(element);
+		return range.getBoundingClientRect().right;
+	});
+	expect(Math.abs(edge - totalEdge), `Amount field at ${edge}px aligns with the total at ${totalEdge}px`).toBeLessThanOrEqual(2);
+	expect(fits, 'The entire amount is visible inside its input').toBe(true);
+}
+
+test('June 1700 computation keeps inputs aligned with taxpayer, spouse and combined totals', async ({ page }) => {
+	await seedWorkspace(page, 'light', 'loaded', { ...fixture, civilStatus: 'Married' });
+	await page.setViewportSize({ width: 1440, height: 960 });
+	await page.goto(`${list}/1700?new=true`);
+	const joint = page.getByRole('radiogroup', { name: 'Joint return?', exact: true });
+	await joint.getByRole('radio', { name: 'Yes', exact: true }).check();
+	await goToReturnPage(page, 2);
+	const field = (id: string) => page.locator(`[id="frm1700:txtPg2Pt4I${id}"]`);
+	for (const column of ['1', '2']) {
+		await field(`5C${column}`).fill('1234567.89');
+		await field(`5C${column}`).blur();
+		await expectAmountEdge(field(`5C${column}`), field(`14C${column}`));
+		await expectAmountEdge(field(`17C${column}`), field(`19C${column}`));
+	}
+	await expectAmountEdge(field('24'), field('28'));
+	await goToReturnPage(page, 1);
+	await joint.getByRole('radio', { name: 'No', exact: true }).check();
+	await goToReturnPage(page, 2);
+	await expect(field('5C2')).toHaveCount(0);
+	for (const width of [1440, 390]) {
+		await page.setViewportSize({ width, height: 960 });
+		await expectAmountEdge(field('5C1'), field('14C1'));
+		await expectAmountEdge(field('24'), field('28'));
+		const output = process.env.INCOME_PREVIEW_DIR;
+		if (output) {
+			mkdirSync(output, { recursive: true });
+			await page.getByRole('region', { name: 'Part IV · Tax computation', exact: true })
+				.screenshot({ path: resolve(output, `1700-computation-${width}.png`), animations: 'disabled' });
+		}
+	}
+});
+
 test('legacy 1700 page 3 aligns amount columns and groups optional transactions by entry', async ({ page }) => {
 	await seedWorkspace(page, 'dark', 'loaded', { ...fixture, civilStatus: 'Single' });
 	await page.setViewportSize({ width: 1440, height: 960 });
@@ -1232,7 +1403,9 @@ test('legacy 1700 page 3 aligns amount columns and groups optional transactions 
 	await expect(royalties).toHaveValue('0.00');
 	await interest.fill('1250');
 	await supplemental.getByRole('textbox', { name: 'Interest final tax withheld', exact: true }).fill('250');
-	await expect(page.getByRole('region', { name: 'Final tax total', exact: true })).toContainText('₱250.00');
+	const finalTaxTotal = page.locator('[id="frm1700:txtPg3Pt5I21TotTaxWithheldPaid"]');
+	await expect(finalTaxTotal).toHaveText('₱250.00');
+	await expectAmountEdge(supplemental.getByRole('textbox', { name: 'Interest final tax withheld', exact: true }), finalTaxTotal);
 
 	const shares = page.getByRole('region', { name: 'Share transactions', exact: true });
 	await shares.locator('summary').click();
@@ -1240,6 +1413,13 @@ test('legacy 1700 page 3 aligns amount columns and groups optional transactions 
 	const second = shares.getByRole('group', { name: 'Sale or exchange 2', exact: true });
 	await expect(first.getByRole('combobox', { name: 'Kind of shares', exact: true })).toHaveText('Select share type');
 	await expect(second).toHaveCount(0);
+	await expectAmountEdge(first.getByRole('textbox', { name: 'Final tax withheld or paid', exact: true }), finalTaxTotal);
+	const exempt = page.getByRole('region', { name: 'Part V.B · Income exempt from tax', exact: true });
+	await exempt.locator('summary').click();
+	const lifeInsurance = exempt.getByRole('textbox', { name: 'Proceeds of life insurance policy', exact: true });
+	await lifeInsurance.fill('4000');
+	await lifeInsurance.blur();
+	await expectAmountEdge(lifeInsurance, page.locator('[id="frm1700:txtPg3Pt5BI10TotalIncome"]'));
 	await first.getByRole('combobox', { name: 'Kind of shares', exact: true }).click();
 	await page.getByRole('option', { name: 'Common shares', exact: true }).click();
 	// A share-type selection by itself must keep the schedule populated on return.

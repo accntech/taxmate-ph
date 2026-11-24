@@ -35,13 +35,14 @@ for (const width of [1440, 1100, 960, 768, 560, 390, 320]) {
 		await expect(page.getByText('1601-EQ', { exact: true })).toBeVisible();
 		const heading = page.getByRole('heading', { name: /^Quarterly Remittance Return/ });
 		const masthead = heading.locator('..');
-		await expect(masthead.getByText('Kawanihan ng Rentas Internas', { exact: true })).toBeVisible();
-		const [title, number] = await Promise.all([heading.boundingBox(), masthead.getByText('1601-EQ', { exact: true }).boundingBox()]);
+		await expect(masthead.getByText('Kawanihan ng Rentas Internas', { exact: true })).toHaveCount(0);
+		const [title, number] = await Promise.all([heading.boundingBox(), masthead.locator('.form-number').boundingBox()]);
 		const header = (await masthead.boundingBox())!;
-		expect(Math.abs(title!.x + title!.width / 2 - header.x - header.width / 2)).toBeLessThan(1);
-		await expect(heading).toHaveCSS('text-align', 'center');
-		if (header.width < 600) {
+		const wideHeaderWidth = await page.evaluate(() => 40 * parseFloat(getComputedStyle(document.documentElement).fontSize));
+		await expect(heading).toHaveCSS('text-align', 'start');
+		if (header.width < wideHeaderWidth) {
 			expect(number!.y).toBeGreaterThanOrEqual(title!.y + title!.height - 1);
+			expect(Math.abs(number!.x - title!.x)).toBeLessThan(1);
 		} else {
 			expect(number!.x).toBeGreaterThanOrEqual(title!.x + title!.width - 1);
 		}
@@ -137,4 +138,30 @@ test('currency amounts align right while resting and editing', async ({ page }) 
 	await expect(remittance).toHaveValue('1234.56');
 	await expect(remittance).toHaveCSS('text-align', 'right');
 	await expect(taxBase).toHaveCSS('text-align', 'right');
+});
+
+test('1601EQ mobile withholding lines line up with the quarterly total', async ({ page }) => {
+	await seedWorkspace(page);
+	await page.setViewportSize({ width: 390, height: 844 });
+	await page.goto(formPath);
+	const line = page.locator('output[aria-label="Item 13 Tax withheld"]');
+	const total = page.getByRole('complementary', { name: 'Summary', exact: true }).locator('.paper-total-row dd').first();
+	const rangeEnd = (element: Element) => {
+		const text = document.createRange();
+		text.selectNodeContents(element);
+		return text.getBoundingClientRect().right;
+	};
+	const [lineEdge, totalEdge] = await Promise.all([line.evaluate(rangeEnd), total.evaluate(rangeEnd)]);
+	expect(Math.abs(lineEdge - totalEdge)).toBeLessThanOrEqual(2);
+	await page.getByRole('button', { name: 'Edit line item 1', exact: true }).click();
+	const drawer = page.getByRole('dialog');
+	const computed = drawer.getByRole('status', { name: 'Tax withheld', exact: true });
+	await expect(computed).toBeVisible();
+	const offset = await computed.evaluate(output => {
+		const input = document.getElementById(output.getAttribute('for')!)!;
+		const text = document.createRange();
+		text.selectNodeContents(output);
+		return input.getBoundingClientRect().right - text.getBoundingClientRect().right;
+	});
+	expect(Math.abs(offset)).toBeLessThanOrEqual(2);
 });

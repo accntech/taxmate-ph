@@ -229,6 +229,8 @@ describe("short annual income returns", () => {
   it("enforces 1701A's printed second-installment limit", () => {
     const errors = validate1701A({
       "frm1701A:txtYear": "2025",
+      "frm1701A:optTaxType": "S",
+      "frm1701A:optATC": "II012",
       "frm1701A:txt36A": "1000000",
       "frm1701A:txt23A": "31251",
     });
@@ -237,6 +239,7 @@ describe("short annual income returns", () => {
 
   it("fills 1701-MS schedule item 18B from the same amount reported in Part II", () => {
     const result = calculate1701MS({
+      "frm1701MS:sourceOfIncomeTaxpayer": "1",
       "frm1701MS:txtTaxpayerNo12a": "2",
       "frm1701MS:txtSalesRevenueNo5a": "1000000",
       methodOfDeductionMain: "osd",
@@ -250,8 +253,8 @@ describe("short annual income returns", () => {
       "frm1701MS:txtTaxpayerNo12a": "3",
       "frm1701MS:txtSalesRevenuesFeesANo19a": "500000",
     };
-    expect(calculate1701MS({ ...values, taxCodeDropdown: "II015" })["frm1701MS:txtTaxDueBusinessIncome24A"]).toBe("20000.00");
-    const mixed = calculate1701MS({ ...values, taxCodeDropdown: "II016", "frm1701MS:txtLess22A": "250000" });
+    expect(calculate1701MS({ ...values, "frm1701MS:sourceOfIncomeTaxpayer": "1" })["frm1701MS:txtTaxDueBusinessIncome24A"]).toBe("20000.00");
+    const mixed = calculate1701MS({ ...values, "frm1701MS:sourceOfIncomeTaxpayer": "2", "frm1701MS:txtLess22A": "250000" });
     expect(mixed["frm1701MS:txtLess22A"]).toBe("0.00");
     expect(mixed["frm1701MS:txtTaxDueBusinessIncome24A"]).toBe("40000.00");
   });
@@ -273,9 +276,13 @@ describe("short annual income returns", () => {
   it("does not offset a 1701-MS spouse's payable amount with the other spouse's overpayment", () => {
     const result = calculate1701MS({
       "frm1701MS:txtIfMarried": "1",
+      "frm1701MS:sourceOfIncomeTaxpayer": "1",
       "frm1701MS:txtTaxpayerNo12a": "2",
+      methodOfDeductionMain: "itemized",
       "frm1701MS:txtSalesRevenueNo5a": "400000",
+      "frm1701MS:sourceOfIncomeSpouse": "1",
       "frm1701MS:txtTaxpayerNo12b": "2",
+      methodOfDeductionStandard: "itemized2",
       "frm1701MS:txtCreditableTaxNo3b": "5000",
     });
     expect(result["frm1701MS:txtAggregateAmountPayable30a"]).toBe("22500.00");
@@ -283,6 +290,9 @@ describe("short annual income returns", () => {
 
   it("rejects a combined 1701-MS refund and tax credit certificate", () => {
     const errors = validate1701MS({
+      "frm1701MS:sourceOfIncomeTaxpayer": "1",
+      "frm1701MS:txtTaxpayerNo12a": "2",
+      methodOfDeductionMain: "itemized",
       "frm1701MS:txtCreditableTaxNo3a": "1000",
       "frm1701MS:txtToBeRefunded": "Y",
       "frm1701MS:txtToBeRefunded1": "500",
@@ -294,6 +304,7 @@ describe("short annual income returns", () => {
 
   it("caps the 1701-MS second installment at the outstanding balance and half of tax due", () => {
     const values = {
+      "frm1701MS:sourceOfIncomeTaxpayer": "1",
       "frm1701MS:txtTaxpayerNo12a": "2",
       "frm1701MS:txtSalesRevenueNo5a": "1000000",
       methodOfDeductionMain: "osd",
@@ -305,6 +316,7 @@ describe("short annual income returns", () => {
 
   it("rejects combined 1701-MS receipts above the bundled 8% eligibility threshold", () => {
     const errors = validate1701MS({
+      "frm1701MS:sourceOfIncomeTaxpayer": "1",
       "frm1701MS:txtTaxpayerNo12a": "3",
       "frm1701MS:txtSalesRevenuesFeesANo19a": "2900000",
       "frm1701MS:txtOtherNonOperatingIncomeNo20a": "100001",
@@ -316,6 +328,7 @@ describe("short annual income returns", () => {
     const errors = validate1701MS({
       "frm1701MS:txtYearNo1": "2025",
       "frm1701MS:txtMonthNo1": "06",
+      "frm1701MS:sourceOfIncomeTaxpayer": "1",
       "frm1701MS:txtTaxpayerNo12a": "5",
       "frm1701MS:txtTaxpayerNo16a": "07/01/2025",
       "frm1701MS:txtTaxpayerNo16a1": "06/29/2025",

@@ -107,6 +107,8 @@ describe('individual income tax return integration', () => {
 	it('keeps the 1701A tax result and filing year in the shared return runtime', () => {
 		const values = calculateReturn('1701A', {
 			'frm1701A:txtYear': '2024',
+			'frm1701A:optTaxType': 'S',
+			'frm1701A:optATC': 'II012',
 			'frm1701A:txt36A': '1000000'
 		});
 		expect(getReturnAmount('1701A', values)).toBe('62500.00');
@@ -120,6 +122,7 @@ describe('individual income tax return integration', () => {
 	it('reconciles Form 1701-MS graduated OSD, credits and penalties', () => {
 		const values = calculateReturn('1701MS', {
 			'frm1701MS:txtYearNo1': '2025',
+			'frm1701MS:sourceOfIncomeTaxpayer': '1',
 			'frm1701MS:txtTaxpayerNo12a': '2',
 			'frm1701MS:txtSalesRevenueNo5a': '1000000',
 			'frm1701MS:txtCreditableTaxNo3a': '50000',

@@ -21,6 +21,80 @@ async function expectAmountsAligned(surface: Locator, context: string) {
 	const misaligned = await surface.locator('input[inputmode="decimal"]:visible').evaluateAll(inputs =>
 		inputs.filter(input => !['right', 'end'].includes(getComputedStyle(input).textAlign)).map(input => input.id));
 	expect(misaligned, context).toEqual([]);
+	await expect.poll(() => surface.locator(':is([data-slot="currency-input"] input, .signed-schedule-amount input, input[data-amount-input]):visible').evaluateAll(inputs => {
+		const rem = parseFloat(getComputedStyle(document.documentElement).fontSize);
+		return inputs.flatMap(input => {
+			const style = getComputedStyle(input.parentElement!);
+			const insets = [style.paddingInlineStart, style.paddingInlineEnd, style.paddingBlockStart, style.paddingBlockEnd].map(parseFloat);
+			const minimum = [.75, .75, .375, .375];
+			return insets.some((inset, side) => inset + .1 < minimum[side] * rem) ? [{ id: input.id, insets }] : [];
+		});
+	}), { message: `${context} currency input padding` }).toEqual([]);
+}
+
+async function expectPaymentAmountColumn(form: Locator, code: string, width: number) {
+	const inputSelector = code === '0605'
+		? (width < 768 ? '#computation-of-tax ~ * input[inputmode="decimal"]' : '.basic-tax input[inputmode="decimal"], .penalties > :last-child input[inputmode="decimal"]')
+		: code === '1601EQ' ? '.paper-summary .paper-amount-row input[inputmode="decimal"]'
+		: code.startsWith('0619') ? '.remittance-row input[inputmode="decimal"]'
+		: '.form-paper-part-two > :is(.form-paper-money, [data-computation-item]) input[inputmode="decimal"]';
+	const totalSelector = code === '0605' ? '.payment-total output'
+		: code === '1601EQ' ? '.paper-summary :is(.paper-total-row dd, .paper-final-total .eq-total)'
+		: code.startsWith('0619') ? '.remittance-total output'
+		: '.form-paper-part-two > .form-paper-total output';
+	const inputs = form.locator(`:is(${inputSelector}):visible`);
+	const totals = form.locator(`:is(${totalSelector}):visible`);
+	if (!(await inputs.count()) || !(await totals.count())) return;
+	const edges = [
+		...await inputs.evaluateAll(elements => elements.map(input => ({ id: input.id, right: input.getBoundingClientRect().right }))),
+		...await totals.evaluateAll(elements => elements.map(total => {
+			const text = document.createRange();
+			text.selectNodeContents(total);
+			return { id: total.id || total.parentElement!.textContent?.trim(), right: text.getBoundingClientRect().right };
+		}))
+	];
+	const reference = edges[0].right;
+	expect(edges.filter(edge => Math.abs(edge.right - reference) > 2), `${code} amount column at ${width}px, target ${reference}px`).toEqual([]);
+}
+
+async function expectIncomeAmountColumns(form: Locator, context: string) {
+	const mismatches = await form.locator('.income-editor table.tax-summary:visible').evaluateAll(tables =>
+		tables.flatMap(table => {
+			const columns = new Map<number, { id: string; right: number; editable: boolean }[]>();
+			for (const cell of table.querySelectorAll('tbody td')) {
+				const input = cell.querySelector('[data-slot="currency-input"] input, .signed-schedule-amount input, input[data-amount-input]');
+				const total = cell.querySelector('output') ?? (cell.matches('.summary-value[id]') ? cell : null);
+				if (!input && !total?.textContent?.includes('₱')) continue;
+				const range = document.createRange();
+				if (total) range.selectNodeContents(total);
+				const right = input?.getBoundingClientRect().right ?? range.getBoundingClientRect().right;
+				const column = Math.round(cell.getBoundingClientRect().right);
+				const amounts = columns.get(column) ?? [];
+				amounts.push({ id: (input ?? total)!.id, right, editable: Boolean(input) });
+				columns.set(column, amounts);
+			}
+			return [...columns.values()].flatMap(amounts => {
+				const reference = amounts.find(amount => amount.editable);
+				return reference && amounts.some(amount => !amount.editable) ? amounts.filter(amount => Math.abs(amount.right - reference.right) > 2)
+					.map(amount => ({ field: amount.id, columnReference: reference.id, offset: amount.right - reference.right })) : [];
+			});
+		})
+	);
+	expect(mismatches, context).toEqual([]);
+}
+
+async function expectDrawerAmountColumn(drawer: Locator, context: string) {
+	const edges = await drawer.evaluate(element => {
+		const amounts = [...element.querySelectorAll('[data-slot="currency-input"] input')].map(input => input.getBoundingClientRect().right);
+		const totals = [...element.querySelectorAll('[data-slot="calculated-value"] output')].filter(output => output.textContent?.includes('₱')).map(output => {
+			const text = document.createRange();
+			text.selectNodeContents(output);
+			return text.getBoundingClientRect().right;
+		});
+		return { amounts, totals };
+	});
+	if (!edges.amounts.length || !edges.totals.length) return;
+	expect(edges.totals.filter(right => edges.amounts.every(edge => Math.abs(edge - right) > 2)), context).toEqual([]);
 }
 
 test('preview fixtures cover all implemented return revisions', async ({ page }) => {
@@ -79,7 +153,7 @@ for (const { code, variant } of previewCases) {
 						'frm1701:txtPg1Pt2I34CTC': '00123456', 'frm1701:txtPg1Pt2I35Month': '02/14/2018',
 						'frm1701:txtPg1Pt2I36PlaceOfIssue': 'MAKATI CITY', 'frm1701:txtPg1Pt2I37AmountIfCTC': '125.50' },
 					'1701v2018': { 'frm1701:rdoPg1I7ATC': 'II012', 'frm1701:rdoPg1I21AMethodDeduction': 'OSD', 'frm1701:txtPg2IShed3_8A': '1250000' },
-					'1701A': { 'frm1701A:optATC': 'II012', 'frm1701A:txt36A': '1000000' },
+					'1701A': { 'frm1701A:optTaxType': 'S', 'frm1701A:optATC': 'II012', 'frm1701A:txt36A': '1000000' },
 					'1701MS': { 'frm1701MS:sourceOfIncomeTaxpayer': '3', 'frm1701MS:txtTaxpayerNo12a': '3', 'frm1701MS:txtSalesRevenuesFeesANo19a': '500000' },
 					'1701Q': { 'frm1701q:txt26A': '100000', 'frm1701q:txt27A': '10000' },
 					'1701Qv2018': { 'frm1701q:optATC': 'II012', 'frm1701q:optMethodOfDeduction': 'I', 'frm1701q:txt36A': '400000' }
@@ -160,6 +234,14 @@ for (const { code, variant } of previewCases) {
 			await page.setViewportSize({ width, height: 1000 });
 			await page.goto(`${list}/${code}?return=preview-return`);
 			await expect(form).toBeVisible({ timeout: 20000 });
+			const header = form.locator('.paper-form-header');
+			const title = header.getByRole('heading', { level: 1 });
+			await expect(title).toBeVisible();
+			await expect(title).toHaveCSS('text-align', 'start');
+			await expect.poll(() => header.evaluate(element => element.scrollWidth - element.clientWidth)).toBeLessThanOrEqual(1);
+			await expect(header.getByText('BIR Form No.', { exact: true })).toBeVisible();
+			await expect(header.getByText(/Republika ng Pilipinas|Republic of the Philippines/)).toHaveCount(0);
+			await expect(header.locator('img')).toHaveCount(0);
 			await page.keyboard.press('Escape');
 			await page.evaluate(() => document.fonts.ready);
 			let number = 1;
@@ -193,6 +275,7 @@ for (const { code, variant } of previewCases) {
 				});
 				expect(problems, `${code} page ${number} at ${width}px`).toEqual({ outsideViewport: false, buttonCheckboxes: 0, overflowingControls: [] });
 				await expectAmountsAligned(form, `${code} page ${number} at ${width}px`);
+				if (!code.startsWith('17')) await expectPaymentAmountColumn(form, code, width);
 				if (directory) {
 					await form.screenshot({
 						path: resolve(directory, `editor-${width}-page-${number}.png`), animations: 'disabled',
@@ -203,6 +286,7 @@ for (const { code, variant } of previewCases) {
 					for (const panel of details) (panel as HTMLDetailsElement).open = true;
 				});
 				await expectAmountsAligned(form, `${code} page ${number} with disclosures open at ${width}px`);
+				if (code.startsWith('17')) await expectIncomeAmountColumns(form, `${code} page ${number} amount columns at ${width}px`);
 				const schedules = await form.locator('details.wh-schedule:visible').all();
 				for (const [index, schedule] of schedules.entries()) {
 					if ((await schedule.getAttribute('open')) === null) await schedule.locator('summary').click();
@@ -213,6 +297,7 @@ for (const { code, variant } of previewCases) {
 					const drawer = page.getByRole('dialog');
 					await expect(drawer).toBeVisible();
 					await expectAmountsAligned(drawer, `${code} page ${number} schedule ${index + 1} at ${width}px`);
+					await expectDrawerAmountColumn(drawer, `${code} page ${number} schedule ${index + 1} amount column at ${width}px`);
 					if (directory && withholdingPages[code]) {
 						await drawer.screenshot({ path: resolve(directory, `editor-${width}-page-${number}-schedule-${index + 1}.png`), animations: 'disabled' });
 					}

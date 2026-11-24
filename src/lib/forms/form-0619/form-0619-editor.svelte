@@ -80,7 +80,7 @@
 
 <div class="paper-sheet">
 	<PaperFormHeader number={finalTax ? '0619-F' : '0619-E'} revision="January 2018" title="Monthly Remittance Form"
-		subtitle={finalTax ? 'of Final Income Taxes Withheld' : 'of Creditable Income Taxes Withheld (Expanded)'} englishAgency />
+		subtitle={finalTax ? 'of Final Income Taxes Withheld' : 'of Creditable Income Taxes Withheld (Expanded)'} />
 
 	<section class={['remittance-period', { 'final-tax': finalTax }]} aria-label="Return period">
 		<div class="period-cell">
@@ -169,7 +169,7 @@
 		font-size: .875rem;
 		font-weight: 600;
 	}
-	.remittance-total output { text-align: end; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+	.remittance-total output { margin-inline-end: var(--paper-amount-inset); text-align: end; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 	.final { border-bottom: 0; background: var(--bg-hover); }
 	.final output { font-size: 1.125rem; }
 	.remittance-feedback { margin: 0; padding: .75rem .875rem; border-top: 1px solid var(--border); }

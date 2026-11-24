@@ -248,7 +248,7 @@
 
 <div class="paper-sheet wh-preparation" bind:this={paper}>
 	<PaperFormHeader number={layout.number} title={layout.title} subtitle={layout.subtitle}
-		revision={layout.revision} englishAgency={layout.englishAgency} />
+		revision={layout.revision} />
 
 	<div data-return-page="1" hidden={current !== '1'}>
 	{#if supporting.length}
@@ -437,7 +437,7 @@
 		font-weight: 600;
 	}
 	.form-paper-total.numbered { grid-template-columns: 1.75rem minmax(0, 1fr) fit-content(48%); }
-	.form-paper-total output { min-width: 0; text-align: end; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+	.form-paper-total output { min-width: 0; margin-inline-end: var(--paper-amount-inset); text-align: end; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 	.final-total { background: var(--bg-hover); }
 	.final-total output { font-size: 1.125rem; }
 	.fixed-atc { margin: 0; font-size: .875rem; }
@@ -455,7 +455,7 @@
 	.form-paper-field :global([data-slot="form-item"]:has(input[placeholder="000-000-000-00000"])) { max-inline-size: 19rem; }
 	.form-paper-field :global([data-slot="currency-input"]),
 	.form-paper-field :global([data-slot="date-input"]) { max-inline-size: 18rem; }
-	.form-paper-money :global([data-slot="currency-input"]) { max-inline-size: none; }
+	:is(.form-paper-money, .computation-item-inputs) :global([data-slot="currency-input"]) { max-inline-size: none; }
 
 	@container paper-form (min-width: 36rem) {
 		.form-paper-grid > .form-paper-field { flex-basis: calc((100% - 1px) / 2); }

@@ -214,7 +214,7 @@
 		font-size: .875rem;
 		font-weight: 600;
 	}
-	.payment-total output { text-align: end; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+	.payment-total output { margin-inline-end: var(--paper-amount-inset); text-align: end; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 	.payment-total.final { background: var(--bg-hover); }
 	.payment-total.final output { font-size: 1.125rem; }
 	.payment-feedback { margin: 0; padding: .75rem .875rem; border-top: 1px solid var(--border); }

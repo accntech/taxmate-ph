@@ -1,6 +1,8 @@
 import type { IncomeForm } from '.';
 import { legacy1700IncomeSourceChecked } from './compensation';
 import { calculateIndividualIncome, incomeOutputValues } from '.';
+import { incomeIncludesSpouse } from './profile-fields';
+import { is1701MSOverpaymentSelected, overpaymentOptions1701MS } from './form-1701ms-overpayment';
 import sourceStyles from './templates/source-layout.css?raw';
 import paginationStyles from '../printing/withholding-print.css?raw';
 import paperStyles from './paper.css?raw';
@@ -58,8 +60,19 @@ export function renderIncomePrintChoices(root: ParentNode, form: IncomeForm): vo
 }
 
 export function hasActivityAttachment(form: IncomeForm, values: Record<string, string>): boolean {
-	return form.code === '1701' ? ['22IncomeExempt', '23IncomeSpecial'].some(item => values['frm1701:rdoPg1Pt1I' + item] === 'Yes') :
-		form.code === '1701v2018' && ['19IncomeExempt', '20IncomeSpecial'].some(item => values['frm1701:rdoPg1I' + item] === 'Yes');
+	if (form.code !== '1701' && form.code !== '1701v2018') return false;
+
+	const june = form.code === '1701';
+	const taxpayerElections = june
+		? ['rdoPg1Pt1I22IncomeExempt', 'rdoPg1Pt1I23IncomeSpecial']
+		: ['rdoPg1I19IncomeExempt', 'rdoPg1I20IncomeSpecial'];
+	const spouseElections = june
+		? ['rdoPg4Pt7I107YesNo', 'rdoPg4Pt7I108YesNo']
+		: ['rdoPg2I10IncomeExempt', 'rdoPg2I11IncomeSpecial'];
+	const selected = (election: string) => values['frm1701:' + election] === 'Yes';
+
+	return taxpayerElections.some(selected) ||
+		(incomeIncludesSpouse(form.code, values) && spouseElections.some(selected));
 }
 
 export function visiblePaperPages(root: ParentNode, form: IncomeForm, values: Record<string, string>): HTMLElement[] {
@@ -93,9 +106,10 @@ export function renderIndividualIncomeValues(root: ParentNode, form: IncomeForm,
 			control.checked = control.value === value;
 			control.disabled = readonly;
 		} else if (control instanceof HTMLInputElement && control.type === 'checkbox') {
-			control.checked = form.code === '1700' && /^frm1700:SourceOfIncome_[12]$/.test(key)
-				? legacy1700IncomeSourceChecked(key, value)
-				: control.dataset.incomeChoice ? control.value === value : ['Y', '1', 'true', 'on'].includes(value);
+			const disposition = form.code === '1701MS' ? overpaymentOptions1701MS.find(option => option.choice === key) : undefined;
+			if (disposition) control.checked = is1701MSOverpaymentSelected(disposition, calculated);
+			else if (form.code === '1700' && /^frm1700:SourceOfIncome_[12]$/.test(key)) control.checked = legacy1700IncomeSourceChecked(key, value);
+			else control.checked = control.dataset.incomeChoice ? control.value === value : ['Y', '1', 'true', 'on'].includes(value);
 			control.disabled = readonly;
 		} else if (control instanceof HTMLSelectElement) {
 			if (control.value !== value) control.value = value;

@@ -23,6 +23,7 @@ describe('1701A inactive filing selections', () => {
 	it('uses the rate implied by an ATC even when an older draft retained another rate', () => {
 		const draft = {
 			'frm1701A:txtYear': '2025',
+			'frm1701A:optTaxType': 'S',
 			'frm1701A:optATC': 'II015',
 			'frm1701A:optTaxRate': 'G',
 			'frm1701A:txt36A': '1000000',

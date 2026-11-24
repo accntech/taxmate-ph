@@ -147,7 +147,7 @@
 	.paper-total-row { margin: 0; font-size: .875rem; }
 	.paper-total-row > div { display: grid; grid-template-columns: minmax(0, 1fr) fit-content(48%); gap: .75rem; align-items: baseline; padding: .75rem .875rem; border-bottom: 1px solid var(--border); }
 	.paper-total-row dt { display: grid; grid-template-columns: 1.5rem minmax(0, 1fr); gap: .375rem; }
-	.paper-total-row dd { margin: 0; text-align: end; font-weight: 600; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+	.paper-total-row dd { margin: 0; margin-inline-end: var(--paper-amount-inset); text-align: end; font-weight: 600; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 	.paper-amount-row { display: grid; grid-template-columns: 1.5rem minmax(0, 1fr); gap: .375rem; min-width: 0; padding: .75rem .875rem; border-top: 1px solid var(--border-soft); }
 	.paper-amount-row > .paper-item-number { padding-top: .125rem; }
 	.paper-disclosure { border-bottom: 1px solid var(--border); }
@@ -155,7 +155,7 @@
 	.paper-disclosure[open] > summary { margin-bottom: 0; }
 	.paper-final-total { padding: .875rem; border-top: 0; background: var(--bg-hover); }
 	.paper-final-total > p:first-child { display: grid; grid-template-columns: 1.5rem minmax(0, 1fr); gap: .375rem; color: var(--fg); font-size: .875rem; font-weight: 650; }
-	.paper-final-total .eq-total { font-size: 1.125rem; letter-spacing: 0; }
+	.paper-final-total .eq-total { margin-inline: auto var(--paper-amount-inset); text-align: end; font-size: 1.125rem; letter-spacing: 0; }
 	.paper-feedback, .paper-overpayment { padding: .875rem; border-top: 1px solid var(--border); }
 	@container paper-form (min-width: 36rem) {
 		.paper-period { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -174,12 +174,13 @@
 		.paper-period-field:last-child { grid-column: auto; border-right: 0; }
 	}
 	@container return-workspace (max-width: 28rem) {
-		.paper-period-field, .paper-amount-row { padding: .625rem .75rem; }
-		.paper-period-field :global([data-slot="form-item"] > div:has(> input)),
-		.paper-amount-row :global([data-slot="form-item"] > div:has(> input)) {
+		.paper-period-field { padding: .625rem .75rem; }
+		.paper-amount-row { padding-block: .625rem; }
+		.paper-period-field :global([data-slot="form-item"] > div:has(> input)) {
 			min-height: 38px;
 			padding-block: .25rem;
 		}
+		.paper-amount-row :global([data-slot="form-item"] > div:has(> input)) { min-height: 38px; }
 		.paper-disclosure > summary,
 		.paper-period-field :global([role="combobox"]),
 		.paper-overpayment :global([role="combobox"]) { min-height: 38px; }

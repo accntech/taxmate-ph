@@ -20,6 +20,10 @@ describe('TIN input', () => {
 		expect(formatTinValue('12345678900')).toBe('123-456-789-00');
 		expect(formatTinValue('')).toBe('');
 	});
+	it('keeps later segments in position when a saved TIN is incomplete', () => {
+		const { body } = render(TinInput, { props: { value: '001--003-00007', preserveSegments: true } });
+		expect(body).toContain('value="001--003-00007"');
+	});
 	it('renders a labeled numeric text field with leading zeros and validation', () => {
 		const { body } = render(TinInput, { props: {
 			id: 'tin', label: 'TIN and branch code', value: '0010020030004', error: 'Check this TIN.'

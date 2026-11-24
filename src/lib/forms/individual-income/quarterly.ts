@@ -43,6 +43,12 @@ export function quarterlyRateForAtc(atc: string): 'Graduated' | 'Percentage' | '
  return undefined;
 }
 
+export function quarterlyTaxReliefPatch(values: Values, id: string, value: string): Values | undefined {
+ if (id === field('j_id217')) return { [id]: value, [field('txtTaxRelief25')]: value === 'Y' ? '1' : '0' };
+ if (id === field('txtTaxRelief25')) return { [id]: values[field('j_id217')] === 'Y' ? value : '0' };
+ return undefined;
+}
+
 const compensationOnlySpouse = (values: Values) => values[field('optSpouseType_3')] === 'Compensation' &&
  !values[field('optSpouseType_1')] && !values[field('optSpouseType_2')];
 const quarterlyAtc = (values: Values, spouse: boolean) => {
@@ -50,8 +56,18 @@ const quarterlyAtc = (values: Values, spouse: boolean) => {
  if (!spouse && estateOrTrust(values)) return 'II012';
  return values[field(spouse ? 'optSpouseATC' : 'optATC')] ?? '';
 };
-const quarterlyRate = (values: Values, spouse: boolean) => quarterlyRateForAtc(quarterlyAtc(values, spouse)) ??
- values[field(spouse ? 'optSpouseTaxRate' : 'optTaxRate')];
+export function quarterlySelectedRate(values: Values, spouse: boolean) {
+ const atc = quarterlyAtc(values, spouse);
+ return !spouse && atc === 'II011' ? undefined : quarterlyRateForAtc(atc);
+}
+
+export function quarterlyFilerReady(values: Values, spouse: boolean): boolean {
+ if (spouse && !quarterlyIncludesSpouse('1701Qv2018', values)) return false;
+ const rate = quarterlySelectedRate(values, spouse);
+ const method = values[field(spouse ? 'optSpouseMethod' : 'optMethodOfDeduction')];
+ return rate === 'Percentage' || (spouse && rate === '') ||
+  (rate === 'Graduated' && (method === 'I' || method === 'O'));
+}
 const spouseTaxApplies = (values: Values) => quarterlyIncludesSpouse('1701Qv2018', values) && quarterlyAtc(values, true) !== 'II011';
 // Older drafts may have a credit with no choice saved. An explicit No excludes it.
 const foreignCreditApplies = (values: Values, spouse: boolean) => values[field(spouse ? 'optSpouseForeignTaxCred' : 'optForeignTaxCredits')] !== 'N';
@@ -80,11 +96,12 @@ export function quarterlyIncomeFieldApplies(code: string, id: string, values: Va
  if (name === 'txtSpouseForeignTaxNum') return foreignCreditApplies(values, true);
  if (name === 'txt43Desc' || name === 'txt48Desc') {
   const rate = name === 'txt43Desc' ? 'Graduated' : 'Percentage';
-  return quarterlyRate(values, false) === rate || (spouseTaxApplies(values) && quarterlyRate(values, true) === rate);
+  return quarterlySelectedRate(values, false) === rate || (spouseTaxApplies(values) && quarterlySelectedRate(values, true) === rate);
  }
- if (name === 'optSpouseTaxRate') return spouseTaxApplies(values);
- if (name === 'optSpouseMethod') return spouseTaxApplies(values) && quarterlyRate(values, true) === 'Graduated';
- if (name === 'optMethodOfDeduction') return quarterlyRate(values, false) === 'Graduated';
+ if (name === 'optTaxRate') return !!quarterlySelectedRate(values, false);
+ if (name === 'optSpouseTaxRate') return spouseTaxApplies(values) && !!quarterlySelectedRate(values, true);
+ if (name === 'optSpouseMethod') return spouseTaxApplies(values) && quarterlySelectedRate(values, true) === 'Graduated';
+ if (name === 'optMethodOfDeduction') return quarterlySelectedRate(values, false) === 'Graduated';
  const item = name.match(/^txt(\d+)([AB])$/);
  if (!item) return true;
  const number = Number(item[1]);
@@ -93,7 +110,7 @@ export function quarterlyIncomeFieldApplies(code: string, id: string, values: Va
  if (spouse && number >= 36 && number <= 68 && !spouseTaxApplies(values)) return false;
  if (number === 59) return amending(values);
  if (number === 60) return foreignCreditApplies(values, spouse);
- const rate = quarterlyRate(values, spouse);
+ const rate = quarterlySelectedRate(values, spouse);
  if (number >= 36 && number <= 46) {
   const method = values[field(spouse ? 'optSpouseMethod' : 'optMethodOfDeduction')];
   if (number === 37 || number === 39) return rate === 'Graduated' && method === 'I';
@@ -110,6 +127,11 @@ export function quarterlyIncomeFieldApplies(code: string, id: string, values: Va
 export function calculateQuarterly(code: string, values: Values): Values {
  const result = { ...values };
  const revised = code === '1701Qv2018';
+ if (!revised) {
+  result[field('txtTaxRelief25')] = values[field('j_id217')] === 'Y'
+   ? ['1', '2'].includes(values[field('txtTaxRelief25')]) ? values[field('txtTaxRelief25')] : '1'
+   : '0';
+ }
  const includesSpouse = quarterlyIncludesSpouse(code, values);
  const read = (name: string) => !revised && !includesSpouse && legacySpouseField(name) ? 0 : amount(result, name);
  const write = (name: string, value: number) => { result[field(name)] = money(revised ? wholePeso(value) : Number(value.toFixed(2))); };
@@ -137,12 +159,15 @@ export function calculateQuarterly(code: string, values: Values): Values {
    write('txt41' + person, read('txt39' + person) + penalties);
    continue;
   }
-  const rate = quarterlyRate(values, spouse);
+  const rate = quarterlySelectedRate(values, spouse);
   const deduction = values[field(spouse ? 'optSpouseMethod' : 'optMethodOfDeduction')];
   const atc = quarterlyAtc(values, spouse);
-  if (atc) result[field(spouse ? 'optSpouseATC' : 'optATC')] = atc;
-  if (rate !== undefined) result[field(spouse ? 'optSpouseTaxRate' : 'optTaxRate')] = rate;
+  if (!spouse || includesSpouse) {
+   if (atc) result[field(spouse ? 'optSpouseATC' : 'optATC')] = atc;
+   if (rate !== undefined) result[field(spouse ? 'optSpouseTaxRate' : 'optTaxRate')] = rate;
+  }
   const canCalculate = !spouse || spouseTaxApplies(values);
+  const ready = quarterlyFilerReady(values, spouse);
   const graduated = canCalculate && rate === 'Graduated';
   const percentage = canCalculate && rate === 'Percentage';
   if (graduated) {
@@ -152,7 +177,8 @@ export function calculateQuarterly(code: string, values: Values): Values {
    const deductions = deduction === 'O' ? read('txt40' + person) : deduction === 'I' ? read('txt39' + person) : 0;
    write('txt41' + person, read('txt38' + person) - deductions);
    write('txt45' + person, [41, 42, 43, 44].reduce((total, item) => total + read('txt' + item + person), 0));
-   write('txt46' + person, graduatedTax(read('txt45' + person), read('txtYear')));
+   if (ready) write('txt46' + person, graduatedTax(read('txt45' + person), read('txtYear')));
+   else result[field('txt46' + person)] = '';
   } else {
    for (const item of [38, 40, 41, 45, 46]) write('txt' + item + person, 0);
   }
@@ -178,9 +204,14 @@ export function calculateQuarterly(code: string, values: Values): Values {
   write('txt28' + person, read('txt63' + person));
   write('txt29' + person, read('txt67' + person));
   write('txt30' + person, read('txt68' + person));
+  if (canCalculate && !ready) {
+   for (const item of [26, 28, 30, 63, 68]) result[field('txt' + item + person)] = '';
+  }
  }
  if (revised) {
-  write('txt31', read('txt30A') + read('txt30B'));
+  if (quarterlyFilerReady(values, false) && (!includesSpouse || quarterlyFilerReady(values, true))) {
+   write('txt31', read('txt30A') + read('txt30B'));
+  } else result[field('txt31')] = '';
   for (const name of ['TIN1', 'TIN2', 'TIN3', 'BranchCode', 'TaxpayerName']) result[field('txtPg2' + name)] = values[field('txt' + name)] ?? '';
  } else write('txt41C', read('txt41A') + read('txt41B'));
  return result;
@@ -249,15 +280,15 @@ export function validateQuarterly(code: string, values: Values): Values {
   if (person === 'B' && !spouse) continue;
   const spousePerson = person === 'B';
   const atcName = spousePerson ? 'optSpouseATC' : 'optATC';
-  const rateName = spousePerson ? 'optSpouseTaxRate' : 'optTaxRate';
   const methodName = spousePerson ? 'optSpouseMethod' : 'optMethodOfDeduction';
   const atc = quarterlyAtc(values, spousePerson);
   const rates = ['II012', 'II014', 'II013', 'II015', 'II017', 'II016'];
-  if (!(spousePerson ? [...rates, 'II011'] : rates).includes(atc)) errors[field(atcName)] = 'Select the ATC.';
   if (spousePerson && !['1', '2', '3'].some(index => values[field('optSpouseType_' + index)])) errors[field('optSpouseType_1')] = 'Select the spouse taxpayer type.';
-  if (atc === 'II011') continue;
-  const rate = quarterlyRate(values, spousePerson);
-  if (!['Graduated', 'Percentage'].includes(rate)) errors[field(rateName)] = 'Select the tax rate regime.';
+  if (!(spousePerson ? [...rates, 'II011'] : rates).includes(atc)) {
+   errors[field(atcName)] = 'Select the ATC.';
+   continue;
+  }
+  const rate = quarterlySelectedRate(values, spousePerson);
   if (rate === 'Graduated') select(methodName, ['I', 'O'], 'the deduction method');
   const subtraction = amount(values, 'txt52' + person);
   if (rate === 'Percentage' && atc !== 'II016' && (subtraction < 0 || subtraction > 250000)) {

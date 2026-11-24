@@ -300,16 +300,15 @@ for (const width of [1440, 390]) {
   await create(page, '0605');
   const title = page.getByRole('heading', { name: 'Payment Form', exact: true });
   const header = title.locator('..');
-  await expect(header.getByText('Kawanihan ng Rentas Internas', { exact: true })).toBeVisible();
+  await expect(header.getByText('Kawanihan ng Rentas Internas', { exact: true })).toHaveCount(0);
   const titleBox = (await title.boundingBox())!;
-  const headerBox = (await header.boundingBox())!;
-  expect(Math.abs(titleBox.x + titleBox.width / 2 - headerBox.x - headerBox.width / 2)).toBeLessThan(1);
-  await expect(title).toHaveCSS('text-align', 'center');
-  const numberBox = (await header.getByText('0605', { exact: true }).boundingBox())!;
+  await expect(title).toHaveCSS('text-align', 'start');
+  const numberBox = (await header.locator('.form-number').boundingBox())!;
   if (width === 1440) {
    expect(numberBox.x).toBeGreaterThanOrEqual(titleBox.x + titleBox.width - 1);
   } else {
    expect(numberBox.y).toBeGreaterThanOrEqual(titleBox.y + titleBox.height - 1);
+   expect(Math.abs(numberBox.x - titleBox.x)).toBeLessThan(1);
   }
   const period = page.getByRole('region', { name: 'Return period' });
   const background = page.getByRole('region', { name: 'Taxpayer information' });
