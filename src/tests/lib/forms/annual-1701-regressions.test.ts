@@ -1,12 +1,64 @@
 import { describe, expect, it } from "vitest";
 import { calculateAnnual, validateAnnual } from "../../../lib/forms/individual-income/annual";
 import { getReturnExportValues } from "../../../lib/forms/form-runtime";
+import { getIndividualIncomeForm } from "../../../lib/forms/individual-income";
+import { incomeEditorFields } from "../../../lib/forms/individual-income/editor-layout";
+import { validate1701ScheduleRow } from "../../../lib/forms/individual-income/annual-1701-schedule-validation";
 
 const p = "frm1701:";
 const values = (fields: Record<string, string>) =>
   Object.fromEntries(Object.entries(fields).map(([name, value]) => [p + name, value]));
 
 describe("Form 1701 filing transitions", () => {
+  it("uses the calculated current-year loss when validating an application", () => {
+    const code = "1701v2018";
+    const scheduleFields = incomeEditorFields(getIndividualIncomeForm(code)!)
+      .filter(field => field.id.startsWith(p + "txtPg3IShed6_7"));
+    const draft = values({
+      txtPg1I1Year: "2025",
+      txtPg2IShed3_8A: "900",
+      txtPg3IShed4_1A: "1500",
+      txtPg3IShed6_7A: "1200",
+      txtPg3IShed6_7D: "700",
+    });
+    expect(validate1701ScheduleRow({
+      code, fields: scheduleFields, scheduleFields, values: draft, calculated: calculateAnnual(code, draft), adding: false,
+    })).toEqual(values({
+      txtPg3IShed6_7D: "Applied and expired amounts together cannot exceed the net operating loss.",
+    }));
+  });
+
+  it("exports January operating losses separately for each filer and retains sparse draft amounts", () => {
+    const joint = values({
+      rdoPg1I16CivilStatus: "Married",
+      rdoPg1I17SpouseIncome: "Yes",
+      rdoPg1I18FilingStatus: "Joint",
+      rdoPg1I7ATC: "II012",
+      rdoPg2I4ATC: "II012",
+      txtPg2IShed3_8A: "1000",
+      txtPg2IShed3_9A: "100",
+      txtPg3IShed4_1A: "1500",
+      txtPg2IShed3_8B: "1200",
+      txtPg3IShed4_1B: "1000",
+      txtPg3IShed6_7D: "100",
+    });
+    const exported = getReturnExportValues("1701v2018", joint);
+    expect(exported).toMatchObject(values({
+      txtPg3IShed6_1A: "900.00",
+      txtPg3IShed6_2A: "1500.00",
+      txtPg3IShed6_3A: "-600.00",
+      txtPg3IShed6_7A: "600.00",
+      txtPg3IShed6_7E: "500.00",
+      txtPg3IShed6_8D: "100.00",
+      txtPg3IShed6_3B: "200.00",
+      txtPg4IShed6_12A: "0.00",
+    }));
+
+    const sparse = calculateAnnual("1701v2018", values({ txtPg3IShed6_7A: "250" }));
+    expect(sparse[p + "txtPg3IShed6_7A"]).toBe("250");
+    expect(sparse[p + "txtPg3IShed6_7E"]).toBe("250.00");
+  });
+
   it("exports only the active identification fields and an applicable overpayment choice", () => {
     const data = values({
       rdoPg1I34CTCGovID: p + "rdoPg1I34GovID", txtPg1Pt2I34CTC: "ID00012",

@@ -3,17 +3,21 @@
 	import { getTinDigits, splitTinSegments } from '$lib/components/ui/tin-input/tin';
 	import { Button, ButtonLink, CalculatedValue, CheckboxInput, CurrencyInput, DateInput, FieldErrors, Input, Label, NumberInput, RadioGroup, Select, TinInput } from '$lib/components/ui';
 	import Icon from '$lib/components/ui/icon/icon.svelte';
+	import { Sheet } from '$lib/components/ui/sheet';
+	import BillList from '@solar-icons/svelte/category/money/Linear/BillList.svelte';
 	import { glyphs } from '$lib/components/ui/icons';
 	import { annualFilingFields, calculateIndividualIncome, incomeAmountDecimals, incomePaymentFieldIds, individualIncomePeriod, isShortFilingPeriod, type IncomeForm } from '.';
 	import { annual1701AScheduleLabels, annual1701ASchedules, incomeChoiceLabel, incomeEditorFields, incomeEditorPageTitle, incomeEditorRowGroups, incomeEditorRows, legacyQuarterlyComputation, type IncomeEditorField } from './editor-layout';
 	import { legacy1700DependentClaim, legacy1700FirstYear, legacy1700IncomeSourceChecked, legacy1700LastYear, revised1700FieldApplies } from './compensation';
 	import { quarterlyFilerReady, quarterlyIncomeFieldApplies, quarterlyRateForAtc, quarterlySelectedRate, quarterlyTaxReliefPatch } from './quarterly';
 	import { annualFieldApplies, legacy1701Filing, legacy1701IsOverpaid, revised1701RateForAtc } from './annual';
+	import { allowsSignedScheduleAmount, is1701CurrentLoss, validate1701ScheduleRow } from './annual-1701-schedule-validation';
 	import { annual1701ReferenceOwner, annual1701References } from './annual-1701-references';
 	import { january1700References } from './annual-1700-january-references';
 	import { june1700References } from './annual-1700-june-references';
 	import { annual1701AAtcOptions, annual1701AElectionPatch, annual1701AFilerRate, annual1701MSFilerReady, annual1701MSFilerRegime, shortAnnualFieldApplies } from './annual-short';
 	import Annual1701AIncomeDetail from './annual-1701a-income-detail.svelte';
+	import { msSpecialDeductionFields, msSpecialDeductionId, msSpecialDeductionIndices } from './annual-1701ms-special-deductions';
 	import Form1701MSOverpayment from './form-1701ms-overpayment.svelte';
 	import { clear1701MSOverpayment, has1701MSOverpayment, is1701MSOverpaymentField } from './form-1701ms-overpayment';
 	import { hasActivityAttachment } from './paper';
@@ -39,6 +43,10 @@
 	let addedSupplementalEntries = $state<string[]>([]);
 	let scheduleOpen = $state<Record<string, boolean>>({});
 	let msRepresentativeOpen = $state<boolean>();
+	let deductionDrawer = $state<{ title: string; item?: string; adding: boolean }>();
+	let deductionDraft = $state<Record<string, string>>({});
+	let deductionValidationAttempted = $state(false);
+	let deductionOpener: HTMLElement | undefined;
 	let heading: HTMLHeadingElement;
 	let editor: HTMLDivElement;
 	const fields = $derived(incomeEditorFields(form));
@@ -158,6 +166,36 @@
 		else groups.push({ title: field.section, fields: [field] });
 		return groups;
 	}, []));
+	const msSpecialDeductionSchedules = $derived(microSmall ? visibleFields.filter(field =>
+		/^frm1701MS:txtSpecialAllowableNo10[ab]$/.test(field.id)
+	).map(aggregate => {
+		const spouse = aggregate.person === 'spouse';
+		const title = `Item 10B · Special deductions · ${spouse ? 'Spouse' : 'Taxpayer'}`;
+		const existing = msSpecialDeductionIndices(values, spouse);
+		const legacyAmount = values[aggregate.id] ?? '';
+		const preserveAmount = !existing.length && Number(legacyAmount.replaceAll(',', '')) > 0;
+		const next = existing.length ? existing[existing.length - 1] + 1 : 0;
+		const fields = [...existing, next].flatMap(index => msSpecialDeductionFields(aggregate, title, index));
+		const legacyPrefill = preserveAmount ? { [msSpecialDeductionId(spouse, 'Amount', 0)]: legacyAmount } : undefined;
+		return { title, fields, legacyPrefill };
+	}) : []);
+	const deductionSchedule = $derived(
+		groups.find(group => group.title === deductionDrawer?.title) ??
+		msSpecialDeductionSchedules.find(group => group.title === deductionDrawer?.title)
+	);
+	const deductionCandidate = $derived({ ...values, ...deductionDraft });
+	const draftDeductions = $derived(deductionSchedule ? calculateIndividualIncome(form, deductionCandidate) : calculated);
+	const deductionErrors = $derived.by(() => {
+		if (!deductionValidationAttempted || !deductionSchedule || !deductionDrawer) return {};
+		const scheduleFields = deductionSchedule.fields;
+		const rows = incomeEditorRows(scheduleFields.filter(field => !isDeductionDrawerTotal(field)));
+		return Object.assign({}, ...rows.filter(row => !deductionDrawer?.item || row.item === deductionDrawer.item).map(row =>
+			validate1701ScheduleRow({
+				code: form.code, fields: row.fields, scheduleFields, values: deductionCandidate,
+				calculated: draftDeductions, adding: deductionDrawer?.adding ?? false
+			})
+		)) as Record<string, string>;
+	});
 	const decimals = $derived(incomeAmountDecimals(form));
 	const currency = $derived(new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP', minimumFractionDigits: decimals, maximumFractionDigits: decimals }));
 	const schedulePeople = $derived(includesSpouse ? ['taxpayer', 'spouse'] as const : ['taxpayer'] as const);
@@ -339,9 +377,101 @@
 		return true;
 	}
 
+	function isDeductionDrawerField(field: IncomeEditorField) {
+		return fullAnnual && /^frm1701:txt(?:Pg[34]IShed[56]_|Pg8Sc[78][ABI])/.test(field.id);
+	}
+
+	function isDeductionDrawerTotal(field: IncomeEditorField) {
+		return /^frm1701:txt(?:Pg[34]IShed(?:5_[36]|6_(?:3[AB]|(?:8|13)D))|Pg8Sc(?:7I5(?:TaxPayer|Spouse)|8[AB](?:I3NetOperatingLoss|1I8TotalNOLCO)))$/.test(field.id);
+	}
+
+	function isDeductionDrawerBalance(field: IncomeEditorField) {
+		return is1701CurrentLoss(field.id) || /^frm1701:txt(?:Pg[34]IShed6_\d+E|Pg8Sc8[AB]1I[4-7]NetOperatingLoss)$/.test(field.id);
+	}
+
+	function isOperatingLossComputation(field: IncomeEditorField) {
+		return /^frm1701:txt(?:Pg3IShed6_[1-3][AB]|Pg8Sc8[AB]I[1-3])/.test(field.id);
+	}
+
+	function isAutofilledOperatingLoss(field: IncomeEditorField) {
+		return form.code === '1701v2018' && isOperatingLossComputation(field);
+	}
+
+	function formatScheduleAmount(value: string | undefined) {
+		return currency.format(Number((value || '0').replaceAll(',', '')));
+	}
+
+	function deductionRowHasEntry(row: ReturnType<typeof incomeEditorRows>[number]) {
+		return row.fields.some(field => isDeductionDrawerBalance(field)
+			? !!errors[field.id] || Number((calculated[field.id] || '0').replaceAll(',', '')) !== 0
+			: hasScheduleEntry(field));
+	}
+
+	function deductionDrawerOpener(title: string, item?: string) {
+		const index = groups.findIndex(group => group.title === title);
+		const section = index >= 0 ? editor.querySelector<HTMLElement>(`[data-section-index="${index}"]`) :
+			editor.querySelector<HTMLElement>(`[data-ms-deduction="${title}"]`);
+		return section?.querySelector<HTMLElement>(`[data-schedule-edit="${item ?? ''}"]`) ??
+			section?.querySelector<HTMLElement>('[data-schedule-add]') ?? section;
+	}
+
+	async function openDeductionDrawer(title: string, trigger: HTMLElement, item?: string, adding = false, targetId?: string) {
+		trigger.focus({ preventScroll: true });
+		deductionOpener = trigger;
+		const legacyPrefill = adding ? msSpecialDeductionSchedules.find(schedule => schedule.title === title)?.legacyPrefill : undefined;
+		deductionDraft = { ...legacyPrefill };
+		deductionValidationAttempted = false;
+		deductionDrawer = { title, item, adding };
+		await focusDeductionDrawer(targetId);
+	}
+
+	async function focusDeductionDrawer(targetId?: string) {
+		await tick();
+		const dialog = editor.querySelector<HTMLDialogElement>('dialog[open]');
+		if (!dialog) return;
+		await Promise.all(dialog.getAnimations().map(animation => animation.finished.catch(() => {})));
+		if (!dialog.open) return;
+		const target = targetId ? document.getElementById(targetId) : dialog.querySelector<HTMLElement>('.schedule-drawer-details input');
+		if (target && dialog.contains(target)) {
+			if (!target.matches('input, button, select, textarea')) target.tabIndex = -1;
+			target.focus({ preventScroll: true });
+			target.scrollIntoView({ block: 'nearest', behavior: 'instant' });
+		}
+	}
+
+	async function closeDeductionDrawer(apply = false) {
+		const drawer = deductionDrawer;
+		if (!drawer) return;
+		if (apply) {
+			deductionValidationAttempted = true;
+			const invalidId = deductionSchedule?.fields.find(field => deductionErrors[field.id])?.id;
+			if (invalidId) {
+				await focusDeductionDrawer(invalidId);
+				return;
+			}
+			if (Object.keys(deductionDraft).length) onvaluechange(deductionDraft);
+		}
+		deductionDrawer = undefined;
+		deductionDraft = {};
+		await tick();
+		const trigger = !apply && deductionOpener?.isConnected ? deductionOpener : deductionDrawerOpener(drawer.title, drawer.item);
+		trigger?.focus({ preventScroll: true });
+	}
+
 	async function showPage(page: string, fieldId?: string) {
+		const destination = fieldId ? fieldsById.get(fieldId) : undefined;
+		const drawerField = destination && isDeductionDrawerField(destination) && !isDeductionDrawerTotal(destination) && !isAutofilledOperatingLoss(destination) ? destination : undefined;
+		const item = drawerField && !isOperatingLossComputation(drawerField) ? drawerField.item : undefined;
 		currentPage = page;
 		await tick();
+		if (drawerField) {
+			const trigger = deductionDrawerOpener(drawerField.section, item);
+			if (trigger) {
+				trigger.scrollIntoView({ block: 'nearest', behavior: 'instant' });
+				await openDeductionDrawer(drawerField.section, trigger, item, false, fieldId);
+				return;
+			}
+		}
 		const targetId = fieldId && groupedSpouseTin.includes(fieldId) ? groupedSpouseTin[0] : fieldId?.replace(/(PartVIEmployer)(?:TIN[23]|BranchCode)$/, '$1TIN1')
 			.replace(/EMPTIN(?:[23]|BranchCode)$/, 'EMPTIN1')
 			.replace(/Sc1I([1-4])EmpTIN[234]C1$/, 'Sc1I$1EmpTIN1C1')
@@ -387,7 +517,7 @@
 			summary.click();
 			await tick();
 		}
-		(summary ?? section)?.focus({ preventScroll: true });
+		(summary ?? section?.querySelector<HTMLElement>('[data-schedule-edit], [data-schedule-add]') ?? section)?.focus({ preventScroll: true });
 		section?.scrollIntoView({ block: 'start' });
 	}
 
@@ -600,6 +730,119 @@
 		onchange={(value) => setValue(field.id, value)} />
 {/snippet}
 
+{#snippet deductionDrawerTotal(field: IncomeEditorField, includeId: boolean, showOwner: boolean)}
+	{@const person = field.person === 'spouse' ? 'Spouse' : 'Taxpayer'}
+	<CalculatedValue id={includeId ? field.id : undefined}
+		label={`Item ${field.item} · ${field.label.replace(/^\d+\s+/, '')}${showOwner ? ` · ${person}` : ''}`}
+		value={formatScheduleAmount((includeId ? calculated : draftDeductions)[field.id])}
+		error={includeId ? errors[field.id] : undefined} />
+{/snippet}
+
+{#snippet deductionDrawerDetails(sectionFields: IncomeEditorField[], item?: string)}
+	{@const totals = sectionFields.filter(isDeductionDrawerTotal)}
+	<div class="schedule-drawer-details">
+		{#each incomeEditorRows(sectionFields).filter(row => !item || row.item === item) as row (row.key)}
+			{@const entryFields = row.fields.filter(field => !isDeductionDrawerTotal(field))}
+			{#if entryFields.length}
+				{@const first = entryFields[0]}
+				{@const numberFields = entryFields.filter(field => field.column === 'Year incurred' ||
+					field.kind === 'money' && !isDeductionDrawerBalance(field))}
+				<fieldset>
+					<legend>Item {row.item}{item ? '' : ` · ${first.label.replace(/^\d+\s+/, '')}`}</legend>
+					<div class="schedule-drawer-fields" class:paired={numberFields.length > 1}>
+						{#each entryFields as field (field.id)}
+							{@const label = field.column ?? (includesSpouse ? (field.person === 'spouse' ? 'Spouse' : 'Taxpayer') : 'Amount')}
+							{@const balance = field.kind === 'money' && isDeductionDrawerBalance(field)}
+							<div class="schedule-drawer-field" class:full-width={balance || !numberFields.includes(field)}
+								class:schedule-drawer-balance={balance && field.column !== 'Net operating loss'}>
+								{#if balance}
+									<CalculatedValue id={field.id} {label} value={formatScheduleAmount(draftDeductions[field.id])}
+										error={errors[field.id]} />
+								{:else}
+									{@render fieldControl(field, undefined, {
+										label,
+										value: deductionCandidate[field.id] ?? '',
+										error: deductionValidationAttempted ? deductionErrors[field.id] ?? '' :
+											Object.hasOwn(deductionDraft, field.id) ? '' : errors[field.id] ?? '',
+										change: (value) => { deductionDraft[field.id] = value; }
+									})}
+								{/if}
+							</div>
+						{/each}
+					</div>
+				</fieldset>
+			{/if}
+		{/each}
+		{#if !item}
+			<div class="schedule-drawer-totals">
+				{#each totals as field (field.id)}
+					{@render deductionDrawerTotal(field, false, totals.length > 1)}
+				{/each}
+			</div>
+		{/if}
+	</div>
+{/snippet}
+
+{#snippet deductionLineItems(title: string, sectionFields: IncomeEditorField[], unlimited = false, prefilled = false)}
+	{@const rows = incomeEditorRows(sectionFields.filter(field => !isDeductionDrawerTotal(field)))}
+	{@const entries = rows.filter(deductionRowHasEntry)}
+	{@const available = rows.find(row => !entries.includes(row) && !row.fields.some(field =>
+		isDeductionDrawerBalance(field) && field.column === 'Net operating loss'
+	))}
+	<header class="eq-section-header">
+		<h3>{title}</h3>
+		<span class="schedule-entry-count">{unlimited ? entries.length : `${entries.length} / ${rows.length}`} {unlimited && entries.length === 1 ? 'line item' : 'line items'}</span>
+	</header>
+	{#if entries.length}
+		<ol class="schedule-entry-list" aria-label="Line items">
+			{#each entries as row (row.key)}
+				{@const description = row.fields.find(field => field.column === 'Description' || field.column === 'Year incurred')}
+				{@const legalBasis = row.fields.find(field => field.column === 'Legal basis')}
+				{@const year = description?.column === 'Year incurred'}
+				{@const entryLabel = description && values[description.id]?.trim()}
+				{@const basis = legalBasis && values[legalBasis.id]?.trim()}
+				{@const current = row.fields.some(field => is1701CurrentLoss(field.id))}
+				{@const balances = row.fields.filter(field => field.kind === 'money' && (!year ||
+					['Net operating loss', 'Applied this year'].includes(field.column ?? '') || /(?:Loss available|Available) to carry over/i.test(field.column ?? '')
+				))}
+				<li class:carryover-line={year}>
+					<div class="schedule-entry-label">
+						<span class="schedule-entry-item">Item {row.item}</span>
+						<strong>{entryLabel || (current ? 'Current-year loss' : row.fields[0].label.replace(/^\d+\s+/, ''))}</strong>
+						{#if basis}<span class="schedule-entry-basis">Legal basis · {basis}</span>{/if}
+					</div>
+					<dl class="schedule-entry-amounts" style:--entry-amount-count={balances.length}>
+						{#each balances as field (field.id)}
+							<div class:carryover-balance={year && isDeductionDrawerBalance(field) && !is1701CurrentLoss(field.id)}>
+								<dt>{field.column}</dt>
+								<dd>{formatScheduleAmount(calculated[field.id])}</dd>
+							</div>
+						{/each}
+					</dl>
+					<Button type="button" variant="ghost" size="sm" aria-label={`Edit Item ${row.item}`} aria-haspopup="dialog"
+						data-schedule-edit={row.item} onclick={(event) => void openDeductionDrawer(title, event.currentTarget, row.item)}>
+						<span class="schedule-edit-icon" aria-hidden="true"><Icon icon={glyphs.pencil} /></span>
+						Edit
+					</Button>
+				</li>
+			{/each}
+		</ol>
+		{#if available}
+			<div class="schedule-add-row">
+				<Button type="button" size="sm" variant="secondary" data-schedule-add aria-haspopup="dialog"
+					onclick={(event) => void openDeductionDrawer(title, event.currentTarget, available.item, true)}>Add line item</Button>
+			</div>
+		{/if}
+	{:else if available}
+		<div class="schedule-entry-empty">
+			<span class="schedule-entry-icon" aria-hidden="true"><BillList size={24} color="currentColor" /></span>
+			<p>No line items yet</p>
+			<Button type="button" size="sm" variant="secondary" data-schedule-add aria-haspopup="dialog"
+				onclick={(event) => void openDeductionDrawer(title, event.currentTarget, available.item, true)}>{prefilled ? 'Add deduction details' : 'Add first line item'}</Button>
+		</div>
+	{/if}
+{/snippet}
+
 {#snippet columnSchedule(title: string, rows: ReturnType<typeof incomeEditorRows>, columns: string[])}
 	{@const amountColumns = columns.filter(column => !scheduleDetailColumns.includes(column) && column !== 'Exempt amount')}
 	{@const displayColumns = columns.includes('Exempt amount') ? [...amountColumns, 'Exempt amount'] : amountColumns}
@@ -799,7 +1042,7 @@
 									{@const field = row.fields.find(field => isScheduleValue(field) && (field.person ?? 'taxpayer') === person)}
 									{@const value = field ? calculated[field.id] ?? '' : ''}
 									{@const inputLabel = `Item ${item} ${label.toLowerCase()} amount${joint ? ` · ${person === 'spouse' ? 'Spouse' : 'Taxpayer'}` : ''}`}
-									<td class="summary-value" class:summary-input={field && !computed.has(field.id)}>
+									<td class="summary-value" class:summary-input={field && !computed.has(field.id) && !(microSmall && item === '10B')}>
 									{#if fullAnnual && joint && field}
 										<span class="cell-column-caption" aria-hidden="true">{person === 'spouse' ? 'Spouse' : 'Taxpayer'}</span>
 									{/if}
@@ -807,7 +1050,7 @@
 											<span aria-label="Not applicable">—</span>
 										{:else if microSmall && field.kind === 'percent'}
 											{@render microSmallRateInput(field, joint ? `${label} · ${person === 'spouse' ? 'Spouse' : 'Taxpayer'}` : label, false)}
-										{:else if computed.has(field.id)}
+										{:else if computed.has(field.id) || (microSmall && item === '10B')}
 											<output id={field.id}>{revisedQuarterly && ['46', '54', '63', '68'].includes(item) &&
 												!(person === 'spouse' ? quarterlySpouseReady : quarterlyTaxpayerReady) ? '—' : currency.format(Number(value.replaceAll(',', '')))}</output>
 											{#if errors[field.id]}<FieldErrors errors={[errors[field.id]]} />{/if}
@@ -821,6 +1064,17 @@
 								{/each}
 							{/if}
 						</tr>
+						{#if microSmall && item === '10B'}
+							{#each msSpecialDeductionSchedules as schedule (schedule.title)}
+								<tr class="ms-special-deduction-details">
+									<td colspan={2 + people.length}>
+										<section aria-label={schedule.title} data-ms-deduction={schedule.title} tabindex="-1">
+											{@render deductionLineItems(schedule.title, schedule.fields, true, !!schedule.legacyPrefill)}
+										</section>
+									</td>
+								</tr>
+							{/each}
+						{/if}
 					{/if}
 				{/each}
 			</tbody>
@@ -828,7 +1082,7 @@
 	</div>
 {/snippet}
 
-{#snippet fieldControl(field: IncomeEditorField, column?: string)}
+{#snippet fieldControl(field: IncomeEditorField, column?: string, draft?: { label: string; value: string; error: string; change: (value: string) => void })}
 	{@const { id, kind } = field}
 	{@const fieldLabel = field.label.replace(/^\d+[A-Z]?(?:\/[A-Z])?\s+/, '')}
 	{@const label = legacyAnnual && id === legacy1701Filing.type ? 'Identification type' :
@@ -838,7 +1092,7 @@
 		id === 'frm1700:txtPg1Pt2I32GovID' || (legacyAnnual && id === legacy1701Filing.number) ? (idType === 'CTC' ? 'CTC number' : 'Government ID number') :
 		form.code === '1700v2018' && !includesSpouse ? fieldLabel.replace(/ · Taxpayer$/, '') :
 		column ? `${fieldLabel.replace(/ · (?:Taxpayer|Spouse)$/, '')} · ${column}` : fieldLabel}
-	{@const value = calculated[id] ?? ''}
+	{@const value = draft?.value ?? calculated[id] ?? ''}
 	{@const annualAtc = shortAnnual && /^frm1701A:opt(?:Spouse)?ATC$/.test(id)}
 	{@const quarterlyAtc = revisedQuarterly && /^frm1701q:opt(?:Spouse)?ATC$/.test(id)}
 	{@const annualRate = shortAnnual && /^frm1701A:opt(?:Spouse)?TaxRate$/.test(id)}
@@ -852,7 +1106,7 @@
 	{@const birthParts = form.quarter && id.endsWith('BirthMonth') ? ['Month', 'Day', 'Year'].map(part => id.replace(/Month$/, part)) : []}
 	{@const filingMonth = annualFiling?.month === id}
 	{@const reliefMethod = legacyQuarterly && id === 'frm1701q:txtTaxRelief25'}
-	{@const error = errors[id] ?? errors[birthParts[1]] ?? ''}
+	{@const error = draft?.error ?? errors[id] ?? errors[birthParts[1]] ?? ''}
 	{@const locked = profileFields.has(id) && (!!value || spouseFieldIds.has(id))}
 	{@const employerEarner = /^frm1700:rdoPg2(?:Pt4I[1-3]Employer|I\d+PartVIEmployee)$/.test(id) || /^frm1701:chkPg2IShed[12]a_[12]$/.test(id)}
 	{@const addressZip = legacy1700 && id === 'frm1700:txtPg4T1ZipCde'}
@@ -940,9 +1194,9 @@
 	{:else if /(?:PagesFiled|PagesFilled|Number(?:Of)?Attachments|txtSheets)$/.test(id)}
 		<NumberInput {id} {label} {value} {error} min={0} max={99} maxlength={field.maxLength ?? undefined} onchange={(next) => setValue(id, next)} />
 	{:else if historicalCount || historicalYear}
-		<NumberInput {id} {label} {value} {error} min={historicalYear ? 1900 : 0}
+		<NumberInput {id} label={draft?.label ?? label} {value} {error} min={historicalYear ? 1900 : 0}
 			max={historicalYear ? 9999 : id.endsWith('Dependent') ? 4 : undefined}
-			maxlength={field.maxLength ?? undefined} onchange={(next) => setValue(id, next)} />
+			maxlength={field.maxLength ?? undefined} onchange={draft?.change ?? ((next) => setValue(id, next))} />
 	{:else if microSmall && kind === 'percent'}
 		{@render microSmallRateInput(field, label, true)}
 	{:else if filingMonth && annualFiling && !isShortFilingPeriod(annualFiling, values)}
@@ -1086,11 +1340,11 @@
 	{:else if kind === 'date' || isDate(field)}
 		<DateInput {id} {label} value={asIsoDate(value)} {error} onchange={(next) => setValue(id, asSourceDate(next))} />
 	{:else if kind === 'money'}
-		<CurrencyInput {decimals} {id} label={field.shortLabel ?? label} aria-label={field.shortLabel ? label : undefined}
-			allowNegative={/Loss|Adjustment|Prior.*Income/i.test(label)} {value} {error} onchange={(next) => setValue(id, next)} />
+		<CurrencyInput {decimals} {id} label={draft?.label ?? field.shortLabel ?? label} aria-label={!draft && field.shortLabel ? label : undefined}
+			allowNegative={draft ? allowsSignedScheduleAmount(id) : /Loss|Adjustment|Prior.*Income/i.test(label)} {value} {error} onchange={draft?.change ?? ((next) => setValue(id, next))} />
 	{:else}
-		<Input {id} {label} {value} {error} required={addressRequired || employerName} inputmode={id === form.year || /Psoc/i.test(id) || /TIN[123]|BranchCode|ZipCode/i.test(id) ? 'numeric' : undefined}
-			maxlength={id === 'frm1700:txtPg1Pt2I32GovID' ? (idType === 'CTC' ? 8 : 17) : field.maxLength ?? undefined} oninput={(event) => setValue(id, event.currentTarget.value)} />
+		<Input {id} label={draft?.label ?? label} {value} {error} required={addressRequired || employerName} inputmode={id === form.year || /Psoc/i.test(id) || /TIN[123]|BranchCode|ZipCode/i.test(id) ? 'numeric' : undefined}
+			maxlength={id === 'frm1700:txtPg1Pt2I32GovID' ? (idType === 'CTC' ? 8 : 17) : field.maxLength ?? undefined} oninput={(event) => draft ? draft.change(event.currentTarget.value) : setValue(id, event.currentTarget.value)} />
 	{/if}
 {/snippet}
 
@@ -1501,7 +1755,30 @@
 				{/each}
 				{/if}
 			{/snippet}
-			{#if group.fields[0]?.optionalSection}
+			{#if group.fields.some(isDeductionDrawerField)}
+				{@const autofilled = group.fields.every(isAutofilledOperatingLoss)}
+				{@const totals = autofilled ? group.fields : group.fields.filter(isDeductionDrawerTotal)}
+				{@const computation = group.fields.every(isOperatingLossComputation)}
+				{#if computation}
+					{@render sectionHeading()}
+				{:else}
+					{@render deductionLineItems(group.title, group.fields)}
+				{/if}
+				<div class="schedule-drawer-summary">
+					<div class="schedule-summary-totals">
+						{#each totals as field (field.id)}
+							<div>
+								{@render deductionDrawerTotal(field, true, autofilled ? includesSpouse : totals.length > 1)}
+								{@render annualReferences([field])}
+							</div>
+						{/each}
+					</div>
+					{#if computation && !autofilled}
+						<Button type="button" size="sm" variant="secondary" aria-haspopup="dialog" data-schedule-edit=""
+							onclick={(event) => void openDeductionDrawer(group.title, event.currentTarget)}>Edit details</Button>
+					{/if}
+				</div>
+			{:else if group.fields[0]?.optionalSection}
 				{@const scheduleKey = `${selectedPage}:${group.title}`}
 				{@const expanded = scheduleOpen[scheduleKey] ?? group.fields.some(hasScheduleEntry)}
 				<details class="schedule-disclosure" data-schedule-key={scheduleKey} open={expanded}>
@@ -1563,12 +1840,173 @@
 	{#if selectedPage === '1' && groups.length <= 1 && Object.keys(itemNumbers).length}
 		{@render taxpayerDetails()}
 	{/if}
+	{#if fullAnnual || microSmall}
+		<Sheet open={!!deductionSchedule} title={deductionSchedule?.title} size="lg"
+			onOpenChange={(open) => { if (!open) void closeDeductionDrawer(); }}>
+			{#if deductionSchedule}
+				{@render deductionDrawerDetails(deductionSchedule.fields, deductionDrawer?.item)}
+			{/if}
+			{#snippet footer()}
+				<Button type="button" variant="secondary" onclick={() => void closeDeductionDrawer()}>Cancel</Button>
+				<Button type="button" onclick={() => void closeDeductionDrawer(true)}>{deductionDrawer?.adding ? 'Add' : 'Update'}</Button>
+			{/snippet}
+		</Sheet>
+	{/if}
 	<ReturnPagination pages={pages.map(page => ({ id: page, title: incomeEditorPageTitle(form, page) }))}
 		current={selectedPage} onchange={(page) => void showPage(page)} />
 </div>
 
 <style>
 	.income-editor { min-width: 0; }
+	.tax-summary .ms-special-deduction-details > td { padding: 0; }
+	.schedule-entry-count {
+		color: var(--fg-muted);
+		font-size: var(--form-label-size);
+		font-variant-numeric: tabular-nums;
+		white-space: nowrap;
+	}
+	.schedule-entry-empty {
+		display: grid;
+		justify-items: center;
+		gap: .75rem;
+		margin-inline: .75rem;
+		padding: 1.5rem .75rem;
+		border: 1px dashed var(--border);
+		background: var(--bg);
+		text-align: center;
+		font-weight: 600;
+	}
+	.schedule-entry-icon {
+		display: grid;
+		place-items: center;
+		width: 2.5rem;
+		height: 2.5rem;
+		border: 1px solid var(--border);
+		border-radius: var(--radius-md);
+		color: var(--fg-muted);
+	}
+	.schedule-entry-list {
+		margin: 0;
+		padding: 0;
+		list-style: none;
+	}
+	.schedule-entry-list li {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) auto;
+		grid-template-areas: "identity edit" "amounts amounts";
+		align-items: start;
+		gap: .75rem 1rem;
+		padding: .875rem;
+		border-block-end: 1px solid var(--border);
+	}
+	.schedule-entry-label {
+		grid-area: identity;
+		min-inline-size: 0;
+		display: grid;
+		gap: .125rem;
+		overflow-wrap: anywhere;
+	}
+	.schedule-entry-item, .schedule-entry-basis, .schedule-entry-amounts dt {
+		color: var(--fg-muted);
+		font-size: var(--form-label-size);
+	}
+	.schedule-entry-item { font-weight: 500; }
+	.schedule-entry-amounts {
+		grid-area: amounts;
+		min-inline-size: 0;
+		display: grid;
+		grid-template-columns: repeat(var(--entry-amount-count), minmax(0, 1fr));
+		gap: .625rem;
+		margin: 0;
+		padding-block-start: .625rem;
+		border-block-start: 1px solid var(--border-soft);
+		font-variant-numeric: tabular-nums;
+	}
+	.schedule-entry-amounts > div {
+		display: flex;
+		flex-direction: column;
+		justify-content: space-between;
+		gap: .25rem;
+		min-inline-size: 0;
+	}
+	.schedule-entry-amounts dd {
+		margin: 0;
+		font-weight: 550;
+		overflow-wrap: anywhere;
+	}
+	.schedule-entry-amounts .carryover-balance dd { font-weight: 700; }
+	.schedule-entry-list :global([data-schedule-edit]) { grid-area: edit; min-block-size: 2rem; }
+	.schedule-edit-icon { display: inline-flex; inline-size: 1rem; }
+	.schedule-add-row { padding: .5rem .875rem; }
+	@container paper-form (min-width: 38rem) {
+		.schedule-entry-list li {
+			grid-template-columns: minmax(0, 2fr) minmax(8rem, 1fr) auto;
+			grid-template-areas: "identity amounts edit";
+			align-items: center;
+		}
+		.schedule-entry-list .carryover-line {
+			grid-template-columns: minmax(5rem, 1fr) minmax(0, 3fr) auto;
+		}
+		.schedule-entry-amounts {
+			padding-block-start: 0;
+			border: 0;
+			text-align: end;
+			gap: 1rem;
+		}
+	}
+	.schedule-drawer-summary {
+		border-block-start: 1px solid var(--border);
+		display: flex;
+		flex-wrap: wrap;
+		align-items: flex-start;
+		gap: .75rem 1.25rem;
+		padding: .75rem;
+	}
+	.schedule-summary-totals {
+		flex: 1 1 18rem;
+		min-width: 0;
+		display: grid;
+		gap: .75rem;
+	}
+	.schedule-drawer-details {
+		container: deduction-drawer / inline-size;
+		display: grid;
+		grid-template-columns: minmax(0, 1fr);
+		gap: 1.5rem;
+		padding: 1.25rem;
+	}
+	.schedule-drawer-details fieldset {
+		min-inline-size: 0;
+		margin: 0;
+		padding: 0;
+		border: 0;
+	}
+	.schedule-drawer-details legend {
+		max-inline-size: 100%;
+		margin-block-end: 1rem;
+		padding: 0;
+		font-size: .875rem;
+		font-weight: 650;
+	}
+	.schedule-drawer-fields, .schedule-drawer-totals {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr);
+		gap: 1rem;
+	}
+	.schedule-drawer-field {
+		min-inline-size: 0;
+	}
+	.schedule-drawer-field.full-width { grid-column: 1 / -1; }
+	.schedule-drawer-field :global([data-slot="form-item"]) {
+		grid-template-columns: minmax(0, 1fr);
+	}
+	@container deduction-drawer (min-width: 26rem) {
+		.schedule-drawer-fields.paired { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+	}
+	.schedule-drawer-balance, .schedule-drawer-totals {
+		padding-block-start: .875rem;
+		border-block-start: 1px solid var(--border);
+	}
 	.filing-identification {
 		display: grid;
 		grid-template-columns: minmax(0, 1fr);

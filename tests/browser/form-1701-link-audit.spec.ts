@@ -101,7 +101,7 @@ for (const revision of revisions) {
 				test.setTimeout(180000);
 				await openReturn(page, revision.code, width, state);
 				await checkSourceExamples(page, revision.code, state);
-				const pager = page.getByRole('navigation', { name: 'Return pages' });
+				const pager = page.locator('nav[aria-label="Return pages"]');
 				const inventory: Array<{ source: number; activityRegime?: string; references: Reference[] }> = [];
 				const allPages = revision.pages.map((_, index) => index + 1);
 				const traversals = revision.code === '1701v2018'
@@ -144,6 +144,8 @@ for (const revision of revisions) {
 									return inViewport && !!hit && (element === hit || element.contains(hit));
 								});
 								expect(visible, `${reference.label} must expose the focused target in the viewport`).toBe(true);
+								const drawer = page.getByRole('dialog');
+								if (await drawer.isVisible()) await drawer.getByRole('button', { name: 'Cancel', exact: true }).click();
 							});
 						}
 					}

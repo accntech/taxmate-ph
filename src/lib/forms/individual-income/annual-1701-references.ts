@@ -38,6 +38,7 @@ for (const [column, person] of [['C1', 'A'], ['C2', 'B']]) {
 		add(june, target, `To Part IV, Item ${item.match(/^\d+/)![0]}${person}`, amount);
 	}
 
+	add(june, `txtPg8Sc8${person}I3NetOperatingLoss`, `To Schedule 8${person}.1, Item 4A`, `txtPg8Sc8${person}1I4Amount`);
 	add(june, `txtPg3Pt5I68RegularRate${column}`, `From Item 67${person}`, `txtPg2Pt4I67TaxDueRegular${column}`);
 	add(june, `txtPg3Pt5I87LessTax${column}`, `From Item 67${person}`, `txtPg2Pt4I67TaxDueRegular${column}`);
 	add(june, `txtPg3Pt5I73Regular${column}`, `From Schedule 9, Item 10${person}`, `txtPg9Sc9I10${person === 'A' ? 'TaxPayerC1' : 'SpouseC2'}`);

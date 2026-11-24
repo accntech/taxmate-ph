@@ -163,6 +163,10 @@ export function calculateAnnual(code: string, values: Values): Values {
     if (sources.some((name) => Object.hasOwn(result, id(name))))
       set(target, amount());
   };
+  const deriveOperatingLoss = (grossIncome: string, deductions: string, loss: string, carryover: string) => {
+    derive(loss, [grossIncome, deductions], () => n(grossIncome) - n(deductions));
+    derive(carryover, [loss], () => Math.max(0, -n(loss)));
+  };
   if (code === "1701v2018") {
     const year = n("txtPg1I1Year");
     for (const column of ["A", "B"]) {
@@ -186,8 +190,26 @@ export function calculateAnnual(code: string, values: Values): Values {
       const specialTotal = `txtPg3IShed5_${column === "A" ? 3 : 6}`;
       derive(specialTotal, special, () => sum(special));
       derive(field(14), [specialTotal], () => n(specialTotal));
+      const grossSources = [8, 9, 11].map(field);
+      const scheduleGross = `txtPg3IShed6_1${column}`;
+      const scheduleDeductions = `txtPg3IShed6_2${column}`;
+      const hasGrossInputs = grossSources.some((name) => Object.hasOwn(values, id(name)));
+      set(field(10), n(field(8)) - n(field(9)));
+      if (hasGrossInputs || !Object.hasOwn(values, id(field(12)))) {
+        set(field(12), n(field(10)) - activeAmount(field(11)));
+      }
+      if (hasGrossInputs || (!Object.hasOwn(values, id(scheduleGross)) && Object.hasOwn(values, id(field(12))))) {
+        set(scheduleGross, activeAmount(field(12)));
+      }
+      derive(scheduleDeductions, [field(13)], () => activeAmount(field(13)));
       const nolcoPage = column === "A" ? "Pg3" : "Pg4";
       const nolcoRows = column === "A" ? range(4, 7) : range(9, 12);
+      deriveOperatingLoss(
+        `txtPg3IShed6_1${column}`,
+        `txtPg3IShed6_2${column}`,
+        `txtPg3IShed6_3${column}`,
+        `txt${nolcoPage}IShed6_${column === "A" ? 7 : 12}A`,
+      );
       for (const row of nolcoRows) {
         const base = `txt${nolcoPage}IShed6_${row}`;
         set(
@@ -208,8 +230,6 @@ export function calculateAnnual(code: string, values: Values): Values {
       );
       set(comp(6), activeAmount(comp(4)) - activeAmount(comp(5)));
       set(comp(7), tax(n(comp(6)), year));
-      set(field(10), n(field(8)) - n(field(9)));
-      set(field(12), n(field(10)) - activeAmount(field(11)));
       set(field(16), [13, 14, 15].reduce((total, item) => total + activeAmount(field(item)), 0));
       set(field(17), deduction === "OSD" ? n(field(10)) * 0.4 : 0);
       // Source methodRate uses net sales less OSD, excluding cost of sales.
@@ -434,6 +454,13 @@ export function calculateAnnual(code: string, values: Values): Values {
       deduction === "OSD" ? 0 : n(costTotal),
     );
     const nolcoColumn = column === "C1" ? "A" : "B";
+    const operatingLoss = `txtPg8Sc8${nolcoColumn}`;
+    deriveOperatingLoss(
+      operatingLoss + "I1GrossIncome",
+      operatingLoss + (nolcoColumn === "A" ? "I2TotalDeduction" : "I2TotalDeductions"),
+      operatingLoss + "I3NetOperatingLoss",
+      operatingLoss + "1I4Amount",
+    );
     const nolcoRows = range(4, 7).map(
       (row) => `txtPg8Sc8${nolcoColumn}1I${row}`,
     );

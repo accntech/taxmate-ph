@@ -8,8 +8,8 @@ const profile = {
 	tradeName: 'Santos Advisory', psicCode: '69200'
 };
 
-async function openReturn(page: Page, code: string, width = 1440, joint = false) {
-	await seedWorkspace(page, 'light', 'loaded', { ...profile, civilStatus: joint ? 'Married' : 'Single' });
+async function openReturn(page: Page, code: string, width = 1440, joint = false, theme = 'light') {
+	await seedWorkspace(page, theme, 'loaded', { ...profile, civilStatus: joint ? 'Married' : 'Single' });
 	await page.setViewportSize({ width, height: 1040 });
 	await page.goto(`${list}/${code}?new=true`);
 	await expect(page.locator('.income-editor')).toBeVisible({ timeout: 20000 });
@@ -428,6 +428,8 @@ for (const { code, revision, total } of [
 					const target = await reference.getAttribute('data-reference-target');
 					await reference.click();
 					await expect(page.locator(`[id="${target}"]`)).toBeFocused();
+					const drawer = page.getByRole('dialog');
+					if (await drawer.isVisible()) await drawer.getByRole('button', { name: 'Cancel', exact: true }).click();
 					await goToReturnPage(page, number);
 					await expandSections(page);
 				}
@@ -450,4 +452,193 @@ for (const { code, revision, total } of [
 			expect(checked).toBeGreaterThan(20);
 		});
 	}
+}
+
+for (const width of [1440, 390]) {
+	test(`1701 January edits deductions and operating losses in drawers at ${width}px`, async ({ page }, testInfo) => {
+		await openReturn(page, '1701v2018', width, false, width === 1440 ? 'dark' : 'light');
+		await page.getByRole('textbox', { name: 'Filing year', exact: true }).fill('2025');
+		await page.getByRole('combobox', { name: 'Alphanumeric tax code (ATC)', exact: true }).click();
+		await page.getByRole('option', { name: /II012/ }).click();
+		await goToReturnPage(page, 3);
+
+		const field = (id: string) => page.locator(`[id="frm1701:txtPg3IShed${id}"]`);
+		const special = 'Schedule 5 · Special deductions · Taxpayer';
+		const computation = 'Schedule 6 · Computation of net operating loss';
+		const carryover = 'Schedule 6 · Loss carryover · Taxpayer';
+		const section = (name: string) => page.getByRole('region', { name, exact: true });
+		const action = (name: string, label: string) => section(name).getByRole('button', { name: label, exact: true });
+
+		await expect(field('5_1Desc')).toHaveCount(0);
+		await expect(section(special).getByText('No line items yet', { exact: true })).toBeVisible();
+		await action(special, 'Add first line item').click();
+		const deductions = page.getByRole('dialog', { name: special, exact: true });
+		await expect(deductions).toBeVisible();
+		await expect.poll(async () => {
+			const description = (await field('5_1Desc').locator('..').boundingBox())!;
+			const legal = (await field('5_1Legal').locator('..').boundingBox())!;
+			const amount = (await field('5_1Amt').locator('..').boundingBox())!;
+			return {
+				stacked: legal.y >= description.y + description.height + 8 && amount.y >= legal.y + legal.height + 8,
+				aligned: [legal, amount].every(box => Math.abs(box.x - description.x) <= 1 && Math.abs(box.width - description.width) <= 1),
+			};
+		}).toEqual({ stacked: true, aligned: true });
+		const addDeduction = deductions.getByRole('button', { name: 'Add', exact: true });
+		await addDeduction.click();
+		await expect(field('5_1Desc')).toBeFocused();
+		await expect(deductions.getByText('Enter the special deduction description.', { exact: true })).toBeVisible();
+		await expect(deductions.getByText('Enter the legal basis for the special deduction.', { exact: true })).toBeVisible();
+		await expect(deductions.getByText('Enter a deduction amount greater than zero.', { exact: true })).toBeVisible();
+		await field('5_1Desc').fill('Eligible deduction');
+		await field('5_1Legal').fill('Statutory provision');
+		await field('5_1Amt').fill('1200');
+		await field('5_1Amt').blur();
+		await page.screenshot({ path: testInfo.outputPath(`1701-deductions-drawer-${width}.png`), animations: 'disabled' });
+		await deductions.getByRole('button', { name: 'Add', exact: true }).click();
+		await expect(action(special, 'Edit Item 1')).toBeFocused();
+		const deductionLine = section(special).getByRole('listitem').filter({ hasText: 'Eligible deduction' });
+		await expect(deductionLine).toContainText('Legal basis · Statutory provision');
+		await expect(deductionLine).toContainText('₱1,200');
+		await action(special, 'Edit Item 1').click();
+		await field('5_1Desc').fill('Discard this change');
+		await page.keyboard.press('Escape');
+		await expect(action(special, 'Edit Item 1')).toBeFocused();
+		await expect(field('5_3')).toHaveJSProperty('tagName', 'OUTPUT');
+		await expect(field('5_3')).toHaveText('₱1,200');
+		await page.getByRole('button', { name: 'To Schedule 3.A, Item 14A · Taxpayer', exact: true }).click();
+		await expect(page.locator('[id="frm1701:txtPg2IShed3_14A"]')).toBeFocused();
+		await page.getByRole('button', { name: 'From Schedule 5, Item 3 · Taxpayer', exact: true }).click();
+		await expect(field('5_3')).toBeFocused();
+
+		await expect(action(computation, 'Edit details')).toHaveCount(0);
+		await goToReturnPage(page, 2);
+		await page.locator('[id="frm1701:txtPg2IShed3_8A"]').fill('900');
+		await page.locator('[id="frm1701:txtPg2IShed3_8A"]').blur();
+		await goToReturnPage(page, 3);
+		await field('4_1A').fill('1500');
+		await field('4_1A').blur();
+		await expect(field('6_1A')).toHaveJSProperty('tagName', 'OUTPUT');
+		await expect(field('6_1A')).toHaveText('₱900');
+		await expect(field('6_2A')).toHaveText('₱1,500');
+		await expect(field('6_3A')).toHaveText('-₱600');
+		await page.getByRole('button', { name: 'To Schedule 6.A.1, Item 7A · Taxpayer', exact: true }).click();
+		await expect(field('6_7A')).toBeFocused();
+		await expect(field('6_7A')).toHaveText('₱600');
+		const lossDrawer = page.getByRole('dialog', { name: carryover, exact: true });
+		await lossDrawer.getByRole('button', { name: 'Cancel', exact: true }).click();
+		await action(carryover, 'Add line item').click();
+		const addLoss = lossDrawer.getByRole('button', { name: 'Add', exact: true });
+		await field('6_4Year').fill('2026');
+		await field('6_4A').fill('1000');
+		await field('6_4D').fill('1400');
+		await addLoss.click();
+		await expect(field('6_4Year')).toBeFocused();
+		await expect(lossDrawer.getByText('Enter a year before the filing year.', { exact: true })).toBeVisible();
+		await expect(lossDrawer.getByText('Applied and expired amounts together cannot exceed the net operating loss.', { exact: true })).toBeVisible();
+		await field('6_4Year').fill('2023');
+		await field('6_4D').fill('400');
+		await field('6_4D').blur();
+		await field('6_4Year').locator('xpath=ancestor::fieldset[1]').scrollIntoViewIfNeeded();
+		await expect(field('6_4E')).toHaveText('₱600');
+		expect(await lossDrawer.evaluate(dialog => dialog.scrollWidth <= dialog.clientWidth)).toBe(true);
+		await page.screenshot({ path: testInfo.outputPath(`1701-carryover-drawer-${width}.png`), animations: 'disabled' });
+		await lossDrawer.getByRole('button', { name: 'Add', exact: true }).click();
+		await expect(action(carryover, 'Edit Item 4')).toBeFocused();
+		const lossLine = section(carryover).getByRole('listitem').filter({ hasText: '2023' });
+		await expect(lossLine).toContainText('Net operating loss');
+		await expect(lossLine).toContainText('Applied this year');
+		await expect(lossLine).toContainText('Loss available to carry over');
+		await expect(lossLine).toContainText('₱1,000');
+		await expect(lossLine).toContainText('₱400');
+		await expect(lossLine).toContainText('₱600');
+		await expect(field('6_8D')).toHaveJSProperty('tagName', 'OUTPUT');
+		await expect(field('6_8D')).toHaveText('₱400');
+		await page.screenshot({ path: testInfo.outputPath(`1701-schedule-totals-${width}.png`), animations: 'disabled' });
+
+		await page.getByRole('button', { name: 'Save draft', exact: true }).click();
+		await expect(page).toHaveURL(/\/forms$/);
+		await page.getByRole('row').filter({ hasText: 'BIR Form 1701' }).getByRole('link', { name: 'Edit', exact: true }).click();
+		await goToReturnPage(page, 3);
+		await expect(field('5_3')).toHaveText('₱1,200');
+		await expect(field('6_8D')).toHaveText('₱400');
+		await action(special, 'Edit Item 1').click();
+		await expect(field('5_1Desc')).toHaveValue('Eligible deduction');
+		await field('5_1Legal').clear();
+		await deductions.getByRole('button', { name: 'Update', exact: true }).click();
+		await expect(field('5_1Legal')).toBeFocused();
+		await expect(deductions.getByText('Enter the legal basis for the special deduction.', { exact: true })).toBeVisible();
+		await deductions.getByRole('button', { name: 'Cancel', exact: true }).click();
+		await action(special, 'Edit Item 1').click();
+		await expect(field('5_1Legal')).toHaveValue('Statutory provision');
+	});
+}
+
+for (const width of [1440, 390]) {
+	test(`1701 June edits joint deductions and operating losses in drawers at ${width}px`, async ({ page }, testInfo) => {
+		await openReturn(page, '1701', width, true);
+		await page.getByRole('textbox', { name: 'Filing year', exact: true }).fill('2017');
+		await goToReturnPage(page, 8);
+		const field = (id: string) => page.locator(`[id="frm1701:txtPg8Sc${id}"]`);
+		const special = 'Schedule 7 · Special deductions';
+		const computation = 'Schedule 8B · Computation of net operating loss · Spouse';
+		const carryover = 'Schedule 8B.1 · Loss carryover · Spouse';
+		const section = (name: string) => page.getByRole('region', { name, exact: true });
+		const action = (name: string, label: string) => section(name).getByRole('button', { name: label, exact: true });
+		const drawer = (name: string) => page.getByRole('dialog', { name, exact: true });
+		const commit = (name: string, label: string) => drawer(name).getByRole('button', { name: label, exact: true }).click();
+
+		await expect(field('7I1Description')).toHaveCount(0);
+		await action(special, 'Add first line item').click();
+		await field('7I1Description').fill('Eligible deduction');
+		await field('7I1LegalBasis').fill('Statutory provision');
+		await field('7I1TaxPayer').fill('1200');
+		await field('7I1Spouse').fill('800');
+		await field('7I1Spouse').blur();
+		await page.screenshot({ path: testInfo.outputPath(`1701-june-deductions-${width}.png`), animations: 'disabled' });
+		await commit(special, 'Add');
+		await expect(field('7I5TaxPayer')).toHaveText('₱1,200');
+		await expect(field('7I5Spouse')).toHaveJSProperty('tagName', 'OUTPUT');
+		await expect(field('7I5Spouse')).toHaveText('₱800');
+
+		await action(computation, 'Edit details').click();
+		await field('8BI1GrossIncome').fill('9x0');
+		await commit(computation, 'Update');
+		await expect(field('8BI1GrossIncome')).toBeFocused();
+		await expect(field('8BI1GrossIncome')).toHaveAttribute('aria-invalid', 'true');
+		await field('8BI1GrossIncome').fill('900');
+		await field('8BI2TotalDeductions').fill('1500');
+		await field('8BI2TotalDeductions').blur();
+		await page.screenshot({ path: testInfo.outputPath(`1701-june-loss-computation-${width}.png`), animations: 'disabled' });
+		await commit(computation, 'Update');
+		await expect(field('8BI3NetOperatingLoss')).toHaveJSProperty('tagName', 'OUTPUT');
+		await expect(field('8BI3NetOperatingLoss')).toHaveText('-₱600');
+		await page.getByRole('button', { name: 'To Schedule 8B.1, Item 4A · Spouse', exact: true }).click();
+		await expect(field('8B1I4Amount')).toBeFocused();
+		await expect(field('8B1I4Amount')).toHaveText('₱600');
+		await commit(carryover, 'Cancel');
+		await action(carryover, 'Add line item').click();
+		await field('8B1I5YearIncurred').fill('2018');
+		await field('8B1I5Amount').fill('1000');
+		await commit(carryover, 'Add');
+		await expect(field('8B1I5YearIncurred')).toBeFocused();
+		await expect(drawer(carryover).getByText('Enter a year from 2014 to 2017.', { exact: true })).toBeVisible();
+		await field('8B1I5YearIncurred').fill('2016');
+		await field('8B1I5NOLCOAppliedCurrentYear').fill('400');
+		await field('8B1I5NOLCOAppliedCurrentYear').blur();
+		await expect(field('8B1I5NetOperatingLoss')).toHaveText('₱600');
+		expect(await drawer(carryover).evaluate(dialog => dialog.scrollWidth <= dialog.clientWidth)).toBe(true);
+		await page.screenshot({ path: testInfo.outputPath(`1701-june-loss-carryover-${width}.png`), animations: 'disabled' });
+		await commit(carryover, 'Add');
+		await expect(action(carryover, 'Edit Item 5')).toBeFocused();
+		await expect(field('8B1I8TotalNOLCO')).toHaveJSProperty('tagName', 'OUTPUT');
+		await expect(field('8B1I8TotalNOLCO')).toHaveText('₱400');
+		await page.screenshot({ path: testInfo.outputPath(`1701-june-schedule-totals-${width}.png`), animations: 'disabled' });
+
+		await page.getByRole('button', { name: 'Save draft', exact: true }).click();
+		await expect(page).toHaveURL(/\/forms$/);
+		await page.getByRole('row').filter({ hasText: 'BIR Form 1701' }).getByRole('link', { name: 'Edit', exact: true }).click();
+		await goToReturnPage(page, 8);
+		await expect(field('7I5Spouse')).toHaveText('₱800');
+		await expect(field('8B1I8TotalNOLCO')).toHaveText('₱400');
+	});
 }

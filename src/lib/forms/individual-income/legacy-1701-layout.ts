@@ -193,7 +193,7 @@ export function legacy1701ScheduleLayout(field: IncomeEditorField): Partial<Inco
 		const label = scheduleLabels[`${scheduleNumber}:${number}`] || labels[scheduleNumber] || field.label.replace(/^\d+\s*/, '').replace(/ · (?:Taxpayer|Spouse)$/, '');
 		if (scheduleNumber === '7') {
 			const column = description ? 'Description' : /LegalBasis/.test(name) ? 'Legal basis' : name.endsWith('Spouse') ? 'Spouse' : 'Taxpayer';
-			return layout(field, field.section, number, label, { column, person: column === 'Spouse' ? 'spouse' : column === 'Taxpayer' ? 'taxpayer' : undefined });
+			return layout(field, 'Schedule 7 · Special deductions', number, label, { column, person: column === 'Spouse' ? 'spouse' : column === 'Taxpayer' ? 'taxpayer' : undefined });
 		}
 		return layout(field, field.section, number, description ? `${label} description` : /LegalBasis/.test(name) ? 'Legal basis' : label);
 	}
@@ -230,6 +230,14 @@ export function legacy1701ScheduleLayout(field: IncomeEditorField): Partial<Inco
 		} as Record<string, string>)[number];
 		return layout(field, field.section, number, label, { person: person === 'B' ? 'spouse' : 'taxpayer' });
 	}
+	const operatingLoss = name.match(/^txtPg8Sc8([AB])I([1-3])/);
+	if (operatingLoss) {
+		const [, filer, number] = operatingLoss;
+		const person = filer === 'A' ? 'taxpayer' : 'spouse';
+		const label = { '1': 'Gross income', '2': 'Ordinary allowable itemized deductions', '3': 'Net operating loss' }[number]!;
+		return layout(field, `Schedule 8${filer} · Computation of net operating loss · ${person === 'taxpayer' ? 'Taxpayer' : 'Spouse'}`,
+			number, label, { person, column: 'Amount' });
+	}
 	const carryover = name.match(/^txtPg8Sc8([AB])1I([4-8])(.*)$/);
 	if (carryover) {
 		const [, filer, number, control] = carryover;
@@ -244,8 +252,6 @@ export function legacy1701ScheduleLayout(field: IncomeEditorField): Partial<Inco
 			column: columns[control], person
 		});
 	}
-	if (/^txtPg8Sc8B/.test(name)) return { person: 'spouse' };
-	if (/^txtPg8Sc8A/.test(name)) return { person: 'taxpayer' };
 	const supplemental = name.match(/^(?:txt|ddl)Pg11Sc12([AB])I(\d+)(.*)$/);
 	if (supplemental) {
 		const [, schedule, number, control] = supplemental;

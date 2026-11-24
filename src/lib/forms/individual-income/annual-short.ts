@@ -1,3 +1,4 @@
+import { msSpecialDeductionId, msSpecialDeductionIndices } from './annual-1701ms-special-deductions';
 import { incomeIncludesSpouse } from './profile-fields';
 import { currencyInputError, roundWholePeso } from '$lib/components/ui/currency-input/currency';
 import { annual1701ABaseDetailFields, annual1701ADetailAmount, annual1701ADetailFields, annual1701ADetailRows, annual1701AVisibleDetailRows } from './annual-1701a-income-detail';
@@ -134,7 +135,8 @@ export function shortAnnualFieldApplies(code: string, id: string, values: Values
 		return msReadyForTotal(values) && has1701MSOverpayment(values) &&
 			(id === disposition.choice || is1701MSOverpaymentSelected(disposition, values));
 	}
-	const spouse = /b1?$|Spouse$|^methodOfDeductionStandard$|(?:Less22|Loss23|Income24|Availment)B$|SP$/.test(field);
+	const detail = /^sched410A([12]):(?:Description|LegalBasis|Amount)\d+$/.exec(field);
+	const spouse = detail ? detail[1] === '2' : /b1?$|Spouse$|^methodOfDeductionStandard$|(?:Less22|Loss23|Income24|Availment)B$|SP$/.test(field);
 	if (spouse && !incomeIncludesSpouse(code, values)) return false;
 	const source = msSource(values, spouse);
 	const regime = annual1701MSFilerRegime(values, spouse);
@@ -147,7 +149,7 @@ export function shortAnnualFieldApplies(code: string, id: string, values: Values
 	}
 	const businessGraduated = source !== '4' && regime !== '3' && annual1701MSFilerReady(values, spouse);
 	if (/^txt(?:SalesRevenueNo5|SalesReturnsNo6|TaxableCompensationIncomeNo7|GrossIncomeNo9|NetIncomeLossNo12|NonOperatingIncomeNo13|TaxableIncomeBusinesNo14|CompensationBusinessNo15)[ab]$|^TotalTaxDueCompensationB/.test(field)) return businessGraduated;
-	if (/^txt(?:CostofSalesNo8|AllowableItemizedDeductionsNo10|SpecialAllowableNo10|NetOperatingLossNo10|TotalAllowableItemixedDeductionsNo10)(?:[ab]|aSpouse)$/.test(field)) {
+	if (detail || /^txt(?:CostofSalesNo8|AllowableItemizedDeductionsNo10|SpecialAllowableNo10|NetOperatingLossNo10|TotalAllowableItemixedDeductionsNo10)(?:[ab]|aSpouse)$/.test(field)) {
 		return businessGraduated && !msUsesOsd(values, spouse);
 	}
 	if (/^txtOptionalDeductionNo11[ab]$/.test(field)) return businessGraduated && msUsesOsd(values, spouse);
@@ -245,6 +247,11 @@ export function calculate1701MS(values: Values): Values {
 		set('txtTaxableCompensationIncomeNo7', businessGraduated ? read('txtSalesRevenueNo5') - read('txtSalesReturnsNo6') : 0);
 		set('txtGrossIncomeNo9', read('txtTaxableCompensationIncomeNo7') - (businessGraduated && !osd ? read('txtCostofSalesNo8') : 0));
 		const ordinary = number(next[field(spouse ? 'txtAllowableItemizedDeductionsNo10aSpouse' : 'txtAllowableItemizedDeductionsNo10a')]);
+		const specialDeductionRows = msSpecialDeductionIndices(values, spouse);
+		if (specialDeductionRows.length) {
+			set('txtSpecialAllowableNo10', specialDeductionRows.reduce((sum, index) =>
+				sum + roundWholePeso(number(values[msSpecialDeductionId(spouse, 'Amount', index)])), 0));
+		}
 		set('txtTotalAllowableItemixedDeductionsNo10', businessGraduated && !osd ? ordinary + read('txtSpecialAllowableNo10') + read('txtNetOperatingLossNo10') : 0);
 		set('txtOptionalDeductionNo11', businessGraduated && osd ? read('txtTaxableCompensationIncomeNo7') * .4 : 0);
 		set('txtNetIncomeLossNo12', read('txtGrossIncomeNo9') - read(osd ? 'txtOptionalDeductionNo11' : 'txtTotalAllowableItemixedDeductionsNo10'));

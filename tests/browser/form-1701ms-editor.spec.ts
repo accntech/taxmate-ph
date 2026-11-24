@@ -155,6 +155,7 @@ test('1701-MS links an incomplete schedule to its source and links summary credi
 });
 
 test('1701-MS keeps both filers in mixed-rate tables and seven-digit amounts readable at 390px', async ({ page }) => {
+	test.setTimeout(120_000);
 	await seedWorkspace(page, 'light', 'loaded', { ...single, civilStatus: 'Married',
 		spouse: { taxpayerName: 'SANTOS, JAMIE, CRUZ', tin1: '009', tin2: '876', tin3: '543', branchCode: '00000' }
 	}, [{
@@ -176,6 +177,13 @@ test('1701-MS keeps both filers in mixed-rate tables and seven-digit amounts rea
 	await expect(graduated.locator('tr[data-income-item="5"]').getByRole('cell').nth(1)).toHaveText('—');
 	await expect(graduated.locator('tr[data-income-item="5"]').getByRole('cell').nth(2).locator(id('txtSalesRevenueNo5b'))).toBeEditable();
 	await expect(flat.locator('tr[data-income-item="19"]').getByRole('cell').nth(2)).toHaveText('—');
+	const spouseDeductions = page.getByRole('region', { name: 'Item 10B · Special deductions · Spouse', exact: true });
+	await expect(page.getByRole('region', { name: 'Item 10B · Special deductions · Taxpayer', exact: true })).toHaveCount(0);
+	await spouseDeductions.getByRole('button', { name: 'Add first line item', exact: true }).click();
+	const spouseDrawer = page.getByRole('dialog', { name: 'Item 10B · Special deductions · Spouse', exact: true });
+	await expect(spouseDrawer.getByRole('textbox', { name: 'Description' })).toHaveAttribute('id', 'frm1701MS:sched410A2:Description0');
+	await spouseDrawer.getByRole('button', { name: 'Cancel', exact: true }).click();
+	await expect(spouseDeductions.getByRole('button', { name: 'Add first line item', exact: true })).toBeFocused();
 	await page.setViewportSize({ width: 390, height: 920 });
 	await page.keyboard.press('Escape');
 	const scrollRegion = page.getByRole('region', { name: 'Part IV.B2 · Business income at 8% columns' });
@@ -214,3 +222,66 @@ test('1701-MS keeps the preferential rate in its numbered business schedule', as
 	await rate.blur();
 	await expect(business.locator(id('txtTaxDueSpeciala'))).toHaveText('₱65,000');
 });
+
+for (const width of [1440, 390]) {
+	test(`1701-MS Item 10B edits special deductions in a drawer at ${width}px`, async ({ page }, testInfo) => {
+		test.setTimeout(120_000);
+		await seedWorkspace(page, 'light', 'loaded', { ...single, civilStatus: 'Single' }, [{
+			id: 'special-ms', taxpayerId, formCode: '1701MS', returnPeriod: '2025', status: 'Draft', finalFlag: '0',
+			updatedAt: 1794441600000, values: {
+				'frm1701MS:txtYearNo1': '2025',
+				'frm1701MS:sourceOfIncomeTaxpayer': '1',
+				'frm1701MS:txtTaxpayerNo12a': '2',
+				methodOfDeductionMain: 'itemized',
+				'frm1701MS:txtSpecialAllowableNo10a': '225'
+			}
+		}]);
+		await page.setViewportSize({ width, height: 980 });
+		await page.goto(`${route}?return=special-ms`);
+		await expect(page.getByRole('navigation', { name: 'Return pages' })).toBeVisible({ timeout: 45_000 });
+		if (width < 640) {
+			await page.keyboard.press('Escape');
+			await expect.poll(async () => (await page.locator('aside.sidebar').boundingBox())!.x).toBeLessThan(-245);
+		}
+		await goToReturnPage(page, 2);
+
+		const label = 'Item 10B · Special deductions · Taxpayer';
+		const schedule = page.getByRole('region', { name: label, exact: true });
+		const subtotal = page.locator(id('txtSpecialAllowableNo10a'));
+		await expect(subtotal).toHaveJSProperty('tagName', 'OUTPUT');
+		await expect(subtotal).toHaveText('₱225');
+		await expect(page.locator(id('txtNetOperatingLossNo10a'))).toBeEditable();
+		await schedule.getByRole('button', { name: 'Add deduction details' }).click();
+
+		const drawer = page.getByRole('dialog', { name: label, exact: true });
+		const add = drawer.getByRole('button', { name: 'Add', exact: true });
+		await add.click();
+		await expect(drawer.getByRole('textbox', { name: 'Description' })).toBeFocused();
+		await expect(drawer.getByText('Enter the legal basis for the special deduction.', { exact: true })).toBeVisible();
+		await expect(drawer.getByRole('textbox', { name: 'Amount' })).toHaveValue('225');
+		await drawer.getByRole('textbox', { name: 'Description' }).fill('Prior deduction');
+		await drawer.getByRole('textbox', { name: 'Legal basis' }).fill('Prior legal basis');
+		await add.click();
+		await expect(subtotal).toHaveText('₱225');
+
+		await schedule.getByRole('button', { name: 'Add line item' }).click();
+		await drawer.getByRole('textbox', { name: 'Description' }).fill('Sample deductible expense');
+		await drawer.getByRole('textbox', { name: 'Legal basis' }).fill('Sample legal basis');
+		await drawer.getByRole('textbox', { name: 'Amount' }).fill('1200');
+		await drawer.getByRole('textbox', { name: 'Amount' }).blur();
+		await expect(await drawer.evaluate(dialog => dialog.scrollWidth <= dialog.clientWidth)).toBe(true);
+		await page.screenshot({ path: testInfo.outputPath(`1701MS-deduction-drawer-${width}.png`), animations: 'disabled' });
+		await add.click();
+		await expect(subtotal).toHaveText('₱1,425');
+		await expect(schedule.getByText('Sample deductible expense')).toBeVisible();
+		await expect(schedule.getByText('Legal basis · Sample legal basis')).toBeVisible();
+		await page.screenshot({ path: testInfo.outputPath(`1701MS-special-deductions-${width}.png`), animations: 'disabled' });
+
+		await page.getByRole('button', { name: 'Save draft', exact: true }).click();
+		await expect(page).toHaveURL(/\/forms$/);
+		await page.getByRole('row').filter({ hasText: '1701MS' }).getByRole('link', { name: 'Edit', exact: true }).click();
+		await goToReturnPage(page, 2);
+		await expect(subtotal).toHaveText('₱1,425');
+		await expect(schedule.getByText('Sample deductible expense')).toBeVisible();
+	});
+}

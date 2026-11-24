@@ -7,6 +7,40 @@ const id = (name: string) => `frm1701MS:${name}`;
 const applies = (name: string, values: Record<string, string>) => shortAnnualFieldApplies(code, id(name), values);
 
 describe('1701-MS income schedule prerequisites', () => {
+	it('derives Item 10B from active detail rows and keeps older totals without detail', () => {
+		const draft = {
+			[id('sourceOfIncomeTaxpayer')]: '1',
+			[id('txtTaxpayerNo12a')]: '2',
+			methodOfDeductionMain: 'itemized',
+			[id('txtSpecialAllowableNo10a')]: '225'
+		};
+		expect(calculate1701MS(draft)[id('txtSpecialAllowableNo10a')]).toBe('225');
+		const details = {
+			[id('sched410A1:Description0')]: 'Advertising',
+			[id('sched410A1:LegalBasis0')]: 'Sample provision',
+			[id('sched410A1:Amount0')]: '1,200',
+			[id('sched410A2:Amount0')]: '750'
+		};
+		const merged = { ...draft, ...details };
+		expect(calculate1701MS(merged)[id('txtSpecialAllowableNo10a')]).toBe('1200.00');
+		expect(calculate1701MS(merged)[id('txtTotalAllowableItemixedDeductionsNo10a')]).toBe('1200.00');
+		const exported = getReturnExportValues(code, merged);
+		expect(exported[id('sched410A1:LegalBasis0')]).toBe('Sample provision');
+		expect(exported).not.toHaveProperty(id('sched410A2:Amount0'));
+		const osd = { ...merged, methodOfDeductionMain: 'osd' };
+		expect(getReturnExportValues(code, osd)).not.toHaveProperty(id('sched410A1:Amount0'));
+		expect(calculate1701MS(osd)[id('sched410A1:Amount0')]).toBe('1,200');
+
+		const joint = {
+			...osd, [id('civilStatus')]: 'Married', [id('txtIfMarried')]: '1',
+			[id('sourceOfIncomeSpouse')]: '3', [id('txtTaxpayerNo12b')]: '2', methodOfDeductionStandard: 'itemized2'
+		};
+		const jointExport = getReturnExportValues(code, joint);
+		expect(jointExport[id('txtSpecialAllowableNo10b')]).toBe('750.00');
+		expect(jointExport[id('sched410A2:Amount0')]).toBe('750');
+		expect(jointExport).not.toHaveProperty(id('sched410A1:Amount0'));
+	});
+
 	it('keeps stale amounts dormant until the filer chooses a valid source and tax regime', () => {
 		const draft = {
 			[id('txtGrossa')]: '400000',
