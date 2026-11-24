@@ -1113,7 +1113,7 @@ export const printBindings: readonly PrintBinding[] = [
                                         </span><span
                                           class="wh-inline-232ced7b40ab"
                                           ><span class="wh-inline-cb3a2164388b"
-                                            >Less : Tax Credits/Payments</span
+                                            >Less: Tax Credits/Payments</span
                                           ></span
                                         ></td
                                       >

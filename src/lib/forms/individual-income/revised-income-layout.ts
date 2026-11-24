@@ -12,7 +12,7 @@ const msAmountLabels: Record<string, [string, string]> = {
 	TotalTaxDueCompensationA: ['18A', 'Total special-rate tax due'], TotalTaxDueCompensationB: ['18B', 'Total regular-rate tax due'],
 	txtSalesRevenuesFeesANo19: ['19', 'Net sales, revenue, receipts or fees'],
 	txtOtherNonOperatingIncomeNo20: ['20', 'Other non-operating income'], txtTotalIncomeNo21: ['21', 'Total income'],
-	txtLess22: ['22', 'Less allowable reduction'],
+	txtLess22: ['22', 'Less: Allowable reduction'],
 	txtTaxableIncomeLoss23: ['23', 'Taxable income or loss'], txtTaxDueBusinessIncome24: ['24', 'Tax due at 8%'],
 	txtCompensationBusinessNo25: ['25', 'Total tax due on compensation and business income'],
 	txtTotalTaxCreditsPaymentsPartVNo10: ['10', 'Total tax credits and payments'],
@@ -43,7 +43,7 @@ export function revisedIncomeScheduleLayout(code: string, field: IncomeEditorFie
 			if (number === '2') section = 'Schedule 2 · Taxable compensation income';
 			if (number === '3') section = name.includes('Pg3') ? 'Schedule 3.B · Business income at 8%' : 'Schedule 3.A · Business income at graduated rates';
 			if (number === '3' && ['19', '20', '27', '29'].includes(row)) {
-				const title = row === '29' ? 'Less allowable reduction' : 'Other non-operating income';
+				const title = row === '29' ? 'Less: Allowable reduction' : 'Other non-operating income';
 				label = `${item} ${title}${column === 'Desc' ? ' description' : ''}`;
 			}
 			if (number === '4') section = 'Schedule 4 · Ordinary itemized deductions';

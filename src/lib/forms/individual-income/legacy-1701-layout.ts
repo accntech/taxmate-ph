@@ -103,12 +103,12 @@ const computationLabels: Record<string, string> = {
 	53: 'Cost of sales or services', 54: 'Gross business or professional income', 55: 'Non-operating income', 56: 'Total gross income',
 	57: 'Ordinary itemized deductions', 58: 'Special itemized deductions', 59: 'Net operating loss carryover',
 	60: 'Total itemized deductions', 61: '40% Optional Standard Deduction (OSD)', 62: 'Taxable business or professional income',
-	63: 'Net taxable compensation', 64: 'Net taxable income', 65: 'Less excess deductions', 66: 'Total taxable income', 67: 'Regular income tax due',
-	68: 'Regular income tax due', 69: 'Special income tax due', 70: 'Less other government agency share', 71: 'Net special income tax due',
+	63: 'Net taxable compensation', 64: 'Net taxable income', 65: 'Less: Excess deductions', 66: 'Total taxable income', 67: 'Regular income tax due',
+	68: 'Regular income tax due', 69: 'Special income tax due', 70: 'Less: Other government agency share', 71: 'Net special income tax due',
 	72: 'Total income tax due', 73: 'Regular tax credits and payments', 74: 'Special tax credits and payments', 75: 'Exempt tax credits and payments',
 	76: 'Total tax credits and payments', 77: 'Net tax payable or overpayment', 78: 'Combined net tax payable or overpayment',
-	79: 'Less second installment', 80: 'Net amount payable or overpayment', 81: 'Surcharge', 82: 'Interest', 83: 'Compromise',
-	84: 'Total penalties', 85: 'Amount payable upon filing', 86: 'Regular income tax otherwise due', 87: 'Less regular tax due',
+	79: 'Less: Second installment', 80: 'Net amount payable or overpayment', 81: 'Surcharge', 82: 'Interest', 83: 'Compromise',
+	84: 'Total penalties', 85: 'Amount payable upon filing', 86: 'Regular income tax otherwise due', 87: 'Less: Regular tax due',
 	88: 'Tax relief before special tax credits', 89: 'Special tax credits', 90: 'Regular tax relief', 91: 'Special tax relief',
 	92: 'Exempt tax relief', 93: 'Total tax relief', 94: 'Combined tax relief'
 };
@@ -283,8 +283,8 @@ export function legacy1701ScheduleLayout(field: IncomeEditorField): Partial<Inco
 			4: 'Cost of sales or services', 5: 'Gross business or professional income', 6: 'Non-operating income', 7: 'Total gross income',
 			8: 'Ordinary itemized deductions', 9: 'Special itemized deductions', 10: 'Net operating loss carryover',
 			11: 'Total itemized deductions', 13: 'Taxable business or professional income', 14: 'Net taxable compensation',
-			15: 'Net taxable income', 16: 'Less excess deductions', 17: 'Total taxable income', 18: 'Total income tax due',
-			19: 'Less tax credits and payments', 20: 'Net tax payable or overpayment', 21: 'Total tax relief'
+			15: 'Net taxable income', 16: 'Less: Excess deductions', 17: 'Total taxable income', 18: 'Total income tax due',
+			19: 'Less: Tax credits and payments', 20: 'Net tax payable or overpayment', 21: 'Total tax relief'
 		};
 		return layout(field, 'Part IX · Consolidated income tax', item, labels[item], { person: undefined });
 	}

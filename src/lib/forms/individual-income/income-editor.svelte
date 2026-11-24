@@ -218,18 +218,18 @@
 		23: 'Taxpayer tax due',
 		24: 'Spouse tax due',
 		25: 'Total income tax due',
-		26: 'Less taxpayer tax credits and payments',
-		27: 'Less spouse tax credits and payments',
+		26: 'Less: Taxpayer tax credits and payments',
+		27: 'Less: Spouse tax credits and payments',
 		28: 'Net tax payable or overpayment',
-		29: 'Less second installment due by July 15',
-		30: 'Add penalties',
+		29: 'Less: Second installment due by July 15',
+		30: 'Add: Penalties',
 		31: 'Amount payable upon filing'
 	};
 	const revisedTaxSummaryLabels: Partial<Record<string, string>> = {
 		26: 'Tax due',
-		27: 'Less tax credits and payments',
+		27: 'Less: Tax credits and payments',
 		28: 'Net tax payable or overpayment',
-		29: 'Less second installment',
+		29: 'Less: Second installment',
 		30: 'Tax after installment',
 		31: 'Interest',
 		32: 'Surcharge',
@@ -240,28 +240,28 @@
 	};
 	const otherTaxSummaries: Partial<Record<string, { total: string; labels: Record<string, string> }>> = {
 		'1701': { total: '32', labels: {
-			26: 'Income tax due', 27: 'Less tax credits and payments', 28: 'Net tax payable or overpayment',
-			29: 'Less second installment', 30: 'Tax after installment', 31: 'Total penalties', 32: 'Amount payable upon filing'
+			26: 'Income tax due', 27: 'Less: Tax credits and payments', 28: 'Net tax payable or overpayment',
+			29: 'Less: Second installment', 30: 'Tax after installment', 31: 'Total penalties', 32: 'Amount payable upon filing'
 		} },
 		'1701v2018': { total: '32', labels: {
-			22: 'Tax due', 23: 'Less tax credits and payments', 24: 'Net tax payable or overpayment', 25: 'Less second installment',
+			22: 'Tax due', 23: 'Less: Tax credits and payments', 24: 'Net tax payable or overpayment', 25: 'Less: Second installment',
 			26: 'Tax after installment', 27: 'Interest', 28: 'Surcharge', 29: 'Compromise', 30: 'Total penalties',
 			31: 'Total payable or overpayment', 32: 'Aggregate amount payable'
 		} },
 		'1701A': { total: '30', labels: {
-			20: 'Tax due', 21: 'Less tax credits and payments', 22: 'Net tax payable or overpayment', 23: 'Less second installment',
+			20: 'Tax due', 21: 'Less: Tax credits and payments', 22: 'Net tax payable or overpayment', 23: 'Less: Second installment',
 			24: 'Tax after installment', 25: 'Surcharge', 26: 'Interest', 27: 'Compromise', 28: 'Total penalties',
 			29: 'Total payable or overpayment', 30: 'Aggregate amount payable'
 		} },
 		'1701MS': { total: '30', labels: {
-			19: 'Tax due at special or preferential rate', 20: 'Less other government agency share', 21: 'Net special-rate tax due',
-			22: 'Tax due at regular rate', 23: 'Total income tax due', 24: 'Less tax credits and payments',
-			25: 'Net tax payable or overpayment', 26: 'Less second installment', 27: 'Tax after installment',
+			19: 'Tax due at special or preferential rate', 20: 'Less: Other government agency share', 21: 'Net special-rate tax due',
+			22: 'Tax due at regular rate', 23: 'Total income tax due', 24: 'Less: Tax credits and payments',
+			25: 'Net tax payable or overpayment', 26: 'Less: Second installment', 27: 'Tax after installment',
 			'28A': 'Surcharge', '28B': 'Interest', '28C': 'Compromise', '28D': 'Total penalties',
 			29: 'Total payable or overpayment', 30: 'Aggregate amount payable'
 		} },
 		'1701Qv2018': { total: '31', labels: {
-			26: 'Tax due', 27: 'Less tax credits and payments', 28: 'Net tax payable or overpayment', 29: 'Total penalties',
+			26: 'Tax due', 27: 'Less: Tax credits and payments', 28: 'Net tax payable or overpayment', 29: 'Total penalties',
 			30: 'Total payable or overpayment', 31: 'Aggregate amount payable'
 		} }
 	};

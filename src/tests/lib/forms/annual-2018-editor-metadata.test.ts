@@ -58,8 +58,8 @@ describe('January 2018 Form 1701 editor column meanings', () => {
 		for (const item of ['1', '2', '5', '6', '10', '11']) {
 			expect(field(`txtPg4IPart9_${item}A`).section).toBe('Part IX · Reconciliation of income');
 		}
-		expect(field('txtPg4IPart9_2A')).toHaveProperty('subheading', 'Add non-deductible expenses and other taxable income');
-		expect(field('txtPg4IPart9_6A')).toHaveProperty('subheading', 'Less non-taxable income and income subject to final tax');
+		expect(field('txtPg4IPart9_2A')).toHaveProperty('subheading', 'Add: Non-deductible expenses and other taxable income');
+		expect(field('txtPg4IPart9_6A')).toHaveProperty('subheading', 'Less: Non-taxable income and income subject to final tax');
 		expect(field('txtPg4IPart9_3A')).not.toHaveProperty('subheading');
 	});
 

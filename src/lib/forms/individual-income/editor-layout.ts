@@ -648,10 +648,10 @@ export const annual1701ASchedules = {
 } as const;
 
 export const annual1701AScheduleLabels: Record<string, string> = {
-	36: 'Sales, revenue, receipts or fees', 37: 'Less returns, allowances and discounts', 38: 'Net sales, revenue, receipts or fees',
+	36: 'Sales, revenue, receipts or fees', 37: 'Less: Returns, allowances and discounts', 38: 'Net sales, revenue, receipts or fees',
 	39: 'Optional standard deduction', 40: 'Net income', 41: 'Other income', 42: 'Other income',
 	43: 'Share of income from a general professional partnership', 44: 'Total other income', 45: 'Total taxable income', 46: 'Tax due',
-	47: 'Sales, revenue, receipts or fees', 48: 'Less returns, allowances and discounts', 49: 'Net sales, revenue, receipts or fees',
+	47: 'Sales, revenue, receipts or fees', 48: 'Less: Returns, allowances and discounts', 49: 'Net sales, revenue, receipts or fees',
 	50: 'Other non-operating income', 51: 'Other non-operating income', 52: 'Total other non-operating income',
 	53: 'Total taxable income', 54: '₱250,000 reduction for purely self-employed filers', 55: 'Taxable income or loss', 56: 'Tax due',
 	57: 'Prior year’s excess credits', 58: 'Tax paid for the first three quarters', 59: 'Creditable tax withheld for the first three quarters',
@@ -690,11 +690,11 @@ const legacyQuarterlyAmountLabels: Record<string, string> = {
 };
 
 const revised1700ComputationLabels: Record<string, string> = {
-	42: 'Gross compensation income', 43: 'Less non-taxable or exempt compensation',
-	44: 'Gross taxable compensation', 45: 'Add other taxable non-business or non-professional income',
+	42: 'Gross compensation income', 43: 'Less: Non-taxable or exempt compensation',
+	44: 'Gross taxable compensation', 45: 'Add: Other taxable non-business or non-professional income',
 	46: 'Total taxable income', 47: 'Tax due at graduated rates',
-	48: 'Gross compensation income', 49: 'Less non-taxable or exempt compensation',
-	50: 'Gross taxable compensation', 51: 'Add other taxable income',
+	48: 'Gross compensation income', 49: 'Less: Non-taxable or exempt compensation',
+	50: 'Gross taxable compensation', 51: 'Add: Other taxable income',
 	52: 'Total taxable income', 53: 'Tax due at the 25% flat rate',
 	54: 'Tax withheld per Form 2316', 55: 'Tax paid on the previously filed return (amended returns)',
 	56: 'Foreign tax credits', 57: 'Other tax credits or payments',

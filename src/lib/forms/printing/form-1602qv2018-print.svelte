@@ -1394,7 +1394,7 @@ export const printBindings: readonly PrintBinding[] = [
                 <tbody
                   ><tr>
                     <td class="tblFormTd wh-inline-5c648a859fec">
-                      <span class="wh-inline-593a732bee33">Add Penalties:</span>
+                      <span class="wh-inline-593a732bee33">Add: Penalties</span>
                       <span class="item-number">24</span>
                       <span class="wh-inline-cb3a2164388b"> Surcharge </span>
                     </td>

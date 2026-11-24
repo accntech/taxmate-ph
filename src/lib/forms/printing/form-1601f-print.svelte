@@ -1160,7 +1160,7 @@ export const printBindings: readonly PrintBinding[] = [
                                           ><span class="wh-inline-cb3a2164388b">
                                           </span><span
                                             class="wh-inline-429482632af7"
-                                            >Less : Tax Remitted in Return
+                                            >Less: Tax Remitted in Return
                                             Previously Filed, if this is an
                                             amended return</span
                                           ></td

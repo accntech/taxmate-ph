@@ -25,31 +25,31 @@ const labels: Record<string, Record<string, string>> = {
 		5: 'Tax relief effective from', 6: 'Tax relief effective to'
 	},
 	B: {
-		1: 'Net sales, revenue, receipts or fees', 2: 'Add other taxable operating income',
-		3: 'Total sales, revenue, receipts or fees', 4: 'Less cost of sales or services',
-		5: 'Gross income from business', 6: 'Add non-operating income', 7: 'Total gross income',
+		1: 'Net sales, revenue, receipts or fees', 2: 'Add: Other taxable operating income',
+		3: 'Total sales, revenue, receipts or fees', 4: 'Less: Cost of sales or services',
+		5: 'Gross income from business', 6: 'Add: Non-operating income', 7: 'Total gross income',
 		8: 'Ordinary itemized deductions', 9: 'Special itemized deductions', 10: 'Total itemized deductions',
 		11: 'Total income from business or profession'
 	},
 	C1: {
-		1: 'Taxable income from business or profession', 2: 'Add special itemized deductions', 3: 'Subtotal',
-		4: 'Regular income tax otherwise due', 5: 'Less income tax due at the special rate',
-		6: 'Tax relief before special tax credits', 7: 'Add special tax credits', 8: 'Total special-rate tax relief'
+		1: 'Taxable income from business or profession', 2: 'Add: Special itemized deductions', 3: 'Subtotal',
+		4: 'Regular income tax otherwise due', 5: 'Less: Income tax due at the special rate',
+		6: 'Tax relief before special tax credits', 7: 'Add: Special tax credits', 8: 'Total special-rate tax relief'
 	},
 	C2: { 9: 'Taxable business income at regular rates', 10: 'Applicable tax rate (%)', 11: 'Tax relief on exempt income' },
 	D: {
-		1: 'Total sales, revenue, receipts or fees', 2: 'Add gross sales not subject to withholding tax',
-		3: 'Total sales, revenue, receipts or fees', 4: 'Less returns, allowances and discounts', 5: 'Net sales, revenue, receipts or fees'
+		1: 'Total sales, revenue, receipts or fees', 2: 'Add: Gross sales not subject to withholding tax',
+		3: 'Total sales, revenue, receipts or fees', 4: 'Less: Returns, allowances and discounts', 5: 'Net sales, revenue, receipts or fees'
 	},
 	F1: {
-		1: 'Merchandise inventory, beginning', 2: 'Add merchandise purchases', 3: 'Total goods available for sale',
-		4: 'Less merchandise inventory, ending', 5: 'Cost of sales'
+		1: 'Merchandise inventory, beginning', 2: 'Add: Merchandise purchases', 3: 'Total goods available for sale',
+		4: 'Less: Merchandise inventory, ending', 5: 'Cost of sales'
 	},
 	F2: {
-		6: 'Direct materials, beginning', 7: 'Add direct material purchases', 8: 'Materials available for use',
-		9: 'Less direct materials, ending', 10: 'Raw materials used', 11: 'Direct labor', 12: 'Manufacturing overhead',
-		13: 'Total manufacturing cost', 14: 'Add work in process, beginning', 15: 'Less work in process, ending',
-		16: 'Cost of goods manufactured', 17: 'Add finished goods, beginning', 18: 'Less finished goods, ending',
+		6: 'Direct materials, beginning', 7: 'Add: Direct material purchases', 8: 'Materials available for use',
+		9: 'Less: Direct materials, ending', 10: 'Raw materials used', 11: 'Direct labor', 12: 'Manufacturing overhead',
+		13: 'Total manufacturing cost', 14: 'Add: Work in process, beginning', 15: 'Less: Work in process, ending',
+		16: 'Cost of goods manufactured', 17: 'Add: Finished goods, beginning', 18: 'Less: Finished goods, ending',
 		19: 'Cost of goods manufactured and sold'
 	},
 	F3: {
@@ -77,9 +77,9 @@ const labels: Record<string, Record<string, string>> = {
 		7: 'Foreign tax credits', 8: 'Special tax credits', 9: 'Other tax credits or payments', 10: 'Total tax credits and payments'
 	},
 	K: {
-		1: 'Net income or loss per books', 2: 'Add taxable income excluded from books', 3: 'Add taxable income excluded from books',
-		4: 'Total additions and book income', 5: 'Less non-taxable income included in books', 6: 'Less non-taxable income included in books',
-		7: 'Less special deductions', 8: 'Less special deductions', 9: 'Total deductions', 10: 'Net taxable income or loss'
+		1: 'Net income or loss per books', 2: 'Add: Taxable income excluded from books', 3: 'Add: Taxable income excluded from books',
+		4: 'Total additions and book income', 5: 'Less: Non-taxable income included in books', 6: 'Less: Non-taxable income included in books',
+		7: 'Less: Special deductions', 8: 'Less: Special deductions', 9: 'Total deductions', 10: 'Net taxable income or loss'
 	}
 };
 

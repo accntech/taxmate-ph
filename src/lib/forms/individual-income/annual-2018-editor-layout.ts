@@ -4,12 +4,12 @@ type Annual2018Layout = Partial<IncomeEditorField> & { column?: string; subheadi
 
 const conciseAmountLabels: Record<string, Record<string, string>> = {
 	Shed2: {
-		4: 'Gross compensation income', 5: 'Less non-taxable or exempt compensation',
+		4: 'Gross compensation income', 5: 'Less: Non-taxable or exempt compensation',
 		6: 'Taxable compensation income', 7: 'Tax due on compensation'
 	},
 	Shed3: {
-		8: 'Sales, revenues, receipts or fees', 9: 'Less sales returns, allowances and discounts',
-		10: 'Net sales, revenues, receipts or fees', 11: 'Less cost of sales or services',
+		8: 'Sales, revenues, receipts or fees', 9: 'Less: Sales returns, allowances and discounts',
+		10: 'Net sales, revenues, receipts or fees', 11: 'Less: Cost of sales or services',
 		12: 'Gross income or loss from operations', 13: 'Ordinary allowable itemized deductions',
 		14: 'Special allowable itemized deductions', 15: 'Net operating loss carryover allowance',
 		16: 'Total allowable itemized deductions', 17: '40% Optional Standard Deduction (OSD)',
@@ -23,7 +23,7 @@ const conciseAmountLabels: Record<string, Record<string, string>> = {
 	Shed4: { 18: 'Total ordinary itemized deductions' },
 	Sc6: {
 		1: 'Regular income tax due', 2: 'Special-rate income tax due',
-		3: 'Less share remitted to another government agency', 4: 'Net special-rate income tax due',
+		3: 'Less: Share remitted to another government agency', 4: 'Net special-rate income tax due',
 		5: 'Total income tax due'
 	},
 	Part7: {
@@ -34,8 +34,8 @@ const conciseAmountLabels: Record<string, Record<string, string>> = {
 	},
 	Part8: {
 		1: 'Regular income tax otherwise due', 2: 'Tax relief on special itemized deductions',
-		3: 'Tax relief subtotal', 4: 'Less income tax due', 5: 'Tax relief before special tax credits',
-		6: 'Add special tax credits', 7: 'Total special-rate tax relief',
+		3: 'Tax relief subtotal', 4: 'Less: Income tax due', 5: 'Tax relief before special tax credits',
+		6: 'Add: Special tax credits', 7: 'Total special-rate tax relief',
 		8: 'Regular income tax on exempt income', 9: 'Tax relief on special itemized deductions',
 		10: 'Total exempt-income tax relief'
 	}
@@ -51,9 +51,9 @@ const reliefLabels: Record<string, string> = {
 };
 const incomeLabels: Record<string, string> = {
 	1: 'Sales, revenues, receipts or fees',
-	2: 'Less sales returns, allowances and discounts',
+	2: 'Less: Sales returns, allowances and discounts',
 	3: 'Net sales, revenues, receipts or fees',
-	4: 'Less cost of sales or services',
+	4: 'Less: Cost of sales or services',
 	5: 'Gross income or loss from operations',
 	6: 'Ordinary allowable itemized deductions',
 	7: 'Special allowable itemized deductions',
@@ -124,8 +124,8 @@ export function annual2018EditorLayout(field: IncomeEditorField): Annual2018Layo
 			...layout(field, 'Part IX · Reconciliation of income',
 				item, label + (column === 'Particulars' ? ' description' : '')),
 			person: column === 'Particulars' ? undefined : column === 'A' ? 'taxpayer' : 'spouse',
-			...(row === 2 ? { subheading: 'Add non-deductible expenses and other taxable income' } :
-				row === 6 ? { subheading: 'Less non-taxable income and income subject to final tax' } : {})
+			...(row === 2 ? { subheading: 'Add: Non-deductible expenses and other taxable income' } :
+				row === 6 ? { subheading: 'Less: Non-taxable income and income subject to final tax' } : {})
 		};
 	}
 	const loss = name.match(/^txtPg[34]IShed6_(\d+)(Year|[A-E])$/);

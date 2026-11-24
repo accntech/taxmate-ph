@@ -1579,7 +1579,7 @@ export const printBindings: readonly PrintBinding[] = [
                                   ><tr>
                                     <td class="wh-inline-36fb844716a5"
                                       ><span class="wh-inline-429482632af7"
-                                        >Less :
+                                        >Less:
                                       </span></td
                                     >
                                     <td class="wh-inline-36fe9f8cef2e"

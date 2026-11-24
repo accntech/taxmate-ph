@@ -75,7 +75,7 @@ describe('June 2013 activity attachment editor meanings', () => {
 		const attachments = fields().filter(field => field.page.includes('m'));
 		expect(attachments.filter(field => /TYPE|Pg\d|\bSc\b|undefined|^\d+$/.test(field.label))).toEqual([]);
 		expect(field('txtPg5mScJI1PriorYearsExcessCreditsC1TYPE')).toMatchObject({ label: '1 Prior year’s excess credits', column: 'Taxpayer' });
-		expect(field('txtPg5mScKI2DescC1TYPE')).toMatchObject({ label: '2 Add taxable income excluded from books', column: 'Description' });
-		expect(field('txtPg5mScKI5C2TYPE')).toMatchObject({ label: '5 Less non-taxable income included in books', column: 'Amount', person: 'spouse' });
+		expect(field('txtPg5mScKI2DescC1TYPE')).toMatchObject({ label: '2 Add: Taxable income excluded from books', column: 'Description' });
+		expect(field('txtPg5mScKI5C2TYPE')).toMatchObject({ label: '5 Less: Non-taxable income included in books', column: 'Amount', person: 'spouse' });
 	});
 });

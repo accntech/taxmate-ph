@@ -118,7 +118,7 @@
 			{@render amount(creditItem, `txtTax${creditItem}`, 'Amount previously remitted')}
 		{/if}
 		{@render total(creditItem + 1, `txtTax${creditItem + 1}`, 'Net amount of remittance')}
-		<h3 class="penalties-heading"><span class="paper-item-number">{penaltyItem}</span> Add penalties</h3>
+		<h3 class="penalties-heading"><span class="paper-item-number">{penaltyItem}</span> Add: Penalties</h3>
 		{@render amount(`${penaltyItem}A`, `txtTax${penaltyItem}A`, 'Surcharge')}
 		{@render amount(`${penaltyItem}B`, `txtTax${penaltyItem}B`, 'Interest')}
 		{@render amount(`${penaltyItem}C`, `txtTax${penaltyItem}C`, 'Compromise')}
