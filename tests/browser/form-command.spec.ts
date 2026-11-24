@@ -3,6 +3,19 @@ import { seedWorkspace, taxpayerId } from './fixtures';
 
 const tablePath = `/ebirforms/taxpayers/${taxpayerId}/forms`;
 
+test('form command drawer reaches both edges of a narrow window', async ({ page }) => {
+	await page.setViewportSize({ width: 428, height: 900 });
+	await seedWorkspace(page);
+	await page.goto(tablePath);
+	await page.getByRole('button', { name: 'Create return', exact: true }).click();
+	const dialog = page.getByRole('dialog', { name: 'Create a tax return' });
+	await expect(dialog).toBeVisible();
+	await expect.poll(async () => {
+		const bounds = await dialog.boundingBox();
+		return bounds && [bounds.x, bounds.x + bounds.width];
+	}).toEqual([0, 428]);
+});
+
 test('form command lists forms in ascending form number order', async ({ page }) => {
 	await seedWorkspace(page);
 	await page.goto(tablePath);

@@ -46,14 +46,14 @@ export const wrapperStyles = stylex.create({
       "default": null,
       "@media (width < 48rem)": {
         "default": "-100%",
-        ":is([data-mobile-open=\"true\"])": "calc(var(--spacing) * 0)"
+        ":is([data-mobile-open=\"true\"])": "0px"
       }
     },
     "translate": {
       "default": null,
       "@media (width < 48rem)": {
-        "default": "var(--sx-translate-x) var(--sx-translate-y)",
-        ":is([data-mobile-open=\"true\"])": "var(--sx-translate-x) var(--sx-translate-y)"
+        "default": "var(--sx-translate-x) var(--sx-translate-y, 0)",
+        ":is([data-mobile-open=\"true\"])": "var(--sx-translate-x) var(--sx-translate-y, 0)"
       }
     },
     "transitionProperty": {

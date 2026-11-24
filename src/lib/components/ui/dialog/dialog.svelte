@@ -126,7 +126,7 @@
 	onclick={onDialogClick}
 	aria-labelledby={title ? titleId : undefined}
 	aria-describedby={description ? descId : undefined}
-	class={stylex.attrs(wrapperStyles.focus, wrapperStyles.root, wrapperStyles.surface, wrapperStyles.centered, wrapperStyles.desktopBounds, sizeStyles[size]).class}
+	class={stylex.attrs(wrapperStyles.focus, wrapperStyles.root, wrapperStyles.surface, sizeStyles[size]).class}
 >
 	<div
 		class={[

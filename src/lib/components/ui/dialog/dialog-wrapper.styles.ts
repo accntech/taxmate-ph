@@ -3,25 +3,25 @@ import * as stylex from "@stylexjs/stylex";
 export const wrapperStyles = stylex.create({
   "sm": {
     "maxWidth": {
-      "default": null,
+      "default": "none",
       "@media (width >= 40rem)": "var(--container-sm)"
     }
   },
   "md": {
     "maxWidth": {
-      "default": null,
+      "default": "none",
       "@media (width >= 40rem)": "var(--container-md)"
     }
   },
   "lg": {
     "maxWidth": {
-      "default": null,
+      "default": "none",
       "@media (width >= 40rem)": "var(--container-lg)"
     }
   },
   "xl": {
     "maxWidth": {
-      "default": null,
+      "default": "none",
       "@media (width >= 40rem)": "var(--container-2xl)"
     }
   },
@@ -47,11 +47,22 @@ export const wrapperStyles = stylex.create({
       "@media (width >= 40rem)": "0px"
     },
     "bottom": "calc(var(--spacing) * 0)",
-    "margin": "calc(var(--spacing) * 0)",
-    "height": "auto",
-    "maxHeight": "90dvh",
-    "width": "100dvw",
-    "maxWidth": "none"
+    "margin": {
+      "default": "0px",
+      "@media (width >= 40rem)": "auto"
+    },
+    "height": {
+      "default": "auto",
+      "@media (width >= 40rem)": "fit-content"
+    },
+    "maxHeight": {
+      "default": "90dvh",
+      "@media (width >= 40rem)": "calc(100dvh - 2rem)"
+    },
+    "width": {
+      "default": "100dvw",
+      "@media (width >= 40rem)": "calc(100vw - 2rem)"
+    }
   },
   "surface": {
     "borderStyle": "var(--sx-border-style)",
@@ -59,26 +70,6 @@ export const wrapperStyles = stylex.create({
     "backgroundColor": "transparent",
     "padding": "calc(var(--spacing) * 0)",
     "color": "var(--fg)"
-  },
-  "centered": {
-    "margin": {
-      "default": null,
-      "@media (width >= 40rem)": "auto"
-    },
-    "height": {
-      "default": null,
-      "@media (width >= 40rem)": "fit-content"
-    }
-  },
-  "desktopBounds": {
-    "maxHeight": {
-      "default": null,
-      "@media (width >= 40rem)": "calc(100dvh - 2rem)"
-    },
-    "width": {
-      "default": null,
-      "@media (width >= 40rem)": "calc(100vw - 2rem)"
-    }
   },
   "panel": {
     "position": "relative",
