@@ -25,6 +25,11 @@ export const wrapperStyles = stylex.create({
     "WebkitBackdropFilter": "var(--sx-backdrop-blur,) var(--sx-backdrop-brightness,) var(--sx-backdrop-contrast,) var(--sx-backdrop-grayscale,) var(--sx-backdrop-hue-rotate,) var(--sx-backdrop-invert,) var(--sx-backdrop-opacity,) var(--sx-backdrop-saturate,) var(--sx-backdrop-sepia,)",
     "backdropFilter": "var(--sx-backdrop-blur,) var(--sx-backdrop-brightness,) var(--sx-backdrop-contrast,) var(--sx-backdrop-grayscale,) var(--sx-backdrop-hue-rotate,) var(--sx-backdrop-invert,) var(--sx-backdrop-opacity,) var(--sx-backdrop-saturate,) var(--sx-backdrop-sepia,)"
   },
+  "history": {
+    "display": "flex",
+    "flexShrink": 0,
+    "gap": "calc(var(--spacing) * 1)"
+  },
   "menuButton": {
     "display": "grid",
     "width": "calc(var(--spacing) * 8)",
@@ -42,12 +47,19 @@ export const wrapperStyles = stylex.create({
     },
     "backgroundColor": {
       "default": "transparent",
-      ":hover": {
+      ":enabled:hover": {
         "default": null,
         "@media (hover: hover)": "var(--bg-hover)"
       }
     },
-    "color": "var(--fg)",
+    "color": {
+      "default": "var(--fg)",
+      ":disabled": "var(--fg-subtle)"
+    },
+    "opacity": {
+      "default": 1,
+      ":disabled": 0.5
+    },
     "transitionProperty": "color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, --sx-gradient-from, --sx-gradient-via, --sx-gradient-to, opacity, box-shadow, transform, translate, scale, rotate, filter, -webkit-backdrop-filter, backdrop-filter, display, content-visibility, overlay, pointer-events",
     "transitionTimingFunction": "var(--sx-ease, var(--default-transition-timing-function))",
     "transitionDuration": "var(--sx-duration, var(--default-transition-duration))",

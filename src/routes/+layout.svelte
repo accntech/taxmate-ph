@@ -2,6 +2,7 @@
 	import * as stylex from '@stylexjs/stylex';
 	import { styles } from './layout.styles';
 	import { browser } from '$app/environment';
+	import { afterNavigate } from '$app/navigation';
 	import { page } from '$app/state';
 	import {
 		listSuiteNavItems,
@@ -32,6 +33,27 @@
 	let stylesReady = $state(!waitForStyleX);
 	let mobileOpen = $state(false);
 	let isMobile = $state(false);
+	let historyPosition = $state(0);
+	let firstHistoryPosition = $state(0);
+	let lastHistoryPosition = $state(0);
+	afterNavigate((navigation) => {
+		if (navigation.type === 'popstate') {
+			historyPosition += navigation.delta;
+			firstHistoryPosition = Math.min(firstHistoryPosition, historyPosition);
+			lastHistoryPosition = Math.max(lastHistoryPosition, historyPosition);
+		} else if (navigation.type !== 'enter' && navigation.from?.url.href !== navigation.to?.url.href) {
+			historyPosition += 1;
+			lastHistoryPosition = historyPosition;
+		}
+	});
+
+	function skipToContent(event: MouseEvent) {
+		const main = document.getElementById('main-content');
+		if (!main) return;
+		event.preventDefault();
+		main.scrollIntoView();
+		main.focus({ preventScroll: true });
+	}
 
 	const navItems = listSuiteNavItems();
 
@@ -123,10 +145,15 @@
 </svelte:head>
 
 {#if stylesReady}
-	<a class="skip-link" href="#main-content">Skip to content</a>
+	<a class="skip-link" href="#main-content" onclick={skipToContent}>Skip to content</a>
 
 	<WindowTitlebar>
-		<Topbar {crumbs} onMenu={handleMenu} />
+		<Topbar
+			{crumbs}
+			onMenu={handleMenu}
+			onBack={historyPosition > firstHistoryPosition ? () => history.back() : undefined}
+			onForward={historyPosition < lastHistoryPosition ? () => history.forward() : undefined}
+		/>
 	</WindowTitlebar>
 
 	<div class="app-shell" data-collapsed={settings.sidebarCollapsed && !isMobile ? 'true' : undefined}>
