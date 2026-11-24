@@ -94,7 +94,10 @@
 	{:else if type === 'date'}
 		<DateInput {id} {label} {required} {value} {error} onchange={(next) => onvaluechange({ [id]: next })} />
 	{:else if type === 'money'}
-		<CurrencyInput {id} {label} {required} {value} {error} onchange={(next) => onvaluechange({ [id]: next })} />
+		<CurrencyInput {id} {label} {required} {value} {error}
+			data-taxmate-agent={name === 'txtTax19' ? 'Basic tax' : undefined}
+			data-taxmate-agent-currency={name === 'txtTax19' ? '' : undefined}
+			onchange={(next) => onvaluechange({ [id]: next })} />
 	{:else}
 		<Input {id} {label} {required} {value} {error} oninput={(event) => onvaluechange({ [id]: event.currentTarget.value })} />
 	{/if}
@@ -114,7 +117,7 @@
 	<div class={['payment-total', { final }]}>
 		<span class="paper-item-number" aria-hidden="true">{item}</span>
 		<span id={`${prefix}${name}-label`}>{label}</span>
-		<output id={prefix + name} aria-labelledby={`${prefix}${name}-label`} aria-live="off">
+		<output id={prefix + name} aria-labelledby={`${prefix}${name}-label`} aria-live="off" data-taxmate-agent={label}>
 			{invalidAmounts ? '—' : currency.format(Number(calculated[prefix + name]))}
 		</output>
 	</div>

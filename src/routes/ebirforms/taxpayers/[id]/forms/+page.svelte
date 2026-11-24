@@ -12,6 +12,7 @@
 	import type { CreatedReturn } from '$lib/ebirforms/created-returns';
 	import { getReturnAmount, getReturnPeriod, getReturnTin, getManagedTaxpayerValues } from '$lib/forms/form-runtime';
 	import { getFormDefinition } from '$lib/forms';
+	import { registerDraftControls } from '$lib/ui-agent';
 	import FormCommand from '$lib/ebirforms/form-command.svelte';
 	import { settings } from '$lib/settings.svelte';
 	import { buildReturnReport } from '$lib/printing/return-report';
@@ -183,6 +184,20 @@
 			if (profile) workspace.selectTaxpayerProfile(params.id);
 			ready = true;
 		});
+		return registerDraftControls(() => {
+			if (!ready || !storageReady || !profile || busy) return [];
+			return workspace.createdReturns
+				.filter(record => record.taxpayerId === params.id && record.status === 'Draft' && !record.archived)
+				.sort((a, b) => b.updatedAt - a.updatedAt || a.id.localeCompare(b.id))
+				.map(record => ({
+					target: `Edit BIR Form ${record.formCode} Draft (${record.id})`,
+					formCode: record.formCode,
+					returnPeriod: record.returnPeriod,
+					updatedAt: record.updatedAt,
+					amountDue: getReturnAmount(record.formCode, record.values),
+					href: route(record.id, record.formCode)
+				}));
+		});
 	});
 	beforeNavigate(({ cancel }) => {
 		if (busy) { toast.info('Wait for the current operation to finish before leaving.'); cancel(); }
@@ -199,7 +214,7 @@
 	{:else}
 		<header class={stylex.attrs(styles.header).class}>
 			<div><h1 class={stylex.attrs(styles.heading).class}>Tax Returns</h1><p class={stylex.attrs(styles.description).class}>{profile.taxpayerName} · <span class={stylex.attrs(styles.tin).class}>{formatTinInput(profile)}</span> · {rows.length} {rows.length === 1 ? 'return' : 'returns'}</p></div>
-			<Button disabled={busy || archived || !storageReady} onclick={() => { createError = ''; createOpen = true; }}><AddCircle size={18} color="currentColor" />Create return</Button>
+			<Button data-taxmate-agent="Create return" data-taxmate-agent-sdk="" disabled={busy || archived || !storageReady} onclick={() => { createError = ''; createOpen = true; }}><AddCircle size={18} color="currentColor" />Create return</Button>
 		</header>
 		{#if archived}<p class={stylex.attrs(styles.status).class}>This taxpayer is archived. Restore the profile to create new returns.</p>{/if}
 		{#if archivedNotice}
@@ -269,7 +284,7 @@
 	<p class={stylex.attrs(styles.status).class}>{workspace.statusMessage}</p>
 	{#snippet footer()}
 		<Button variant="secondary" onclick={() => deleteId = ''}>Cancel</Button>
-		<Button variant="danger" disabled={busy || !storageReady} onclick={deleteForm}>Delete return</Button>
+		<Button variant="danger" data-agent-confirm="delete" disabled={busy || !storageReady} onclick={deleteForm}>Delete return</Button>
 	{/snippet}
 </Dialog>
 <Toaster />

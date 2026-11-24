@@ -12,6 +12,7 @@
     "test": "vitest",
     "test:run": "vitest run",
     "tauri": "tauri",
+    "tauri:agent": "mkdir -pm 700 \"$HOME/.codex/taxmate-ui\" && TAXMATE_UI_AGENT_SOCKET=\"$HOME/.codex/taxmate-ui/agent.sock\" tauri dev",
     "test:browser": "playwright test"
   },
   "license": "MIT",

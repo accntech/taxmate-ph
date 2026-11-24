@@ -11,6 +11,7 @@
   <a href="#app-tour">App tour</a> ·
   <a href="#supported-bir-forms">Supported forms</a> ·
   <a href="#sending-and-filing-status">Sending and filing status</a> ·
+  <a href="#ai-agent-integration">AI agent integration</a> ·
   <a href="#run-from-source">Run from source</a>
 </p>
 
@@ -36,6 +37,7 @@ accepted forms, refer to the Bureau of Internal Revenue.
 | PDF export | Generate printable copies in A4, Letter, Long / Folio, or Legal. Supported withholding schedules can continue on additional pages. |
 | Return packages and history | Prepare packages locally, use desktop sending for eligible 1601-EQ returns, and review locally recorded results and submission logs. |
 | Workspace preferences | Choose an eBIRForms, Teal, or Catppuccin palette, set light, dark, or system appearance, and save a default paper size. |
+| AI agent integration | Connect Codex or another local MCP client to navigate the app, edit return fields, and save drafts through the desktop UI. |
 
 ## App tour
 
@@ -163,6 +165,64 @@ to exercise submission handling without connecting to BIR.
 
 Both pages currently preview the planned workflows. Corporate income tax and
 regular VAT returns are outside the current forms catalog.
+
+## AI agent integration
+
+TaxMate PH exposes its desktop controls through a local Model Context Protocol
+(MCP) server on macOS and Linux. An agent can inspect the active screen, navigate
+to a taxpayer’s returns, edit fields, and verify saved drafts.
+
+### Connect an agent
+
+1. Install Node.js and keep a checkout of this repository for the MCP server script.
+2. In the TaxMate desktop app, turn on **Settings → Agent bridge → Enable agent
+   bridge**. The bridge is off by default. It starts immediately and stays enabled
+   across app restarts. Turn the setting off to disconnect local agents.
+3. With the Codex CLI installed, run the command below from the repository root.
+   Keep TaxMate open and start a new Codex chat to use the tools.
+
+```sh
+codex mcp add taxmate-ui \
+  --env "TAXMATE_UI_AGENT_SOCKET=$HOME/.codex/taxmate-ui/agent.sock" \
+  -- "$(command -v node)" "$PWD/scripts/taxmate-ui-mcp.mjs"
+```
+
+For another local MCP client, register a stdio server named `taxmate-ui` with
+the absolute path to `node` as its command and the absolute path to
+`scripts/taxmate-ui-mcp.mjs` as its argument. The server uses the private Unix
+socket `~/.codex/taxmate-ui/agent.sock` by default. If it cannot connect, check
+that TaxMate is running and look for a bridge error in **Settings**.
+
+### Use the tools
+
+Use `taxmate_ui_query` to discover controls on the active screen. An empty
+`text` value lists controls and any current status or validation messages.
+When the result includes `nextOffset`, pass it as `offset` with the same query
+text to retrieve more results. Pass a returned target and action to
+`taxmate_ui_act`. Use `press` for buttons and links, `set_value` for editable
+fields, `select` for native selects, and `key` where the control lists specific
+shortcuts. Supply `args.value` for `set_value` and `select`, or `args.key` for
+`key`. Query again after actions that change the screen.
+
+With a sample taxpayer’s **Tax Returns** open, try this prompt in Codex:
+
+> Open the most recently updated Form 0605 draft. Set Basic tax to 500.00,
+> report the Total amount payable, then save and reopen the draft to verify
+> the amount.
+
+On **Tax Returns**, search for a form code and **Draft** to find that
+taxpayer's working copies in last-updated order, including drafts outside the
+current table page and filters. For Form 0605, **Basic tax** is editable and
+**Total amount payable** shows the calculated result. Use **Save draft** and
+query the saved return again to verify persistence.
+
+When a control reports `requiresUserConsent`, complete the delete or remove
+action directly in TaxMate. The bridge can open a delete dialog for review.
+Changing the bridge setting, using native file pickers, and operating external
+application windows also require direct interaction.
+
+For development, `bun run tauri:agent` can start the bridge before the setting
+has been saved. A saved Off setting takes precedence.
 
 ## Run from source
 

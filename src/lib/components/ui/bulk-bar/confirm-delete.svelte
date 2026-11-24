@@ -41,8 +41,8 @@
     open = false;
   }
 
-  function confirm() {
-    if (pending || !confirmMatches) return;
+  function confirm(event: MouseEvent) {
+    if (!event.isTrusted || pending || !confirmMatches) return;
     onconfirm();
   }
 
@@ -121,6 +121,7 @@
     </button>
     <Button
       type="button"
+      data-agent-confirm="delete"
       onclick={confirm}
       disabled={pending || !confirmMatches}
       variant="destructive-soft"

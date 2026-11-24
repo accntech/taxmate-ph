@@ -1,3 +1,5 @@
+#[cfg(all(desktop, unix))]
+mod agent_bridge;
 pub mod pdf_export;
 pub mod profile_store;
 pub mod return_history;
@@ -58,7 +60,15 @@ fn window_ready(
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     window_chrome::initialize();
-    let app = tauri::Builder::default()
+    let builder = tauri::Builder::default();
+    #[cfg(all(desktop, unix))]
+    let builder = builder
+        .manage(agent_bridge::AgentBridge::default())
+        .setup(|app| {
+            agent_bridge::start(app.handle());
+            Ok(())
+        });
+    let app = builder
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
@@ -76,7 +86,13 @@ pub fn run() {
             submission::read_submission_log,
             working_returns::load_working_returns,
             working_returns::save_working_returns,
-            return_history::list_submitted_returns
+            return_history::list_submitted_returns,
+            #[cfg(all(desktop, unix))]
+            agent_bridge::taxmate_ui_agent_status,
+            #[cfg(all(desktop, unix))]
+            agent_bridge::taxmate_ui_agent_set_enabled,
+            #[cfg(all(desktop, unix))]
+            agent_bridge::taxmate_ui_agent_reply
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application");
@@ -87,7 +103,11 @@ pub fn run() {
                 eprintln!("Unable to reopen main window: {error}");
             }
         }
-        tauri::RunEvent::Exit => window_chrome::shutdown(),
+        tauri::RunEvent::Exit => {
+            #[cfg(all(desktop, unix))]
+            agent_bridge::stop(app);
+            window_chrome::shutdown();
+        }
         _ => {}
     });
 }

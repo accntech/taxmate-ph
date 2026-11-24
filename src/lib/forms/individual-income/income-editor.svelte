@@ -1533,7 +1533,7 @@
 		{#if form.quarter && !['Estate', 'Trust'].includes(values['frm1701q:optTaxpayerType'])}
 			<div class="income-spouse-action">
 				{#if includesSpouse}
-					<Button variant="secondary" size="sm" onclick={() => setValue('income:useSavedSpouse', 'N')}>Remove spouse from this return</Button>
+					<Button variant="secondary" size="sm" data-agent-confirm="delete" onclick={() => setValue('income:useSavedSpouse', 'N')}>Remove spouse from this return</Button>
 				{:else if profile.spouse}
 					<Button variant="secondary" size="sm" onclick={() => setValue('income:useSavedSpouse', 'Y')}>Use saved spouse details</Button>
 				{:else}

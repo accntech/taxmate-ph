@@ -342,13 +342,13 @@
 							{/if}
 						</div>
 						<button id={`drag-atc-${row}`} type="button" class="grip" disabled={rows.length < 2}
-							aria-label={`Drag line item ${index + 1}`} aria-describedby="atc-drag-help"
+							aria-label={`Drag line item ${index + 1}`} data-taxmate-agent-keys="ArrowUp ArrowDown Home End" aria-describedby="atc-drag-help"
 							onpointerdown={(event) => startPointer(event, row)} onkeydown={(event) => reorderKey(event, index)}>
 							{@render gripIcon()}
 						</button>
 						<div class="row-actions">
 							<Button variant="ghost" size="icon" aria-label={`Edit line item ${index + 1}`} title="Edit line item" onclick={(event) => edit(row, undefined, event.currentTarget)}><span class="edit-icon"><Icon icon={glyphs.pencil} /></span></Button>
-							<Button variant="ghost" size="icon" aria-label={`Remove line item ${index + 1}`} title="Remove line item" onclick={() => remove(row)}><TrashBinTrash size={18} color="currentColor" aria-hidden="true" /></Button>
+							<Button variant="ghost" size="icon" aria-label={`Remove line item ${index + 1}`} title="Remove line item" data-agent-confirm="delete" onclick={() => remove(row)}><TrashBinTrash size={18} color="currentColor" aria-hidden="true" /></Button>
 						</div>
 					</li>
 				{/each}

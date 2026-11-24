@@ -13,6 +13,8 @@
 		type = 'button',
 		class: className = '',
 		children,
+		onclick,
+		'data-agent-confirm': agentConfirm,
 		...rest
 	}: {
 		variant?: ButtonVariant;
@@ -20,6 +22,7 @@
 		type?: 'button' | 'submit' | 'reset';
 		class?: string;
 		children?: Snippet;
+		'data-agent-confirm'?: 'delete';
 	} & Omit<HTMLButtonAttributes, 'class' | 'type'> = $props();
 	// The source uses intersected anchor/button handlers; this wrapper selects one native element.
 	const SourceButton = BaseButton as unknown as Component<Omit<HTMLButtonAttributes, 'type'> & {
@@ -33,6 +36,14 @@
 <SourceButton
 	{...rest}
 	{type}
+	data-agent-confirm={agentConfirm}
+	onclick={agentConfirm ? (event) => {
+		if (!event.isTrusted) {
+			event.preventDefault();
+			return;
+		}
+		onclick?.(event);
+	} : onclick}
 	variant={variant === 'primary' ? 'accent' : variant === 'secondary' ? 'outlined' : variant === 'danger' ? 'destructive' : variant === 'warn' ? 'primary-soft' : 'ghost'}
 	size={size === 'sm' ? 'compact' : size === 'icon' ? 'icon' : 'normal'}
 	class={[variant === 'warn' ? 'ui-warning-action' : '', className].filter(Boolean).join(' ')}

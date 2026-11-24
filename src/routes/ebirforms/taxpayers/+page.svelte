@@ -185,6 +185,7 @@
       {#snippet cell(row, key)}
         {#if key === "name"}
           <a
+            data-taxmate-agent={row.name}
             class={stylex.attrs(styles.taxpayerLink).class}
             href={resolve("/ebirforms/taxpayers/[id]/forms", { id: row.id })}
             >{row.name}</a
@@ -288,6 +289,7 @@
     >
     <Button
       variant="danger"
+      data-agent-confirm="delete"
       disabled={deleting}
       onclick={() => void deleteProfile()}
       >{deleting ? "Deleting…" : "Delete taxpayer"}</Button

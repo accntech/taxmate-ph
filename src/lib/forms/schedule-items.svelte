@@ -368,9 +368,9 @@
 			<ol bind:this={listElement} aria-label={`${schedule.title} line items`} class="items" onpointermove={movePointer} onpointerup={finishPointer} onpointercancel={cancelPointer} onlostpointercapture={cancelPointer}>
 				{#each displayRows as row, index (keyFor(row))}
 					<li animate:flip={{ duration: prefersReducedMotion.current ? 0 : 180, easing: cubicOut }} class={['item', !reorderable && 'fixed-item', dragging === row.id && 'dragging', row.fields.some(field => errors[field.id]) && 'invalid']}>
-						{#if reorderable}<button id={gripId(row)} type="button" class="grip" disabled={rows.length < 2} aria-label={`Drag line item ${index + 1}`} aria-describedby={dragHelpId} onpointerdown={(event) => startPointer(event, row)} onkeydown={(event) => reorderKey(event, index)}>{@render gripIcon()}</button>{/if}
+						{#if reorderable}<button id={gripId(row)} type="button" class="grip" disabled={rows.length < 2} aria-label={`Drag line item ${index + 1}`} data-taxmate-agent-keys="ArrowUp ArrowDown Home End" aria-describedby={dragHelpId} onpointerdown={(event) => startPointer(event, row)} onkeydown={(event) => reorderKey(event, index)}>{@render gripIcon()}</button>{/if}
 						<button type="button" class="item-details" aria-label={`Edit line item ${index + 1}`} onclick={(event) => edit(row, undefined, event.currentTarget)}>{@render rowSummary(row, index)}</button>
-						<Button variant="ghost" size="icon" aria-label={`Remove line item ${index + 1}`} title="Remove line item" onclick={() => remove(row)}><TrashBinTrash size={18} color="currentColor" aria-hidden="true" /></Button>
+						<Button variant="ghost" size="icon" aria-label={`Remove line item ${index + 1}`} title="Remove line item" data-agent-confirm="delete" onclick={() => remove(row)}><TrashBinTrash size={18} color="currentColor" aria-hidden="true" /></Button>
 					</li>
 				{/each}
 			</ol>

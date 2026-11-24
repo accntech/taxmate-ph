@@ -19,6 +19,7 @@
 		'@solar-icons/svelte/category/users/Linear/UsersGroupRounded.svelte';
 	import Settings from '@solar-icons/svelte/category/settings/Linear/Settings.svelte';
 	import { onMount } from 'svelte';
+	import { isTauri } from '@tauri-apps/api/core';
 	import WindowTitlebar from '$lib/window-titlebar.svelte';
 	import { Badge, Sidebar, Topbar, type Crumb } from '$lib/components/ui';
 	import '@fontsource-variable/inter';
@@ -115,6 +116,12 @@
 	}
 
 	onMount(() => settings.init());
+	onMount(() => {
+		if (!isTauri()) return;
+		const subscription = import('$lib/ui-agent').then(({ listenForUiAgentRequests }) => listenForUiAgentRequests());
+		void subscription.catch(error => console.warn('TaxMate UI agent could not start', error));
+		return () => { void subscription.then(unlisten => unlisten?.()).catch(() => {}); };
+	});
 </script>
 
 {#snippet appIcon(id: SuiteNavItem['id'], size = 18)}
@@ -179,6 +186,7 @@
 				{#each navItems as item (item.id)}
 					<a
 						aria-current={isCurrent(item) ? 'page' : undefined}
+						data-taxmate-agent={item.id === 'ebirforms' ? 'eBIRForms' : undefined}
 						class={["sidebar-row-anim", (sidebarCollapsed
 							? (isCurrent(item) ? stylex.attrs(styles.navigationRow, styles.collapsedNavigation, styles.activeCollapsedNavigation).class : stylex.attrs(styles.navigationRow, styles.collapsedNavigation).class)
 							: (isCurrent(item) ? stylex.attrs(styles.navigationRow, styles.expandedNavigation, styles.activeNavigation).class : stylex.attrs(styles.navigationRow, styles.expandedNavigation).class))]}

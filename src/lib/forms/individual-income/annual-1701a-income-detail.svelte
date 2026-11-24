@@ -122,7 +122,7 @@
 					onblur={endDescriptionEdit}
 					oninput={(event) => onvaluechange({ [fields.description]: event.currentTarget.value })}
 				/>
-				<Button size="sm" variant="ghost" aria-label={`Remove ${entry}${dormant ? ' active amount' : ''}`} onclick={() => void removeEntry(row.id, index)}>
+				<Button size="sm" variant="ghost" aria-label={`Remove ${entry}${dormant ? ' active amount' : ''}`} data-agent-confirm="delete" onclick={() => void removeEntry(row.id, index)}>
 					{dormant ? 'Remove amount' : 'Remove'}
 				</Button>
 			</div>

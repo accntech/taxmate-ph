@@ -1,9 +1,11 @@
 <script lang="ts">
 	import * as stylex from '@stylexjs/stylex';
+	import { Switch, SwitchThumb } from '@ui-sdk/svelte/switch';
 	import { styles } from './settings.styles';
 	import { Badge, Button, Card, Dialog, Page, PageHeader, Select } from '$lib/components/ui';
 	import { settings, type ColorTheme, type PaperSize } from '$lib/settings.svelte';
 	import { createSubmissionLogClient, formatSubmissionError, formatSubmissionLog, type SubmissionLog } from '$lib/tauri/submission';
+	import { getAgentBridgeStatus, setAgentBridgeEnabled, type AgentBridgeStatus } from '$lib/tauri/agent-bridge';
 	import { isTauri } from '@tauri-apps/api/core';
 	import Settings from '@solar-icons/svelte/category/settings/Linear/Settings.svelte';
 	import Palette from '@solar-icons/svelte/category/tools/Linear/Palette.svelte';
@@ -15,7 +17,7 @@
 	import Sun from '@solar-icons/svelte/category/weather/Linear/Sun.svelte';
 	import Moon from '@solar-icons/svelte/category/weather/Linear/Moon.svelte';
 	import Monitor from '@solar-icons/svelte/category/devices/Linear/Monitor.svelte';
-	import type { Snippet, Component } from 'svelte';
+	import { onMount, type Snippet, type Component } from 'svelte';
 
 	const appVersion = '0.1.0';
 
@@ -42,6 +44,27 @@
 		{ label: 'eBIRForms — official BIR page', href: 'https://www.bir.gov.ph/eservices/ebirforms' },
 		{ label: 'Bureau of Internal Revenue', href: 'https://www.bir.gov.ph' }
 	];
+
+	let agentBridge = $state<AgentBridgeStatus | null>(null);
+	let agentBridgePending = $state(false);
+	let agentBridgeError = $state('');
+
+	onMount(() => {
+		if (isTauri()) void getAgentBridgeStatus().then(status => { agentBridge = status; }).catch(() => {});
+	});
+
+	async function toggleAgentBridge() {
+		if (!agentBridge || agentBridgePending) return;
+		agentBridgePending = true;
+		agentBridgeError = '';
+		try {
+			agentBridge = await setAgentBridgeEnabled(!agentBridge.enabled);
+		} catch (error) {
+			agentBridgeError = typeof error === 'string' ? error : 'Could not update the agent bridge setting.';
+		} finally {
+			agentBridgePending = false;
+		}
+	}
 
 	let resetOpen = $state(false);
 	let logOpen = $state(false);
@@ -237,6 +260,24 @@
 	</Button>
 {/snippet}
 
+{#snippet agentBridgeControl()}
+	<Switch
+		class="agent-bridge-switch"
+		aria-label="Enable agent bridge"
+		checked={agentBridge?.enabled ?? false}
+		disabled={agentBridgePending}
+		data-agent-confirm="agent-bridge"
+		onCheckedChange={(_checked, details) => {
+			details.cancel();
+			if (details.event?.isTrusted) void toggleAgentBridge();
+		}}
+	>
+		<span class="agent-bridge-track" aria-hidden="true">
+			<SwitchThumb class="agent-bridge-thumb" data-slot="switch-thumb" />
+		</span>
+	</Switch>
+{/snippet}
+
 {#snippet resetControl()}
 	<Button variant="secondary" onclick={() => (resetOpen = true)}>
 		<TrashBin size={16} color="currentColor" />
@@ -343,6 +384,16 @@
 		)}
 	</Card>
 
+	{#if agentBridge}
+		<Card variant="panel" padding="lg" class={stylex.attrs(styles.card).class}>
+			{@render sectionTitle('Agent bridge', 'Connect an agent running under your account on this device.', Settings)}
+			{@render row('Enable agent bridge', 'Allow local agents to operate TaxMate. The bridge starts whenever you open TaxMate while enabled.', agentBridgeControl, true)}
+			{#if agentBridgeError || agentBridge.error}
+				<p role="alert" class={stylex.attrs(styles.logError).class}>{agentBridgeError || agentBridge.error}</p>
+			{/if}
+		</Card>
+	{/if}
+
 	<Card variant="panel" padding="lg" class={stylex.attrs(styles.card).class}>
 		{@render sectionTitle('About', 'App information and references.', InfoCircle)}
 
@@ -392,6 +443,60 @@
 </Dialog>
 
 <style>
+	:global(.agent-bridge-switch) {
+		display: grid;
+		place-items: center;
+		inline-size: 2.75rem;
+		block-size: 2.75rem;
+		border: 0;
+		padding: 0;
+		background: transparent;
+		cursor: pointer;
+	}
+	:global(.agent-bridge-switch):disabled {
+		cursor: wait;
+		opacity: .65;
+	}
+	.agent-bridge-track {
+		display: grid;
+		align-items: center;
+		box-sizing: border-box;
+		inline-size: 100%;
+		block-size: 1.5rem;
+		padding-inline: .1875rem;
+		border-radius: 999px;
+		background: var(--bg-elev-2);
+		box-shadow: inset 0 0 0 1px var(--fg-subtle);
+		transition: background-color 150ms ease;
+	}
+	.agent-bridge-track :global(.agent-bridge-thumb) {
+		inline-size: 1.125rem;
+		block-size: 1.125rem;
+		border-radius: 50%;
+		background: var(--fg-muted);
+		transition: transform 150ms ease, background-color 150ms ease;
+	}
+	:global(.agent-bridge-switch[aria-checked='true']) .agent-bridge-track {
+		background: var(--accent);
+		box-shadow: none;
+	}
+	:global(.agent-bridge-switch[aria-checked='true']) .agent-bridge-track :global(.agent-bridge-thumb) {
+		background: var(--accent-fg);
+		transform: translateX(1.25rem);
+	}
+	:global(.agent-bridge-switch):focus-visible {
+		outline: none;
+	}
+	:global(.agent-bridge-switch):focus-visible .agent-bridge-track {
+		outline: 2px solid var(--accent);
+		outline-offset: 3px;
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.agent-bridge-track, .agent-bridge-track :global(.agent-bridge-thumb) {
+			transition: none;
+		}
+	}
+
 	.about-logo {
 		display: block;
 		margin-top: 1rem;

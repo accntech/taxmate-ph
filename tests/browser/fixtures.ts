@@ -34,8 +34,8 @@ export async function goToReturnPage(page: Page, target: number) {
 }
 
 /** Isolated browser data: native calls never reach the user's saved profiles. */
-export async function seedWorkspace(page: Page, theme = 'light', profileState: 'loaded' | 'empty' | 'error' | 'error-once' = 'loaded', profileOverrides: Partial<TaxpayerProfileInput> = {}, returns?: CreatedReturn[], options: { persistProfile?: boolean } = {}) {
-	await page.addInitScript(({ taxpayerId, theme, profileState, profileOverrides, returns, persistProfile }) => {
+export async function seedWorkspace(page: Page, theme = 'light', profileState: 'loaded' | 'empty' | 'error' | 'error-once' = 'loaded', profileOverrides: Partial<TaxpayerProfileInput> = {}, returns?: CreatedReturn[], options: { persistProfile?: boolean; uiAgent?: boolean } = {}) {
+	await page.addInitScript(({ taxpayerId, theme, profileState, profileOverrides, returns, persistProfile, uiAgent }) => {
 		localStorage.setItem('taxmate-ph-theme', theme);
 		const profile = {
 			id: taxpayerId, tin1: '001', tin2: '234', tin3: '567', branchCode: '0008',
@@ -62,8 +62,39 @@ export async function seedWorkspace(page: Page, theme = 'light', profileState: '
 			}]
 		}));
 		let profileLoadAttempts = 0;
+		let agentListener: ((event: unknown) => unknown) | undefined;
+		const callbacks: Array<(event: unknown) => unknown> = [];
+		let agentReply: ((response: unknown) => void) | undefined;
+		if (uiAgent) {
+			Object.assign(window, {
+				isTauri: true,
+				sendUiAgentRequest: (request: unknown) => new Promise(resolve => {
+					agentReply = resolve;
+					agentListener?.({ payload: { id: 'test-request', request } });
+				})
+			});
+			Object.defineProperty(window, 'uiAgentReady', { get: () => !!agentListener });
+		}
 		Object.assign(window, { __TAURI_INTERNALS__: {
-			invoke: async (command: string, args?: { profile?: typeof profile; data?: unknown }) => {
+			...(uiAgent && { metadata: { currentWindow: { label: 'main' }, currentWebview: { label: 'main' } } }),
+			...(uiAgent && { transformCallback: (callback: (event: unknown) => unknown) => callbacks.push(callback) - 1 }),
+			invoke: async (command: string, args?: { profile?: typeof profile; data?: unknown; event?: string; handler?: number; response?: unknown }) => {
+				if (uiAgent && command === 'desktop_platform') return 'browser';
+				if (command === 'taxmate_ui_agent_enabled') return !!uiAgent;
+			if (uiAgent && command === 'taxmate_ui_agent_status') {
+				const enabled = sessionStorage.getItem('taxmate-test-agent-enabled') === 'true';
+				return { enabled, running: enabled };
+			}
+			if (uiAgent && command === 'taxmate_ui_agent_set_enabled') {
+				const enabled = Reflect.get(args ?? {}, 'enabled') === true;
+				sessionStorage.setItem('taxmate-test-agent-enabled', String(enabled));
+				return { enabled, running: enabled };
+			}
+				if (uiAgent && command === 'plugin:event|listen' && args?.event === 'taxmate-ui-agent-request' && args.handler !== undefined) {
+					agentListener = callbacks[args.handler];
+					return 1;
+				}
+				if (uiAgent && command === 'taxmate_ui_agent_reply') { agentReply?.(args?.response); return; }
 				if (command === 'load_working_returns') return JSON.parse(localStorage.getItem('ebirforms-created-returns-v1') || 'null');
 				if (command === 'save_working_returns') { localStorage.setItem('ebirforms-created-returns-v1', JSON.stringify(args?.data)); return; }
 				if (command === 'submit_return') return { status: 'drafted', finalFlag: '2', savePath: 'test.xml', sendPath: '', message: 'Package prepared locally.' };
@@ -85,5 +116,5 @@ export async function seedWorkspace(page: Page, theme = 'light', profileState: '
 				throw new Error(`Unexpected native command in browser review: ${command}`);
 			}
 		} });
-	}, { taxpayerId, theme, profileState, profileOverrides, returns, persistProfile: options.persistProfile });
+	}, { taxpayerId, theme, profileState, profileOverrides, returns, persistProfile: options.persistProfile, uiAgent: options.uiAgent });
 }

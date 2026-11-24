@@ -86,6 +86,7 @@
 			{@const typeColor = form.status === 'ready' ? formTypeColors.get(form.category) : undefined}
 			<button
 				id={`${uid}-${form.code}`}
+				data-taxmate-agent={`BIR Form ${form.code}`}
 				type="button"
 				role="option"
 				aria-selected={active?.code === form.code}

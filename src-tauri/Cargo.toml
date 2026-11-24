@@ -36,6 +36,9 @@ ureq = { version = "2", features = ["json"] }
 tauri-plugin-dialog = "2"
 tempfile = "3"
 
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+
 [target.'cfg(target_os = "windows")'.dependencies]
 tokio = { version = "1", features = ["sync"] }
 windows = { version = "0.61.3", features = ["Foundation", "Graphics", "UI"] }

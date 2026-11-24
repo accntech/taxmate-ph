@@ -138,7 +138,7 @@
 				{/if}
 				<footer class="eq-action-bar" aria-label="Return actions">
 					<div class="eq-actions">
-						<Button disabled={busy} onclick={save}>Save draft</Button>
+						<Button data-taxmate-agent="Save draft" data-taxmate-agent-sdk="" disabled={busy} onclick={save}>Save draft</Button>
 						<Button variant="secondary" disabled={busy} onclick={cancel}>Cancel</Button>
 					</div>
 					<div class="eq-status" role="status">
