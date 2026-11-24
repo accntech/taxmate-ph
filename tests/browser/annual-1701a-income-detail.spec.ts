@@ -58,8 +58,8 @@ for (const { item, atc, baseLabel, total } of [
 		expect(Math.abs(inputEdge.x + inputEdge.width - totalEdge)).toBeLessThanOrEqual(2);
 		await amount.fill('37500');
 		await amount.blur();
-		await expect(itemTotal).toHaveText('₱50,000.00');
-		await expect(sectionTotal).toHaveText('₱50,000.00');
+		await expect(itemTotal).toHaveText('₱50,000');
+		await expect(sectionTotal).toHaveText('₱50,000');
 
 		async function saveAndReopen() {
 			await page.getByRole('button', { name: 'Save draft', exact: true }).click();
@@ -70,7 +70,7 @@ for (const { item, atc, baseLabel, total } of [
 		await saveAndReopen();
 		await expect(entry1).toHaveValue('Original income');
 		await expect(entry2).toHaveValue('Additional income');
-		await expect(itemTotal).toHaveText('₱50,000.00');
+		await expect(itemTotal).toHaveText('₱50,000');
 		const html = await page.evaluate(async () => {
 			const formsModule = '/src/lib/forms/index.ts';
 			const reportModule = '/src/lib/printing/return-report.ts';
@@ -86,22 +86,22 @@ for (const { item, atc, baseLabel, total } of [
 		});
 		const print = await page.context().newPage();
 		await print.setContent(html);
-		await expect(print.locator(`[data-income-field="frm1701A:txt${item}A"]`)).toHaveValue('50000.00');
+		await expect(print.locator(`[data-income-field="frm1701A:txt${item}A"]`)).toHaveValue('50,000');
 		await print.close();
 
 		await page.getByRole('button', { name: `Remove Item ${item} entry 1` }).click();
 		await expect(entry1).toHaveValue('Additional income');
 		await expect(entry2).toHaveCount(0);
-		await expect(itemTotal).toHaveText('₱37,500.00');
+		await expect(itemTotal).toHaveText('₱37,500');
 		await saveAndReopen();
 		await expect(entry1).toHaveValue('Additional income');
-		await expect(itemTotal).toHaveText('₱37,500.00');
+		await expect(itemTotal).toHaveText('₱37,500');
 
 		await page.getByRole('button', { name: `Remove Item ${item} entry 1` }).click();
 		await expect(addEntry).toBeFocused();
 		await saveAndReopen();
 		await expect(entry1).toHaveCount(0);
-		await expect(sectionTotal).toHaveText('₱0.00');
+		await expect(sectionTotal).toHaveText('₱0');
 	});
 }
 
@@ -133,10 +133,10 @@ test('1701A allows a missing shared description and preserves an inactive spouse
 	await expect(description).not.toBeEditable();
 	await page.getByRole('button', { name: 'Remove Item 42 entry 1 active amount', exact: true }).click();
 	await expect(description).toHaveCount(0);
-	await expect(page.locator('[id="frm1701A:txt42A"]')).toHaveText('₱0.00');
+	await expect(page.locator('[id="frm1701A:txt42A"]')).toHaveText('₱0');
 
 	const spouseAtc = page.getByRole('combobox', { name: 'Spouse alphanumeric tax code (ATC)', exact: true });
 	await spouseAtc.selectOption('II014');
 	await expect(description).toHaveValue('Rental income');
-	await expect(page.getByRole('textbox', { name: 'Item 42 entry 1 spouse amount' })).toHaveValue('80,000.00');
+	await expect(page.getByRole('textbox', { name: 'Item 42 entry 1 spouse amount' })).toHaveValue('80,000');
 });

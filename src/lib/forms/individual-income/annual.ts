@@ -1,7 +1,8 @@
 /** Exact field mappings and formula chains from BIR-Form1701(.v2018).hta.
  * Both templates match the supplied 7.9.6.2 resources after BOM normalization.
- * Amounts remain decimal strings for the saved return and its paper form.
+ * Whole-peso results retain the saved return’s decimal string format.
  */
+import { roundWholePeso } from '$lib/components/ui/currency-input/currency';
 import { incomeIncludesSpouse } from "./profile-fields";
 
 type Values = Record<string, string>;
@@ -145,8 +146,9 @@ export function calculateAnnual(code: string, values: Values): Values {
   const result = { ...values };
   const n = (name: string) => number(result[id(name)]);
   const set = (name: string, amount: number) => {
-    result[id(name)] = amount.toFixed(2);
-    return amount;
+    const rounded = roundWholePeso(amount);
+    result[id(name)] = rounded.toFixed(2);
+    return rounded;
   };
   const sum = (names: string[]) =>
     names.reduce((total, name) => total + n(name), 0);

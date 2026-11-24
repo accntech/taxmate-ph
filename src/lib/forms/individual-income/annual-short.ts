@@ -1,5 +1,5 @@
 import { incomeIncludesSpouse } from './profile-fields';
-import { currencyInputError } from '$lib/components/ui/currency-input/currency';
+import { currencyInputError, roundWholePeso } from '$lib/components/ui/currency-input/currency';
 import { annual1701ABaseDetailFields, annual1701ADetailAmount, annual1701ADetailFields, annual1701ADetailRows, annual1701AVisibleDetailRows } from './annual-1701a-income-detail';
 import { has1701MSOverpayment, is1701MSOverpaymentSelected, overpaymentOptions1701MS, validate1701MSOverpayment } from './form-1701ms-overpayment';
 
@@ -169,7 +169,7 @@ export function calculate1701A(values: Values): Values {
 	const next = { ...values };
 	const field = (item: string) => key('1701A', item);
 	const read = (item: string) => number(next[field(item)]);
-	const set = (item: string, amount: number) => { next[field(item)] = Math.round(amount).toFixed(2); };
+	const set = (item: string, amount: number) => { next[field(item)] = roundWholePeso(amount).toFixed(2); };
 	for (const item of ['42', '51'] as const) {
 		const rows = annual1701ADetailRows(item, values);
 		if (!rows.length) continue;
@@ -178,7 +178,7 @@ export function calculate1701A(values: Values): Values {
 		for (const person of ['taxpayer', 'spouse'] as const) {
 			if (!shortAnnualFieldApplies('1701A', base[person], values)) continue;
 			set(`txt${item}${person === 'taxpayer' ? 'A' : 'B'}`,
-				rows.reduce((total, row) => total + annual1701ADetailAmount(row[person]), 0));
+				rows.reduce((total, row) => total + roundWholePeso(annual1701ADetailAmount(row[person])), 0));
 		}
 	}
 	for (const person of ['A', 'B']) {
@@ -225,7 +225,7 @@ export function calculate1701MS(values: Values): Values {
 		const active = !spouse || joint;
 		const ready = active && annual1701MSFilerReady(values, spouse);
 		const read = (item: string) => number(next[field(item + person)]);
-		const set = (item: string, amount: number) => { next[field(item + person)] = Math.round(amount).toFixed(2); };
+		const set = (item: string, amount: number) => { next[field(item + person)] = roundWholePeso(amount).toFixed(2); };
 		const regime = annual1701MSFilerRegime(values, spouse);
 		const source = msSource(values, spouse);
 		if (spouse && active && source === '4') next[field('txtTaxpayerNo12b')] = '2';

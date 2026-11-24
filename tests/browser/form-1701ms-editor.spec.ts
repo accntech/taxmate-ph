@@ -10,6 +10,38 @@ const single = {
 	contactNumber: '09171234567'
 } as const;
 
+test('1701-MS keeps filing choices aligned and puts spouse editing with spouse information', async ({ page }) => {
+	await seedWorkspace(page, 'light', 'loaded', { ...single, civilStatus: 'Married',
+		spouse: { taxpayerName: 'SANTOS, JAMIE, CRUZ', tin1: '009', tin2: '876', tin3: '543', branchCode: '00000' }
+	});
+	await page.setViewportSize({ width: 1440, height: 960 });
+	await page.goto(`${route}?new=true`);
+	const filing = page.getByRole('region', { name: 'Filing details', exact: true });
+	const status = filing.getByRole('radiogroup', { name: 'Filing status' });
+	await expect(status).toBeVisible({ timeout: 30000 });
+	const choices = await status.getByRole('radio').evaluateAll(radios => radios.map(radio => radio.getBoundingClientRect().top));
+	expect(new Set(choices).size).toBe(1);
+	const incomeChoices = page.getByRole('region', { name: 'Income and filing choices', exact: true });
+	const editSpouse = page.getByRole('link', { name: 'Edit spouse details', exact: true });
+	await expect(editSpouse).toHaveCount(0);
+	await status.getByRole('radio', { name: 'Jointly', exact: true }).check();
+	await expect(incomeChoices.getByRole('link', { name: 'Edit spouse details', exact: true })).toBeVisible();
+	await expect(editSpouse).toHaveCount(1);
+	const output = process.env.INCOME_PREVIEW_DIR;
+	if (output) await filing.screenshot({ path: resolve(output, '1701MS-filing-desktop.png') });
+	await page.setViewportSize({ width: 390, height: 920 });
+	await page.keyboard.press('Escape');
+	await expect.poll(async () => (await page.locator('aside.sidebar').boundingBox())!.x).toBeLessThan(-245);
+	await expect(status.getByRole('radio', { name: 'Spouse has no income' })).toBeVisible();
+	expect(await filing.evaluate(node => node.scrollWidth <= node.clientWidth)).toBe(true);
+	if (output) {
+		await filing.evaluate(node => node.scrollIntoView({ block: 'center', behavior: 'instant' }));
+		await filing.screenshot({ path: resolve(output, '1701MS-filing-mobile.png') });
+	}
+	await status.getByRole('radio', { name: 'Separately', exact: true }).check();
+	await expect(editSpouse).toHaveCount(0);
+});
+
 test('1701-MS keeps the declaration compact and discloses representative details on demand', async ({ page }) => {
 	await seedWorkspace(page, 'light', 'loaded', { ...single, civilStatus: 'Single' });
 	await page.goto(`${route}?new=true`);
@@ -34,23 +66,40 @@ test('1701-MS keeps the declaration compact and discloses representative details
 	await read.focus();
 	await page.keyboard.press('Enter');
 	await expect(terms).toBeVisible();
+	const termsPosition = (await terms.boundingBox())!;
+	const agreePosition = (await agree.boundingBox())!;
+	expect(agreePosition.y).toBeGreaterThanOrEqual(termsPosition.y + termsPosition.height);
+	const representative = declaration.getByText('Authorized representative details', { exact: true });
+	const representativePosition = (await representative.boundingBox())!;
+	const expandedAttachmentPosition = (await attachmentCount.boundingBox())!;
+	expect(representativePosition.y).toBeGreaterThanOrEqual(expandedAttachmentPosition.y + expandedAttachmentPosition.height);
+	if (output) {
+		await representative.click();
+		await representativeTin.fill('009876543');
+		await representativeTin.blur();
+		await declaration.screenshot({ path: resolve(output, '1701MS-declaration-desktop-expanded.png') });
+		await representative.click();
+	}
 	await read.click();
 	await expect(terms).toBeHidden();
 	await agree.check();
 	await expect(agree).toBeChecked();
 	await page.setViewportSize({ width: 390, height: 920 });
-	const representative = declaration.getByText('Authorized representative details', { exact: true });
+	await page.keyboard.press('Escape');
+	await expect.poll(async () => (await page.locator('aside.sidebar').boundingBox())!.x).toBeLessThan(-245);
 	await representative.click();
+	await representativeTin.focus();
 	await representativeTin.fill('009876543');
 	await representative.click();
 	await expect(representativeTin).toBeHidden();
 	await representative.click();
-	await expect(representativeTin).toHaveValue('009876543');
+	await expect(representativeTin).toHaveValue('009-876-543');
 	await representativeTin.fill('');
 	await expect(representativeTin).toBeFocused();
 	await representativeTin.fill('009876543');
 	expect(await declaration.evaluate(node => node.scrollWidth <= node.clientWidth)).toBe(true);
 	if (output) {
+		await representativeTin.blur();
 		await declaration.evaluate(node => node.scrollIntoView({ block: 'center' }));
 		await declaration.screenshot({ path: resolve(output, '1701MS-declaration-mobile.png') });
 	}
@@ -69,9 +118,23 @@ test('1701-MS reveals representative data when opening a saved draft', async ({ 
 	await page.goto(`${route}?return=representative-ms`);
 	const representativeTin = page.locator(id('authorizeRepresentative'));
 	await expect(representativeTin).toBeVisible({ timeout: 30000 });
-	await expect(representativeTin).toHaveValue('009876543');
+	await expect(representativeTin).toHaveValue('009-876-543');
 	await expect(page.locator(id('printedName'))).toHaveValue('SAMPLE REPRESENTATIVE');
 	await expect(page.getByRole('checkbox', { name: 'I agree to the declaration' })).toBeChecked();
+	await representativeTin.focus();
+	await representativeTin.fill('00123456700089');
+	await representativeTin.blur();
+	await expect(representativeTin).toHaveValue('001-234-567-00089');
+	await page.getByRole('button', { name: 'Save draft', exact: true }).click();
+	await expect(page).toHaveURL(/\/forms$/);
+	const savedTin = await page.evaluate(() => {
+		const storage = JSON.parse(localStorage.getItem('ebirforms-created-returns-v1')!);
+		return storage.returns.find((record: { id: string }) => record.id === 'representative-ms')
+			?.values['frm1701MS:authorizeRepresentative'];
+	});
+	expect(savedTin).toBe('00123456700089');
+	await page.getByRole('row').filter({ hasText: '1701MS' }).getByRole('link', { name: 'Edit', exact: true }).click();
+	await expect(representativeTin).toHaveValue('001-234-567-00089');
 });
 
 test('1701-MS links an incomplete schedule to its source and links summary credits back to Part V', async ({ page }) => {
@@ -121,7 +184,7 @@ test('1701-MS keeps both filers in mixed-rate tables and seven-digit amounts rea
 	await amount.fill('1000000');
 	await amount.blur();
 	const total = flat.locator(id('txtTotalIncomeNo21a'));
-	await expect(total).toHaveText('₱1,000,000.00');
+	await expect(total).toHaveText('₱1,000,000');
 	const fits = await total.evaluate(node => {
 		const range = document.createRange();
 		range.selectNodeContents(node);
@@ -149,5 +212,5 @@ test('1701-MS keeps the preferential rate in its numbered business schedule', as
 	await expect(rate).toHaveValue('5');
 	await rate.fill('6.5');
 	await rate.blur();
-	await expect(business.locator(id('txtTaxDueSpeciala'))).toHaveText('₱65,000.00');
+	await expect(business.locator(id('txtTaxDueSpeciala'))).toHaveText('₱65,000');
 });

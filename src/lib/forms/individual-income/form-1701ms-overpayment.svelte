@@ -13,7 +13,7 @@
 	} = $props();
 
 	const uid = $props.id();
-	const currency = new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' });
+	const currency = new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP', minimumFractionDigits: 0, maximumFractionDigits: 0 });
 	const [refund, certificate] = overpaymentOptions1701MS;
 	const allocation = $derived(get1701MSOverpaymentAllocation(values, calculated));
 	const choicesError = $derived(errors[refund.choice]);
@@ -38,7 +38,7 @@
 					{#if error}<FieldErrors id={`${option.choice}-error`} errors={[error]} />{/if}
 				</div>
 				{#if checked}
-					<CurrencyInput id={option.amount} aria-label={option.amountLabel} value={values[option.amount] ?? ''}
+					<CurrencyInput decimals={0} id={option.amount} aria-label={option.amountLabel} value={values[option.amount] ?? ''}
 						error={errors[option.amount]} maxlength={12} required
 						onchange={(value) => onvaluechange({ [option.amount]: value })} />
 				{/if}

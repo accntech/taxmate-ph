@@ -34,7 +34,7 @@
 	let editingSharedDescription = $state('');
 	const baseDescriptionShared = $derived(baseDormant && !!values[base.description]?.trim() && editingSharedDescription !== base.description);
 	const addButtonId = $derived(`1701a-item-${item}-add-entry`);
-	const currency = new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' });
+	const currency = new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP', minimumFractionDigits: 0, maximumFractionDigits: 0 });
 
 	function startDescriptionEdit(id: string, dormant: boolean) {
 		if (dormant && !values[id]?.trim()) editingSharedDescription = id;
@@ -90,7 +90,7 @@
 			{:else if rows.length}
 				<output id={base[person]}>{currency.format(Number((calculated[base[person]] ?? '').replaceAll(',', '')))}</output>
 			{:else}
-				<CurrencyInput
+				<CurrencyInput decimals={0}
 					id={base[person]}
 					aria-label={`Item ${item} ${label.toLowerCase()} amount${people.length > 1 ? ` · ${person === 'spouse' ? 'Spouse' : 'Taxpayer'}` : ''}`}
 					value={values[base[person]] ?? ''}
@@ -130,7 +130,7 @@
 		{#each people as person (person)}
 			<td class={['amount', { editable: active.includes(person) }]}>
 				{#if active.includes(person)}
-					<CurrencyInput
+					<CurrencyInput decimals={0}
 						id={fields[person]}
 						aria-label={`${entry} ${person} amount`}
 						value={row[person]}

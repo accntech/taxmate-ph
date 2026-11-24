@@ -1,3 +1,4 @@
+import { roundWholePeso as whole } from '$lib/components/ui/currency-input/currency';
 import { isValidPsocCode } from '../../profiles/profile';
 
 /** Exact computation IDs from the packaged 1700 templates. */
@@ -16,8 +17,6 @@ function numeric(value: string | undefined): number {
     const valueNumber = Number(clean);
     return Number.isFinite(valueNumber) ? valueNumber : 0;
 }
-const whole = (value: number) => Number(value.toFixed(0));
-const peso = (value: number) => value.toFixed(2);
 function legacyChecked(values: Values, group: string, id: string): boolean {
     return values[p + group] === p + id || values[p + group] === id;
 }
@@ -121,7 +120,11 @@ export function calculateCompensation(code: string, values: Values): Values {
 function calculateRevised(values: Values): Values {
     const result: Values = { ...values, 'frm1700:txtPg1I3ATC': 'II011' };
     const n = (name: string) => numeric(result[p + name]);
-    const set = (name: string, value: number) => { result[p + name] = peso(value); return value; };
+    const set = (name: string, value: number) => {
+        const rounded = whole(value);
+        result[p + name] = rounded.toFixed(2);
+        return rounded;
+    };
     const joint = jointRevised(values);
     for (const column of ['A', 'B']) {
         const enabled = column === 'A' || joint;
@@ -132,9 +135,9 @@ function calculateRevised(values: Values): Values {
                 continue;
             const regularField = `txtPg2ISched1c_${row}REG`;
             const flatField = `txtPg2ISched1d_${row}CIFR`;
-            if (revised1700FieldApplies(regularField, values)) regular += n(regularField);
-            if (revised1700FieldApplies(flatField, values)) flat += n(flatField);
-            withheld += n(`txtPg2ISched1e_${row}TW`);
+            if (revised1700FieldApplies(regularField, values)) regular += whole(n(regularField));
+            if (revised1700FieldApplies(flatField, values)) flat += whole(n(flatField));
+            withheld += whole(n(`txtPg2ISched1e_${row}TW`));
         }
         set(`txtPg2ISched1c_5${column}REG`, whole(regular));
         set(`txtPg2ISched1d_5${column}CIFR`, whole(flat));
@@ -168,8 +171,12 @@ function calculateRevised(values: Values): Values {
 }
 function calculateLegacy(values: Values): Values {
     const result = { ...values };
-    const n = (name: string) => Math.trunc(numeric(result[p + name]));
-    const set = (name: string, value: number) => { result[p + name] = peso(value); return value; };
+    const n = (name: string) => whole(numeric(result[p + name]));
+    const set = (name: string, value: number) => {
+        const rounded = whole(value);
+        result[p + name] = rounded.toFixed(2);
+        return rounded;
+    };
     const joint = legacyChecked(values, 'rdoPg1Pt1I3JointFiling', 'rdoPg1Pt1I3JointFilingYes');
     if (values[p + 'rdoPg1Pt1I13CivilStatusInd']) {
         set('txtPg2Pt4I8C1', 50000);
@@ -228,7 +235,7 @@ function calculateLegacy(values: Values): Values {
     set('txtPg1Pt2I30', penalties);
     set('txtPg1Pt2I31', net < 0 && penalties > 0 ? penalties : net + penalties);
     const supplemental = Object.keys(values).filter(key => /^frm1700:txtPg3Pt5I[1-6]FinalTaxWithheld$|^frm1700:txtPg3Pt5I(?:11|17|20)C[12]$/.test(key));
-    set('txtPg3Pt5I21TotTaxWithheldPaid', supplemental.reduce((sum, key) => sum + Math.trunc(numeric(values[key])), 0));
+    set('txtPg3Pt5I21TotTaxWithheldPaid', supplemental.reduce((sum, key) => sum + whole(numeric(values[key])), 0));
     const exemptIncome = ['1', '2', '3', '7A', '7B', '9A', '9B'];
     set('txtPg3Pt5BI10TotalIncome', exemptIncome.reduce((sum, item) => sum + n(`txtPg3Pt5BI${item}`), 0));
     return result;

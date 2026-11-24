@@ -20,7 +20,7 @@ describe("Form 1701 filing transitions", () => {
     const overpaid = getReturnExportValues("1701", { ...data, ...values({
       rdoPg1I34CTCGovID: p + "rdoPg1I34CTC", txtPg1Pt2I34CTC: "00123456", txtPg9Sc9I1TaxPayerC1: "500"
     }) });
-    expect(overpaid[p + "txtPg1Pt2I37AmountIfCTC"]).toBe("125.50");
+    expect(overpaid[p + "txtPg1Pt2I37AmountIfCTC"]).toBe("126");
     expect(overpaid[p + "rdoPg1Pt2Overpayment"]).toBe(p + "rdoPg1Pt2OverpaymentRefunded");
   });
 

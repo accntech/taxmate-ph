@@ -202,3 +202,54 @@ it('manages legacy Form 1700 PSOC from the taxpayer profile and preserves untrac
 	expect(getManagedTaxpayerValues('1700', cleared, 'Draft', { [id]: '1234' })[id]).toBeUndefined();
 	expect(validateReturnValues('1700', { [id]: '12' })[id]).toMatch(/four/i);
 });
+
+describe('return amount precision', () => {
+	it.each(['1700', '1700v2018'])('rounds each employer amount before summing it in %s', (code) => {
+		const legacy = code === '1700';
+		const fields = legacy ? ['txtPg2Pt4I1ComIncomeC1', 'txtPg2Pt4I2ComIncomeC1'] : ['txtPg2ISched1c_1REG', 'txtPg2ISched1c_2REG'];
+		const total = legacy ? 'txtPg2Pt4I4AC1' : 'txtPg2ISched1c_5AREG';
+		const result = calculateReturn(code, {
+			['frm1700:' + fields[0]]: '1,234.50',
+			['frm1700:' + fields[1]]: '1,234.50',
+			'frm1700:rdoPg2I1PartVIEmployee': 'Taxpayer',
+			'frm1700:rdoPg2I2PartVIEmployee': 'Taxpayer'
+		});
+		expect(Number(result['frm1700:' + total])).toBe(2470);
+	});
+
+	it('adds the individually rounded amounts in Form 1701A detail rows', () => {
+		const result = calculateReturn('1701A', {
+			'frm1701A:optTaxType': 'S', 'frm1701A:optATC': 'II012', 'frm1701A:optTaxRate': 'G',
+			'frm1701A:txtmodalPartIVA_1C2': '1,234.50',
+			'frm1701A:txtmodalPartIVA_2C2': '1,234.50'
+		});
+		expect(Number(result['frm1701A:txt42A'])).toBe(2470);
+	});
+
+	it('rounds revised Form 1701 inputs before subtracting deductions', () => {
+		const result = calculateReturn('1701v2018', {
+			'frm1701:txtPg1I1Year': '2025',
+			'frm1701:rdoPg1I21TaxRate': 'Graduated',
+			'frm1701:rdoPg1I21AMethodDeduction': 'OSD',
+			'frm1701:txtPg2IShed3_8A': '1000.49',
+			'frm1701:txtPg2IShed3_9A': '200.50'
+		});
+		expect(Number(result['frm1701:txtPg2IShed3_10A'])).toBe(799);
+	});
+
+	it('keeps the special tax rate at its entered precision on Form 1701-MS', () => {
+		const result = calculateReturn('1701MS', {
+			'frm1701MS:txtTaxRatea': '6.50',
+			'frm1701MS:txtToBeCarried1': '1,234.50'
+		});
+		expect(result['frm1701MS:txtTaxRatea']).toBe('6.50');
+		expect(result['frm1701MS:txtToBeCarried1']).toBe('1235');
+	});
+
+	it('keeps cents in the legacy Form 1701Q calculation', () => {
+		const result = calculateReturn('1701Q', {
+			'frm1701q:txt26A': '1,234.56', 'frm1701q:txt27A': '0.10'
+		});
+		expect(result['frm1701q:txt28A']).toBe('1234.66');
+	});
+});

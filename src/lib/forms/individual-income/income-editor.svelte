@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { tick } from 'svelte';
-	import { splitTinSegments } from '$lib/components/ui/tin-input/tin';
+	import { getTinDigits, splitTinSegments } from '$lib/components/ui/tin-input/tin';
 	import { Button, ButtonLink, CalculatedValue, CheckboxInput, CurrencyInput, DateInput, FieldErrors, Input, Label, NumberInput, RadioGroup, Select, TinInput } from '$lib/components/ui';
 	import Icon from '$lib/components/ui/icon/icon.svelte';
 	import { glyphs } from '$lib/components/ui/icons';
-	import { annualFilingFields, calculateIndividualIncome, incomePaymentFieldIds, individualIncomePeriod, isShortFilingPeriod, type IncomeForm } from '.';
+	import { annualFilingFields, calculateIndividualIncome, incomeAmountDecimals, incomePaymentFieldIds, individualIncomePeriod, isShortFilingPeriod, type IncomeForm } from '.';
 	import { annual1701AScheduleLabels, annual1701ASchedules, incomeChoiceLabel, incomeEditorFields, incomeEditorPageTitle, incomeEditorRowGroups, incomeEditorRows, legacyQuarterlyComputation, type IncomeEditorField } from './editor-layout';
 	import { legacy1700DependentClaim, legacy1700FirstYear, legacy1700IncomeSourceChecked, legacy1700LastYear, revised1700FieldApplies } from './compensation';
 	import { quarterlyFilerReady, quarterlyIncomeFieldApplies, quarterlyRateForAtc, quarterlySelectedRate, quarterlyTaxReliefPatch } from './quarterly';
@@ -148,6 +148,7 @@
 	}));
 	const visibleFields = $derived(fields.filter(field => field.page === selectedPage && shouldShow(field) &&
 		!(legacyAnnual && annualIdentificationIds.includes(field.id)) && !summaryIds.has(field.id) && !isRepeatedIdentity(field) && !taxpayerExtras.some(extra => extra.id === field.id)));
+	const hasVisibleSpouseFields = $derived(visibleFields.some(field => spouseFieldIds.has(field.id)));
 	const [formNumber, revision] = $derived(form.revision.split(' · '));
 	const description = $derived(form.title.split(' | ')[1].replace(/^(?:Annual|Quarterly) return for /i, 'For '));
 	const shortTitle = $derived(form.quarter ? 'Quarterly Income Tax Return' : 'Annual Income Tax Return');
@@ -157,7 +158,8 @@
 		else groups.push({ title: field.section, fields: [field] });
 		return groups;
 	}, []));
-	const currency = new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' });
+	const decimals = $derived(incomeAmountDecimals(form));
+	const currency = $derived(new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP', minimumFractionDigits: decimals, maximumFractionDigits: decimals }));
 	const schedulePeople = $derived(includesSpouse ? ['taxpayer', 'spouse'] as const : ['taxpayer'] as const);
 	const historicalRegimes = ['Regular', 'Special', 'Exempt', 'Total'];
 	const scheduleDetailColumns = ['Description', 'Legal basis', 'Year incurred'];
@@ -593,13 +595,9 @@
 {/snippet}
 
 {#snippet signedScheduleAmount(field: IncomeEditorField, label: string)}
-	<div class="signed-schedule-amount">
-		<Input id={field.id} aria-label={label} inputmode="decimal"
-			value={calculated[field.id] ?? ''} error={errors[field.id]}
-			oninput={(event) => setValue(field.id, event.currentTarget.value)}>
-			{#snippet leading()}<span aria-hidden="true">₱</span>{/snippet}
-		</Input>
-	</div>
+	<CurrencyInput {decimals} allowNegative id={field.id} aria-label={label}
+		value={calculated[field.id] ?? ''} error={errors[field.id]}
+		onchange={(value) => setValue(field.id, value)} />
 {/snippet}
 
 {#snippet columnSchedule(title: string, rows: ReturnType<typeof incomeEditorRows>, columns: string[])}
@@ -790,7 +788,7 @@
 								<td class="summary-value" class:summary-input={combined && !computed.has(aggregate.id)}
 									class:combined-input={combined && !computed.has(aggregate.id)} colspan={people.length}>
 									{#if combined && !computed.has(aggregate.id)}
-										<CurrencyInput id={aggregate.id} aria-label={label} value={calculated[aggregate.id] ?? ''}
+										<CurrencyInput {decimals} id={aggregate.id} aria-label={label} value={calculated[aggregate.id] ?? ''}
 											error={errors[aggregate.id] ?? ''} onchange={(next) => setValue(aggregate.id, next)} />
 									{:else}
 										<output id={aggregate.id}>{currency.format(Number((calculated[aggregate.id] ?? '').replaceAll(',', '')))}</output>
@@ -816,7 +814,7 @@
 										{:else if /loss|overpayment|net income per books/i.test(label) || /^[(-]/.test(value)}
 											{@render signedScheduleAmount(field, inputLabel)}
 										{:else}
-											<CurrencyInput id={field.id} aria-label={inputLabel}
+											<CurrencyInput {decimals} id={field.id} aria-label={inputLabel}
 												{value} error={errors[field.id]} onchange={(next) => setValue(field.id, next)} />
 										{/if}
 									</td>
@@ -1041,7 +1039,10 @@
 	{:else if id === 'frm1701MS:perjuryClause'}
 		<div class="ms-declaration-actions">
 			<details class="ms-disclosure" open={!!error}>
-				<summary>Read declaration</summary>
+				<summary>
+					<span class="schedule-chevron"><Icon icon={glyphs.chevronRight} /></span>
+					Read declaration
+				</summary>
 				<p>
 					I declare under the penalties of perjury that this return and all its attachments have been made in good faith,
 					verified by me, and to the best of my knowledge and belief are true and correct, pursuant to the National Internal
@@ -1060,8 +1061,11 @@
 	{:else if id === 'frm1701MS:authorizeRepresentative'}
 		<details class="ms-disclosure ms-representative" open={msRepresentativeOpen ?? !!value.trim()}
 			ontoggle={(event) => { msRepresentativeOpen = event.currentTarget.open; }}>
-			<summary>Authorized representative details</summary>
-			<Input {id} {label} {value} {error} oninput={(event) => setValue(id, event.currentTarget.value)} />
+			<summary>
+				<span class="schedule-chevron"><Icon icon={glyphs.chevronRight} /></span>
+				Authorized representative details
+			</summary>
+			<TinInput {id} {label} {value} {error} onchange={(next) => setValue(id, getTinDigits(next))} />
 		</details>
 	{:else if kind === 'checkbox' || (kind === 'radio' && options.length === 1)}
 		<CheckboxInput {id} {label}
@@ -1081,11 +1085,9 @@
 			onchange={(next) => setValue(id, next)} />
 	{:else if kind === 'date' || isDate(field)}
 		<DateInput {id} {label} value={asIsoDate(value)} {error} onchange={(next) => setValue(id, asSourceDate(next))} />
-	{:else if kind === 'money' && !/Loss|Adjustment|Prior.*Income/i.test(label)}
-		<CurrencyInput {id} label={field.shortLabel ?? label} aria-label={field.shortLabel ? label : undefined}
-			{value} {error} onchange={(next) => setValue(id, next)} />
 	{:else if kind === 'money'}
-		<Input {id} {label} {value} {error} inputmode="decimal" data-amount-input="true" oninput={(event) => setValue(id, event.currentTarget.value)} />
+		<CurrencyInput {decimals} {id} label={field.shortLabel ?? label} aria-label={field.shortLabel ? label : undefined}
+			allowNegative={/Loss|Adjustment|Prior.*Income/i.test(label)} {value} {error} onchange={(next) => setValue(id, next)} />
 	{:else}
 		<Input {id} {label} {value} {error} required={addressRequired || employerName} inputmode={id === form.year || /Psoc/i.test(id) || /TIN[123]|BranchCode|ZipCode/i.test(id) ? 'numeric' : undefined}
 			maxlength={id === 'frm1700:txtPg1Pt2I32GovID' ? (idType === 'CTC' ? 8 : 17) : field.maxLength ?? undefined} oninput={(event) => setValue(id, event.currentTarget.value)} />
@@ -1257,12 +1259,13 @@
 			</div>
 		{/key}
 	{/if}
-	{#if !['1700v2018', '1701A'].includes(form.code) && visibleFields.some(field => spouseFieldIds.has(field.id))}
-		<div class="income-spouse-action">
-			<ButtonLink href={taxpayerHref} size="icon" variant="ghost" aria-label="Edit spouse details" title="Edit spouse details">
-				<span class="edit-spouse-icon"><Icon icon={glyphs.pencil} /></span>
-			</ButtonLink>
-		</div>
+	{#snippet editSpouseDetails()}
+		<ButtonLink href={taxpayerHref} size="icon" variant="ghost" aria-label="Edit spouse details" title="Edit spouse details">
+			<span class="edit-spouse-icon"><Icon icon={glyphs.pencil} /></span>
+		</ButtonLink>
+	{/snippet}
+	{#if !['1700v2018', '1701A', '1701MS'].includes(form.code) && hasVisibleSpouseFields}
+		<div class="income-spouse-action">{@render editSpouseDetails()}</div>
 	{/if}
 	{#snippet taxpayerDetails()}
 		<ReturnTaxpayerInformation formCode={form.code} {values} {profile} {taxpayerHref} {itemNumbers} extraItems={taxpayerExtras}>
@@ -1288,6 +1291,10 @@
 			{@render taxpayerDetails()}
 		{/if}
 		{@const filingDetails = group.title === 'Filing details'}
+		{@const msDeclaration = microSmall && group.title === 'Declaration'}
+		{@const sectionFields = msDeclaration ? group.fields.toSorted((left, right) =>
+			Number(left.id === 'frm1701MS:authorizeRepresentative') - Number(right.id === 'frm1701MS:authorizeRepresentative')
+		) : group.fields}
 		{@const legacySummary = legacy1700 && group.title === 'Part II - Total Tax Payable'}
 		{@const revisedSummary = form.code === '1700v2018' && /^Part III - Total Tax Payable\b/i.test(group.title)}
 		{@const otherSummary = /^Part [IVX]+ - Total (?:Income )?Tax Payable\b/i.test(group.title) ? otherTaxSummaries[form.code] : undefined}
@@ -1327,10 +1334,8 @@
 						<header class="eq-section-header">
 							<h3>{summaryFields.length ? `Part ${summaryPart} · Total tax payable` : revisedSpouseSection ? 'Part II · Spouse information' : annualSpouse ? 'Part V · Spouse information' :
 								form.code === '1701Q' && group.title === 'Part I' ? 'Filer and tax options' : group.title}</h3>
-							{#if revisedSpouseSection || annualSpouse}
-								<ButtonLink href={taxpayerHref} variant="ghost" size="icon" aria-label="Edit spouse details" title="Edit spouse details">
-									<span class="edit-spouse-icon"><Icon icon={glyphs.pencil} /></span>
-								</ButtonLink>
+							{#if revisedSpouseSection || annualSpouse || (microSmall && hasVisibleSpouseFields && group.title === 'Income and filing choices')}
+								{@render editSpouseDetails()}
 							{/if}
 						</header>
 					{/if}
@@ -1426,7 +1431,7 @@
 												!(item === '31' ? quarterlyReturnReady : field.person === 'spouse' ? quarterlySpouseReady : quarterlyTaxpayerReady))}
 										{#if !legacySummary && !computed.has(field.id)}
 											<td class="summary-value summary-input">
-												<CurrencyInput id={field.id} aria-label={jointSummary ? `${label} · ${field.person === 'spouse' ? 'Spouse' : 'Taxpayer'}` : label}
+												<CurrencyInput {decimals} id={field.id} aria-label={jointSummary ? `${label} · ${field.person === 'spouse' ? 'Spouse' : 'Taxpayer'}` : label}
 													aria-describedby={shortAnnual && item === '23' ? '1701a-installment-help' : microSmall && item === '26' ? '1701ms-installment-help' : undefined}
 												{value} error={errors[field.id]} onchange={(next) => setValue(field.id, next)} />
 											</td>
@@ -1444,7 +1449,7 @@
 						<Form1701MSOverpayment {values} {calculated} {errors} ready={msReturnReady} {onvaluechange} />
 					{/if}
 				{/if}
-				{#each incomeEditorRowGroups(group.fields.filter(field => !summaryFields.includes(field) &&
+				{#each incomeEditorRowGroups(sectionFields.filter(field => !summaryFields.includes(field) &&
 					!(form.code === '1701v2018' && revisedEmployer && /IShed[12]a_(?:TIN[23]|BranchCode)$/.test(field.id)) &&
 					!(legacyAnnual && /(?:Sc1I[1-4]EmpTIN[234]C1|Pt7I\d+(?:External|Signing|Spouse)TIN[234])$/.test(field.id)) &&
 					!(annualSpouse && /^frm1701A:txtSpouse(?:TIN[23]|BranchCode)$/.test(field.id)))) as block (block.rows[0].key)}
@@ -1454,7 +1459,7 @@
 						<div class="income-fields" class:annual-spouse-fields={annualSpouse} class:revised-employer={revisedEmployer} class:legacy-schedule={legacy1700 && selectedPage !== '1'}
 							class:dependent-fields={legacyAnnual && /^Part VIIA · Dependent/.test(group.title)}
 							class:legacy-filing={legacy1700 && filingDetails} class:return-filing={!legacy1700 && filingDetails} class:quarter-filing={!!form.quarter && filingDetails}
-							class:ms-declaration-fields={microSmall && group.title === 'Declaration'}>
+							class:ms-declaration-fields={msDeclaration}>
 							{#each block.rows as row (row.key)}
 								{#if row.item}
 									{@const unnumbered = revisedEmployer || revisedEmployerTotals || (legacyAnnual && /^Part VIIA · Dependent/.test(group.title)) ||
@@ -1707,7 +1712,7 @@
 	.income-fields > div { min-width: 0; padding: .75rem .875rem; background: var(--bg-elev); border-bottom: 1px solid var(--border); border-right: 1px solid var(--border-soft); }
 	.income-fields > :is(.income-row, .wide) { border-inline-end: 0; }
 	.return-filing > .income-row { grid-column: auto; }
-	.revised-1700-editor .return-filing { --radio-choice-row-gap: .25rem; }
+	:is(.revised-1700-editor, .micro-small-editor) .return-filing { --radio-choice-row-gap: .25rem; }
 	.quarter-filing { --radio-choice-row-gap: .25rem; --radio-choice-column-gap: .75rem; }
 	.income-fields :global([data-slot="form-item"]),
 	.filing-identification :global([data-slot="form-item"]),
@@ -1794,7 +1799,6 @@
 	.annual-schedule th :global([data-slot="form-item"]) { max-inline-size: 26rem; margin-block-start: .3rem; }
 	.annual-schedule :global([data-slot="form-item"]) { grid-template-columns: minmax(0, 1fr); }
 	.annual-schedule :global(input:not([role="spinbutton"])) { min-width: 0; width: 100%; }
-	.signed-schedule-amount :global(input[inputmode="decimal"]) { text-align: end; font-variant-numeric: tabular-nums; }
 	.annual-schedule .summary-value { padding-inline-end: .75rem; }
 	.annual-schedule output { display: inline-block; padding-inline-end: calc(.75rem + 1px); font-weight: 650; }
 	.editable-summary .summary-value:not(.summary-input) { padding-inline-end: calc(1.25rem + 1px); }
@@ -1944,22 +1948,32 @@
 	.annual-atc-field select[aria-invalid='true'] { border-color: var(--field-error-border); }
 	.annual-atc-field select:disabled { color: var(--fg-muted); }
 	.short-annual-editor .summary-value { white-space: nowrap; }
-	.ms-declaration-actions { display: grid; align-items: start; gap: .5rem; }
-	.ms-disclosure > summary { cursor: pointer; inline-size: fit-content; }
+	.ms-declaration-actions { display: grid; gap: .625rem; }
+	.ms-disclosure > summary {
+		display: flex;
+		align-items: center;
+		gap: .375rem;
+		inline-size: fit-content;
+		min-block-size: 1.5rem;
+		list-style: none;
+		cursor: pointer;
+	}
+	.ms-disclosure > summary::-webkit-details-marker { display: none; }
 	.ms-disclosure > summary:focus-visible { outline: 2px solid var(--field-focus-border); outline-offset: 2px; }
 	.ms-disclosure > p { margin: .5rem 0 0; max-inline-size: 74ch; }
-	.ms-disclosure[open] > summary { margin-block-end: .5rem; }
-	.ms-declaration-fields > :first-child { grid-column: 1 / -1; border-inline-end: 0; }
-	@container paper-form (width >= 36rem) {
-		.income-fields.ms-declaration-fields { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); }
-		.ms-declaration-fields > .wide:not(:first-child) { grid-column: auto; border-inline-end: 1px solid var(--border-soft); }
-		.ms-declaration-fields > :has(.ms-representative) { border-inline-end: 0; }
-		.ms-declaration-actions { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: .875rem; }
+	.ms-disclosure[open] > summary .schedule-chevron { transform: rotate(90deg); }
+	.ms-representative[open] > summary { margin-block-end: .625rem; }
+	.ms-representative { --compact-number-width: 18rem; }
+	.income-fields.ms-declaration-fields { grid-template-columns: minmax(0, 1fr); }
+	.ms-declaration-fields > div { border-inline-end: 0; }
+	.ms-declaration-fields > :is(:has(.ms-declaration-actions), :has(.ms-representative)) { grid-column: 1 / -1; }
+	.ms-declaration-fields [data-income-item="35"] :global([data-slot="form-item"] > div:has(> input)) {
+		max-inline-size: 5rem;
 	}
-	@container paper-form (width >= 54rem) {
-		.income-fields.ms-declaration-fields { grid-template-columns: minmax(0, 2fr) minmax(0, 1.35fr) minmax(13rem, .75fr); }
-		.ms-declaration-fields > :has(.ms-representative) { border-inline-end: 1px solid var(--border-soft); }
-		.ms-declaration-fields > .income-row { grid-column: auto; }
+	@container paper-form (width >= 36rem) {
+		.income-fields.ms-declaration-fields { grid-template-columns: minmax(0, 1fr) 13rem; }
+		.ms-declaration-fields > :is(.wide, .income-row) { grid-column: auto; }
+		.ms-declaration-fields > .wide { border-inline-end: 1px solid var(--border-soft); }
 	}
 	@container paper-form (width >= 58rem) {
 		.micro-small-editor :global(.profile-grid > :is([data-profile-key='taxpayerName'], [data-profile-key='email'], [data-profile-key='contactNumber'])) {
@@ -2010,10 +2024,17 @@
 	}
 	@container paper-form (width >= 36rem) {
 		.return-filing .income-control :global([data-slot="form-item"]:has(input[placeholder="YYYY"])) { max-inline-size: 12rem; }
+		.micro-small-editor .return-filing > [data-income-item="4"]:last-child { grid-column: 1 / -1; }
+	}
+	@container paper-form (36rem <= width < 58rem) {
+		.micro-small-editor .return-filing > [data-income-item="1"] { grid-column: 1 / -1; border-inline-end: 0; }
+		.micro-small-editor .return-filing > :is([data-income-item="2"], [data-income-item="4"]:not(:last-child)) { border-inline-end: 1px solid var(--border-soft); }
+		.micro-small-editor .return-filing > [data-income-item="3"] { border-inline-end: 0; }
 	}
 	@container paper-form (width >= 58rem) {
 		.return-filing > .income-row:not(:last-child):not(:nth-child(3n)) { border-inline-end: 1px solid var(--border-soft); }
 		.revised-1700-editor .return-filing { grid-template-columns: minmax(0, .75fr) minmax(0, 1fr) minmax(0, 1.25fr); }
+		.micro-small-editor .return-filing > [data-income-item="5"] { grid-column: span 2; }
 	}
 	@container paper-form (width >= 54rem) {
 		.return-filing.quarter-filing { grid-template-columns: minmax(0, .8fr) minmax(0, 2fr) minmax(0, .9fr) minmax(0, 1fr); }

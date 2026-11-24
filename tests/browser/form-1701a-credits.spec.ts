@@ -29,7 +29,7 @@ test('1701A keeps cleared election credits blank after saving and reopening', as
 	await previousReturn.fill('2000');
 	await foreignAmount.fill('3000');
 	await foreignAmount.blur();
-	await expect(total).toHaveText('₱6,000.00');
+	await expect(total).toHaveText('₱6,000');
 
 	await goToReturnPage(page, 1);
 	for (const election of [amended, foreignTaxCredits]) {
@@ -47,6 +47,6 @@ test('1701A keeps cleared election credits blank after saving and reopening', as
 	await goToReturnPage(page, 2);
 	await expect(previousReturn).toHaveValue('');
 	await expect(foreignAmount).toHaveValue('');
-	await expect(withholding).toHaveValue('1,000.00');
-	await expect(total).toHaveText('₱1,000.00');
+	await expect(withholding).toHaveValue('1,000');
+	await expect(total).toHaveText('₱1,000');
 });

@@ -53,7 +53,7 @@ test('keeps seven-digit amounts readable at 390px', async ({ page }) => {
 	const sales = page.locator(id('txt47A'));
 	await sales.fill('1000000');
 	await sales.blur();
-	await expect(sales).toHaveValue('1,000,000.00');
+	await expect(sales).toHaveValue('1,000,000');
 	const editableAmountFits = await sales.evaluate((input: HTMLInputElement) => {
 		const styles = getComputedStyle(input);
 		const text = document.createElement('span');
@@ -70,7 +70,7 @@ test('keeps seven-digit amounts readable at 390px', async ({ page }) => {
 	});
 	expect(editableAmountFits).toBe(true);
 	const total = page.locator(id('txt49A'));
-	await expect(total).toHaveText('₱1,000,000.00');
+	await expect(total).toHaveText('₱1,000,000');
 	const textFits = await total.evaluate(node => {
 		const range = document.createRange();
 		range.selectNodeContents(node);

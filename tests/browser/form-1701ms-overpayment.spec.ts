@@ -33,7 +33,7 @@ test('1701-MS Item 31 supports a refund and carry-over split only when overpaid'
 	await carry.check();
 	await carryAmount.fill('400');
 	await carryAmount.blur();
-	const allocated = choices.getByText('₱1,000.00', { exact: true });
+	const allocated = choices.getByText('₱1,000', { exact: true });
 	await expect(allocated).toBeVisible();
 	for (const width of [1440, 320, 390]) {
 		await page.setViewportSize({ width, height: 920 });
@@ -51,8 +51,8 @@ test('1701-MS Item 31 supports a refund and carry-over split only when overpaid'
 	}
 	await page.getByRole('button', { name: 'Save draft', exact: true }).click();
 	await page.getByRole('row').filter({ hasText: '1701MS' }).getByRole('link', { name: 'Edit', exact: true }).click();
-	await expect(refundAmount).toHaveValue('600.00');
-	await expect(carryAmount).toHaveValue('400.00');
+	await expect(refundAmount).toHaveValue('600');
+	await expect(carryAmount).toHaveValue('400');
 
 	await goToReturnPage(page, 2);
 	await payments.fill('0');
@@ -94,6 +94,6 @@ test('1701-MS prints legacy source checkbox values for an Item 31 split', async 
 	await expect(print.locator('[id="frm1701MS:txtToBeIssued"]')).toBeChecked();
 	await expect(print.locator('[id="frm1701MS:txtToBeCarried"]')).toBeChecked();
 	await expect(print.locator('[id="frm1701MS:txtToBeRefunded"]')).not.toBeChecked();
-	await expect(print.locator('[id="frm1701MS:txtToBeIssued1"]')).toHaveValue('600.00');
-	await expect(print.locator('[id="frm1701MS:txtToBeCarried1"]')).toHaveValue('400.00');
+	await expect(print.locator('[id="frm1701MS:txtToBeIssued1"]')).toHaveValue('600');
+	await expect(print.locator('[id="frm1701MS:txtToBeCarried1"]')).toHaveValue('400');
 });

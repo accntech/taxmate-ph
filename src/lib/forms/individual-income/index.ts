@@ -1,3 +1,4 @@
+import { normalizeCurrencyInput, roundWholePeso, type CurrencyDecimals } from '$lib/components/ui/currency-input/currency';
 import { taxpayerEmailError, type TaxpayerProfile } from '../../profiles/profile';
 import { isPackagedRdoCode } from '../../profiles/rdo-codes';
 import type { FormDefinition, FormField } from '..';
@@ -157,10 +158,43 @@ export function isShortFilingPeriod(fields: { shortPeriod: string }, values: Val
 	return ['Yes', 'Y'].includes(values[fields.shortPeriod]);
 }
 
+export function incomeAmountDecimals(form: IncomeForm): CurrencyDecimals {
+	return form.quarter ? 2 : 0;
+}
+
+const amountFieldsByForm = new WeakMap<IncomeForm, ReadonlySet<string>>();
+
+function incomeAmountFields(form: IncomeForm): ReadonlySet<string> {
+	let ids = amountFieldsByForm.get(form);
+	if (!ids) {
+		ids = new Set(incomeEditorFields(form).filter(field => field.kind === 'money').map(field => field.id));
+		amountFieldsByForm.set(form, ids);
+	}
+	return ids;
+}
+
+export function isIncomeAmount(form: IncomeForm, id: string): boolean {
+	return incomeAmountFields(form).has(id) ||
+		(form.code === '1701A' && /^frm1701A:txtmodalPartIV[AB]_\d+C[23]$/.test(id));
+}
+
+function roundIncomeAmounts(form: IncomeForm, values: Values): Values {
+	if (incomeAmountDecimals(form) === 2) return values;
+	const rounded = { ...values };
+	for (const [id, raw] of Object.entries(values)) {
+		if (!isIncomeAmount(form, id)) continue;
+		const normalized = normalizeCurrencyInput(raw, true);
+		if (!normalized) continue;
+		const amount = Number(normalized);
+		if (!Number.isInteger(amount)) rounded[id] = String(roundWholePeso(amount));
+	}
+	return rounded;
+}
+
 export function calculateIndividualIncome(form: IncomeForm, values: Values): Values {
 	const filing = annualFilingFields[form.code];
 	const inputs = filing && !isShortFilingPeriod(filing, values) ? { ...values, [filing.month]: '12' } : values;
-	return rules[form.code as IncomeCode].calculate(form.code, inputs);
+	return rules[form.code as IncomeCode].calculate(form.code, roundIncomeAmounts(form, inputs));
 }
 
 export function incomePaymentFieldIds(code: string): Set<string> {
@@ -233,7 +267,7 @@ export function incomeOutputValues(form: IncomeForm, values: Values): Values {
 }
 
 export function validateIndividualIncome(form: IncomeForm, values: Values): Values {
-	const errors = rules[form.code as IncomeCode].validate(form.code, values);
+	const errors = rules[form.code as IncomeCode].validate(form.code, roundIncomeAmounts(form, values));
 	const filing = annualFilingFields[form.code];
 	if (filing && isShortFilingPeriod(filing, values) && !/^(?:0[1-9]|1[0-2])$/.test(values[filing.month] ?? ''))
 		errors[filing.month] = 'Select the last month of the short filing period.';

@@ -4,6 +4,7 @@ import { legacy1701FieldKind, legacy1701ScheduleLayout } from './legacy-1701-lay
 import { annual2013EditorLayout } from './annual-2013-editor-layout';
 import { legacy1701Filing } from './annual';
 import { revisedIncomeFieldKind, revisedIncomeScheduleLayout } from './revised-income-layout';
+import { overpaymentOptions1701MS } from './form-1701ms-overpayment';
 import fieldData from './templates/fields.json';
 
 export type IncomeEditorField = {
@@ -705,10 +706,15 @@ const revised1700ComputationSections: Record<string, string> = {
 	'Part V.C': 'Part V.C · Tax credits and payments'
 };
 
+const legacy1700SummaryAmount = /^frm1700:txtPg1Pt2I(?:2[3-9]|3[01])(?:[A-Z]|$)/;
+const msAllocationAmounts = new Set<string>(overpaymentOptions1701MS.map(option => option.amount));
+
 export function incomeEditorFields(form: IncomeForm): IncomeEditorField[] {
 	const identities = new Map(Object.entries(form.identity).map(([key, id]) => [id, identityLabels[key]]));
 	return (fieldData[form.code as keyof typeof fieldData] as IncomeEditorField[]).map(sourceField => {
 		const field = { ...sourceField, kind: form.code === '1701' ? legacy1701FieldKind(sourceField) : revisedIncomeFieldKind(form.code, sourceField) };
+		if (form.code === '1700' && (legacy1700SummaryAmount.test(field.id) || field.id === 'frm1700:txtPg1Pt2I34Amount')) field.kind = 'money';
+		if (form.code === '1701MS' && msAllocationAmounts.has(field.id)) field.kind = 'money';
 		let label = sourceLabel(form, field, fieldLabels[field.id] || field.label);
 		const identityLabel = identities.get(field.id);
 		if (identityLabel) {
@@ -760,7 +766,7 @@ export function incomeEditorFields(form: IncomeForm): IncomeEditorField[] {
 		if (coordinates.item && !/^\d+[A-Z]?(?=\s|$)/.test(label)) label = `${coordinates.item} ${label}`;
 		if (coordinates.person && !new RegExp(coordinates.person, 'i').test(label)) label += ` · ${coordinates.person === 'taxpayer' ? 'Taxpayer' : 'Spouse'}`;
 		const optionalEmployer = form.code === '1700v2018' && !!row && Number(row) > 1;
-		const result = { ...field, label, section, ...coordinates, optionalSection: optionalEmployer || field.optionalSection, kind: field.id === 'frm1700:txtPg1Pt2I34Amount' ? 'money' : field.kind, maxLength: field.id === form.year ? 4 : field.maxLength };
+		const result = { ...field, label, section, ...coordinates, optionalSection: optionalEmployer || field.optionalSection, maxLength: field.id === form.year ? 4 : field.maxLength };
 		if (employerTotal) return {
 			...result,
 			label: `5${employerTotal[2]} ${{ c: 'Graduated-rate compensation', d: '25%-rate compensation', e: 'Tax withheld' }[employerTotal[1]]}`,

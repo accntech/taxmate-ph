@@ -58,17 +58,17 @@ test('1700 asks who earned the income when filing jointly and preserves a spouse
 	await compensation.blur();
 	const taxpayerTotal = page.locator('[id="frm1700:txtPg2Pt4I4AC1"]');
 	const spouseTotal = page.locator('[id="frm1700:txtPg2Pt4I4BC1"]');
-	await expect(taxpayerTotal).toHaveText('₱0.00');
-	await expect(spouseTotal).toHaveText('₱420,000.00');
+	await expect(taxpayerTotal).toHaveText('₱0');
+	await expect(spouseTotal).toHaveText('₱420,000');
 
 	await goToReturnPage(page, 1);
 	await page.getByRole('radiogroup', { name: 'Joint return?', exact: true }).getByRole('radio', { name: 'No', exact: true }).check();
 	await goToReturnPage(page, 2);
 	await expect(earner).toHaveCount(0);
 	await expect(employer.getByText('Spouse in saved draft', { exact: true })).toBeVisible();
-	await expect(taxpayerTotal).toHaveText('₱0.00');
+	await expect(taxpayerTotal).toHaveText('₱0');
 	await employer.getByRole('button', { name: 'Assign to taxpayer' }).click();
-	await expect(taxpayerTotal).toHaveText('₱420,000.00');
+	await expect(taxpayerTotal).toHaveText('₱420,000');
 });
 
 for (const width of [390, 1440]) {
@@ -91,8 +91,8 @@ for (const width of [390, 1440]) {
 			await withholding.fill('100000');
 			await withholding.blur();
 			for (const [input, total, value] of [
-				[field(rate), field(rate.replace('_1', `_5${column}`)), '₱1,234,567.00'],
-				[withholding, field(`e_5${column}TW`), '₱100,000.00']
+				[field(rate), field(rate.replace('_1', `_5${column}`)), '₱1,234,567'],
+				[withholding, field(`e_5${column}TW`), '₱100,000']
 			] as const) {
 				await expect(total).toHaveText(value);
 				const inputEdge = await input.evaluate(element => element.getBoundingClientRect().right);

@@ -153,7 +153,7 @@ for (const [code, total] of Object.entries({ 1701: '32', '1701v2018': '32', '170
 		await expect(summary).toBeVisible({ timeout: 15000 });
 		await expect(summary.getByRole('columnheader', { name: 'Spouse', exact: true })).toHaveCount(0);
 		expect(await summary.locator('tbody tr').evaluateAll(rows => rows.every(row => row.children.length === 3))).toBe(true);
-		await expect(summary.getByRole('row', { name: new RegExp(`^${total} .*payable`, 'i') })).toContainText(['1701A', '1701MS', '1701Qv2018'].includes(code) ? '—' : '₱0.00');
+		await expect(summary.getByRole('row', { name: new RegExp(`^${total} .*payable`, 'i') })).toContainText(['1701A', '1701MS', '1701Qv2018'].includes(code) ? '—' : '₱0');
 		await page.setViewportSize({ width: 390, height: 920 });
 		await page.keyboard.press('Escape');
 		await expect.poll(async () => (await page.locator('aside.sidebar').boundingBox())!.x).toBeLessThan(-245);
@@ -214,7 +214,7 @@ test('1701-MS aligns populated business schedules and clears deductions after ch
 	await business.locator('[id="frm1701MS:txtSalesRevenueNo5a"]').fill('1000000');
 	await business.locator('[id="frm1701MS:txtCostofSalesNo8a"]').fill('100000');
 	await business.locator('[id="frm1701MS:txtCostofSalesNo8a"]').blur();
-	await expect(business.locator('[id="frm1701MS:TotalTaxDueCompensationBTP"]')).toHaveText('₱127,500.00');
+	await expect(business.locator('[id="frm1701MS:TotalTaxDueCompensationBTP"]')).toHaveText('₱127,500');
 	await expect(page.getByRole('table', { name: 'Part IV.B2 · Business income at 8%', exact: true })).toHaveCount(0);
 	const output = process.env.INCOME_PREVIEW_DIR;
 	if (output) {
@@ -259,10 +259,10 @@ test('1701A derives the rate from the ATC and retains the calculated total after
 	await sales.blur();
 	await expect(page.locator('[id="frm1701A:txt47A"]')).toHaveCount(0);
 	await page.getByRole('button', { name: 'Previous page', exact: true }).click();
-	await expect(page.locator('[id="frm1701A:txt30"]')).toHaveText('₱62,500.00');
+	await expect(page.locator('[id="frm1701A:txt30"]')).toHaveText('₱62,500');
 	await page.getByRole('button', { name: 'Save draft', exact: true }).click();
 	await page.getByRole('row').filter({ hasText: '1701A' }).getByRole('link', { name: 'Edit', exact: true }).click();
-	await expect(page.locator('[id="frm1701A:txt30"]')).toHaveText('₱62,500.00');
+	await expect(page.locator('[id="frm1701A:txt30"]')).toHaveText('₱62,500');
 	const output = process.env.INCOME_PREVIEW_DIR;
 	if (output) {
 		mkdirSync(output, { recursive: true });
@@ -291,7 +291,7 @@ test('1701A aligns schedule amounts and descriptions on page 2', async ({ page }
 	await amount.fill('25000');
 	await amount.blur();
 	expect((await description.boundingBox())!.y).toBe((await amount.boundingBox())!.y);
-	await expect(graduated.locator('[id="frm1701A:txt44A"]')).toHaveText('₱25,000.00');
+	await expect(graduated.locator('[id="frm1701A:txt44A"]')).toHaveText('₱25,000');
 	await page.setViewportSize({ width: 390, height: 920 });
 	expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
 	const output = process.env.INCOME_PREVIEW_DIR;
@@ -350,6 +350,8 @@ test('June 2013 Form 1701 shows only applicable filing identification and overpa
 	await certificate.fill('00123456');
 	const amount = identification.getByRole('textbox', { name: 'CTC amount', exact: true });
 	await amount.fill('125.50');
+	await amount.blur();
+	await expect(amount).toHaveValue('126');
 	await expect(amount).toHaveCSS('text-align', 'right');
 	const output = process.env.INCOME_PREVIEW_DIR;
 	if (output) {
@@ -404,7 +406,7 @@ test('June 2013 Form 1701 keeps employer fields and historical tax regime amount
 	await expect(regimes.getByRole('columnheader')).toHaveText(['Item', 'Description', 'Regular', 'Special', 'Exempt', 'Total']);
 	await expect(page.getByRole('table', { name: 'Spouse tax regimes' })).toHaveCount(0);
 	await expect(regimes.locator('[id="frm1701:txtPg12Pt9I1SalesC1"]')).toHaveAttribute('inputmode', 'decimal');
-	await expect(regimes.locator('[id="frm1701:txtPg12Pt9I1SalesC1"]')).toHaveCSS('text-align', 'end');
+	await expect(regimes.locator('[id="frm1701:txtPg12Pt9I1SalesC1"]')).toHaveCSS('text-align', 'right');
 	await expect(regimes.locator('[id="frm1701:txtPg12Pt9I1SalesC2"]')).toHaveAttribute('inputmode', 'decimal');
 	const output = process.env.INCOME_PREVIEW_DIR;
 	if (output) {
@@ -508,8 +510,11 @@ test('1700v2018 uses native fields and retains values while paging and reopening
 		if (!id.startsWith('frm1700:txtPg2') || /EmployerTIN|EmployerBranchCode/.test(id)) continue;
 		await page.locator(`[id="${id}"]`).fill(value);
 	}
-	await expect(page.locator('[id="frm1700:txtPg2I47A"]')).toHaveText('₱152,500.00');
-	await expect(page.locator('[id="frm1700:txtPg2I54A"]')).toHaveText('₱100,000.00');
+	await earnings.fill('999,999.50');
+	await earnings.blur();
+	await expect(earnings).toHaveValue('1,000,000');
+	await expect(page.locator('[id="frm1700:txtPg2I47A"]')).toHaveText('₱152,500');
+	await expect(page.locator('[id="frm1700:txtPg2I54A"]')).toHaveText('₱100,000');
 	await expectAmountEdge(page.locator('[id="frm1700:txtPg2I43A"]'), page.locator('[id="frm1700:txtPg2I47A"]'));
 	await employer.getByRole('textbox', { name: 'Tax withheld', exact: true }).blur();
 	await employer.evaluate(node => node.scrollIntoView({ block: 'center' }));
@@ -529,7 +534,7 @@ test('1700v2018 uses native fields and retains values while paging and reopening
 	await employer.getByRole('textbox', { name: 'Second name line', exact: true }).fill('PAYROLL DIVISION');
 	await page.getByRole('button', { name: 'Previous page', exact: true }).click();
 	await expect(year).toHaveValue('2025');
-	await expect(page.locator('[id="frm1700:txtPg1I36"]')).toHaveText('₱52,500.00');
+	await expect(page.locator('[id="frm1700:txtPg1I36"]')).toHaveText('₱52,500');
 	await expectAmountEdge(page.locator('[id="frm1700:txtPg1I31A"]'), page.locator('[id="frm1700:txtPg1I36"]'));
 	await page.getByRole('link', { name: /Back to forms/ }).evaluate(node => node.scrollIntoView({ block: 'center' }));
 	await page.screenshot({ path: resolve(output, '1700v2018-editor-page-1.png') });
@@ -601,12 +606,12 @@ test('joint Form 1700 uses profile identity, keeps one desktop item row, and pag
 	const summary = page.getByRole('table', { name: 'Calculated tax amounts' });
 	await expect(summary).toBeVisible({ timeout: 3000 });
 	const taxDue = summary.getByRole('row', { name: /26.*Tax due/ });
-	await expect(taxDue.getByRole('cell', { name: '₱0.00' })).toHaveCount(2);
+	await expect(taxDue.getByRole('cell', { name: '₱0' })).toHaveCount(2);
 	await expect(summary.getByText('Calculated', { exact: true })).toHaveCount(0);
 	const interest = summary.getByRole('textbox', { name: 'Interest · Taxpayer', exact: true });
 	await interest.fill('120');
 	await interest.press('Tab');
-	await expect(summary.locator('[id="frm1700:txtPg1I36"]')).toHaveText('₱120.00');
+	await expect(summary.locator('[id="frm1700:txtPg1I36"]')).toHaveText('₱120');
 	await summary.getByRole('textbox', { name: 'Interest · Spouse', exact: true }).blur();
 	const summarySection = page.getByRole('region', { name: /^Part III - Total Tax Payable/i });
 	const row = page.locator('[data-income-item="18"]').filter({ has: page.locator('[id="frm1700:txtPg1I18STIN1"]') });
@@ -630,7 +635,7 @@ test('joint Form 1700 uses profile identity, keeps one desktop item row, and pag
 	await page.setViewportSize({ width: 390, height: 920 });
 	await page.keyboard.press('Escape');
 	await expect.poll(async () => (await page.locator('aside.sidebar').boundingBox())!.x).toBeLessThan(-245);
-	const amountCells = taxDue.getByRole('cell', { name: '₱0.00' });
+	const amountCells = taxDue.getByRole('cell', { name: '₱0' });
 	expect((await amountCells.first().boundingBox())!.y).toBe((await amountCells.last().boundingBox())!.y);
 	const controlEdge = await interest.evaluate(input => input.parentElement!.getBoundingClientRect().right);
 	const cell = (await interest.locator('xpath=ancestor::td').boundingBox())!;
@@ -643,7 +648,7 @@ test('joint Form 1700 uses profile identity, keeps one desktop item row, and pag
 	await spouseIncome.getByRole('radio', { name: 'Yes', exact: true }).check();
 	await expect(page.getByRole('radio', { name: 'Joint Filing', exact: true })).not.toBeChecked();
 	await expect(summary.getByRole('columnheader', { name: 'Spouse' })).toHaveCount(0);
-	await expect(summary.locator('[id="frm1700:txtPg1I36"]')).toHaveText('₱120.00');
+	await expect(summary.locator('[id="frm1700:txtPg1I36"]')).toHaveText('₱120');
 	await expect(page.getByRole('navigation', { name: 'Return pages' })).toHaveCSS('border-top-width', '0px');
 	const attachments = summarySection.locator('[id="frm1700:txtPg1I37NumberOfAttachments"]');
 	expect((await attachments.boundingBox())!.width).toBeLessThan(180);
@@ -713,6 +718,7 @@ for (const [code, count] of Object.entries(cases)) {
 				const form = getIndividualIncomeForm(code);
 
 				const values = { ...createIndividualIncomeValues(form, fixture), [form.year]: ['1700', '1701', '1701Q'].includes(code) ? '2017' : '2025' };
+				if (code === '1701') values['frm1701:txtPg5Sc1I1ComIncomeC2'] = '125000.50';
 				if (code === '1701A') Object.assign(values, {
 					'frm1701A:txt36A': '1000000', 'frm1701A:optTaxType': 'S', 'frm1701A:optATC': 'II012',
 					'frm1701A:txtmodalPartIVADesc_1C1': 'Service income adjustment', 'frm1701A:txtmodalPartIVA_1C2': '5000',
@@ -721,15 +727,15 @@ for (const [code, count] of Object.entries(cases)) {
 				if (code === '1701v2018') Object.assign(values, {
 					'frm1701:rdoPg1I21TaxRate': 'Graduated',
 					'frm1701:rdoPg1I21AMethodDeduction': 'OSD',
-					'frm1701:txtPg2IShed3_8A': '1250000'
+					'frm1701:txtPg2IShed3_8A': '1249999.50'
 				});
 				if (code === '1701MS') Object.assign(values, {
 					'frm1701MS:sourceOfIncomeTaxpayer': '3',
 					'frm1701MS:txtTaxpayerNo12a': '3',
-					'frm1701MS:txtSalesRevenuesFeesANo19a': '500000'
+					'frm1701MS:txtSalesRevenuesFeesANo19a': '499999.50'
 				});
 				if (code === '1701Q') Object.assign(values, {
-					'frm1701q:txt26A': '100000',
+					'frm1701q:txt26A': '100000.56',
 					'frm1701q:txt27A': '10000',
 					'frm1701:optMethodOfDeduction23': 'O'
 				});
@@ -737,7 +743,7 @@ for (const [code, count] of Object.entries(cases)) {
 					'frm1701q:optATC': 'II012',
 					'frm1701q:optTaxRate': 'Graduated',
 					'frm1701q:optMethodOfDeduction': 'I',
-					'frm1701q:txt36A': '400000'
+					'frm1701q:txt36A': '400000.56'
 				});
 				if (code === '1700') Object.assign(values, {
 					GovorCTC: 'Gov',
@@ -838,7 +844,7 @@ for (const [code, count] of Object.entries(cases)) {
 				await expect(slot('txtPg1Pt1I15QualifyDependent')).toHaveText('1');
 				await expect(slot('txtPg1Pt1I22SpouseQualifiedDependentChildren')).toBeEmpty();
 				await expect(slot('rdoPg1Pt1I21SpouseClaimAdditionalExemptionNo')).toHaveText('X');
-				expect(second).toMatch(/25,?000\.00/);
+				expect(second).toMatch(/25,000/);
 				expect(second).toContain('SAMPLE EMPLOYER');
 				expect(fourth).toContain('JAMIE');
 
@@ -853,8 +859,8 @@ for (const [code, count] of Object.entries(cases)) {
 				await expect(slot('txtPg3Pt5I15DateofIssueC1_1')).toHaveText('06');
 				await expect(slot('txtPg3Pt5I15DateofIssueC1_2')).toHaveText('15');
 				await expect(slot('txtPg3Pt5I15DateofIssueC1_3')).toHaveText('2017');
-				expect(third).toMatch(/3,?250\.00/);
-				expect(third).toMatch(/3,?025\.00/);
+				expect(third).toMatch(/3,250/);
+				expect(third).toMatch(/3,025/);
 				expect(fourth).toContain('SAMPLE BARANGAY');
 			}
 			if (code === '1700v2018') {
@@ -862,17 +868,26 @@ for (const [code, count] of Object.entries(cases)) {
 				expect(text).toContain('1209');
 				expect(text).not.toContain('TEST PAYMENT INSTRUMENT');
 				expect(text).toMatch(/001\s*-?\s*234\s*-?\s*567\s*-?\s*00008/);
-				expect(text).toMatch(/52,?500\.00/);
+				expect(text).toMatch(/52,500/);
 				expect(text.split(sampleSource)).toHaveLength(3);
 			}
 			if (code === '1701A') {
 				const text = execFileSync('pdftotext', ['-layout', path, '-'], { encoding: 'utf8' });
-				expect(text).toMatch(/400,?000\.00/);
-				expect(text).toMatch(/42\s+OTHERS\s+42A\s+7,?500\.00/);
-				expect(text).toMatch(/7,?500\.00/);
-				expect(text).toMatch(/607,?500\.00/);
-				expect(text).toMatch(/20A\s+64,?000\.00/);
-				expect(text).toMatch(/46A\s+64,?000\.00/);
+				expect(text).toMatch(/400,000/);
+				expect(text).toMatch(/42\s+OTHERS\s+42A\s+7,500/);
+				expect(text).toMatch(/7,500/);
+				expect(text).toMatch(/607,500/);
+				expect(text).toMatch(/20A\s+64,000/);
+				expect(text).toMatch(/46A\s+64,000/);
+			}
+			const printedAmounts: Partial<Record<string, string>> = {
+				'1701': '125,001', '1701v2018': '1,250,000', '1701MS': '500,000',
+				'1701Q': '100,000.56', '1701Qv2018': '400,000.56'
+			};
+			const printedAmount = printedAmounts[code];
+			if (printedAmount) {
+				const text = execFileSync('pdftotext', ['-layout', path, '-'], { encoding: 'utf8' });
+				expect(text.split(/\s+/)).toContain(printedAmount);
 			}
 			if (process.env.INCOME_PREVIEW_DIR) {
 				const output = resolve(process.env.INCOME_PREVIEW_DIR ?? 'test-results/individual-income-previews');
@@ -938,11 +953,11 @@ test('legacy 1700 summarizes profile fields and reveals the applicable identific
 	await employer.getByRole('textbox', { name: 'Employer name', exact: true }).fill('Example Employer');
 	await income.fill('420000');
 	await income.blur();
-	await expect(income).toHaveValue('420,000.00');
+	await expect(income).toHaveValue('420,000');
 	await withheld.fill('18000');
 	await withheld.blur();
-	await expect(page.locator('[id="frm1700:txtPg2Pt4I4AC1"]')).toHaveText('₱420,000.00');
-	await expect(page.locator('[id="frm1700:txtPg2Pt4I4AC2"]')).toHaveText('₱18,000.00');
+	await expect(page.locator('[id="frm1700:txtPg2Pt4I4AC1"]')).toHaveText('₱420,000');
+	await expect(page.locator('[id="frm1700:txtPg2Pt4I4AC2"]')).toHaveText('₱18,000');
 	expect((await income.boundingBox())!.y).toBe((await withheld.boundingBox())!.y);
 	await capture('page-2', employer.getByRole('heading'));
 
@@ -950,7 +965,7 @@ test('legacy 1700 summarizes profile fields and reveals the applicable identific
 	await expect(page.getByRole('heading', { name: 'Supplemental income' })).toBeFocused();
 	await expect(page.getByText('Summation', { exact: false })).toHaveCount(0);
 	await expect(page.getByRole('region', { name: 'Share transactions' })).toBeVisible();
-	await expect(page.locator('[id="frm1700:txtPg3Pt5BI10TotalIncome"]')).toHaveText('₱0.00');
+	await expect(page.locator('[id="frm1700:txtPg3Pt5BI10TotalIncome"]')).toHaveText('₱0');
 	const property = page.getByRole('region', { name: 'Real property transactions', exact: true }).locator('summary');
 	await property.click();
 	await capture('page-3', property);
@@ -969,7 +984,7 @@ test('legacy 1700 summarizes profile fields and reveals the applicable identific
 	await expect(address).toHaveCount(0);
 	await expect(page.getByText('This schedule applies', { exact: false })).toBeVisible();
 	await goToReturnPage(page, 2);
-	await expect(income).toHaveValue('420,000.00');
+	await expect(income).toHaveValue('420,000');
 	await page.setViewportSize({ width: 390, height: 920 });
 	expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
 	expect((await income.boundingBox())!.y).toBeLessThan((await withheld.boundingBox())!.y);
@@ -1120,11 +1135,11 @@ test('legacy 1700 shows a compact tax summary on narrow screens', async ({ page 
 	await page.keyboard.press('Escape');
 	await expect.poll(async () => (await page.locator('aside.sidebar').boundingBox())!.x).toBeLessThan(-245);
 	const row = summary.getByRole('row', { name: /23.*Taxpayer tax due/ });
-	await expect(row.getByRole('cell', { name: '₱0.00', exact: true })).toBeVisible();
+	await expect(row.getByRole('cell', { name: '₱0', exact: true })).toBeVisible();
 	await expect(summary.getByRole('row', { name: /24.*Spouse/ })).toHaveCount(0);
 	await expect(summary.getByRole('row', { name: /31.*Amount payable upon filing/ })).toBeVisible();
 	const label = (await row.getByRole('rowheader').boundingBox())!;
-	const amount = (await row.getByRole('cell', { name: '₱0.00', exact: true }).boundingBox())!;
+	const amount = (await row.getByRole('cell', { name: '₱0', exact: true }).boundingBox())!;
 	expect(amount.x).toBeGreaterThanOrEqual(label.x + label.width);
 	expect(amount.y).toBe(label.y);
 	expect((await row.boundingBox())!.height).toBeLessThan(65);
@@ -1400,11 +1415,11 @@ test('legacy 1700 page 3 aligns amount columns and groups optional transactions 
 	expect((await interest.boundingBox())!.x).toBe((await royalties.boundingBox())!.x);
 	await royalties.fill('0');
 	await royalties.blur();
-	await expect(royalties).toHaveValue('0.00');
+	await expect(royalties).toHaveValue('0');
 	await interest.fill('1250');
 	await supplemental.getByRole('textbox', { name: 'Interest final tax withheld', exact: true }).fill('250');
 	const finalTaxTotal = page.locator('[id="frm1700:txtPg3Pt5I21TotTaxWithheldPaid"]');
-	await expect(finalTaxTotal).toHaveText('₱250.00');
+	await expect(finalTaxTotal).toHaveText('₱250');
 	await expectAmountEdge(supplemental.getByRole('textbox', { name: 'Interest final tax withheld', exact: true }), finalTaxTotal);
 
 	const shares = page.getByRole('region', { name: 'Share transactions', exact: true });
@@ -1425,7 +1440,7 @@ test('legacy 1700 page 3 aligns amount columns and groups optional transactions 
 	// A share-type selection by itself must keep the schedule populated on return.
 	await goToReturnPage(page, 4);
 	await goToReturnPage(page, 3);
-	await expect(royalties).toHaveValue('0.00');
+	await expect(royalties).toHaveValue('0');
 	await expect(first.getByRole('combobox', { name: 'Kind of shares', exact: true })).toHaveText('Common shares');
 	await first.getByRole('textbox', { name: 'Stock certificate series number', exact: true }).fill('STK123');
 	await shares.getByRole('button', { name: 'Add second sale or exchange', exact: true }).click();

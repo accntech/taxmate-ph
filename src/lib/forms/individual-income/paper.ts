@@ -1,6 +1,7 @@
+import { formatCurrencyInput } from '$lib/components/ui/currency-input/currency';
 import type { IncomeForm } from '.';
 import { legacy1700IncomeSourceChecked } from './compensation';
-import { calculateIndividualIncome, incomeOutputValues } from '.';
+import { calculateIndividualIncome, incomeAmountDecimals, incomeOutputValues, isIncomeAmount } from '.';
 import { incomeIncludesSpouse } from './profile-fields';
 import { is1701MSOverpaymentSelected, overpaymentOptions1701MS } from './form-1701ms-overpayment';
 import sourceStyles from './templates/source-layout.css?raw';
@@ -91,6 +92,7 @@ export function renderIndividualIncomeValues(root: ParentNode, form: IncomeForm,
 	for (const control of paperControls(root)) {
 		const key = control.dataset.incomeField!;
 		let value = calculated[key] ?? '';
+		if (isIncomeAmount(form, key)) value = formatCurrencyInput(value, incomeAmountDecimals(form), true);
 		if (key === form.year && /^\d{2}$/.test(value) === false && ['1700', '1701'].includes(form.code) && value.length === 4) value = value.slice(-2);
 		if (/^\d{4}-\d{2}-\d{2}$/.test(value)) value = value.slice(5).replace('-', '/') + '/' + value.slice(0, 4);
 		const incomingError = errors[key] ?? errors[control.id];
