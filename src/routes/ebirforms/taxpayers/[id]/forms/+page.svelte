@@ -122,7 +122,7 @@
 		isPrinting = true;
 		const job = { id: crypto.randomUUID(), submitted: false, canceled: false };
 		pdfJob = job;
-		const values = { ...record.values, ...(profile ? getManagedTaxpayerValues(record.formCode, profile, record.status) : {}) };
+		const values = { ...record.values, ...(profile ? getManagedTaxpayerValues(record.formCode, profile, record.status, record.values) : {}) };
 		const paperSize = settings.prefs.paperSize;
 		try {
 			const suggestedFilename = buildPdfExportFilename({ tin: normalizeTinParts(getReturnTin(record.formCode, values, profile)), formCode: record.formCode,

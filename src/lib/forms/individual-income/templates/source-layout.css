@@ -1,0 +1,820 @@
+* {
+    margin: 0;
+    padding: 0;
+}
+
+body, html {
+    margin: 0;
+    padding: 0;
+    font-weight: normal;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 15px;
+    background: none !important;
+    zoom: 1;
+}
+/* input, select { color:#000 !important; font-family:Arial, Helvetica, sans-serif; font-size:10px; } */
+
+#wrapper, #container {
+    padding: 1%;
+    margin: 0 auto;
+    width: auto;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 12px;
+}
+
+#sched1Div1602 {
+    padding: 1%;
+    margin: 0 auto;
+    width: auto;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 12px;
+    background: #e2e2e2;
+    border: #CCC 1px solid;
+}
+
+#formPaper {
+    background: #FFF;
+    width: auto;
+    border: #CCC 1px solid;
+    margin: 0 auto;
+}
+
+#footer {
+    background: #FFF;
+    width: auto;
+    border: #CCC 1px solid;
+    margin: 0 auto;
+}
+
+#formPaper table {
+    width: 100%;
+}
+
+#footer {
+    background: #FFF;
+    width: auto;
+    border: #CCC 1px solid;
+    margin: 0 auto;
+}
+
+.tblForm2200AN {
+    background: #e2e2e2;
+    border-collapse: collapse;
+    border-spacing: 0;
+}
+
+    .tblForm2200AN td.tblFormTd2200AN {
+        background-image: url("/legacy/individual-income/frmbg.png");
+        background-repeat: repeat-x;
+        background-position: top;
+        padding: 1px 0 1px 0;
+        border-top: #AAAAAA 1px solid;
+        border-right: #AAAAAA 1px solid;
+    }
+
+    .tblForm2200AN td.tblFormTdPart2200AN {
+        background-image: url("/legacy/individual-income/frmbg.png");
+        background-repeat: repeat-x;
+        background-position: top;
+        padding: 1px 0 1px 0;
+        border-top: #AAAAAA 1px solid;
+        border-right: #AAAAAA 1px solid;
+    }
+
+.tblForm1801 {
+    background: #e2e2e2;
+    border-collapse: collapse;
+    border-spacing: 0;
+}
+
+    .tblForm1801 td.tblFormTd1801 {
+        background-image: url("/legacy/individual-income/frmbg.png");
+        background-repeat: repeat-x;
+        background-position: top;
+        padding: 2px 0 2px 0;
+        border-top: #AAAAAA 1px solid;
+        border-right: #AAAAAA 1px solid;
+    }
+
+    .tblForm1801 td.tblFormTdPart1801 {
+        background-image: url("/legacy/individual-income/frmbg.png");
+        background-repeat: repeat-x;
+        background-position: top;
+        padding: 2px 0 2px 0;
+        border-top: #AAAAAA 1px solid;
+        border-right: #AAAAAA 1px solid;
+    }
+
+.tblForm {
+    background: #e2e2e2;
+    border-collapse: collapse;
+    border-spacing: 0;
+}
+
+    .tblForm td.tblFormTd {
+        background-image: url("/legacy/individual-income/frmbg.png");
+        background-repeat: repeat-x;
+        background-position: top;
+        padding: 1px 0 1px 0;
+        border-top: #AAAAAA 1px solid;
+        border-right: #AAAAAA 1px solid;
+    }
+
+    .tblForm td.tblFormTdNoTopBorder {
+        /* background-image: url("/legacy/individual-income/frmbg.png");
+        background-repeat: repeat-x; */
+        background-position: top;
+        padding: 1px 0 1px 0;
+        border-right: #AAAAAA 1px solid;
+    }
+
+    .tblForm td.tblFormTdPart {
+        background-image: url("/legacy/individual-income/frmbg.png");
+        background-repeat: repeat-x;
+        background-position: top;
+        padding: 1px 0 1px 0;
+        border-top: #AAAAAA 1px solid;
+        border-right: #AAAAAA 1px solid;
+    }
+
+.spacePadder {
+    padding: 4px 0 4px 0;
+}
+
+.aBox {
+    background-color: #e2e2e2;
+    /*border: 1px solid #a9a9a9;*/
+    color: #000000;
+    padding: 0px;
+    margin: 0px;
+    top: 50%;
+    left: 30%;
+    position: absolute;
+    z-index: 100000;
+}
+
+    .aBox input, .aBox label { /*border:0 !important;*/
+        font-family: Arial, Helvetica, sans-serif !important;
+        font-size: 11px !important;
+    }
+
+#msg {
+    color: #F00;
+    border: 1px #CCC solid;
+    padding: 5px;
+    background: #FFC;
+}
+
+.printSignFooterClass table, .printSignFooterClass table td, .printSignFooterClass table tr {
+    border-collapse: collapse;
+}
+
+#watermark {
+    position: absolute;
+    margin: 0 auto;
+    float: left;
+    clear: none;
+    width: 700px;
+    display: block;
+    left: 50%;
+    margin-left: -350px;
+    top: 140px;
+    z-index: 3;
+}
+
+#bg {
+    position: fixed;
+    float: left;
+    clear: none;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    z-index: -1;
+}
+
+.formTitle {
+    padding: 2px;
+    padding-top: 20px;
+    margin-bottom: 10px;
+    display: block;
+    font-size: 24px;
+    display: block;
+    width: 100% !important;
+    color: #000;
+    font-size: 24px;
+    border-bottom: 1px #555 solid;
+    font-weight: bold;
+    margin-bottom: 10px;
+}
+
+.helpTitle {
+    padding: 2px;
+    padding-top: 20px;
+    margin-bottom: 10px;
+    display: block;
+    font-size: 22px;
+    display: block;
+    width: 100% !important;
+    color: rgb(102, 101, 101);
+    font-weight: bold;
+    margin-bottom: 10px;
+    font-family: "Times New Roman";
+}
+
+
+.topnav {
+    background: #f9f9f9;
+    border-bottom: 1px solid #333;
+    font-size: 0.85em;
+    height: 30px;
+    position: fixed;
+    top: 0;
+    width: 100%;
+    z-index: 1000000;
+}
+
+ul.topnav {
+    list-style: none;
+    padding: 0 20px;
+    margin: 0;
+    float: left;
+    background: #f9f9f9;
+    font-size: 14px;
+}
+
+    ul.topnav li {
+        float: left;
+        margin: 0;
+        padding: 0 15px 0 0;
+        position: relative; /*--Declare X and Y axis base for sub navigation--*/
+    }
+
+        ul.topnav li a {
+            padding: 7px;
+            color: #000;
+            display: block;
+            text-decoration: none;
+            float: left;
+        }
+
+            ul.topnav li a:hover {
+            }
+
+        ul.topnav li span { /*--Drop down trigger styles--*/
+            width: 17px;
+            height: 35px;
+            float: left;
+        }
+
+            ul.topnav li span.subhover {
+                background-position: center bottombottom;
+                cursor: pointer;
+            }
+        /*--Hover effect for trigger--*/
+        ul.topnav li ul.subnav {
+            list-style: none;
+            position: absolute; /*--Important - Keeps subnav from affecting main navigation flow--*/
+            left: 0;
+            top: 30px;
+            background: #f9f9f9;
+            margin: 0;
+            padding: 0;
+            display: none;
+            float: left;
+            width: 180px;
+            border: 1px solid #111;
+            border-top: 0;
+        }
+
+            ul.topnav li ul.subnav li {
+                margin: 0;
+                padding: 0;
+                border-top: 1px solid #252525; /*--Create bevel effect--*/
+                clear: both;
+                width: 100%;
+                overflow: hidden;
+            }
+
+html ul.topnav li ul.subnav li a {
+    float: left;
+    display: block;
+    width: 100%;
+}
+
+.previewButtonClass {
+    display: none !important;
+}
+
+.footerContent {
+    font-weight: normal;
+    font-family: sans-serif, Arial, Helvetica;
+    font-size: 10px;
+}
+
+.footerColumnHeader {
+    font-weight: bold;
+    font-family: sans-serif, Arial, Helvetica;
+    font-size: 12px;
+}
+
+.footerHeader {
+    font-weight: bold;
+    font-family: sans-serif, Arial, Helvetica;
+    font-size: 14px;
+}
+
+.modalContent {
+    font-weight: normal;
+    font-family: Arial, sans-serif, Helvetica;
+    font-size: 10px;
+}
+/* 
+.modalColumnHeader {
+font-weight:bold;
+font-family:Arial, sans-serif, Helvetica;
+font-size:12px;
+}
+ 
+.modalHeader {
+font-weight:bold;
+font-family:Arial, sans-serif, Helvetica;
+font-size:14px;
+}
+*/
+.modalColumnHeader {
+    font-weight: bold;
+    font-family: Arial, sans-serif, Helvetica;
+    font-size: 11px;
+    color: #000;
+}
+
+.modalHeader {
+    font-weight: bold;
+    font-family: Arial, sans-serif, Helvetica;
+    font-size: 12px;
+    color: #000;
+}
+
+.modalContent_1800 {
+    font-weight: normal;
+    font-family: Arial, sans-serif, Helvetica;
+    font-size: 10px;
+}
+
+.modalColumnHeader_1800 {
+    font-weight: bold !important;
+    font-family: Arial, sans-serif, Helvetica;
+    font-size: 11px !important;
+    color: #000 !important;
+}
+
+.modalHeader_1800 {
+    font-weight: bold !important;
+    font-family: Arial, sans-serif, Helvetica;
+    font-size: 12px !important;
+    color: #000 !important;
+}
+
+.modalContent_2200M {
+    font-weight: normal;
+    font-family: Arial, sans-serif, Helvetica;
+    font-size: 10px;
+}
+
+.modalColumnHeader_2200M {
+    font-weight: bold !important;
+    font-family: Arial, sans-serif, Helvetica;
+    font-size: 11px !important;
+    color: #000 !important;
+}
+
+.modalHeader_2200M {
+    font-weight: bold !important;
+    font-family: Arial, sans-serif, Helvetica;
+    font-size: 12px !important;
+    color: #000 !important;
+}
+
+.modalColumnHeader1 {
+    font-weight: normal;
+    font-family: Arial, sans-serif, Helvetica;
+    font-size: 12px;
+}
+
+.mainLabel {
+    font-weight: bold;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 11px;
+}
+
+/*helpers css ==========================================================================================================*/
+
+#inserted {
+    font-family: 'Times New Roman';
+    font-size: 14px;
+    border: none;
+    border-collapse: collapse;
+    margin-bottom: 15px;
+}
+
+    #inserted tr {
+        width: 100%;
+        border: none;
+    }
+
+    #inserted td {
+        vertical-align: top;
+        border: none;
+    }
+
+    #inserted p {
+        text-indent: 30px;
+        margin: 7.5px 0 7.5px 0;
+    }
+
+    #inserted li {
+        margin: 0 0 2.5px 15px;
+    }
+
+    #inserted dt {
+        font-weight: bold;
+        margin: 10px 0 5px 0;
+    }
+
+    #inserted dd {
+        margin: 2.5px 0 2.5px 10px;
+    }
+
+
+.titlecol {
+    width: 100%;
+    text-align: center;
+    font-family: 'Times New Roman';
+    font-size: 25px;
+    font-weight: bold;
+    margin-bottom: 15px;
+    padding-top: 15px;
+    border: none;
+}
+
+    .titlecol .small {
+        display: inline;
+        font-size: 16px;
+    }
+
+.subtitle {
+    font-size: 18px;
+    font-weight: bold;
+    text-align: center;
+    font-family: 'Times New Roman';
+}
+.smallSubtitle {
+    font-size: 14px;
+    font-weight: bold;
+    text-align: center;
+    font-family: 'Times New Roman';
+}
+
+
+.firstcol {
+    width: 50%;
+    padding: 5px 15px 5px 15px;
+    border-right: 1px solid black !important;
+    text-align: justify;
+}
+
+.firstcol_noborder {
+    width: 50%;
+    padding: 5px 15px 5px 15px;
+    border-right: 0px solid black !important;
+    text-align: justify;
+}
+
+.secondcol {
+    width: 50%;
+    padding: 5px 15px 5px 15px;
+    text-align: justify;
+}
+
+#minitable {
+    width: 50%;
+    /*position: relative;*/
+    text-align: center;
+    border-collapse: collapse;
+}
+
+    #minitable th {
+        background-color: #d9d9d9;
+    }
+
+    #minitable th, #minitable tr, #minitable td {
+        border: 1px solid black;
+    }
+
+.boxed {
+    padding: 10px;
+    font-weight: bold;
+    text-align: center;
+    margin: 0 auto 0 auto;
+    width: 50%;
+    border: 1px solid black;
+}
+
+.indent {
+    margin-left: 20px;
+}
+
+/*additional styles for tosa*/
+
+        #tosa {
+			color:#333;
+            font-family: Arial, Helvetica, sans-serif;
+			position:relative;
+			padding:25px;
+            width: 80%;
+            margin-left: auto;
+            margin-right: auto;
+			margin-top:50px;
+			background-color:white;
+        }
+
+        .centerButton {
+            width: 100px;
+            margin: 0 auto;
+        }
+         #tosa h2 {
+        margin-top:25px;
+        margin-bottom:15px;
+        }
+		
+		  #tosa h4 {
+				margin-top:15px;
+                margin-bottom:15px;
+        }
+		
+		  #tosa h5 {
+				margin-top:15px;
+                margin-bottom:15px;
+        }
+
+            .centerButton input {
+                width: 70px;
+                height: 30px;
+            }
+
+        .indentTosa {
+            margin-left: 30px;
+			margin-bottom:10px;
+        }
+
+/* Style for payment option */
+.payment-option {
+    display: none;
+    width: 50%; 
+    position: relative; 
+    top: 25%; 
+    left: 25%; 
+    right: auto; 
+    overflow-y: auto; 
+    overflow-x: hidden; 
+    background: #e2e2e2;
+    z-index: 100; 
+    border: #0e00d1;
+    border-style: solid;
+    border-width: 2px;
+}
+
+.payment-option-content {
+    vertical-align: middle;
+    margin: 10px;
+}
+
+.payment-option-footer {
+    padding: 10px;
+    position: relative;
+    font-weight: normal;
+    text-align: right;
+    background: #d2d2d2;
+}
+
+body { font-family:Arial;  }
+
+/*XBOX*/
+
+     .checkbox, .radio {
+      width: 19px;
+      height: 25px;
+      padding: 0 5px 0 0;
+      background: url("/legacy/individual-income/xbox.png") no-repeat;
+      display: block;
+      clear: left;
+      float: left;
+    }
+    .radio {
+      background: url("/legacy/individual-income/xbox.png") no-repeat;
+    }
+/*END*/
+
+td.FormHeaderLogo
+{
+    width:82px;
+    padding:0 0 0 0;
+    text-align:center;
+}
+
+.noCellSpace
+{
+    margin:0px 0px 0px 0px;
+    padding:0px 0px 0px 0px;
+    border-spacing:0;
+}
+
+input.NotEditable { width: auto; }
+
+.textCenter
+{
+    text-align:center;
+}
+
+.center, .FormHeader
+{
+    text-align:center; 
+    height:0;
+    margin:0px 0px 0px 0px;
+    padding:0px 0px 0px 0px;
+    border-spacing: 0;
+}
+.left
+{
+    text-align:left; 
+    height:0;
+    margin:0px 0px 0px 0px;
+    padding:0px 0px 0px 0px;
+    border-spacing: 0;
+}
+.right
+{
+    text-align:right;
+    height:0;
+    margin:0px 0px 0px 0px;
+    padding:0px 0px 0px 0px;
+    border-spacing: 0;
+}
+
+table.FormHeader 
+{
+    text-align: center; 
+    width: 100%;
+    border-spacing: 0;
+    background-color: white;
+    border-left: 1px solid black;
+    border-bottom: 1px solid black;
+}
+table.FormHeader tr td 
+{
+    border-top: 1px solid black;
+    border-right: 1px solid black;
+    padding: 0;
+}
+
+.FormHeader1{ font-size: 16pt; }
+.FormHeader2 { font-size: 9pt; }
+.FormHeader3 { font-size: 8pt; }
+.FormHeader4 { font-size: 7pt; }
+
+.ContentLeft { text-align: left; padding-left: 3px; }
+.ContentRight{ text-align:right; padding-right:3px; }
+
+td.ContentBold { font-size: small; width: 15px; font-weight: bold; vertical-align: top; }
+.Content1	{font-size:11px; }
+.Content2	{font-size:10px; }
+.ContentTip	{font-size:11px; font-style:italic; padding-left:2px; }
+
+.ContentBold, .ContentHeader	{font-size:14px; font-weight:bold; }
+.ContentBoldSmall { font-size: 11px; font-weight: bold; }
+.ContentHeader	{ width:100%; text-align:center; }
+
+.xxsmall, .xxsmallBold, .xxsmallItalic, .xxsmallBoldItalic{font-size:9px}
+.xxsmallBold { font-weight:bold; }
+.xxsmallItalic { font-style:italic; }
+.xxsmallBoldItalic{font-weight:bold; font-style:italic; }
+
+.xsmall, .xsmallBold, .xsmallItalic, .xsmallBoldItalic{font-size:x-small;}
+.xsmallBold { font-weight:bold; }
+.xsmallItalic { font-style:italic; }
+.xsmallBoldItalic{font-weight:bold; font-style:italic; }
+
+.small, .smallBold, .smallItalic, .smallBoldItalic{font-size:13px;}
+.smallBold { font-weight:bold; }
+.smallItalic { font-style:italic; }
+.smallBoldItalic{font-weight:bold; font-style:italic; }
+
+.smaller, .smallerBold, .smallerItalic, .smallerBoldItalic{font-size:smaller;}
+.smallerBold { font-weight:bold; }
+.smallerItalic { font-style:italic; }
+.smallerBoldItalic{font-weight:bold; font-style:italic; }
+
+.medium, .mediumBold, .mediumItalic, .mediumBoldItalic{font-size:medium;}
+.mediumBold { font-weight:bold; }
+.mediumItalic { font-style:italic; }
+.mediumBoldItalic{font-weight:bold; font-style:italic; }
+
+.large, .largeBold, .largeItalic, .largeBoldItalic{font-size:large;}
+.largeBold { font-weight:bold; }
+.largeItalic { font-style:italic; }
+.largeBoldItalic{font-weight:bold; font-style:italic; }
+
+.larger, .largerBold, .largerItalic, .largerBoldItalic{font-size:larger;}
+.largerBold { font-weight:bold; }
+.largerItalic { font-style:italic; }
+.largerBoldItalic{font-weight:bold; font-style:italic; }
+
+.xlarge, .xlargeBold, .xlargeItalic, .xlargeBoldItalic{font-size:x-large;}
+.xlargeBold { font-weight:bold; }
+.xlargeItalic { font-style:italic; }
+.xlargeBoldItalic{font-weight:bold; font-style:italic; }
+
+div.PageDiv,table.PageTable
+{
+    width:820px;
+}
+
+div.SubPageDiv, .PageDiv
+{
+   margin: 0 auto;
+   position: relative;
+}
+
+table.RowSubTable
+{
+    width:100%;
+    border-spacing: 0;
+}
+
+/* table.RowSubTable tr td
+{
+    padding: 0;
+    margin: 0;
+    background-image: url("/legacy/individual-income/frmbg.png");
+	background-repeat: repeat-x;
+	background-position: top;
+	border-top: #AAAAAA 1px solid;
+	border-right: #AAAAAA 1px solid;
+} */
+
+.numbertext { text-align: right; }
+
+/* Non-Page 1 Headers */
+td.FormName { width: 45%; }
+td.FormNumber { width: 10%; }
+span.FormNumber { font-size: 14pt; font-weight: bold; }
+td.FormBarcode { text-align: right; width: 45%; }
+
+td.TINHeader { text-align: left; font-size: 9pt; font-weight: bold; width: 43%; }
+td.RegNameHeader { text-align: left; font-size: 9pt; font-weight: bold; width: 57%; }
+
+td.ColumnHeader { text-align: center; }
+td.Instructions { text-align: left; font-size: 9pt; vertical-align: top; }
+
+/*table with border*/
+table.RowSubTableBorder 
+{
+height:100%; 
+margin:0px 0px 0px 0px;
+padding:0px 0px 0px 0px;
+border:1px solid black;
+width:100%;
+}
+
+/*td with border*/
+td.BorderTD
+{
+height:100%; 
+margin:0px 0px 0px 0px;
+padding:0px 0px 0px 0px;
+border:1px solid black;
+width:100%;
+}
+
+td.TopBottomBorder
+{
+border-bottom: #000000 2px solid; 
+border-top: #000000 2px solid;
+}
+
+/*XBOX*/
+
+     .checkbox, .radio {
+      width: 19px;
+      height: 25px;
+      padding: 0 5px 0 0;
+      background: url("/legacy/individual-income/xbox.png") no-repeat;
+      display: block;
+      clear: left;
+      float: left;
+    }
+    .radio {
+      background: url("/legacy/individual-income/xbox.png") no-repeat;
+    }
+/*END*/

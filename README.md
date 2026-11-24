@@ -90,7 +90,7 @@ and revised form versions.
 
 ## Currently supported eBIRForms
 
-All versions below support preparation, calculation and validation, saved working
+The payment and withholding versions support preparation, calculation and validation, saved working
 copies, local finalization, local package preparation, and PDF output.
 **Sending to BIR is currently limited to Form 1601-EQ.**
 
@@ -130,10 +130,21 @@ copies, local finalization, local package preparation, and PDF output.
 | 1604-F | Annual information return of income payments subjected to final withholding taxes | Packaged version |
 | 1606 | Withholding tax remittance for onerous transfer of real property | Packaged version |
 
-The 23-version count includes separate legacy and 2018 versions of 1601-C and
-1604-E. Coverage is based on the supplied **eBIRForms v7.9.6.0** package; a form's
-presence in the app does not mean that version applies to a particular filing
-period. Annual information returns reconcile remittances and have no amount payable.
+The 23 payment and withholding versions are based on the supplied **eBIRForms v7.9.6.0** package. Annual information returns reconcile remittances and have no amount payable.
+
+### Individual income tax
+
+The individual income tax editors and base-page PDFs use the supplied **eBIRForms v7.9.6.2** resources.
+
+| Form | Available versions |
+| --- | --- |
+| 1700 | June 2013 and January 2018 |
+| 1701 | June 2013 and January 2018 |
+| 1701A | January 2018 |
+| 1701-MS | August 2024 |
+| 1701Q | July 2008 and January 2018 |
+
+Returns can be saved and reopened locally. Coverage of repeatable legacy schedules and special or exempt activity attachments is partial.
 
 ## Sending and filing status
 
@@ -164,4 +175,4 @@ dispatcher fallback, and loopback SFTP completion without contacting BIR. See
   related submission files.
 
 These workspaces are currently placeholders. Forms outside the list above,
-including income tax and regular VAT returns, are not yet supported.
+including corporate income tax and regular VAT returns, are not yet supported.

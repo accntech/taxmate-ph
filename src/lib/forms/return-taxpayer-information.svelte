@@ -4,7 +4,9 @@
 	import Icon from '$lib/components/ui/icon/icon.svelte';
 	import { glyphs } from '$lib/components/ui/icons';
 	import type { TaxpayerProfile } from '$lib/profiles/profile';
-	import { formatTinInput } from '$lib/profiles/profile';
+	import { formatTinInput, isValidPsocCode } from '$lib/profiles/profile';
+	import { getIndividualIncomeForm } from './individual-income';
+	import { isLegacy1700ContactValid } from './individual-income/compensation';
 	import { getWithholdingDefinition } from './withholding-definitions';
 	import { compareFormItems, type TaxpayerItemKey } from './withholding-paper-layout';
 
@@ -24,7 +26,10 @@
 		taxpayerName: 'frm1601EQ:txtTaxpayerName', address: 'frm1601EQ:txtAddress',
 		address2: 'frm1601EQ:txtAddress2'
 	};
-	const profileFields = $derived(formCode === '1601EQ' ? legacyFields : Object.fromEntries(
+	const legacy1700 = $derived(formCode === '1700');
+	const revised1700 = $derived(formCode === '1700v2018');
+	const income = $derived(getIndividualIncomeForm(formCode));
+	const profileFields = $derived(formCode === '1601EQ' ? legacyFields : income?.identity ?? Object.fromEntries(
 		(getWithholdingDefinition(formCode)?.sections ?? []).flatMap(section => section.fields)
 			.filter(field => field.profileKey).map(field => [field.profileKey!, field.id])
 	));
@@ -41,23 +46,50 @@
 	const classification = $derived(value('taxpayerClassification'));
 	const category = $derived(value('category'));
 	const tin = $derived(formatTinInput({ tin1: value('tin1'), tin2: value('tin2'), tin3: value('tin3'), branchCode: value('branchCode') }));
-	const address = $derived([value('address'), value('address2')].filter(Boolean).join(', '));
+	const address = $derived([value('address'), value('address2'), formCode === '1700' ? values['frm1700:txtPg1Pt1I9Address3'] : ''].filter(Boolean).join(', '));
+	const legacyName = $derived(['LastName', 'FirstName', 'MiddleName'].map(part => values['frm1700:txtPg1Pt1I8TaxFiler' + part]).filter(Boolean).join(', '));
+	const annualName = $derived(['', 'FirstName', 'MiddleName'].map(part => values['frm1701:txtPg1Pt1I8TaxFiler' + part]).filter(Boolean).join(', '));
+	const legacyCivilStatus: Record<string, string> = {
+		'frm1700:rdoPg1Pt1I13SingleInd': 'Single', 'frm1700:rdoPg1Pt1I13MarriedInd': 'Married',
+		'frm1700:rdoPg1Pt1I13LegalSeparatedInd': 'Legally separated', 'frm1700:rdoPg1Pt1I13WidowerInd': 'Widowed'
+	};
 	const profileLabels: Partial<Record<TaxpayerItemKey, string>> = {
 		tin: 'TIN and branch code', rdoCode: 'RDO code', taxpayerName: 'Withholding agent’s name',
 		address: 'Registered address', zipCode: 'ZIP code', category: 'Category of withholding agent',
-		contactNumber: 'Contact number', email: 'Email address', lineOfBusiness: 'Line of business / occupation'
+		contactNumber: 'Contact number', email: 'Email address', birthDate: 'Date of birth', civilStatus: 'Civil status', psocCode: 'Occupation code (PSOC)', lineOfBusiness: 'Line of business / occupation'
 	};
 
+	const groupedExtras = $derived(extraItems.reduce<{ key: string; item: string; fieldIds: string[] }[]>((rows, { id, item }) => {
+		const row = income && rows.find(row => row.item === item);
+		if (row) row.fieldIds.push(id);
+		else rows.push({ key: id, item, fieldIds: [id] });
+		return rows;
+	}, []));
+	const legacyPsoc = $derived(values['frm1700:txtPg1Pt1I7Psoc'] ??
+		(profile.taxpayerClassification === 'I' ? profile.psocCode ?? '' : ''));
+	const legacyProfileNotice = $derived(legacy1700 ? {
+		psocCode: !legacyPsoc.trim() ? 'Required' : isValidPsocCode(legacyPsoc) ? '' : 'Enter a four-digit PSOC code',
+		birthDate: values['frm1700:txtPg1Pt1I10DOB'] ? '' : 'Required',
+		civilStatus: legacyCivilStatus[values['frm1700:rdoPg1Pt1I13CivilStatusInd']] ? '' : 'Required',
+		contactNumber: isLegacy1700ContactValid(value('contactNumber')) ? '' : 'Enter a valid contact number'
+	} as Partial<Record<string, string>> : {});
 	const paperRows = $derived([
 		...Object.entries(itemNumbers ?? {}).map(([rawKey, item]) => {
 			const key = rawKey as TaxpayerItemKey;
+			const legacyDetails: Partial<Record<TaxpayerItemKey, string>> = formCode === '1700' ? {
+				taxpayerName: legacyName || value('taxpayerName'),
+				psocCode: legacyPsoc,
+				birthDate: values['frm1700:txtPg1Pt1I10DOB'] ?? '',
+				civilStatus: legacyCivilStatus[values['frm1700:rdoPg1Pt1I13CivilStatusInd']] ?? ''
+			} : formCode === '1701' ? { taxpayerName: annualName || profile.taxpayerName } : {};
 			const content = key === 'tin' ? tin : key === 'address' ? address :
-				key === 'category' ? category === 'P' ? 'Private' : category === 'G' ? 'Government' : '' : value(key);
+				key === 'category' ? category === 'P' ? 'Private' : category === 'G' ? 'Government' : '' : legacyDetails[key] ?? value(key);
 			const label = formCode === '1606' && key === 'taxpayerName' ? 'Buyer’s name' :
-				formCode === '1606' && key === 'address' ? 'Buyer’s registered address' : profileLabels[key] ?? key;
-			return { key, item, label, content, fieldId: undefined };
+				formCode === '1606' && key === 'address' ? 'Buyer’s registered address' : income && key === 'taxpayerName' ? 'Taxpayer name' : profileLabels[key] ?? key;
+			const addressControls = legacy1700 && key === 'address' ? groupedExtras.find(row => row.item === item)?.fieldIds : undefined;
+			return { key, item, label, content, fieldIds: addressControls };
 		}),
-		...extraItems.map(({ id, item }) => ({ key: id, item, fieldId: id, label: '', content: '' }))
+		...groupedExtras.filter(row => !(legacy1700 && row.item === itemNumbers?.address)).map(row => ({ ...row, label: '', content: '' }))
 	].sort((a, b) => compareFormItems(a.item, b.item)));
 
 	const details = $derived(remittance ? [
@@ -83,7 +115,7 @@
 	]);
 </script>
 
-<section class={['eq-section taxpayer-information', { paper, payment, remittance, 'mapped-paper': !!itemNumbers }]} aria-label="Taxpayer information">
+<section class={['eq-section taxpayer-information', { paper, payment, remittance, 'mapped-paper': !!itemNumbers, 'income-profile': !!income, 'legacy-1700': legacy1700, 'revised-1700': revised1700 }]} aria-label="Taxpayer information">
 	<header class="eq-section-header">
 		<h2>{paper ? 'Part I · Background Information' : 'Taxpayer information'}</h2>
 		<ButtonLink href={taxpayerHref} variant="ghost" size="icon" aria-label="Edit taxpayer information" title="Edit taxpayer information">
@@ -93,15 +125,22 @@
 	{#if itemNumbers}
 		<div class="profile-grid">
 			{#each paperRows as row (row.key)}
-				{#if row.fieldId && extraField}
-					<div class="profile-extra">
+				{#if row.fieldIds && extraField && !row.label}
+					<div class="profile-extra" class:grouped={row.fieldIds.length > 1} data-income-item={income ? row.item : undefined}>
 						<span class="taxpayer-item" aria-hidden="true">{row.item}</span>
-						{@render extraField(row.fieldId)}
+						<div class="profile-extra-controls" style:--extra-column-count={row.fieldIds.length}>
+							{#each row.fieldIds as id (id)}{@render extraField(id)}{/each}
+						</div>
 					</div>
 				{:else}
-					<dl data-profile-key={row.key}>
+					<dl data-profile-key={row.key} data-income-item={revised1700 ? row.item : undefined}>
 						<dt><span class="taxpayer-item">{row.item}</span> {row.label}</dt>
-						<dd>{row.content || '—'}</dd>
+						<dd class:profile-required={!!legacyProfileNotice[row.key]}>{legacyProfileNotice[row.key] || row.content || '—'}</dd>
+						{#if row.fieldIds && extraField}
+							<dd class="profile-item-controls">
+								{#each row.fieldIds as id (id)}{@render extraField(id)}{/each}
+							</dd>
+						{/if}
 					</dl>
 				{/if}
 			{/each}
@@ -169,6 +208,27 @@
 		background: var(--bg-elev);
 	}
 	.profile-extra { display: grid; grid-template-columns: 1.75rem minmax(0, 1fr); gap: .375rem; align-items: start; }
+	.profile-extra.grouped { flex-basis: 100%; }
+	.profile-extra-controls { display: grid; min-width: 0; gap: .75rem; }
+	@container paper-form (min-width: 36rem) {
+		.profile-extra-controls { grid-template-columns: repeat(var(--extra-column-count, 1), minmax(0, 1fr)); }
+	}
+	.income-profile > .eq-section-header { border-block-start: 0; }
+	.income-profile > .profile-grid { --radio-choice-row-gap: .25rem; border-block-end: 1px solid var(--border); }
+	.legacy-1700 .profile-grid > [data-profile-key="address"] { flex-basis: 100%; }
+	.legacy-1700 .profile-extra { grid-template-columns: 1.1rem minmax(0, 1fr); }
+	.legacy-1700 .profile-extra.grouped { flex-basis: 100%; }
+	.profile-item-controls { margin-top: .625rem; }
+	.profile-required { color: var(--danger); font-weight: 600; }
+	@container paper-form (min-width: 36rem) {
+		.legacy-1700 .profile-grid > [data-profile-key="address"] {
+			display: grid;
+			grid-template-columns: minmax(0, 1fr) auto;
+			column-gap: 1rem;
+		}
+		.legacy-1700 [data-profile-key="address"] > :is(dt, dd:not(.profile-item-controls)) { grid-column: 1; }
+		.legacy-1700 .profile-item-controls { grid-area: 1 / 2 / 3; align-self: center; margin: 0; }
+	}
 	.profile-extra > .taxpayer-item { margin-inline-end: 0; font-size: .8rem; }
 	.profile-extra :global([data-slot="form-item"]) { grid-template-columns: minmax(0, 1fr); }
 	@container paper-form (min-width: 36rem) {
@@ -178,5 +238,31 @@
 	@container paper-form (min-width: 58rem) {
 		.profile-grid { --profile-cell-width: calc((100% - 3px) / 4); }
 		.profile-grid > [data-profile-key="address"] { --profile-cell-width: calc((100% - 1px) / 2); }
+	}
+	.revised-1700 .profile-grid > :is(dl, .profile-extra) { padding-block: .625rem; }
+	.revised-1700 .profile-extra, .revised-1700 .profile-grid > dl > dt { grid-template-columns: 1.4rem minmax(0, 1fr); gap: .375rem; }
+	.revised-1700 .profile-grid > dl > dt { display: grid; }
+	.revised-1700 .profile-grid > dl > dd { padding-inline-start: 1.775rem; }
+	.revised-1700 .profile-grid > dl .taxpayer-item { margin-inline-end: 0; }
+	@container paper-form (width >= 54rem) {
+		.revised-1700 .profile-grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); }
+		.revised-1700 [data-income-item="4"] { grid-column: 1 / 5; }
+		.revised-1700 [data-income-item="5"] { grid-column: 5 / 7; }
+		.revised-1700 [data-income-item="6"] { grid-column: 7 / -1; }
+		.revised-1700 [data-income-item="7"] { grid-column: 1 / 5; }
+		.revised-1700 [data-income-item="8"] { grid-column: 5 / 11; }
+		.revised-1700 [data-income-item="8A"] { grid-column: 11 / -1; }
+		.revised-1700 [data-income-item="9"] { grid-column: 1 / 4; }
+		.revised-1700 [data-income-item="10"] { grid-column: 4 / 10; }
+		.revised-1700 [data-income-item="11"] { grid-column: 10 / -1; }
+		.revised-1700 [data-income-item="12"] { grid-column: 1 / 9; }
+		.revised-1700 .profile-grid:has([data-income-item="13"]) [data-income-item="12"] { grid-column: 1 / 5; }
+		.revised-1700 [data-income-item="13"] { grid-column: 5 / 9; }
+		.revised-1700 [data-income-item="14"] { grid-column: 9 / -1; }
+		.revised-1700 [data-income-item="15"] { grid-column: 1 / -1; }
+		.revised-1700 .profile-grid:has([data-income-item="16"]) [data-income-item="15"] { grid-column: 1 / 5; }
+		.revised-1700 [data-income-item="16"] { grid-column: 5 / -1; }
+		.revised-1700 .profile-grid:has([data-income-item="17"]) [data-income-item="16"] { grid-column: 5 / 9; }
+		.revised-1700 [data-income-item="17"] { grid-column: 9 / -1; }
 	}
 </style>

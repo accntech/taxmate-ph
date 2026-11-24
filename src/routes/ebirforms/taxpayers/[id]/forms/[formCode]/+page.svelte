@@ -5,6 +5,8 @@
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import { afterNavigate, beforeNavigate, goto } from '$app/navigation';
+	import IncomeEditor from '$lib/forms/individual-income/income-editor.svelte';
+	import { getIndividualIncomeForm } from '$lib/forms/individual-income';
 	import WithholdingEditor from '$lib/forms/withholding-editor.svelte';
 	import { getWithholdingDefinition } from '$lib/forms/withholding-definitions';
 	import Form0605Editor from '$lib/forms/form-0605/form-0605-editor.svelte';
@@ -19,6 +21,7 @@
 	let ready = $state(false);
 	let recordError = $state('');
 	let withholdingEditor = $state<ReturnType<typeof WithholdingEditor>>();
+	const incomeForm = $derived(getIndividualIncomeForm(params.formCode));
 	const recordId = $derived(page.url.searchParams.get('return'));
 	const busy = $derived(workspace.isSavingDraft || workspace.isSubmitting || workspace.isPersisting);
 	onMount(() => {
@@ -87,7 +90,7 @@
 				{#snippet taxpayerInformation()}
 					<ReturnTaxpayerInformation formCode={params.formCode} values={workspace.formValues} profile={workspace.profile} taxpayerHref={`/ebirforms/taxpayers/${params.id}/edit`} />
 				{/snippet}
-				{#if Object.keys(workspace.validationErrors).length}
+				{#if !incomeForm && Object.keys(workspace.validationErrors).length}
 					<div class="eq-errors">
 						<ReturnErrors definition={workspace.selectedForm} errors={workspace.validationErrors}
 							taxpayerHref={`/ebirforms/taxpayers/${params.id}/edit`} onreveal={withholdingEditor?.revealField} />
@@ -95,7 +98,11 @@
 				{/if}
 				<fieldset disabled={busy} class="eq-form-controls">
 					<legend class={stylex.attrs(styles.visuallyHidden).class}>BIR form details</legend>
-					{#if workspace.selectedForm.code === '1601EQ'}
+					{#if incomeForm}
+					{#key incomeForm.code}
+						<IncomeEditor form={incomeForm} profile={workspace.profile} values={workspace.formValues} errors={workspace.validationErrors} taxpayerHref={`/ebirforms/taxpayers/${params.id}/edit`} onvaluechange={(patch) => workspace.updateFormValues(patch)} />
+					{/key}
+				{:else if workspace.selectedForm.code === '1601EQ'}
 						<Form1601EQ definition={workspace.selectedForm} bind:values={workspace.formValues} errors={workspace.validationErrors} onvaluechange={(patch) => workspace.updateFormValues(patch)} {taxpayerInformation} />
 					{:else if workspace.selectedForm.code === '0605'}
 						<Form0605Editor values={workspace.formValues} errors={workspace.validationErrors} onvaluechange={(patch) => workspace.updateFormValues(patch)} {taxpayerInformation} />

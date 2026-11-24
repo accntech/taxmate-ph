@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { getFormDefinition, listForms } from '$lib/forms';
 
 describe('form metadata', () => {
-	it('lists all 23 selectable versions and preserves the first migrated form', () => {
-		expect(listForms()).toHaveLength(23);
+	it('lists all 31 selectable versions and preserves the first migrated form', () => {
+		expect(listForms()).toHaveLength(31);
 		expect(listForms()[0].code).toBe('1601EQ');
 		expect(listForms().every(form => form.status === 'ready')).toBe(true);
 	});

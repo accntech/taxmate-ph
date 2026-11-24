@@ -1,3 +1,4 @@
+import { createIndividualIncomeValues, getIndividualIncomeForm } from '$lib/forms/individual-income';
 import { loadCreatedReturnsData, saveCreatedReturnsData, type CreatedReturn, type CreatedReturnStatus } from './created-returns';
 import { getFormDefinition, listForms } from '$lib/forms';
 import { calculateReturn, validateReturnValues, getReturnPeriod, getReturnTin, getManagedTaxpayerValues, getReturnEmail, getReturnEmailFieldId, getReturnExportValues } from '$lib/forms/form-runtime';
@@ -43,6 +44,8 @@ export const initialProfile: TaxpayerProfile = {
 };
 
 export function createInitialFormValues(profile: TaxpayerProfile, code = '1601EQ'): Record<string, string> {
+	const income = getIndividualIncomeForm(code);
+	if (income) return createIndividualIncomeValues(income, profile);
 	if (code !== '1601EQ') return createWithholdingValues(code, profile);
 	return {
 		...buildTaxpayerProfileFormValues(profile),
@@ -114,6 +117,12 @@ class EbirformsWorkspace {
 		if (this.isPersisting) return;
 		if (!Object.entries(patch).some(([id, value]) => this.formValues[id] !== value)) return;
 		Object.assign(this.formValues, patch);
+		const income = this.selectedForm && getIndividualIncomeForm(this.selectedForm.code);
+		if (income && this.currentReturnStatus === 'Draft') {
+			Object.assign(this.formValues, getManagedTaxpayerValues(income.code, this.profile, 'Draft', this.formValues, {
+				openingDraft: false
+			}));
+		}
 		this.finalFlag = '0';
 		this.submissionReceipt = null;
 		this.statusMessage = 'Unsaved changes.';
@@ -227,7 +236,7 @@ class EbirformsWorkspace {
 		this.selectTaxpayerProfile(record.taxpayerId);
 		this.activeReturnId = id;
 		this.selectedForm = form;
-		this.formValues = { ...record.values, ...getManagedTaxpayerValues(form.code, this.profile, record.status) };
+		this.formValues = { ...record.values, ...getManagedTaxpayerValues(form.code, this.profile, record.status, record.values) };
 		this.finalFlag = record.finalFlag;
 		this.validationErrors = {};
 		this.submissionReceipt = null;

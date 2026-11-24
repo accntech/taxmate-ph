@@ -1,10 +1,14 @@
 import { mount, tick, unmount } from 'svelte';
 import type { FormDefinition } from '$lib/forms';
+import { getIndividualIncomeForm } from '$lib/forms/individual-income';
+import { fitLegacyIncomePrintValues, individualIncomePaperStyles, legacy1700PrintStyles, loadIndividualIncomePaper, renderIndividualIncomeValues, renderIncomePrintChoices, visiblePaperPages } from '$lib/forms/individual-income/paper';
+import { renderLegacy1700Print } from '$lib/forms/individual-income/legacy-1700-print';
+import { renderLegacy1701Print } from '$lib/forms/individual-income/legacy-1701-print';
 import { calculateReturn } from '$lib/forms/form-runtime';
 import { arimoFontFaceCss } from './arimo-font';
 import { buildPrintHtml, formatReportFormNumber, PRINT_SOURCE_URL_PLACEHOLDER } from './html';
 import { getWithholdingPrintComponent, getWithholdingPrintStyles } from './withholding-print-registry';
-import { getPrintProfile, type PrintPaperSize } from './profiles';
+import { getPrintProfile, type PrintPaperSize, type PrintProfile } from './profiles';
 
 async function dataUrl(url: string): Promise<string> {
 	if (url.startsWith('data:')) return url;
@@ -236,34 +240,47 @@ function alignSourceSections(surface: HTMLElement): void {
  }
 }
 
-function fitPages(surface: HTMLElement, paperSize: PrintPaperSize, status: string, title: string): void {
-	const profile = getPrintProfile(paperSize);
+function printContentBoxes(page: HTMLElement): DOMRect[] {
+	// Relative positioning groups in the 2013 artwork can extend past the
+	// image even though the actual printed fields fit on the artwork.
+	const contents = page.classList.contains('legacy-1701-ocr') ? 'img, [data-legacy-print-id]' : '*';
+	return [...page.querySelectorAll(contents)].map(child => child.getBoundingClientRect()).filter(child => child.width > 0);
+}
+
+function fitPages(surface: HTMLElement, profile: PrintProfile, status: string, title: string, footerSource: string): void {
 	const toPixels = (length: string): number => parseFloat(length) * (length.endsWith('mm') ? 96 / 25.4 : 96);
 	const margins = profile.margin.split(/\s+/).map(toPixels);
 	const width = toPixels(profile.width) - 2 * (margins[1] ?? margins[0]);
 	const height = toPixels(profile.height) - 2 * margins[0] - 0.5;
+	const landscapeWidth = toPixels(profile.height) - 2 * (margins[1] ?? margins[0]);
+	const landscapeHeight = toPixels(profile.width) - 2 * margins[0] - 0.5;
 	const chromeBand = 0.36 * 96;
-	const contentHeight = height - chromeBand * 2;
 	const footerDate = new Intl.DateTimeFormat('en-GB').format(new Date());
 	const pages = [...surface.querySelectorAll<HTMLElement>('.withholding-print-page-content')];
 	for (const [index, page] of pages.entries()) {
 		const bounds = page.getBoundingClientRect();
-		const children = [...page.querySelectorAll<HTMLElement>('*')].map(child => child.getBoundingClientRect()).filter(child => child.width > 0);
-		const sourceWidth = Math.max(bounds.width, page.scrollWidth, ...children.map(child => child.right - bounds.left), 1);
-		const sourceHeight = Math.max(bounds.height, page.scrollHeight, ...children.map(child => child.bottom - bounds.top), 1);
+		const children = printContentBoxes(page);
+		const artwork = page.classList.contains('legacy-1701-ocr');
+		const landscape = artwork && page.dataset.sourcePage === '12';
+		const pageWidth = landscape ? landscapeWidth : width;
+		const pageHeight = landscape ? landscapeHeight : height;
+		const contentHeight = pageHeight - chromeBand * 2;
+		const sourceWidth = Math.max(artwork ? bounds.width : page.scrollWidth, ...children.map(child => child.right - bounds.left), bounds.width, 1);
+		const sourceHeight = Math.max(artwork ? bounds.height : page.scrollHeight, ...children.map(child => child.bottom - bounds.top), bounds.height, 1);
 		const frame = document.createElement('section');
 		frame.className = 'withholding-print-page';
 		frame.dataset.sourcePage = page.dataset.sourcePage;
-		frame.style.setProperty('--withholding-page-width', `${width}px`);
-		frame.style.setProperty('--withholding-page-height', `${height}px`);
+		if (landscape) frame.dataset.printOrientation = 'landscape';
+		frame.style.setProperty('--withholding-page-width', `${pageWidth}px`);
+		frame.style.setProperty('--withholding-page-height', `${pageHeight}px`);
 		frame.style.setProperty('--withholding-chrome-band', `${chromeBand}px`);
 		frame.style.setProperty('--withholding-source-width', `${sourceWidth}px`);
-		frame.style.setProperty('--withholding-page-scale', String(Math.min(width / sourceWidth, contentHeight / sourceHeight, Number(profile.scale))));
+		frame.style.setProperty('--withholding-page-scale', String(Math.min(pageWidth / sourceWidth, contentHeight / sourceHeight, Number(profile.scale))));
 		page.before(frame);
 		frame.append(page);
 		for (const [kind, left, right] of [
 			['header', formatReportFormNumber(title), `Page ${index + 1} of ${pages.length}`],
-			['footer', PRINT_SOURCE_URL_PLACEHOLDER, footerDate]
+			['footer', footerSource, footerDate]
 		]) {
 			const chrome = document.createElement('div');
 			chrome.className = `pdf-report-${kind} withholding-page-${kind}`;
@@ -280,17 +297,17 @@ function fitPages(surface: HTMLElement, paperSize: PrintPaperSize, status: strin
 		// final mounted geometry, rather than assuming scaled source dimensions.
 		for (let attempt = 0; attempt < 6; attempt++) {
 			const box = page.getBoundingClientRect();
-			const descendants = [...page.querySelectorAll<HTMLElement>('*')].map(child => child.getBoundingClientRect()).filter(child => child.width > 0);
+			const descendants = printContentBoxes(page);
 			const actualWidth = Math.max(box.width, ...descendants.map(child => child.right - box.left));
 			const actualHeight = Math.max(box.height, ...descendants.map(child => child.bottom - box.top));
-			const correction = Math.min((width - 0.5) / actualWidth, (contentHeight - 0.5) / actualHeight, 1);
+			const correction = Math.min((pageWidth - 0.5) / actualWidth, (contentHeight - 0.5) / actualHeight, 1);
 			if (correction >= 1) break;
 			const scale = Number(frame.style.getPropertyValue('--withholding-page-scale'));
 			frame.style.setProperty('--withholding-page-scale', String(scale * correction));
 		}
 		const fitted = page.getBoundingClientRect();
-		const fittedChildren = [...page.querySelectorAll<HTMLElement>('*')].map(child => child.getBoundingClientRect()).filter(child => child.width > 0);
-		if (Math.max(fitted.width, ...fittedChildren.map(child => child.right - fitted.left)) > width + 1 ||
+		const fittedChildren = printContentBoxes(page);
+		if (Math.max(fitted.width, ...fittedChildren.map(child => child.right - fitted.left)) > pageWidth + 1 ||
 			Math.max(fitted.height, ...fittedChildren.map(child => child.bottom - fitted.top)) > contentHeight + 1) {
 			throw new Error(`${title}, page ${index + 1}: print layout exceeds the reserved page content area.`);
 		}
@@ -333,9 +350,51 @@ function fitPages(surface: HTMLElement, paperSize: PrintPaperSize, status: strin
 	}
 }
 
-/** Export every return through its compiled Svelte print component and external CSS. */
+function alignNativeIncomePages(surface: HTMLElement): void {
+	const pages = [...surface.querySelectorAll<HTMLElement>('.withholding-print-page')].filter(frame =>
+		/^\d+$/.test(frame.dataset.sourcePage ?? '') && frame.querySelector('.individual-income-sheet:not(.legacy-1700-ocr, .legacy-1701-ocr)')
+	);
+	if (pages.length < 2) return;
+	// Side-by-side pages of one return should have the same print magnification.
+	const commonScale = Math.min(...pages.map(frame => Number(frame.style.getPropertyValue('--withholding-page-scale'))));
+	for (const frame of pages) frame.style.setProperty('--withholding-page-scale', String(commonScale));
+}
+
+/** Keep a populated return value inside its source box, including split TINs and ZIP codes. */
+function fitIncomePrintedValues(surface: HTMLElement): void {
+	const context = document.createElement('canvas').getContext('2d');
+	if (!context) return;
+	for (const control of surface.querySelectorAll<HTMLElement>(
+		'[data-income-field]:not([type="radio"]):not([type="checkbox"])'
+	)) {
+		const value = control instanceof HTMLSelectElement ? control.selectedOptions[0]?.text ?? '' :
+			control instanceof HTMLInputElement || control instanceof HTMLTextAreaElement ? control.value : control.textContent ?? '';
+		if (!value || !control.clientWidth) continue;
+		const style = getComputedStyle(control);
+		const initialSize = parseFloat(style.fontSize);
+		context.font = `400 ${initialSize}px Arial`;
+		const transformed = style.textTransform === 'uppercase' ? value.toUpperCase() : value;
+		const textWidth = context.measureText(transformed).width;
+		const reserved = control instanceof HTMLSelectElement ? 20 : 3;
+		const available = control.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight) - reserved;
+		if (textWidth > available && available > 0) control.style.setProperty('font-size', `${initialSize * available / textWidth}px`, 'important');
+	}
+}
+
+/** Export a return through its source-specific printable layout. */
 export async function buildReturnReport(definition: FormDefinition, values: Record<string, string>, status: string, paperSize: PrintPaperSize, onProgress?: (completedSteps: number, stage: string) => void): Promise<string> {
-	const [PrintComponent, styles] = await Promise.all([getWithholdingPrintComponent(definition.code), getWithholdingPrintStyles(definition.code)]);
+	const income = getIndividualIncomeForm(definition.code);
+	const legacy1700 = income?.code === '1700';
+	const legacy1701 = income?.code === '1701';
+	const paperProfile = getPrintProfile(paperSize);
+	const profile = legacy1700 || legacy1701 ? { ...paperProfile, margin: '5mm', scale: '1' } : paperProfile;
+	const namedPage = legacy1701 ? `
+		@page bir-1701-landscape { size: ${profile.height} ${profile.width}; margin: ${profile.margin}; }
+		.withholding-print-page[data-print-orientation='landscape'] { page: bir-1701-landscape; }
+	` : '';
+	const [PrintComponent, styles] = income
+		? [undefined, legacy1700 ? legacy1700PrintStyles : individualIncomePaperStyles] as const
+		: await Promise.all([getWithholdingPrintComponent(definition.code), getWithholdingPrintStyles(definition.code)]);
 	onProgress?.(1, 'Embedding print assets');
 	const fontStyle = document.createElement('style');
 	fontStyle.textContent = arimoFontFaceCss;
@@ -354,7 +413,40 @@ export async function buildReturnReport(definition: FormDefinition, values: Reco
 	document.body.append(host);
 	let component: ReturnType<typeof mount> | undefined;
 	try {
-		component = mount(PrintComponent, { target: surface, props: { values: calculateReturn(definition.code, values) } });
+		const calculated = calculateReturn(definition.code, values);
+		if (income) {
+			const template = document.createElement('template');
+			template.innerHTML = await loadIndividualIncomePaper(definition.code);
+			if (legacy1700) {
+				const print = document.createElement('template');
+				print.innerHTML = await loadIndividualIncomePaper('1700-ocr');
+				renderLegacy1700Print(print.content, template.content, income, calculated);
+				surface.append(print.content);
+			} else {
+				surface.append(template.content);
+				renderIndividualIncomeValues(surface, income, calculated);
+				if (legacy1701) {
+					const print = document.createElement('template');
+					print.innerHTML = await loadIndividualIncomePaper('1701-ocr');
+					renderLegacy1701Print(print.content, surface);
+					for (const page of print.content.querySelectorAll<HTMLElement>('[data-income-page]')) {
+						surface.querySelector(`[data-income-page="${page.dataset.incomePage}"]`)?.replaceWith(page);
+					}
+				}
+			}
+			const pages = new Set(visiblePaperPages(surface, income, calculated));
+			for (const page of surface.querySelectorAll<HTMLElement>('[data-income-page]')) {
+				if (!pages.has(page)) {
+					page.remove();
+					continue;
+				}
+				page.classList.add('withholding-print-page-content');
+				page.dataset.sourcePage = page.dataset.incomePage;
+				if (!legacy1700 && !legacy1701) page.dataset.incomePrintFrame = income.code;
+			}
+		} else if (PrintComponent) {
+			component = mount(PrintComponent, { target: surface, props: { values: calculated } });
+		}
 		await tick();
 		const embedded = await embedAssets(surface, styles);
 		onProgress?.(2, 'Laying out pages');
@@ -362,22 +454,30 @@ export async function buildReturnReport(definition: FormDefinition, values: Reco
 		await document.fonts.load('12px Arimo');
 		await waitForLayout(surface);
 		onProgress?.(3, 'Preparing document');
-		snapshotControls(surface);
-		fitValues(surface);
-		normalizeRadioControls(surface);
-		for (let pass = 0; pass < 3; pass++) {
-			fitSourceFrames(surface);
-			alignSourceSections(surface);
+		if (!legacy1700) {
+			if (income) renderIncomePrintChoices(surface, income);
+			snapshotControls(surface);
+			fitValues(surface);
+			normalizeRadioControls(surface);
 		}
-		fitSourceFrames(surface);
-		fitPages(surface, paperSize, status, `BIR Form ${definition.code}`);
+		if (legacy1700 || legacy1701) fitLegacyIncomePrintValues(surface);
+		if (!income) {
+			for (let pass = 0; pass < 3; pass++) {
+				fitSourceFrames(surface);
+				alignSourceSections(surface);
+			}
+			fitSourceFrames(surface);
+		}
+		const title = `BIR Form ${income ? income.revision.replace(' · ', ' — ') : definition.code}`;
+		fitPages(surface, profile, status, title, PRINT_SOURCE_URL_PLACEHOLDER);
+		if (income) alignNativeIncomePages(surface);
 		setPrintedValueSize(surface, paperSize);
-		const profile = getPrintProfile(paperSize);
+		if (income && !legacy1700) fitIncomePrintedValues(surface);
 		return buildPrintHtml({
-			title: `BIR Form ${definition.code}`,
+			title,
 			profile: definition.code === '1601EQ' ? profile : { ...profile, scale: '1' },
-			bodyHtml: `<div class="print-export-root">${surface.innerHTML}</div>`,
-			styleHtml: `<style>${embedded.styles}</style>`,
+			bodyHtml: `<div class="print-export-root${income ? ' withholding-print' : ''}">${surface.innerHTML}</div>`,
+			styleHtml: `<style>${embedded.styles}${namedPage}</style>`,
 			assets: embedded.assets
 		});
 	} finally {

@@ -52,7 +52,13 @@ test('shows PSOC only for profiles classified as Individual', async ({ page }) =
 	await expect(psoc).toHaveCount(0);
 	await classification.click();
 	await page.getByRole('option', { name: 'Individual', exact: true }).click();
-	await expect(psoc).toContainText('0110');});
+	await expect(psoc).toContainText('0110');
+
+	await page.goto(`${profilePath}/forms/1700?new=true`);
+	const legacyPsoc = page.locator('[data-profile-key="psocCode"]');
+	await expect(legacyPsoc).toContainText('Occupation code (PSOC)', { timeout: 15000 });
+	await expect(legacyPsoc).not.toContainText('0110');
+});
 
 test('saves an optional taxpayer type only for an Individual profile', async ({ page }) => {
 	await seedWorkspace(page, 'light', 'loaded', { taxpayerClassification: 'N' });

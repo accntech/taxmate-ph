@@ -20,10 +20,10 @@ fn validate_export_request_accepts_1601eq_long_html() {
 #[test]
 fn validate_export_request_accepts_legal_html() {
     let request = PdfExportRequest {
-        form_code: "1601EQ".into(),
+        form_code: "1701MS".into(),
         paper_size: "legal".into(),
-        html: "<!doctype html><html><body>1601EQ</body></html>".into(),
-        suggested_filename: "1601EQ.pdf".into(),
+        html: "<!doctype html><html><body>1701-MS</body></html>".into(),
+        suggested_filename: "1701MS.pdf".into(),
         output_path: None,
         job_id: None,
     };
@@ -179,6 +179,27 @@ fn accepts_all_selectable_withholding_versions_and_rejects_inactive_templates() 
             !["0620", "1621", "unknown"].contains(&code),
             "{code}"
         );
+    }
+}
+
+#[test]
+fn accepts_individual_income_pdf_versions() {
+    for code in [
+        "1700",
+        "1700v2018",
+        "1701",
+        "1701v2018",
+        "1701A",
+        "1701MS",
+        "1701Q",
+        "1701Qv2018",
+    ] {
+        let request: PdfExportRequest = serde_json::from_value(serde_json::json!({
+            "formCode": code, "paperSize": "a4", "html": "<!doctype html><html></html>",
+            "suggestedFilename": "income.pdf"
+        }))
+        .unwrap();
+        assert!(validate_export_request(&request).is_ok(), "{code}");
     }
 }
 

@@ -1,0 +1,45 @@
+{
+  "packageVersion": "7.9.6.2",
+  "forms": {
+    "1700": {
+      "resource": "forms/BIR-Form1700.hta",
+      "sha256": "d025bb0743123dc0dfdf8251da18c42cc7827c5c571f5b06ff8f39a62f8437ba",
+      "pages": 4
+    },
+    "1700v2018": {
+      "resource": "forms/BIR-Form1700v2018.hta",
+      "sha256": "7288b63d63c98e0beabe43793c3549ae310317661ec6cc4d98c985e95c398a2d",
+      "pages": 2
+    },
+    "1701": {
+      "resource": "forms/BIR-Form1701.hta",
+      "sha256": "8832169627811b00a5a1bbd63f1a396e04715fd63c8a2c6ff6eb7c5845b7d89f",
+      "pages": 17
+    },
+    "1701v2018": {
+      "resource": "forms/BIR-Form1701v2018.hta",
+      "sha256": "debd0a5716ea8b8a352247e7008a973d77ecd2ca6936b365c6efa3b0e9cf308b",
+      "pages": 8
+    },
+    "1701A": {
+      "resource": "forms/BIR-Form1701A.hta",
+      "sha256": "c85f8f1e13e4752549cb2886bc598a0be4cf8b67a709d9a913d09d22f087de1b",
+      "pages": 2
+    },
+    "1701MS": {
+      "resource": "forms/BIR-Form1701MS.hta",
+      "sha256": "5737ddbd86d467457b613cc1f016c51d1add7fa91b396f6af88d213bccc48202",
+      "pages": 2
+    },
+    "1701Q": {
+      "resource": "forms/BIR-Form1701Q.hta",
+      "sha256": "d0caa7ff1f6726c76d875abbc4e626b2468c9dd4bd8ddd734ef3137a8a1d8afb",
+      "pages": 1
+    },
+    "1701Qv2018": {
+      "resource": "forms/BIR-Form1701Qv2018.hta",
+      "sha256": "5f164dde6154b96f28e23656ed2ef29406010ee3f94333e88ea6eb107fe589a0",
+      "pages": 2
+    }
+  }
+}

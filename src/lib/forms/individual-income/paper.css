@@ -1,0 +1,143 @@
+.individual-income-sheet {
+	box-sizing: border-box;
+	display: block;
+	width: 852px;
+	max-width: none;
+	background: white;
+	color: #151515;
+	font: 12px Arial, Helvetica, sans-serif;
+	line-height: normal;
+}
+.individual-income-sheet[hidden] { display: none !important; }
+/* Importing the page content strips the HTA's #formPaper ancestor. Restore its
+   table rule so nested tables use their available column width. */
+.individual-income-sheet table {
+	width: 100%;
+}
+.individual-income-sheet[data-income-print-frame] {
+	border: 3px solid #000;
+}
+.individual-income-sheet[data-income-print-frame='1700v2018'],
+.individual-income-sheet[data-income-print-frame='1701MS'] {
+	border-width: 2px;
+}
+.individual-income-sheet a[id^='part4btn'] {
+	display: none;
+}
+.individual-income-print-choice {
+	display: inline-block;
+	box-sizing: border-box;
+	min-height: 16px;
+	padding-inline: 2px;
+	vertical-align: middle;
+}
+.individual-income-sheet input,
+.individual-income-sheet textarea,
+.individual-income-sheet select {
+	box-sizing: border-box;
+	margin-block: 2px;
+	color: #151515;
+	background: white;
+	border: 1px solid #72777d;
+	border-radius: 2px;
+	font: 12px Arial, Helvetica, sans-serif;
+}
+.individual-income-sheet input[type='radio'],
+.individual-income-sheet input[type='checkbox'] {
+	width: 15px;
+	height: 15px;
+	vertical-align: middle;
+	accent-color: #1859ae;
+}
+.individual-income-sheet input[readonly],
+.individual-income-sheet select:disabled {
+	color: #262c38;
+	background: #eef1f5;
+}
+.individual-income-sheet [aria-invalid='true'] { outline: 2px solid #bd2234; }
+.individual-income-sheet :focus-visible { outline: 2px solid #1859ae; outline-offset: 1px; }
+.individual-income-sheet img { max-width: 100%; }
+.individual-income-sheet :is(.printButtonClass, .printSignFooterClass, .modalShow) { display: none !important; }
+.withholding-print-page .individual-income-sheet :is(input, select, textarea) {
+	color: black;
+	background: white;
+	opacity: 1;
+}
+
+/* The packaged IE text boxes under-size short identifiers in Chromium. */
+.individual-income-sheet input[id$='TIN1'],
+.individual-income-sheet input[id$='TIN2'],
+.individual-income-sheet input[id$='TIN3'] { min-width: 30px; }
+.individual-income-sheet input:is([id$='BranchCode'], [id$='TIN4']) { min-width: 45px; }
+.individual-income-sheet input:is([id$='ZipCode'], [id$='RDOCode']) { min-width: 38px; }
+.individual-income-sheet { color-scheme: light; }
+.individual-income-sheet input[type='checkbox'] { accent-color: #000; }
+
+/* The June 2013 print layer is a fixed coordinate surface from the BIR package. */
+.individual-income-sheet.legacy-1700-ocr {
+	width: 810px;
+	height: 1250px;
+	position: relative;
+	overflow: hidden;
+	color: #000;
+}
+.legacy-1700-print-background {
+	position: absolute;
+	inset: 0 auto auto 0;
+	width: 810px;
+	height: 1250px;
+	max-width: none !important;
+}
+.legacy-1700-print-value {
+	position: absolute;
+	white-space: nowrap;
+	overflow: hidden;
+}
+.legacy-1700-print-value > [data-legacy-print-id] {
+	display: inline-block;
+	vertical-align: top;
+	font: 700 13px/15px Arial, Helvetica, sans-serif;
+}
+.legacy-1700-print-value:has([data-legacy-print-id='txtPg2Pt4TaxFilerLastName']),
+.legacy-1700-print-value:has([data-legacy-print-id='txtPg4LastName']) { width: 440px !important; }
+.legacy-1700-print-value:has([data-legacy-print-id='txtPg1Pt1I20SpouseEmailAddress']) { width: 540px !important; }
+.legacy-1700-print-branch [data-legacy-branch-part]:not(:empty) {
+	position: absolute;
+	inset-block: 0;
+	display: grid;
+	place-items: center;
+	background: #fff;
+	font: 700 11px/1 Arial, Helvetica, sans-serif;
+	letter-spacing: normal;
+}
+.legacy-1700-print-branch [data-legacy-branch-part='1'] { font-size: 10px !important; }
+
+.individual-income-sheet.legacy-1701-ocr {
+	position: relative;
+	overflow: hidden;
+	color: #000;
+}
+.legacy-1701-print-background {
+	position: absolute;
+	inset: 0 auto auto 0;
+	max-width: none !important;
+}
+.legacy-1701-print-value {
+	white-space: nowrap;
+	overflow: hidden;
+}
+.legacy-1701-print-value > [data-legacy-print-id] {
+	display: inline-block;
+	vertical-align: top;
+	font: 700 13px/15px Arial, Helvetica, sans-serif;
+}
+
+@media print {
+	/* Align the report header and footer with the rulings inside the centered HTA artwork. */
+	.withholding-print-page:has(> .legacy-1700-ocr) > :is(.withholding-page-header, .withholding-page-footer) {
+		inset-inline: calc(
+			(var(--withholding-page-width) - var(--withholding-source-width) * var(--withholding-page-scale)) / 2
+			+ 29px * var(--withholding-page-scale)
+		);
+	}
+}
