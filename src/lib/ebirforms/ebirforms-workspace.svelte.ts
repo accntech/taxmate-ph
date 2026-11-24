@@ -159,6 +159,14 @@ class EbirformsWorkspace {
 		})
 	);
 
+	async ensureReturnEditorData(): Promise<void> {
+		await Promise.all([
+			this.#workingCopiesLoad ?? (this.#workingCopiesLoaded && !this.#workingCopiesLoadFailed
+				? undefined
+				: this.loadCreatedReturns()),
+			this.#profileLoad ?? (this.profileLoadState === 'loaded' ? undefined : this.loadTaxpayerProfiles())
+		]);
+	}
 
 	loadCreatedReturns(): Promise<boolean> {
 		if (this.isPersisting) return Promise.resolve(this.#workingCopiesLoaded && !this.#workingCopiesLoadFailed);
