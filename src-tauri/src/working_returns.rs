@@ -1,7 +1,7 @@
 //! Durable working-copy snapshots. A missing snapshot is distinct from an empty one,
 //! allowing the frontend to import its old localStorage data without overwriting it.
-use rusqlite::{Connection, OptionalExtension};
-use serde::Deserialize;
+use rusqlite::{Connection, OptionalExtension, TransactionBehavior};
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::{
     collections::{HashMap, HashSet},
@@ -79,6 +79,9 @@ fn connect(root: &Path) -> Result<Connection, String> {
 }
 pub fn load_from_root(root: &Path) -> Result<Option<Value>, String> {
     let connection = connect(root)?;
+    load_snapshot(&connection)
+}
+fn load_snapshot(connection: &Connection) -> Result<Option<Value>, String> {
     let text: Option<String> = connection
         .query_row(
             "SELECT data FROM working_return_snapshot WHERE id = 1",
@@ -102,6 +105,68 @@ pub fn save_to_root(root: &Path, data: Value) -> Result<(), String> {
     transaction.execute("INSERT INTO working_return_snapshot(id, data) VALUES(1, ?1) ON CONFLICT(id) DO UPDATE SET data = excluded.data", [data.to_string()]).map_err(|e| e.to_string())?;
     transaction.commit().map_err(|e| e.to_string())
 }
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DraftDeletion {
+    pub data: Value,
+    pub deleted_ids: Vec<String>,
+}
+
+pub fn delete_drafts_from_root(
+    root: &Path,
+    taxpayer_id: &str,
+    confirmed_ids: &[String],
+) -> Result<DraftDeletion, String> {
+    let mut connection = connect(root)?;
+    let transaction = connection
+        .transaction_with_behavior(TransactionBehavior::Immediate)
+        .map_err(|e| e.to_string())?;
+    let mut data = load_snapshot(&transaction)?.ok_or("Saved forms could not be found.")?;
+    let returns = data["returns"]
+        .as_array_mut()
+        .ok_or("Saved form data is invalid.")?;
+    let confirmed_ids: HashSet<&str> = confirmed_ids.iter().map(String::as_str).collect();
+    let mut deleted_ids = Vec::new();
+    returns.retain(|record| {
+        if let Some(id) = record["id"].as_str() {
+            if confirmed_ids.contains(id)
+                && record["taxpayerId"].as_str() == Some(taxpayer_id)
+                && record["status"].as_str() == Some("Draft")
+                && record["archived"].as_bool() != Some(true)
+            {
+                deleted_ids.push(id.to_owned());
+                return false;
+            }
+        }
+        true
+    });
+    if !deleted_ids.is_empty() {
+        transaction
+            .execute(
+                "UPDATE working_return_snapshot SET data = ?1 WHERE id = 1",
+                [data.to_string()],
+            )
+            .map_err(|e| e.to_string())?;
+    }
+    transaction.commit().map_err(|e| e.to_string())?;
+    Ok(DraftDeletion { data, deleted_ids })
+}
+
+#[tauri::command]
+pub async fn delete_draft_working_returns(
+    app: tauri::AppHandle,
+    taxpayer_id: String,
+    confirmed_ids: Vec<String>,
+) -> Result<DraftDeletion, String> {
+    let root = app.path().app_data_dir().map_err(|e| e.to_string())?;
+    tauri::async_runtime::spawn_blocking(move || {
+        delete_drafts_from_root(&root, &taxpayer_id, &confirmed_ids)
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
 #[tauri::command]
 pub async fn load_working_returns(app: tauri::AppHandle) -> Result<Option<Value>, String> {
     let root = app.path().app_data_dir().map_err(|e| e.to_string())?;

@@ -9,10 +9,10 @@
 	import { openPath } from '@tauri-apps/plugin-opener';
 	import { buildTaxpayerFormsRoute } from '$lib/apps/app-shell';
 	import { ebirformsWorkspace as workspace } from '$lib/ebirforms/ebirforms-workspace.svelte';
-	import type { CreatedReturn } from '$lib/ebirforms/created-returns';
+	import { isTaxpayerDraft, type CreatedReturn } from '$lib/ebirforms/created-returns';
 	import { getReturnAmount, getReturnPeriod, getReturnTin, getManagedTaxpayerValues } from '$lib/forms/form-runtime';
 	import { getFormDefinition } from '$lib/forms';
-	import { registerDraftControls } from '$lib/ui-agent';
+	import { registerAgentControls } from '$lib/ui-agent';
 	import FormCommand from '$lib/ebirforms/form-command.svelte';
 	import { settings } from '$lib/settings.svelte';
 	import { buildReturnReport } from '$lib/printing/return-report';
@@ -32,6 +32,7 @@
 	let createOpen = $state(false);
 	let createError = $state('');
 	let deleteId = $state('');
+	let draftDeletion: { taxpayerId: string; confirmationId: string; ids: string[] } | null = null;
 	let isPrinting = $state(false);
 	let isGenerating = $state(false);
 	let pdfProgress = $state<PdfExportProgress>({ completedSteps: 0, totalSteps: 7, stage: 'Loading print template' });
@@ -46,6 +47,7 @@
 	const archived = $derived(workspace.archivedTaxpayerIds.includes(params.id));
 	const busy = $derived(workspace.isSavingDraft || workspace.isSubmitting || workspace.isPersisting || isPrinting);
 	const deletingRecord = $derived(workspace.createdReturns.find(record => record.id === deleteId));
+	const drafts = $derived(workspace.createdReturns.filter(record => isTaxpayerDraft(record, params.id)));
 	const errorRecord = $derived(workspace.createdReturns.find(record => record.id === errorRecordId));
 	const columns = [
 		{ key: 'form', label: 'BIR form', locked: true },
@@ -93,6 +95,36 @@
 			if (archivedNotice === deleteId) archivedNotice = null;
 			deleteId = '';
 		}
+	}
+	function prepareDraftDeletion() {
+		if (busy || !storageReady || !profile || !drafts.length) {
+			return { ok: false as const, error: 'No drafts are available for deletion right now.' };
+		}
+		const confirmationId = crypto.randomUUID();
+		draftDeletion = { taxpayerId: profile.id, confirmationId, ids: drafts.map(record => record.id) };
+		return { ok: true as const, result: {
+			taxpayerName: profile.taxpayerName,
+			draftCount: draftDeletion.ids.length,
+			confirmationId,
+			requiresUserConsent: true,
+			confirmationLocation: 'agent',
+			instructions: 'Ask the user in this conversation to approve permanent deletion for this taxpayer and draft count. Use the Confirm draft deletion action with this confirmation ID and their approval decision. Set approved to true only after explicit approval.'
+		} };
+	}
+	async function confirmDraftDeletion(confirmationId: string, approved: boolean) {
+		const pending = draftDeletion;
+		if (!pending || pending.confirmationId !== confirmationId ||
+			pending.taxpayerId !== params.id || !profile || busy || !storageReady) {
+			return { ok: false as const, error: 'This confirmation is no longer valid. Request a new preview.' };
+		}
+		draftDeletion = null;
+		if (!approved) return { ok: true as const, result: { canceled: true } };
+		const deletedIds = await workspace.deleteDrafts(pending.taxpayerId, pending.ids);
+		if (deletedIds === null) {
+			return { ok: false as const, error: workspace.statusMessage };
+		}
+		if (deletedIds.includes(errorRecordId)) clearErrors();
+		return { ok: true as const, result: { deletedCount: deletedIds.length } };
 	}
 	async function finalize(id: string) {
 		if (!recordForAction(id) || !workspace.openReturn(id)) return;
@@ -184,10 +216,9 @@
 			if (profile) workspace.selectTaxpayerProfile(params.id);
 			ready = true;
 		});
-		return registerDraftControls(() => {
+		return registerAgentControls(() => {
 			if (!ready || !storageReady || !profile || busy) return [];
-			return workspace.createdReturns
-				.filter(record => record.taxpayerId === params.id && record.status === 'Draft' && !record.archived)
+			const editControls = [...drafts]
 				.sort((a, b) => b.updatedAt - a.updatedAt || a.id.localeCompare(b.id))
 				.map(record => ({
 					target: `Edit BIR Form ${record.formCode} Draft (${record.id})`,
@@ -197,10 +228,22 @@
 					amountDue: getReturnAmount(record.formCode, record.values),
 					href: route(record.id, record.formCode)
 				}));
+			return [
+				...(drafts.length ? [{ target: 'Delete all drafts', press: prepareDraftDeletion }] : []),
+				...(draftDeletion?.taxpayerId === params.id
+					? [{ target: 'Confirm draft deletion', confirm: confirmDraftDeletion }]
+					: []),
+				...editControls
+			];
 		});
 	});
 	beforeNavigate(({ cancel }) => {
-		if (busy) { toast.info('Wait for the current operation to finish before leaving.'); cancel(); }
+		if (busy) {
+			toast.info('Wait for the current operation to finish before leaving.');
+			cancel();
+			return;
+		}
+		draftDeletion = null;
 	});
 </script>
 

@@ -12,6 +12,26 @@ export type CreatedReturn = {
  archived?: boolean;
 };
 export type CreatedReturnsData = { version: 1; returns: CreatedReturn[]; archivedTaxpayerIds: string[] };
+export type DraftDeletion = { data: CreatedReturnsData; deletedIds: string[] };
+
+export function isTaxpayerDraft(record: CreatedReturn, taxpayerId: string): boolean {
+ return record.taxpayerId === taxpayerId && record.status === 'Draft' && !record.archived;
+}
+
+export function deleteStoredDrafts(taxpayerId: string, confirmedIds: string[]): DraftDeletion {
+ const data = loadCreatedReturnsData();
+ const confirmed = new Set(confirmedIds);
+ const deletedIds = data.returns
+  .filter(record => confirmed.has(record.id) && isTaxpayerDraft(record, taxpayerId))
+  .map(record => record.id);
+ if (deletedIds.length) {
+  const deleted = new Set(deletedIds);
+  data.returns = data.returns.filter(record => !deleted.has(record.id));
+  saveCreatedReturnsData(data);
+ }
+ return { data, deletedIds };
+}
+
 const storageKey = 'ebirforms-created-returns-v1';
 const statuses: CreatedReturnStatus[] = ['Draft', 'Final', 'Submitted', 'For resubmission', 'Simulated'];
 function isObject(value: unknown): value is Record<string, unknown> {

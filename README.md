@@ -220,8 +220,16 @@ current table page and filters. For Form 0605, **Basic tax** is editable and
 **Total amount payable** shows the calculated result. Use **Save draft** and
 query the saved return again to verify persistence.
 
-When a control reports `requiresUserConsent`, complete the delete or remove
-action directly in TaxMate. The bridge can open a delete dialog for review.
+For **Delete all drafts**, use `press` on **Tax Returns** to preview the
+taxpayer and draft count. Ask the user to approve that deletion in the agent
+conversation. Query **Confirm draft deletion** and use `confirm` with the
+preview's `args.confirmationId` and the user's decision in `args.approved`.
+Set `approved` to `true` only after explicit approval. TaxMate uses the
+confirmation once and rechecks taxpayer ownership and draft status before
+deleting.
+
+When a control reports `requiresUserConsent` with an empty action list,
+complete the action directly in TaxMate. The bridge can open a dialog for review.
 Changing the bridge setting, using native file pickers, and operating external
 application windows also require direct interaction.
 

@@ -21,11 +21,14 @@ type DraftControl = {
 	href: string;
 };
 
-const draftSources = new Set<() => DraftControl[]>();
+type AgentAction =
+	| { target: string; press: () => Reply }
+	| { target: string; confirm: (confirmationId: string, approved: boolean) => Promise<Reply> };
+const controlSources = new Set<() => (DraftControl | AgentAction)[]>();
 
-export function registerDraftControls(source: () => DraftControl[]) {
-	draftSources.add(source);
-	return () => { draftSources.delete(source); };
+export function registerAgentControls(source: () => (DraftControl | AgentAction)[]) {
+	controlSources.add(source);
+	return () => { controlSources.delete(source); };
 }
 
 function visible(element: HTMLElement) {
@@ -79,11 +82,18 @@ function controls(dialog = activeDialog()) {
 		control.target += ` [${id}]`;
 	}
 	if (dialog) return visibleControls;
-	return [...visibleControls, ...Array.from(draftSources).flatMap(source => source())];
+	return [...visibleControls, ...Array.from(controlSources).flatMap(source => source())];
 }
 
 function describe(control: ReturnType<typeof controls>[number]) {
 	const { target } = control;
+	if ('press' in control) return { target, actions: ['press'] };
+	if ('confirm' in control) {
+		return {
+			target, actions: ['confirm'], requiresUserConsent: true, confirmationLocation: 'agent',
+			args: { confirmationId: 'string', approved: 'boolean' }
+		};
+	}
 	if ('href' in control) {
 		const { formCode, returnPeriod, updatedAt, amountDue } = control;
 		return { target, actions: ['press'], formCode, returnPeriod, status: 'Draft', updatedAt, amountDue };
@@ -160,6 +170,14 @@ export async function listenForUiAgentRequests() {
 		}
 		const [control] = matching;
 		const { target, actions, requiresUserConsent } = describe(control);
+		if ('confirm' in control) {
+			const { confirmationId, approved } = request.args ?? {};
+			if (request.action !== 'confirm' || Object.keys(request.args ?? {}).length !== 2 ||
+				typeof confirmationId !== 'string' || typeof approved !== 'boolean') {
+				return { ok: false, error: 'Provide the preview’s confirmation ID and the user’s approval decision.' };
+			}
+			return control.confirm(confirmationId, approved);
+		}
 		if (requiresUserConsent) {
 			return { ok: false, error: 'This action requires the user to confirm it directly in TaxMate.' };
 		}
@@ -213,6 +231,9 @@ export async function listenForUiAgentRequests() {
 		if ('href' in control) {
 			await goto(control.href);
 			return { ok: true, result: { pressed: target } };
+		}
+		if ('press' in control) {
+			return control.press();
 		}
 		const { element } = control;
 		if (element instanceof HTMLAnchorElement) {

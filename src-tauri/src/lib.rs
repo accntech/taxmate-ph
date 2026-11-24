@@ -86,6 +86,7 @@ pub fn run() {
             submission::read_submission_log,
             working_returns::load_working_returns,
             working_returns::save_working_returns,
+            working_returns::delete_draft_working_returns,
             return_history::list_submitted_returns,
             #[cfg(desktop)]
             agent_bridge::taxmate_ui_agent_status,

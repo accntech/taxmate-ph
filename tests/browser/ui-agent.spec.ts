@@ -275,3 +275,81 @@ test('agent setup keeps the URL above the copy actions across window sizes', asy
 		await expect(url).toHaveText('http://127.0.0.1:42171/mcp');
 	}
 });
+
+test('bulk draft deletion is previewed and confirmed only through the agent', async ({ page }) => {
+	await page.setViewportSize({ width: 390, height: 900 });
+	const draft = { taxpayerId, formCode: '1601EQ', status: 'Draft' as const,
+		updatedAt: 1794441600000, finalFlag: '0', values: {} };
+	await seedWorkspace(page, 'light', 'loaded', {}, [
+		{ ...draft, id: 'first', returnPeriod: '2026Q1' },
+		{ ...draft, id: 'second', returnPeriod: '2026Q2' },
+		{ ...draft, id: 'changed', returnPeriod: '2026Q3' },
+		{ ...draft, id: 'other', returnPeriod: '2026Q4', taxpayerId: 'other-taxpayer' },
+		{ ...draft, id: 'archived', returnPeriod: '2025Q1', archived: true }
+	], { uiAgent: true });
+	await page.goto(`/ebirforms/taxpayers/${taxpayerId}/forms`);
+	await expect.poll(() => page.evaluate(() => Reflect.get(window, 'uiAgentReady'))).toBe(true);
+	await page.getByRole('searchbox', { name: 'Search tax returns' }).fill('no matching returns');
+	const trigger = page.getByRole('button', { name: 'Delete all drafts', exact: true });
+	await expect(trigger).toHaveCount(0);
+	const query = (text: string) => request(page, { method: 'query', text });
+	const press = (target: string) => request(page, { method: 'act', target, action: 'press' });
+	const confirm = (confirmationId: string, approved: boolean) => request(page, {
+		method: 'act', target: 'Confirm draft deletion', action: 'confirm', args: { confirmationId, approved }
+	});
+	const prepare = async () => {
+		const reply = await press('Delete all drafts') as { result?: { confirmationId: string } };
+		expect(reply).toMatchObject({
+			ok: true,
+			result: {
+				taxpayerName: 'Example Services Corporation', draftCount: 3,
+				confirmationId: expect.any(String), confirmationLocation: 'agent'
+			}
+		});
+		return reply.result!.confirmationId;
+	};
+	const readIds = () => page.evaluate(() => JSON.parse(localStorage.getItem('ebirforms-created-returns-v1')!).returns
+		.map((record: { id: string }) => record.id));
+	const original = ['first', 'second', 'changed', 'other', 'archived'];
+	await expect(query('Delete all drafts')).resolves.toMatchObject({
+		result: { controls: [{ target: 'Delete all drafts', actions: ['press'] }] }
+	});
+	await expect(confirm('missing', true)).resolves.toMatchObject({ ok: false });
+	const canceled = await prepare();
+	await expect(page.getByRole('dialog')).toHaveCount(0);
+	await expect(query('Confirm draft deletion')).resolves.toMatchObject({
+		result: { controls: [{
+			target: 'Confirm draft deletion', actions: ['confirm'], requiresUserConsent: true, confirmationLocation: 'agent'
+		}] }
+	});
+	expect(JSON.stringify(await query('Confirm draft deletion'))).not.toContain(canceled);
+	await expect(request(page, {
+		method: 'act', target: 'Confirm draft deletion', action: 'confirm', args: { confirmationId: canceled }
+	})).resolves.toMatchObject({ ok: false });
+	await expect(confirm('wrong-id', true)).resolves.toMatchObject({ ok: false });
+	await expect(confirm(canceled, false)).resolves.toMatchObject({ ok: true, result: { canceled: true } });
+	await expect(confirm(canceled, true)).resolves.toMatchObject({ ok: false });
+	expect(await readIds()).toEqual(original);
+
+	const stale = await prepare();
+	await expect(press('← Back to taxpayers')).resolves.toMatchObject({ ok: true });
+	await expect(page.getByRole('link', { name: 'Example Services Corporation', exact: true })).toBeVisible();
+	await expect(press('Example Services Corporation')).resolves.toMatchObject({ ok: true });
+	await expect(page.getByRole('searchbox', { name: 'Search tax returns' })).toBeVisible();
+	await expect(confirm(stale, true)).resolves.toMatchObject({ ok: false });
+	expect(await readIds()).toEqual(original);
+
+	const approved = await prepare();
+	await page.evaluate(() => {
+		const key = 'ebirforms-created-returns-v1';
+		const data = JSON.parse(localStorage.getItem(key)!);
+		data.returns.find((record: { id: string }) => record.id === 'changed').status = 'Final';
+		localStorage.setItem(key, JSON.stringify(data));
+	});
+	await expect(confirm(approved, true)).resolves.toMatchObject({ ok: true, result: { deletedCount: 2 } });
+	await expect(confirm(approved, true)).resolves.toMatchObject({ ok: false });
+	await expect(page.getByRole('dialog')).toHaveCount(0);
+	expect(await readIds()).toEqual(['changed', 'other', 'archived']);
+	await expect(query('Delete all drafts')).resolves.toMatchObject({ result: { controls: [] } });
+	await expect(trigger).toHaveCount(0);
+});

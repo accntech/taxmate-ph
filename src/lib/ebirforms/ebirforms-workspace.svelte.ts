@@ -1,5 +1,5 @@
 import { createIndividualIncomeValues, getIndividualIncomeForm } from '$lib/forms/individual-income';
-import { loadCreatedReturnsData, saveCreatedReturnsData, type CreatedReturn, type CreatedReturnStatus } from './created-returns';
+import { deleteStoredDrafts, loadCreatedReturnsData, saveCreatedReturnsData, type CreatedReturn, type CreatedReturnStatus } from './created-returns';
 import { getFormDefinition, listForms } from '$lib/forms';
 import { calculateReturn, validateReturnValues, getReturnPeriod, getReturnTin, getManagedTaxpayerValues, getReturnEmail, getReturnEmailFieldId, getReturnExportValues } from '$lib/forms/form-runtime';
 import { createWithholdingValues } from '$lib/forms/withholding-rules';
@@ -317,16 +317,41 @@ class EbirformsWorkspace {
 	async deleteReturn(id: string): Promise<boolean> {
 		if (!this.#returnForLifecycleChange(id)) return false;
 		if (!await this.#persistWorkingCopies(this.createdReturns.filter(item => item.id !== id))) return false;
-		if (this.activeReturnId === id) {
-			this.activeReturnId = null;
-			this.formValues = createInitialFormValues(this.profile);
-			this.finalFlag = '0';
-			this.validationErrors = {};
-			this.submissionReceipt = null;
-			this.importBuffer = '';
-		}
+		if (this.activeReturnId === id) this.#resetDeletedReturnEditor();
 		this.statusMessage = 'Saved form deleted. Submission history has been kept.';
 		return true;
+	}
+
+	async deleteDrafts(taxpayerId: string, confirmedIds: string[]): Promise<string[] | null> {
+		if (this.isSavingDraft || this.isSubmitting || this.isPersisting ||
+			this.#workingCopiesLoad || !this.#workingCopiesLoaded || this.#workingCopiesLoadFailed) {
+			this.statusMessage = 'Saved forms are unavailable or another operation is still running.';
+			return null;
+		}
+		this.isPersisting = true;
+		try {
+			const { data, deletedIds } = isTauri()
+				? await createWorkingReturnsClient().deleteDrafts(taxpayerId, confirmedIds)
+				: deleteStoredDrafts(taxpayerId, confirmedIds);
+			this.createdReturns = data.returns;
+			this.archivedTaxpayerIds = data.archivedTaxpayerIds;
+			if (this.activeReturnId && deletedIds.includes(this.activeReturnId)) this.#resetDeletedReturnEditor();
+			return deletedIds;
+		} catch (error) {
+			this.statusMessage = `Could not delete drafts: ${formatSubmissionError(error)}`;
+			return null;
+		} finally {
+			this.isPersisting = false;
+		}
+	}
+
+	#resetDeletedReturnEditor() {
+		this.activeReturnId = null;
+		this.formValues = createInitialFormValues(this.profile);
+		this.finalFlag = '0';
+		this.validationErrors = {};
+		this.submissionReceipt = null;
+		this.importBuffer = '';
 	}
 
 	async archiveTaxpayerProfile(id: string): Promise<boolean> {
