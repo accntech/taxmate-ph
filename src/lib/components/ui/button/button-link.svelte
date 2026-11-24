@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { Component, Snippet } from 'svelte';
-	import { Button as PcstiButton, type ButtonVariant as PcstiButtonVariant, type ButtonSize as PcstiButtonSize } from '$lib/components/ui/button/base';
+	import { Button as BaseButton, type ButtonVariant as BaseButtonVariant, type ButtonSize as BaseButtonSize } from '$lib/components/ui/button/base';
 	import type { HTMLAnchorAttributes } from 'svelte/elements';
 	import {
 		type ButtonSize,
@@ -21,11 +21,11 @@
 		children?: Snippet;
 	} & Omit<HTMLAnchorAttributes, 'class'> = $props();
 	// The source uses intersected anchor/button handlers; this wrapper selects one native element.
-	const SourceButton = PcstiButton as unknown as Component<Omit<HTMLAnchorAttributes, 'type'> & {
+	const SourceButton = BaseButton as unknown as Component<Omit<HTMLAnchorAttributes, 'type'> & {
 		children?: Snippet;
 		type?: 'button' | 'submit' | 'reset';
-		variant?: PcstiButtonVariant;
-		size?: PcstiButtonSize;
+		variant?: BaseButtonVariant;
+		size?: BaseButtonSize;
 	}>;
 </script>
 

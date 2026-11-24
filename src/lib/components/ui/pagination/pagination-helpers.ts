@@ -1,4 +1,3 @@
-// Copied from PCSTI packages/ui/src/components/pagination/helpers.ts.
 export type PaginationItem = number | "…";
 
 const maxVisiblePages = 7;

@@ -1,5 +1,3 @@
-<!-- Ported from pcsti/packages/ui/src/components/menu-item/index.svelte.
-     Uses the copied PCSTI Button with the source menuitem contract. -->
 <script lang="ts">
   import type { ComponentProps } from "svelte";
   import Button from "../button/compat-button.svelte";

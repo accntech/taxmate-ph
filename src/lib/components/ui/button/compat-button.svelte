@@ -1,4 +1,4 @@
-<!-- Uses the local PCSTI library; the disabled-link fallback preserves inert anchor semantics. -->
+<!-- The disabled-link fallback keeps the anchor inert. -->
 <script module lang="ts">
   export type ButtonSize = "normal" | "compact" | "icon" | "icon-sm";
   export type ButtonVariant =
@@ -12,7 +12,7 @@
 
 <script lang="ts">
   import type { Snippet } from "svelte";
-  import { Button as PcstiButton } from "$lib/components/ui/button/base";
+  import { Button as BaseButton } from "$lib/components/ui/button/base";
   import type {
     HTMLAnchorAttributes,
     HTMLButtonAttributes,
@@ -50,20 +50,20 @@
     href={disabled ? undefined : href}
     aria-disabled={disabled || undefined}
     tabindex={disabled ? -1 : rest.tabindex}
-    class={["pcsti-button", className]}
+    class={["taxmate-button", className]}
     data-button-size={size}
     data-button-variant={variant}
   >
     {@render leading?.()}{@render children?.()}{@render trailing?.()}
   </a>
 {:else}
-  <PcstiButton {...rest} {href} {type} {disabled} {size} {variant} class={className} {leading} {trailing}>
+  <BaseButton {...rest} {href} {type} {disabled} {size} {variant} class={className} {leading} {trailing}>
     {@render children?.()}
-  </PcstiButton>
+  </BaseButton>
 {/if}
 
 <style>
-  .pcsti-button {
+  .taxmate-button {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -83,11 +83,11 @@
       box-shadow 160ms var(--ease-ui),
       opacity 160ms var(--ease-ui);
   }
-  .pcsti-button:active {
+  .taxmate-button:active {
     scale: 0.97;
   }
-  .pcsti-button:disabled,
-  .pcsti-button[aria-disabled="true"] {
+  .taxmate-button:disabled,
+  .taxmate-button[aria-disabled="true"] {
     pointer-events: none;
     opacity: 0.6;
   }
@@ -183,12 +183,12 @@
     box-shadow: 0 0 0 3px color-mix(in oklch, var(--danger) 18%, transparent);
   }
   @media (prefers-reduced-motion: reduce) {
-    .pcsti-button {
+    .taxmate-button {
       transition: none;
     }
   }
   @media (forced-colors: active) {
-    .pcsti-button:focus-visible {
+    .taxmate-button:focus-visible {
       outline: 2px solid Highlight;
     }
   }

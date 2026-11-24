@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { buildPaginationItems } from "$lib/components/ui/pagination/pagination-helpers";
 
-describe("PCSTI pagination ranges", () => {
+describe("pagination ranges", () => {
   it("shows every page for a small list, including one empty-data page", () => {
     expect(buildPaginationItems(1, 1)).toEqual([1]);
     expect(buildPaginationItems(2, 3)).toEqual([1, 2, 3]);
@@ -25,7 +25,7 @@ function renderedText(body: string) {
     .trim();
 }
 
-describe("PCSTI footer presentation", () => {
+describe("footer presentation", () => {
   it("renders a truthful empty result count and the current first page", () => {
     const { body } = render(Pagination, {
       props: { page: 1, pageSize: 12, total: 0, label: "Taxpayers pagination" },

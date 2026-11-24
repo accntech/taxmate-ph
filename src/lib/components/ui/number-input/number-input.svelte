@@ -1,5 +1,5 @@
 <script lang="ts">
-	// Adapted from PCSTI's NumberInput; retain string values for legacy form XML.
+	// Retain string values for legacy form XML.
 	import type { ComponentProps } from 'svelte';
 	import Input from '../input/input.svelte';
 	import { numberInputError } from './number';

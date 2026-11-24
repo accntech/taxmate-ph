@@ -2,7 +2,6 @@
   lang="ts"
   generics="HiddenKey extends string, ItemKey extends string = HiddenKey"
 >
-  // Ported from PCSTI packages/ui/src/components/list-columns-menu; StyleX translated to CSS.
   import { SvelteSet } from "svelte/reactivity";
   import Icon from "../icon/icon.svelte";
   import { glyphs } from "../icons";
@@ -40,8 +39,8 @@
   label="Columns"
   tooltip="Columns"
   align="right"
-  panelClass="pcsti-columns-panel"
-  triggerClass="pcsti-columns-trigger"
+  panelClass="taxmate-columns-panel"
+  triggerClass="taxmate-columns-trigger"
 >
   {#snippet trigger()}<span data-icon class="columns-icon" aria-hidden="true"
       ><Icon icon={glyphs.columns} /></span
@@ -66,10 +65,10 @@
 </Menu>
 
 <style>
-  :global(.pcsti-columns-panel) {
+  :global(.taxmate-columns-panel) {
     min-width: 12.5rem;
   }
-  :global(.pcsti-columns-trigger) {
+  :global(.taxmate-columns-trigger) {
     min-height: 1.875rem;
     min-width: 1.875rem;
     padding-inline: 0.5rem;

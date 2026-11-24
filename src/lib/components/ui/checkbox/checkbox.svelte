@@ -1,5 +1,4 @@
 <script lang="ts">
-  // Ported from PCSTI packages/ui/src/components/checkbox; StyleX declarations translated to CSS.
   let {
     checked,
     indeterminate = false,
@@ -15,7 +14,7 @@
 
 <span
   class={[
-    "pcsti-checkbox",
+    "taxmate-checkbox",
     size,
     (checked || indeterminate) && "checked",
     className,
@@ -23,7 +22,7 @@
   aria-hidden="true"
 >
   {#if checked || indeterminate}
-    <!-- Exact Solar check/minus vectors used by PCSTI's checkbox; these glyphs are absent in Solar v1. -->
+    <!-- These check and minus glyphs are absent in Solar v1. -->
     <svg
       class="check-icon"
       viewBox="0 0 24 24"
@@ -46,7 +45,7 @@
 </span>
 
 <style>
-  .pcsti-checkbox {
+  .taxmate-checkbox {
     display: inline-flex;
     flex: none;
     align-items: center;

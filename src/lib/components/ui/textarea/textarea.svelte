@@ -2,7 +2,7 @@
 	import * as stylex from '@stylexjs/stylex';
 	import { wrapperStyles } from './textarea-wrapper.styles';
 	import type { HTMLTextareaAttributes } from 'svelte/elements';
-	import { Textarea as PcstiTextarea } from '$lib/components/ui/textarea/base';
+	import { Textarea as BaseTextarea } from '$lib/components/ui/textarea/base';
 	import { Label } from '../label';
 	import { FieldErrors } from '../field-errors';
 
@@ -38,7 +38,7 @@
 			{label}{#if rest.required}<span class={stylex.attrs(wrapperStyles.required).class} aria-hidden="true">*</span>{/if}
 		</Label>
 	{/if}
-	<PcstiTextarea
+	<BaseTextarea
 		{...rest}
 		id={controlId}
 		bind:value

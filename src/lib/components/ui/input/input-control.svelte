@@ -1,7 +1,6 @@
 <script lang="ts">
 	import * as stylex from '@stylexjs/stylex';
 	import { wrapperStyles } from './input-control-wrapper.styles';
-	// Adapted from PCSTI's @erp/ui/components/input/input.svelte.
 	import type { HTMLInputAttributes } from 'svelte/elements';
 
 	let {

@@ -1,4 +1,3 @@
-// Relevant glyph mappings copied from PCSTI packages/ui/src/icons.ts and component icon registries.
 // Only package import paths differ for eBIRForms' installed Solar Icons version.
 import type { Component } from "svelte";
 import type { IconProps } from "@solar-icons/svelte";

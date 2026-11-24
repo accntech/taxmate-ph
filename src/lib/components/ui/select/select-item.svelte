@@ -1,7 +1,6 @@
 <script lang="ts">
 	import * as stylex from '@stylexjs/stylex';
 	import { wrapperStyles } from './select-item-wrapper.styles';
-	// Adapted from PCSTI ERP's @erp/ui SelectItem.
 	import { Select as SelectPrimitive } from 'bits-ui';
 	import CheckCircle from '@solar-icons/svelte/category/ui/Linear/CheckCircle.svelte';
 	let {

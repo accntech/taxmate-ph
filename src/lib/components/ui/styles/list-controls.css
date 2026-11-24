@@ -23,7 +23,6 @@
 	--color-white: #fff;
 }
 
-/* PCSTI's soft primary action supplies the mechanics for our warning variant. */
 .ui-warning-action {
 	--primary: var(--warn);
 	--primary-hover: var(--warn);

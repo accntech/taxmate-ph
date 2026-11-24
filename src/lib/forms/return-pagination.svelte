@@ -26,7 +26,7 @@
 {/if}
 
 <style>
-	:global(.pcsti-pagination.return-pagination) {
+	:global(.taxmate-pagination.return-pagination) {
 		border-block-start: 0;
 		scroll-margin-block-end: 5rem;
 	}

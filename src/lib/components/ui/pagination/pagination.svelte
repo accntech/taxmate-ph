@@ -1,5 +1,3 @@
-<!-- Ported from PCSTI packages/ui/src/components/pagination/index.svelte.
-     Its StyleX declarations are translated to scoped CSS; pagination semantics are retained. -->
 <script lang="ts">
   import type { Snippet } from "svelte";
   import Icon from "../icon/icon.svelte";
@@ -54,7 +52,7 @@
   >
 {/snippet}
 
-<div class={["pcsti-pagination", compact && "is-compact", className]}>
+<div class={["taxmate-pagination", compact && "is-compact", className]}>
   <div class="summary" class:page-status-only={summary === "page" && !children}>
     {#if summary === "page"}
       <span class="page-status" aria-live="polite">Page {page} of {pageCount}</span>
@@ -147,7 +145,7 @@
 </div>
 
 <style>
-  .pcsti-pagination {
+  .taxmate-pagination {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
@@ -291,7 +289,7 @@
   .is-compact :is(.page-status, .page-status-only) { display: none; }
   @media (max-width: 767px) {
     .page-status, .page-status-only { display: none; }
-    .pcsti-pagination {
+    .taxmate-pagination {
       flex-direction: column;
       align-items: stretch;
       padding: 0.75rem;

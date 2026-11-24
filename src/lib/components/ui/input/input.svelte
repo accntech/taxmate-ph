@@ -2,7 +2,7 @@
 	import * as stylex from '@stylexjs/stylex';
 	import { wrapperStyles } from './input-wrapper.styles';
 	import type { Snippet } from 'svelte';
-	import { Input as PcstiInput, type InputProps } from '$lib/components/ui/input/base';
+	import { Input as BaseInput, type InputProps } from '$lib/components/ui/input/base';
 	import type { HTMLInputAttributes } from 'svelte/elements';
 	import { FieldErrors } from '../field-errors';
 	import { Label } from '../label';
@@ -47,7 +47,7 @@
 
 {#snippet field()}
 	{#if !list && (type === 'text' || type === 'search' || type === 'email' || type === 'tel' || type === 'url')}
-		<PcstiInput
+		<BaseInput
 			{...sourceAttributes}
 			id={controlId}
 			autocapitalize={type === 'email' ? 'none' : rest.autocapitalize}

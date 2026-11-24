@@ -1,5 +1,4 @@
 <script lang="ts">
-  // Ported from PCSTI packages/ui/src/components/filter-chip/index.svelte.
   import Icon from "../icon/icon.svelte";
   import { glyphs } from "../icons";
   let {
@@ -25,7 +24,6 @@
 </span>
 
 <style>
-  /* PCSTI filter-chip/index.styles.ts and origin-chip-in from styles/reset.css. */
   .filter-chip {
     display: inline-flex;
     min-height: 1.875rem;

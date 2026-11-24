@@ -49,33 +49,33 @@
   }
 </script>
 
-<div class="pcsti-scroll-fade {klass}">
+<div class="taxmate-scroll-fade {klass}">
   <div {@attach watchScroll} {...stylex.attrs(trackClass)}>
     {@render children()}
   </div>
   <div
-    class="pcsti-scroll-fade__edge pcsti-scroll-fade__edge--top"
+    class="taxmate-scroll-fade__edge taxmate-scroll-fade__edge--top"
     style:opacity={upOpacity}
     aria-hidden="true"
   >
     <span
       class={[
         stylex.attrs(fade.arrow, arrowClass).class,
-        "pcsti-scroll-fade__arrow pcsti-scroll-fade__arrow--up",
+        "taxmate-scroll-fade__arrow taxmate-scroll-fade__arrow--up",
       ]}
     >
       <ChevronDownIcon size="100%" aria-hidden="true" focusable="false" />
     </span>
   </div>
   <div
-    class="pcsti-scroll-fade__edge pcsti-scroll-fade__edge--bottom"
+    class="taxmate-scroll-fade__edge taxmate-scroll-fade__edge--bottom"
     style:opacity={downOpacity}
     aria-hidden="true"
   >
     <span
       class={[
         stylex.attrs(fade.arrow, arrowClass).class,
-        "pcsti-scroll-fade__arrow",
+        "taxmate-scroll-fade__arrow",
       ]}
     >
       <ChevronDownIcon size="100%" aria-hidden="true" focusable="false" />
@@ -84,11 +84,11 @@
 </div>
 
 <style>
-  .pcsti-scroll-fade {
+  .taxmate-scroll-fade {
     position: relative;
   }
 
-  .pcsti-scroll-fade__edge {
+  .taxmate-scroll-fade__edge {
     position: absolute;
     right: 0;
     left: 0;
@@ -99,7 +99,7 @@
     transition: opacity 180ms ease-out;
   }
 
-  .pcsti-scroll-fade__edge--top {
+  .taxmate-scroll-fade__edge--top {
     top: 0;
     align-items: flex-start;
     justify-content: center;
@@ -111,7 +111,7 @@
     );
   }
 
-  .pcsti-scroll-fade__edge--bottom {
+  .taxmate-scroll-fade__edge--bottom {
     bottom: 0;
     align-items: flex-end;
     justify-content: center;
@@ -123,7 +123,7 @@
     );
   }
 
-  .pcsti-scroll-fade__arrow--up {
+  .taxmate-scroll-fade__arrow--up {
     transform: rotate(180deg);
   }
 </style>

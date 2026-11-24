@@ -51,7 +51,7 @@
 		class={className}
 		onfocus={(event) => {
 			if (!readonly) {
-				// PCSTI focuses the ungrouped amount and selects it for replacement.
+				// Select the ungrouped amount for replacement.
 				// Keep our exact decimal string instead of converting through Number.
 				draft = normalizeCurrencyInput(value) ?? value;
 				const input = event.currentTarget;

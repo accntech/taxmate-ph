@@ -1,5 +1,4 @@
 <script lang="ts">
-  // Ported from PCSTI packages/ui/src/components/list-sort-header; exact glyph and direction convention.
   import Icon from "../icon/icon.svelte";
   import { glyphs } from "../icons";
   type Props = {
@@ -31,7 +30,7 @@
 <th
   scope="col"
   aria-sort={ariaSort}
-  class={["pcsti-sort-header", align === "end" && "align-end", className]}
+  class={["taxmate-sort-header", align === "end" && "align-end", className]}
 >
   {#snippet content()}
     {label}<span
@@ -55,7 +54,7 @@
 </th>
 
 <style>
-  .pcsti-sort-header {
+  .taxmate-sort-header {
     padding: 0.5rem 0.75rem;
   }
   .sort-trigger {

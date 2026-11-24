@@ -2,7 +2,7 @@ import { render } from 'svelte/server';
 import { describe, expect, it } from 'vitest';
 import Input from '$lib/components/ui/input/input.svelte';
 
-describe('PCSTI input composition', () => {
+describe('input composition', () => {
 	it('associates its separate label with the supplied native control id', () => {
 		const { body } = render(Input, {
 			props: { id: 'profile-name', label: 'Taxpayer name', required: true }

@@ -1,5 +1,4 @@
 <script lang="ts">
-  // Ported from PCSTI packages/ui/src/components/menu; StyleX translated to CSS.
 
   import { tick, type Snippet } from "svelte";
   import { quartOut } from "svelte/easing";
@@ -75,7 +74,7 @@
   function onKey(e: KeyboardEvent) {
     if (!open) return;
     // A manual popover stays open when Tab moves focus beyond its root.
-    // Preserve PCSTI's global Escape dismissal before restricting navigation keys.
+    // Handle Escape dismissal globally before restricting navigation keys.
     if (e.key === "Escape") {
       e.preventDefault();
       close();
@@ -444,7 +443,6 @@
     box-shadow: 0 18px 48px rgba(20, 22, 30, 0.1);
     max-width: calc(100vw - 16px);
   }
-  /* Source shadow values: PCSTI apps/erp/src/routes/layout.css. */
   :global([data-theme="dark"]) .menu-panel {
     box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
   }

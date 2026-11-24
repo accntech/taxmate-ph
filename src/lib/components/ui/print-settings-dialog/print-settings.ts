@@ -18,19 +18,30 @@ export const DEFAULT_PRINT_SETTINGS: PrintSettings = {
   orientation: "portrait",
 };
 
-const STORAGE_KEY = "pcsti-print-settings";
+const STORAGE_KEY = "taxmate-print-settings";
+const LEGACY_STORAGE_KEY = "pcsti-print-settings";
 
 function readSettings(settingsKey?: string): Partial<PrintSettings> | null {
   try {
     if (typeof localStorage === "undefined") return null;
-    const raw = localStorage.getItem(
-      settingsKey ? `${STORAGE_KEY}:${settingsKey}` : STORAGE_KEY,
-    );
+    const suffix = settingsKey ? `:${settingsKey}` : "";
+    const currentKey = `${STORAGE_KEY}${suffix}`;
+    const legacyKey = `${LEGACY_STORAGE_KEY}${suffix}`;
+    const current = localStorage.getItem(currentKey);
+    const raw = current ?? localStorage.getItem(legacyKey);
     if (!raw) return null;
     const parsed: unknown = JSON.parse(raw);
-    return parsed !== null && typeof parsed === "object"
-      ? (parsed as Partial<PrintSettings>)
-      : null;
+    if (parsed === null || typeof parsed !== "object") return null;
+
+    if (current === null) {
+      try {
+        localStorage.setItem(currentKey, raw);
+        localStorage.removeItem(legacyKey);
+      } catch {
+        // The preferences are still usable if migration or cleanup fails.
+      }
+    }
+    return parsed as Partial<PrintSettings>;
   } catch {
     return null;
   }

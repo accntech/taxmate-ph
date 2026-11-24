@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { DateInput } from '$lib/components/ui/date-input';
 
 describe('project date input', () => {
-	it('uses the PCSTI segmented date control and preserves ISO calendar dates', () => {
+	it('uses the segmented date control and preserves ISO calendar dates', () => {
 		const html = render(DateInput, { props: { id: 'date-paid', label: 'Date paid', value: '2024-02-29', required: true } }).body;
 		expect((html.match(/role="spinbutton"/g) ?? []).length).toBe(3);
 		expect(html.includes('type="date"')).toBe(false);

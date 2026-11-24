@@ -10,7 +10,7 @@ import ListColumnsMenu from '$lib/components/ui/list-columns-menu/list-columns-m
 const trigger = createRawSnippet<[{ open: boolean }]>(() => ({ render: () => '<span>More actions</span>' }));
 const content = createRawSnippet<[{ close: () => void }]>(() => ({ render: () => '<button type="button" role="menuitem">Archive taxpayer</button>' }));
 
-describe('ported PCSTI list controls', () => {
+describe('list controls', () => {
  it('keeps menu actions hidden until the menu is opened', () => {
   const closed = render(Menu, { props: { label: 'Taxpayer actions', trigger, content } }).body;
   expect(closed).toContain('aria-label="Taxpayer actions"');

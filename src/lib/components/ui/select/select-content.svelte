@@ -1,7 +1,6 @@
 <script lang="ts">
 	import * as stylex from '@stylexjs/stylex';
 	import { wrapperStyles } from './select-content-wrapper.styles';
-	// Adapted from PCSTI ERP's @erp/ui SelectContent, Portal and scroll controls.
 	import { Select as SelectPrimitive } from 'bits-ui';
 	import AltArrowDown from '@solar-icons/svelte/category/arrows/Linear/AltArrowDown.svelte';
 	import AltArrowUp from '@solar-icons/svelte/category/arrows/Linear/AltArrowUp.svelte';

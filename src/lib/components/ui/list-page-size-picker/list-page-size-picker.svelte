@@ -1,5 +1,3 @@
-<!-- Ported from PCSTI packages/ui/src/components/list-page-size-picker/index.svelte.
-     Source StyleX declarations are translated below. -->
 <script lang="ts" generics="Size extends number = 12 | 24 | 36">
   import Menu from "../menu/menu.svelte";
   import Icon from "../icon/icon.svelte";
@@ -20,8 +18,8 @@
 <Menu
   label="Rows per page"
   align="left"
-  panelClass="pcsti-page-size-panel"
-  triggerClass="pcsti-page-size-trigger"
+  panelClass="taxmate-page-size-panel"
+  triggerClass="taxmate-page-size-trigger"
 >
   {#snippet trigger()}
     {size} per page
@@ -52,10 +50,10 @@
 </Menu>
 
 <style>
-  :global(.pcsti-page-size-panel) {
+  :global(.taxmate-page-size-panel) {
     min-width: 8.75rem;
   }
-  :global(.pcsti-page-size-trigger) {
+  :global(.taxmate-page-size-trigger) {
     gap: 0.25rem;
     border-color: transparent;
     padding: 0.25rem 0.5rem;
@@ -68,7 +66,7 @@
       box-shadow 160ms var(--ease-ui),
       color 160ms var(--ease-ui);
   }
-  :global(.pcsti-page-size-trigger:hover) {
+  :global(.taxmate-page-size-trigger:hover) {
     background: var(--bg-hover);
     color: var(--fg);
   }
@@ -123,7 +121,7 @@
   }
   @media (prefers-reduced-motion: reduce) {
     .option,
-    :global(.pcsti-page-size-trigger) {
+    :global(.taxmate-page-size-trigger) {
       transition: none;
     }
   }

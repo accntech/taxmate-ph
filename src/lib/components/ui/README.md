@@ -1,14 +1,8 @@
 # Shared UI components
 
-This folder contains the app adapters and reusable UI source copied from
-`/Volumes/SSK Drive/pcsti/packages/ui` on 2026-11-12: 343 source files covering
-78 component families, shared utilities, types, icons, and styles. The external
-path records provenance only. Runtime code, styles, imports, and build tooling
-resolve entirely inside this repository and its installed dependencies.
-
-All component families live directly under `src/lib/components/ui/<component>`.
-There is no separate UI workspace or external source dependency. Run `bun install`
-from the project root after cloning; the original drive is not needed.
+This folder contains the shared UI components and application adapters.
+Component families live under `src/lib/components/ui/<component>`.
+Run `bun install` from the project root after cloning.
 
 ## Imports and application adapters
 

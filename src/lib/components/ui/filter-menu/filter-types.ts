@@ -1,4 +1,3 @@
-/** Ported from PCSTI packages/ui/src/components/filter-menu/index.ts and index.svelte. */
 import type { Component } from "svelte";
 
 export type FilterOption = {
@@ -43,7 +42,7 @@ export function toggleFilterValue(
     : [...selected, value];
 }
 
-/** Applying one detail section changes that filter only, as in the PCSTI component. */
+/** Applying one detail section changes only that filter. */
 export function filterPatch(
   descriptor: FilterDescriptor,
   picked: Record<string, FilterValue>,

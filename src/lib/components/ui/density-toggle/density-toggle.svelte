@@ -1,5 +1,4 @@
 <script lang="ts">
-  // Ported from PCSTI ERP density-toggle and shared ToggleGroup; source motion and measurements retained.
   type T = "compact" | "comfortable";
   import SolarIcon from "../icon/icon.svelte";
   import { glyphs } from "../icons";
@@ -186,7 +185,7 @@
   role="group"
   aria-describedby={describedBy}
   aria-label={ariaLabel}
-  class={["pcsti-toggle", `pcsti-${variant}`, fullWidth && "full-width", klass]}
+  class={["taxmate-toggle", `taxmate-${variant}`, fullWidth && "full-width", klass]}
 >
   {#if variant === "outline"}
     <div
@@ -219,24 +218,24 @@
 </div>
 
 <style>
-  .pcsti-toggle {
+  .taxmate-toggle {
     position: relative;
     display: inline-flex;
     align-items: stretch;
     gap: 0;
   }
-  .pcsti-toggle.full-width {
+  .taxmate-toggle.full-width {
     display: flex;
     width: 100%;
   }
-  .pcsti-outline {
+  .taxmate-outline {
     min-height: 1.875rem;
     border: 1px solid var(--border);
     border-radius: var(--radius-field);
     background: var(--bg-elev-2);
     padding: 0.125rem;
   }
-  :global([data-theme="dark"]) .pcsti-outline {
+  :global([data-theme="dark"]) .taxmate-outline {
     background: var(--bg);
   }
   button {
@@ -273,7 +272,7 @@
     width: 100%;
     flex: 1;
   }
-  .pcsti-ghost button.pressed {
+  .taxmate-ghost button.pressed {
     background: var(--bg-hover);
   }
   .density-icon {

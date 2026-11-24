@@ -296,7 +296,6 @@
 </Dialog>
 
 <style>
-  /* Menu item dimensions follow PCSTI list-columns-menu/index.styles.ts. */
   :global(.taxpayer-actions-trigger) {
     min-width: 1.875rem;
     min-height: 1.875rem;

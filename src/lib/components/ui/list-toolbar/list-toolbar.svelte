@@ -1,5 +1,3 @@
-<!-- Ported from pcsti/packages/ui/src/components/list-toolbar/index.svelte.
-     Source StyleX declarations are expressed as scoped CSS; composition is unchanged. -->
 <script lang="ts">
   import type { Snippet } from "svelte";
   let {

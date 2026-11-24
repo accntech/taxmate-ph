@@ -2,7 +2,7 @@
 	import * as stylex from '@stylexjs/stylex';
 	import { wrapperStyles } from './select-wrapper.styles';
 	import type { Snippet } from 'svelte';
-	import { Select as PcstiSelect } from '$lib/components/ui/select/base';
+	import { Select as BaseSelect } from '$lib/components/ui/select/base';
 	import Label from '../label/label.svelte';
 	import FieldErrors from '../field-errors/field-errors.svelte';
 
@@ -45,7 +45,7 @@
 	{#if label}<Label id={labelId} for={triggerId}
 			>{label}{#if required}<span class={stylex.attrs(wrapperStyles.required).class} aria-hidden="true">*</span>{/if}</Label
 		>{/if}
-	<PcstiSelect
+	<BaseSelect
 		id={triggerId}
 		{value}
 		options={sourceOptions}
@@ -70,7 +70,7 @@
 				</span>
 			</span>
 		{/snippet}
-	</PcstiSelect>
+	</BaseSelect>
 	{#if error}<FieldErrors id={errorId} errors={[error]} />{/if}
 </div>
 

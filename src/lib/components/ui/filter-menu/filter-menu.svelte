@@ -1,5 +1,4 @@
 <script lang="ts">
-  // Ported from PCSTI packages/ui/src/components/filter-menu/index.svelte.
   // Its StyleX declarations are translated below without a second styling runtime.
   import { tick } from "svelte";
   import { SvelteMap } from "svelte/reactivity";
@@ -124,8 +123,8 @@
   {label}
   {align}
   {mobileSheet}
-  panelClass="pcsti-filter-panel"
-  triggerClass="pcsti-filter-trigger"
+  panelClass="taxmate-filter-panel"
+  triggerClass="taxmate-filter-trigger"
   onopenchange={setOpen}
 >
   {#snippet trigger()}
@@ -233,13 +232,12 @@
 </Menu>
 
 <style>
-  /* PCSTI filter-menu/index.styles.ts: same spacing, type, radii and semantic surfaces. */
-  :global(.pcsti-filter-panel) {
+  :global(.taxmate-filter-panel) {
     width: max-content;
     min-width: 13.75rem;
     max-width: 18rem;
   }
-  :global(.pcsti-filter-trigger) {
+  :global(.taxmate-filter-trigger) {
     height: 1.875rem;
     min-height: 1.875rem;
     gap: 0.375rem;
@@ -249,7 +247,7 @@
     line-height: 1rem;
     color: var(--fg-muted);
   }
-  :global(.pcsti-filter-trigger:hover) {
+  :global(.taxmate-filter-trigger:hover) {
     color: var(--fg);
     background: var(--bg-hover);
   }
@@ -433,13 +431,13 @@
     color: var(--fg-subtle);
   }
   @media (max-width: 767px) {
-    :global(.pcsti-filter-panel) {
+    :global(.taxmate-filter-panel) {
       width: auto;
       min-width: 0;
       max-width: none;
       padding: 0.5rem;
     }
-    :global(.pcsti-filter-trigger) {
+    :global(.taxmate-filter-trigger) {
       height: 2rem;
       min-width: 2.125rem;
       justify-content: center;

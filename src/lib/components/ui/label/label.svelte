@@ -1,7 +1,6 @@
 <script lang="ts">
 	import * as stylex from '@stylexjs/stylex';
 	import { wrapperStyles } from './label-wrapper.styles';
-	// Adapted from PCSTI's @erp/ui/components/label/label.svelte.
 	import { Label as LabelPrimitive } from 'bits-ui';
 
 	let {

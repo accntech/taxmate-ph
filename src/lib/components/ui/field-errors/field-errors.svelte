@@ -1,7 +1,6 @@
 <script lang="ts">
 	import * as stylex from '@stylexjs/stylex';
 	import { wrapperStyles } from './field-errors-wrapper.styles';
-	// Standalone presentation port of PCSTI's @erp/ui form-field-errors.svelte.
 	import type { HTMLAttributes } from 'svelte/elements';
 
 	let {
