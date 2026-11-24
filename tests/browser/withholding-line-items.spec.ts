@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { getWithholdingAtcs, getWithholdingDefinition, withholdingDefinitions, type WithholdingSchedule } from '../../src/lib/forms/withholding-definitions';
-import { seedWorkspace, taxpayerId } from './fixtures';
+import { goToReturnPage, seedWorkspace, taxpayerId } from './fixtures';
 
 test.beforeEach(async ({ page }) => {
 	// Keep each mounted editor stable while other workspace work triggers Vite HMR.
@@ -9,7 +9,16 @@ test.beforeEach(async ({ page }) => {
 
 async function openSchedule(page: Page, title: string) {
 	const heading = page.locator('summary').filter({ hasText: title }).first();
+	const parentPage = heading.locator('xpath=ancestor::*[@data-return-page][1]');
+	const number = await parentPage.getAttribute('data-return-page');
+	if (number !== '1' && number && !(await heading.isVisible())) {
+		await goToReturnPage(page, Number(number));
+	}
 	if (await heading.locator('..').getAttribute('open') === null) await heading.click();
+}
+
+async function returnToSummary(page: Page) {
+	await goToReturnPage(page, 1);
 }
 
 async function seededSchedule(page: Page, code: string, scheduleId: string, tuples: string[][]) {
@@ -42,8 +51,9 @@ test('1601FQ hides withholding schedules on No and restores draft items on Yes',
 	const withheld = page.getByRole('radiogroup', { name: 'Any tax withheld?', exact: true });
 	const atcHeading = page.locator('summary').getByText('Computation by ATC', { exact: true });
 	await expect(scheduleList(page, schedule)).toContainText('TT01');
+	await returnToSummary(page);
 	await withheld.getByRole('radio', { name: 'No', exact: true }).check();
-	await expect(page.getByText('No taxes withheld this quarter.', { exact: true })).toBeVisible();
+	await expect(page.locator('[data-return-page="1"]').getByText('No taxes withheld this quarter.', { exact: true })).toBeVisible();
 	await expect(atcHeading).toHaveCount(0);
 	await expect(scheduleList(page, schedule)).toHaveCount(0);
 	await page.getByRole('button', { name: 'Save draft', exact: true }).click();
@@ -51,9 +61,9 @@ test('1601FQ hides withholding schedules on No and restores draft items on Yes',
 	await page.getByRole('link', { name: 'Edit', exact: true }).click();
 	await expect(withheld.getByRole('radio', { name: 'No', exact: true })).toBeChecked();
 	await withheld.getByRole('radio', { name: 'Yes', exact: true }).check();
+	await expect(atcHeading).toBeVisible();
 	await openSchedule(page, schedule.title);
 	await expect(scheduleList(page, schedule)).toContainText('TT01');
-	await expect(atcHeading).toBeVisible();
 });
 
 test('1600PT hides ATC and payee schedules on No and restores saved details on Yes', async ({ page }) => {
@@ -61,10 +71,14 @@ test('1600PT hides ATC and payee schedules on No and restores saved details on Y
 	const withheld = page.getByRole('radiogroup', { name: 'Any tax withheld?', exact: true });
 	const atcHeading = page.locator('summary').getByText('Computation by ATC', { exact: true });
 	await expect(scheduleList(page, schedule)).toContainText('Sample Payee');
+	await expect(page.locator('.wh-schedule:visible').locator('.wh-schedule-totals')).toHaveCSS('border-top-width', '0px');
+	await returnToSummary(page);
 	await withheld.getByRole('radio', { name: 'No', exact: true }).check();
 	await expect(atcHeading).toHaveCount(0);
 	await expect(scheduleList(page, schedule)).toHaveCount(0);
-	await expect(page.getByText('No taxes withheld this month.', { exact: true })).toBeVisible();
+	await expect(page.locator('[data-return-page="1"]').getByText('No taxes withheld this month.', { exact: true })).toBeVisible();
+	await goToReturnPage(page, 2);
+	await expect(page.getByRole('region', { name: 'Monthly alphalist of payees' }).getByText('No taxes withheld this month.', { exact: true })).toBeVisible();
 	await page.getByRole('button', { name: 'Save draft', exact: true }).click();
 	await expect(page).toHaveURL(/\/forms$/);
 	await page.getByRole('link', { name: 'Edit', exact: true }).click();
@@ -141,7 +155,9 @@ for (const [code, scheduleId, tuples] of [
 		await page.setViewportSize({ width: 1440, height: 1100 });
 		const schedule = await seededSchedule(page, code, scheduleId, tuples.map(tuple => [...tuple]));
 		const list = scheduleList(page, schedule);
+		if (code === '1601FQ') await returnToSummary(page);
 		await expect(page.getByRole('region', { name: 'Return period' }).locator('> div').first()).toHaveCSS('flex-basis', '0px');
+		if (code === '1601FQ') await openSchedule(page, schedule.title);
 		await page.evaluate(() => document.fonts.ready);
 		await list.evaluate(element => element.scrollIntoView({ block: 'center', behavior: 'instant' }));
 		await page.evaluate(() => new Promise(requestAnimationFrame));
@@ -224,6 +240,27 @@ test('fixed fringe-benefit rows keep their prescribed category and tax rate', as
 	await expect(list.getByRole('button', { name: /^Drag line item/ })).toHaveCount(0);
 });
 
+test('validation opens the affected schedule from the return summary page', async ({ page }) => {
+	const definition = getWithholdingDefinition('1603Qv2018')!;
+	const amount = definition.schedules[0].rows[0].fields.find(field => field.type === 'money' && !field.readonly)!;
+	await seedWorkspace(page, 'light', 'loaded', {}, [{
+		id: 'invalid-schedule', taxpayerId, formCode: definition.code, returnPeriod: '2025Q2',
+		status: 'Draft', finalFlag: '0', updatedAt: 1794441600000,
+		values: {
+			[definition.yearField]: '2025', [definition.quarterField!]: 'Q2',
+			[definition.prefix + 'optWithheld']: 'Y', [amount.id]: 'invalid'
+		}
+	}]);
+	await page.goto(`/ebirforms/taxpayers/${taxpayerId}/forms/${definition.code}?return=invalid-schedule&validate=true`);
+	const pager = page.getByRole('navigation', { name: 'Return pages' });
+	await expect(pager).toContainText('Page 1 of 2', { timeout: 20_000 });
+	await page.locator(`a[href="#${encodeURIComponent(amount.id)}"]`).click();
+	const drawer = page.getByRole('dialog', { name: 'Edit line item 1' });
+	await expect(drawer.locator(`[id="${amount.id}"]`)).toBeFocused();
+	await drawer.getByRole('button', { name: 'Cancel', exact: true }).click();
+	await expect(pager).toContainText('Page 2 of 2');
+});
+
 test('schedule pointer previews cancel on Escape and reduced motion skips reordering animation', async ({ page }) => {
 	await page.setViewportSize({ width: 1440, height: 1100 });
 	const schedule = await seededSchedule(page, '1601E', 'atc', [['WI120', '100000', '2', '2000'], ['WI010', '20000', '10', '2000']]);
@@ -268,6 +305,10 @@ test('payee editor fits a narrow dark window and keeps keyboard focus visible', 
 	const editor = page.getByRole('dialog', { name: 'New line item', exact: true });
 	const first = editor.getByRole('textbox', { name: 'Payee TIN', exact: true });
 	await expect(first).toBeFocused();
+	await expect(first).toHaveAttribute('inputmode', 'numeric');
+	await first.fill('00123456700008');
+	await first.press('Tab');
+	await expect(first).toHaveValue('001-234-567-00008');
 	await editor.evaluate(async element => { await Promise.all(element.getAnimations({ subtree: true }).map(animation => animation.finished.catch(() => {}))); });
 	expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
 	await page.screenshot({ path: testInfo.outputPath('schedule-payee-dark-narrow.png') });

@@ -1,13 +1,24 @@
 import { buildTaxpayerProfileFormValues, taxpayerEmailError, type TaxpayerProfile } from '$lib/profiles/profile';
 import type { CreatedReturnStatus } from '$lib/ebirforms/created-returns';
 import { calculate1601EQ, validate1601EQ } from './form-1601-eq/form-1601-eq-rules';
-import { getWithholdingDefinition } from './withholding-definitions';
+import { getWithholdingDefinition, withholdingPriorRemittanceFields } from './withholding-definitions';
 import { calculateWithholding, validateWithholding, withholdingReturnPeriod } from './withholding-rules';
 
 export function calculateReturn(code: string, values: Record<string, string>): Record<string, string> {
  const normalized = Object.fromEntries(Object.entries(values).map(([id, value]) => [id, /email/i.test(id) ? value.toLowerCase() : value]));
  return code === '1601EQ' ? calculate1601EQ(normalized) : calculateWithholding(code, normalized);
 }
+export function getReturnExportValues(code: string, values: Record<string, string>): Record<string, string> {
+ const calculated = calculateReturn(code, values);
+ const priorCredit = withholdingPriorRemittanceFields[code];
+ const withholding = getWithholdingDefinition(code);
+ if (priorCredit && withholding && calculated[withholding.prefix + 'optAmend'] !== 'Y') {
+  const id = withholding.prefix + priorCredit;
+  if (id in calculated) calculated[id] = '0.00';
+ }
+ return calculated;
+}
+
 export function validateReturnValues(code: string, values: Record<string, string>): Record<string, string> {
  if (code === '1601EQ') return validate1601EQ(values);
  const errors = validateWithholding(code, values);

@@ -32,6 +32,14 @@
 		else Object.assign(values, patch);
 	}
 	function set(id: string, value: string) { change({ [id]: value }); }
+	function setQuarter(quarter: string) {
+		const carryOverApplies = quarter !== 'Q4' && values[prefix + 'optQuarter'] !== 'Q4';
+		change({
+			[prefix + 'optQuarter']: quarter,
+			...(!carryOverApplies && values[prefix + 'overpaymentOption'] === 'carry'
+				? { [prefix + 'overpaymentOption']: '' } : {})
+		});
+	}
 	function money(id: string) { return invalidAmounts ? '—' : currency.format(Number(calculated[prefix + id] || 0)); }
 </script>
 
@@ -64,7 +72,7 @@
 		<div class="paper-period-field">
 			<span class="paper-item-number" aria-hidden="true">2</span>
 			<Select id={prefix + 'optQuarter'} label="Quarter" required value={values[prefix + 'optQuarter'] || ''} error={errors[prefix + 'optQuarter'] || ''}
-				options={['First Quarter', 'Second Quarter', 'Third Quarter', 'Fourth Quarter'].map((label, index) => ({ value: `Q${index + 1}`, label }))} onchange={(value) => set(prefix + 'optQuarter', value)} />
+				options={['First Quarter', 'Second Quarter', 'Third Quarter', 'Fourth Quarter'].map((label, index) => ({ value: `Q${index + 1}`, label }))} onchange={setQuarter} />
 		</div>
 		<div class="paper-period-field">
 			<span class="paper-item-number" aria-hidden="true">3</span>

@@ -9,7 +9,7 @@
 	import AltArrowRight from '@solar-icons/svelte/category/arrows/Linear/AltArrowRight.svelte';
 	import TrashBinTrash from '@solar-icons/svelte/category/ui/Linear/TrashBinTrash.svelte';
 	import BillList from '@solar-icons/svelte/category/money/Linear/BillList.svelte';
-	import { Button, CalculatedValue, CurrencyInput, DateInput, Input, NumberInput, RadioGroup, Select } from '$lib/components/ui';
+	import { Button, CalculatedValue, CurrencyInput, DateInput, Input, NumberInput, RadioGroup, Select, TinInput } from '$lib/components/ui';
 	import AtcPicker from './atc-picker.svelte';
 	import { calculateWithholding } from './withholding-rules';
 	import { withholdingSchedules, type WithholdingDefinition, type WithholdingField, type WithholdingRow, type WithholdingSchedule } from './withholding-definitions';
@@ -321,6 +321,10 @@
 			<CalculatedValue id={field.id} label={displayLabel(field.label)} value={draftInvalidAmounts && field.type === 'money' ? '' : display(field, draftCalculated[field.id] ?? draft[field.id] ?? '')} error={draftErrors[field.id] ?? ''} />
 		{:else if displayLabel(field.label) === 'ATC'}
 			<AtcPicker id={field.id} label={displayLabel(field.label)} formCode={definition.code} fieldOptions={field.options ?? []} category={editorValues[definition.prefix + 'optCategory'] ?? ''} year={Number(editorValues[definition.yearField])} required={field.required ?? false} value={draft[field.id] ?? ''} error={draftErrors[field.id] ?? ''} onchange={(value) => changeDraft(field, value)} />
+		{:else if schedule.id === 'payees' && /:dtSched:txtTin\d+$/.test(field.id)}
+			<div class="schedule-tin">
+				<TinInput id={field.id} label={displayLabel(field.label)} value={draft[field.id] ?? ''} error={draftErrors[field.id] ?? ''} onchange={(value) => changeDraft(field, value)} />
+			</div>
 		{:else if field.type === 'money' && !field.allowNegative}
 			<CurrencyInput id={field.id} label={displayLabel(field.label)} required={field.required ?? false} value={draft[field.id] ?? ''} error={draftErrors[field.id] ?? ''} onchange={(value) => changeDraft(field, value)} />
 		{:else if field.type === 'money'}
@@ -423,6 +427,8 @@
 	.error { color: var(--danger); font-size: .8rem; }
 	.editor-fields { display: grid; gap: var(--form-field-row-gap); padding: 1.25rem; }
 	.editor-row { display: grid; gap: var(--form-field-row-gap); min-width: 0; margin: 0; padding: 0; border: 0; }
+	.schedule-tin { min-inline-size: 0; max-inline-size: 16rem; }
+	.editor-row :global(input[inputmode="decimal"]) { text-align: end; font-variant-numeric: tabular-nums; }
 	.editor-actions { display: flex; justify-content: end; gap: .5rem; }
 	@media (forced-colors: active) { .item-details:focus-visible, .grip:focus-visible { outline: 2px solid Highlight; box-shadow: none; } }
 	@container paper-form (max-width: 27rem) {

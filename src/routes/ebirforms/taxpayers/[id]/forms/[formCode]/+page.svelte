@@ -18,6 +18,7 @@
 	let { params } = $props();
 	let ready = $state(false);
 	let recordError = $state('');
+	let withholdingEditor = $state<ReturnType<typeof WithholdingEditor>>();
 	const recordId = $derived(page.url.searchParams.get('return'));
 	const busy = $derived(workspace.isSavingDraft || workspace.isSubmitting || workspace.isPersisting);
 	onMount(() => {
@@ -88,7 +89,8 @@
 				{/snippet}
 				{#if Object.keys(workspace.validationErrors).length}
 					<div class="eq-errors">
-						<ReturnErrors definition={workspace.selectedForm} errors={workspace.validationErrors} taxpayerHref={`/ebirforms/taxpayers/${params.id}/edit`} />
+						<ReturnErrors definition={workspace.selectedForm} errors={workspace.validationErrors}
+							taxpayerHref={`/ebirforms/taxpayers/${params.id}/edit`} onreveal={withholdingEditor?.revealField} />
 					</div>
 				{/if}
 				<fieldset disabled={busy} class="eq-form-controls">
@@ -100,7 +102,9 @@
 					{:else if workspace.selectedForm.code === '0619E' || workspace.selectedForm.code === '0619F'}
 						<Form0619Editor code={workspace.selectedForm.code} values={workspace.formValues} errors={workspace.validationErrors} onvaluechange={(patch) => workspace.updateFormValues(patch)} {taxpayerInformation} />
 					{:else if getWithholdingDefinition(workspace.selectedForm.code)}
-						<WithholdingEditor definition={getWithholdingDefinition(workspace.selectedForm.code)!} values={workspace.formValues} errors={workspace.validationErrors} profile={workspace.profile} taxpayerHref={`/ebirforms/taxpayers/${params.id}/edit`} onvaluechange={(patch) => workspace.updateFormValues(patch)} />
+					{#key `${params.formCode}:${recordId ?? ''}`}
+						<WithholdingEditor bind:this={withholdingEditor} definition={getWithholdingDefinition(workspace.selectedForm.code)!} values={workspace.formValues} errors={workspace.validationErrors} profile={workspace.profile} taxpayerHref={`/ebirforms/taxpayers/${params.id}/edit`} onvaluechange={(patch) => workspace.updateFormValues(patch)} />
+					{/key}
 					{/if}
 				</fieldset>
 			{/if}

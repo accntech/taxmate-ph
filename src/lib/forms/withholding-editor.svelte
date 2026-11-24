@@ -1,12 +1,14 @@
 <script lang="ts">
+	import { tick } from 'svelte';
 	import type { TaxpayerProfile } from '$lib/profiles/profile';
 	import PaperFormHeader from './paper-form-header.svelte';
+	import ReturnPagination from './return-pagination.svelte';
 	import ReturnTaxpayerInformation from './return-taxpayer-information.svelte';
-	import { compareFormItems, getWithholdingPaperLayout } from './withholding-paper-layout';
+	import { compareFormItems, getWithholdingPaperLayout, getWithholdingSupportingPages } from './withholding-paper-layout';
 	import AtcPicker from './atc-picker.svelte';
-	import { CalculatedValue, CurrencyInput, DateInput, Input, NumberInput, RadioGroup, Select } from '$lib/components/ui';
+	import { CalculatedValue, CurrencyInput, DateInput, Input, NumberInput, RadioGroup, Select, TinInput } from '$lib/components/ui';
 	import { normalizeCurrencyInput } from '$lib/components/ui/currency-input/currency';
-	import { withholdingSchedules, withholdingSchedulesEnabled, type WithholdingDefinition, type WithholdingField, type WithholdingSchedule } from './withholding-definitions';
+	import { withholdingPriorRemittanceFields, withholdingSchedules, withholdingSchedulesEnabled, type WithholdingDefinition, type WithholdingField, type WithholdingSchedule } from './withholding-definitions';
 	import { calculateWithholding } from './withholding-rules';
 	import ScheduleItems from './schedule-items.svelte';
 	import './withholding-layout.css';
@@ -24,6 +26,15 @@
 	const schedulesEnabled = $derived(withholdingSchedulesEnabled(definition, values));
 	const schedules = $derived(schedulesEnabled ? withholdingSchedules(definition, values) : []);
 	const layout = $derived(getWithholdingPaperLayout(definition.code));
+	const supporting = $derived(getWithholdingSupportingPages(definition.code).map((page, index) => ({
+		...page, id: String(index + 2)
+	})));
+	const pages = $derived([{ id: '1', title: 'Taxpayer details and return summary' }, ...supporting]);
+	const primarySchedules = $derived(schedules.filter(schedule =>
+		!supporting.some(page => 'schedules' in page && page.schedules.includes(schedule.id))
+	));
+	let current = $state('1');
+	let paper: HTMLDivElement;
 	const annual = $derived(definition.period === 'year');
 	const propertyReturn = $derived(definition.code === '1606');
 	const sectionFields = $derived(definition.sections.flatMap(section => section.fields));
@@ -53,6 +64,13 @@
 		...definition.sections.find(section => section.id === 'property')!.fields.filter(field => shortName(field) !== 'Habitual'),
 		byName.optRelief, byName.reliefDescription
 	].filter(field => field && visible(field)).sort(byItem) : []);
+	const propertyGroups = $derived(propertyFields.reduce<{ item: string; fields: WithholdingField[] }[]>((groups, field) => {
+		const item = itemNumber(field);
+		const previous = groups.at(-1);
+		if (item && previous?.item === item) previous.fields.push(field);
+		else groups.push({ item, fields: [field] });
+		return groups;
+	}, []));
 	const valuation = $derived(propertyReturn ? [
 		...sectionFields.filter(field => /^(27|28)[A-E]/.test(field.label)).sort(byItem),
 		byName.Habitual
@@ -64,13 +82,37 @@
 			const second = itemNumber(b);
 			return first && second ? compareFormItems(first, second) : Number(!first) - Number(!second);
 		}) ?? []);
-	const separateSchedules = $derived(schedules.filter(schedule => !Object.hasOwn(layout.inlineSchedules ?? {}, schedule.id)));
+	const computationGroups = $derived(computation.reduce<{ item: string; fields: WithholdingField[] }[]>((groups, field) => {
+		const item = itemNumber(field);
+		const previous = groups.at(-1);
+		if (item && previous?.item === item) previous.fields.push(field);
+		else groups.push({ item, fields: [field] });
+		return groups;
+	}, []));
+	const separateSchedules = $derived(primarySchedules.filter(schedule => !Object.hasOwn(layout.inlineSchedules ?? {}, schedule.id)));
 	const fields = $derived([
 		...definition.sections.flatMap(section => section.fields),
 		...schedules.flatMap(schedule => [...schedule.rows.flatMap(row => row.fields), ...(schedule.totals ?? [])])
 	]);
 	const invalidAmounts = $derived(fields.some(field => field.type === 'money' && !field.readonly && visible(field) && normalizeMoney(values[field.id] ?? '', !!field.allowNegative) === null));
 	const currency = new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' });
+
+	async function showPage(id: string) {
+		current = id;
+		await tick();
+		const heading = paper?.querySelector<HTMLElement>(`[data-return-page="${id}"] > h2`);
+		heading?.focus({ preventScroll: true });
+		heading?.scrollIntoView({ block: 'start', behavior: 'instant' });
+	}
+
+	export async function revealField(id: string) {
+		const schedule = schedules.find(schedule => schedule.totals?.some(field => field.id === id) ||
+			schedule.rows.some(row => row.fields.some(field => field.id === id)));
+		const page = schedule && supporting.find(page => 'schedules' in page && page.schedules.includes(schedule.id));
+		current = page ? page.id : '1';
+		await tick();
+	}
+
 	function shortName(field: WithholdingField) {
 		return field.id.slice(definition.prefix.length);
 	}
@@ -84,14 +126,38 @@
 	function byItem(a: WithholdingField, b: WithholdingField) {
 		return compareFormItems(itemNumber(a), itemNumber(b));
 	}
+	function hasTransactionDescription(transaction: string) {
+		return transaction === 'Exempt' || transaction === 'Others';
+	}
 	function displayLabel(label: string) {
 		return label.replace(/^\d+[A-Z]?(?:[.):-])?\s+/i, '');
 	}
 	function visible(field: WithholdingField) {
+		if (propertyReturn && shortName(field) === 'txtOthers20' &&
+			!hasTransactionDescription(values[definition.prefix + 'transactionType'])) return false;
+		if (shortName(field) === 'overpaymentOption' && Number(calculated[definition.totalField]) >= 0) return false;
 		return !field.showWhen || values[field.showWhen.field] === field.showWhen.value;
 	}
+	function applyChange(patch: Record<string, string>) {
+		const disposition = definition.prefix + 'overpaymentOption';
+		if (values[disposition] && !(disposition in patch) &&
+			(Number(calculated[definition.totalField]) >= 0 ||
+				Number(calculateWithholding(definition.code, { ...values, ...patch })[definition.totalField]) >= 0)) {
+			patch = { ...patch, [disposition]: '' };
+		}
+		onvaluechange(patch);
+	}
 	function change(id: string, value: string) {
-		onvaluechange({ [id]: value });
+		const prior = withholdingPriorRemittanceFields[definition.code];
+		const patch = { [id]: value };
+		if (id === definition.prefix + 'optAmend' && value === 'N' && prior) patch[definition.prefix + prior] = '';
+		if (propertyReturn && id === definition.prefix + 'transactionType') {
+			if (!hasTransactionDescription(value)) patch[definition.prefix + 'txtOthers20'] = '';
+			for (const field of sectionFields) {
+				if (field.showWhen?.field === id && field.showWhen.value !== value) patch[field.id] = '';
+			}
+		}
+		applyChange(patch);
 	}
 	function normalizeMoney(value: string, allowNegative = false) {
 		const trimmed = value.trim();
@@ -111,32 +177,48 @@
 	}
 </script>
 
-{#snippet control(field: WithholdingField)}
+{#snippet control(field: WithholdingField, labelOverride?: string)}
+	{@const label = labelOverride ?? displayLabel(field.label)}
 	{#if visible(field)}
 		{#if field.readonly}
-			<CalculatedValue id={field.id} label={displayLabel(field.label)} value={invalidAmounts && field.type === 'money' ? '' : display(field, calculated[field.id] ?? values[field.id] ?? '')} error={displayLabel(errors[field.id] ?? '')} />
-		{:else if displayLabel(field.label) === 'ATC'}
-			<AtcPicker id={field.id} label={displayLabel(field.label)} formCode={definition.code} fieldOptions={field.options ?? []} category={values[definition.prefix + 'optCategory'] ?? ''} year={Number(values[definition.yearField])} required={field.required ?? false} value={values[field.id] ?? ''} error={displayLabel(errors[field.id] ?? '')} onchange={(value) => change(field.id, value)} />
+			<CalculatedValue id={field.id} label={label} value={invalidAmounts && field.type === 'money' ? '' : display(field, calculated[field.id] ?? values[field.id] ?? '')} error={displayLabel(errors[field.id] ?? '')} />
+		{:else if label === 'ATC'}
+			<AtcPicker id={field.id} label={label} formCode={definition.code} fieldOptions={field.options ?? []} category={values[definition.prefix + 'optCategory'] ?? ''} year={Number(values[definition.yearField])} required={field.required ?? false} value={values[field.id] ?? ''} error={displayLabel(errors[field.id] ?? '')} onchange={(value) => change(field.id, value)} />
+		{:else if propertyReturn && shortName(field) === 'sellerTin'}
+			<div class="seller-tin-control">
+				<TinInput id={field.id} label={label} required={field.required ?? false} value={values[field.id] ?? ''} error={errors[field.id] ?? ''} onchange={(value) => change(field.id, value)} />
+			</div>
+		{:else if propertyReturn && ['sellerRdo', 'propertyRdo'].includes(shortName(field))}
+			<div class="property-rdo-control">
+				<Input id={field.id} label={label} maxlength={3} required={field.required ?? false} value={values[field.id] ?? ''} error={errors[field.id] ?? ''} oninput={(event) => change(field.id, event.currentTarget.value.toUpperCase())} />
+			</div>
+		{:else if field.type === 'money' && field.allowNegative}
+			<Input id={field.id} label={label} inputmode="decimal" required={field.required ?? false} value={values[field.id] ?? ''} error={displayLabel(errors[field.id] ?? '')} oninput={(event) => change(field.id, event.currentTarget.value)} />
 		{:else if field.type === 'money'}
-			<CurrencyInput id={field.id} label={displayLabel(field.label)} required={field.required ?? false} value={values[field.id] ?? ''} error={displayLabel(errors[field.id] ?? '')} onchange={(value) => change(field.id, value)} />
+			<CurrencyInput id={field.id} label={label} required={field.required ?? false} value={values[field.id] ?? ''} error={displayLabel(errors[field.id] ?? '')} onchange={(value) => change(field.id, value)} />
 		{:else if field.type === 'number'}
-			<NumberInput id={field.id} label={displayLabel(field.label)} required={field.required ?? false} value={values[field.id] ?? ''} error={displayLabel(errors[field.id] ?? '')} decimal={!/year|sheet|count|number|month|day/i.test(field.id)} onchange={(value) => change(field.id, value)} />
+			<NumberInput id={field.id} label={label} required={field.required ?? false} value={values[field.id] ?? ''} error={displayLabel(errors[field.id] ?? '')}
+				decimal={propertyReturn && shortName(field) === 'txtArea'} min={field.id === definition.yearField ? definition.minYear : 0}
+				max={field.id === definition.yearField ? definition.maxYear : undefined} maxlength={field.id === definition.yearField ? 4 : undefined}
+				onchange={(value) => change(field.id, value)} />
 		{:else if field.type === 'select'}
-			{#if field.options?.length === 2 && field.options.every(option => ['Y', 'N'].includes(option.value))}
-				<RadioGroup id={field.id} label={displayLabel(field.label)} required={field.required ?? false} options={field.options} value={values[field.id] ?? ''} error={displayLabel(errors[field.id] ?? '')} onchange={(value) => change(field.id, value)} />
+			{#if shortName(field) === 'overpaymentOption'}
+				<RadioGroup id={field.id} label={label} required options={field.options ?? []} value={values[field.id] ?? ''} error={errors[field.id] ?? ''} onchange={(value) => change(field.id, value)} />
+			{:else if field.options?.length === 2 && field.options.every(option => ['Y', 'N'].includes(option.value))}
+				<RadioGroup id={field.id} label={label} required={field.required ?? false} options={field.options} value={values[field.id] ?? ''} error={displayLabel(errors[field.id] ?? '')} onchange={(value) => change(field.id, value)} />
 			{:else}
-				<Select id={field.id} label={displayLabel(field.label)} required={field.required ?? false} options={field.options ?? []} value={values[field.id] ?? ''} error={displayLabel(errors[field.id] ?? '')} onchange={(value) => change(field.id, value)} />
+				<Select id={field.id} label={label} required={field.required ?? false} options={field.options ?? []} value={values[field.id] ?? ''} error={displayLabel(errors[field.id] ?? '')} onchange={(value) => change(field.id, value)} />
 			{/if}
 		{:else if field.type === 'date'}
-			<DateInput id={field.id} label={displayLabel(field.label)} required={field.required ?? false} value={values[field.id] ?? ''} error={displayLabel(errors[field.id] ?? '')} onchange={(value) => change(field.id, value)} />
+			<DateInput id={field.id} label={label} required={field.required ?? false} value={values[field.id] ?? ''} error={displayLabel(errors[field.id] ?? '')} onchange={(value) => change(field.id, value)} />
 		{:else}
-			<Input id={field.id} label={displayLabel(field.label)} required={field.required ?? false} value={values[field.id] ?? ''} error={displayLabel(errors[field.id] ?? '')} oninput={(event) => change(field.id, event.currentTarget.value)} />
+			<Input id={field.id} label={label} required={field.required ?? false} value={values[field.id] ?? ''} error={displayLabel(errors[field.id] ?? '')} oninput={(event) => change(field.id, event.currentTarget.value)} />
 		{/if}
 	{/if}
 {/snippet}
 
 {#snippet scheduleEditor(schedule: WithholdingSchedule)}
-	<ScheduleItems {definition} {schedule} {values} {errors} onchange={onvaluechange} printedRange={layout.scheduleItems?.[schedule.id]}>
+	<ScheduleItems {definition} {schedule} {values} {errors} onchange={applyChange} printedRange={layout.scheduleItems?.[schedule.id]}>
 		{#snippet totals()}
 			{#if !annual && schedule.totals?.length}
 				<div class="eq-field-grid wh-schedule-totals">
@@ -164,10 +246,14 @@
 	</div>
 {/snippet}
 
-<div class="paper-sheet wh-preparation">
+<div class="paper-sheet wh-preparation" bind:this={paper}>
 	<PaperFormHeader number={layout.number} title={layout.title} subtitle={layout.subtitle}
 		revision={layout.revision} englishAgency={layout.englishAgency} />
 
+	<div data-return-page="1" hidden={current !== '1'}>
+	{#if supporting.length}
+		<h2 class="return-page-heading" tabindex="-1">{pages[0].title}</h2>
+	{/if}
 	<section class="form-paper-grid form-period" aria-label="Return period">
 		{#each periodGroups as group (group.item)}
 			<div class="form-paper-field numbered">
@@ -200,7 +286,18 @@
 		<section aria-labelledby="property-and-transaction">
 			<h2 class="form-paper-heading" id="property-and-transaction">Property and transaction</h2>
 			<div class="form-paper-grid">
-				{#each propertyFields as field (field.id)}{@render numberedField(field)}{/each}
+				{#each propertyGroups as group (group.fields[0].id)}
+					{#if group.fields.length > 1}
+						<div class="form-paper-field numbered property-item-group" data-property-item={group.item}>
+							<span class="paper-item-number" aria-hidden="true">{group.item}</span>
+							<div class="property-item-controls" style:--property-control-count={group.fields.length}>
+								{#each group.fields as field (field.id)}{@render control(field)}{/each}
+							</div>
+						</div>
+					{:else}
+						{@render numberedField(group.fields[0])}
+					{/if}
+				{/each}
 			</div>
 		</section>
 		<section aria-labelledby="property-valuation">
@@ -216,20 +313,34 @@
 		{/if}
 		{#if annual}
 			<aside class="form-paper-summary" aria-label="Summary">
-				{#each schedules as schedule (`${definition.code}:${schedule.id}`)}
+				{#each primarySchedules as schedule (`${definition.code}:${schedule.id}`)}
 					{@render scheduleEditor(schedule)}
 					{#each schedule.totals ?? [] as field (field.id)}{@render numberedField(field, true)}{/each}
 				{/each}
 			</aside>
 		{:else}
-			{#each schedules.filter(schedule => layout.inlineSchedules?.[schedule.id] === '') as schedule (schedule.id)}
+			{#each primarySchedules.filter(schedule => layout.inlineSchedules?.[schedule.id] === '') as schedule (schedule.id)}
 				{@render scheduleEditor(schedule)}
 			{/each}
-			{#each computation as field (field.id)}
-				{#each schedules.filter(schedule => layout.inlineSchedules?.[schedule.id] === shortName(field)) as schedule (schedule.id)}
+			{#each computationGroups as group (group.fields[0].id)}
+				{#each primarySchedules.filter(schedule => group.fields.some(field => layout.inlineSchedules?.[schedule.id] === shortName(field))) as schedule (schedule.id)}
 					{@render scheduleEditor(schedule)}
 				{/each}
-				{@render numberedField(field, true)}
+				{#if group.fields.length > 1}
+					<div class="form-paper-field numbered" role="group" aria-label={displayLabel(group.fields[0].label)} data-computation-item={group.item}>
+						<span class="paper-item-number" aria-hidden="true">{group.item}</span>
+						<div class="computation-item-controls">
+							<p>{displayLabel(group.fields[0].label)}</p>
+							<div class="computation-item-inputs">
+								{#each [...group.fields].sort((a, b) => Number(a.type === 'money') - Number(b.type === 'money')) as field (field.id)}
+									{@render control(field, field.type === 'money' ? 'Amount' : 'Description')}
+								{/each}
+							</div>
+						</div>
+					</div>
+				{:else}
+					{@render numberedField(group.fields[0], true)}
+				{/if}
 			{/each}
 		{/if}
 		{#if invalidAmounts}
@@ -243,9 +354,48 @@
 			{#each separateSchedules as schedule (`${definition.code}:${schedule.id}`)}{@render scheduleEditor(schedule)}{/each}
 		</section>
 	{/if}
+	</div>
+
+	{#each supporting as page (page.id)}
+		<section data-return-page={page.id} hidden={current !== page.id} aria-labelledby={`return-page-${page.id}`}>
+			<h2 id={`return-page-${page.id}`} class="return-page-heading" tabindex="-1">{page.title}</h2>
+			{#if 'reference' in page}
+				<div class="return-reference">
+					<p>These schedules are included in the return PDF.</p>
+					<ul>
+						{#each page.reference as label (label)}
+							<li>{label}</li>
+						{/each}
+					</ul>
+				</div>
+			{:else if schedulesEnabled}
+				{#each schedules.filter(schedule => page.schedules.includes(schedule.id)) as schedule (schedule.id)}
+					{@render scheduleEditor(schedule)}
+				{/each}
+			{:else}
+				<p class="eq-muted form-paper-feedback">No taxes withheld this {definition.period === 'month' ? 'month' : 'quarter'}.</p>
+			{/if}
+		</section>
+	{/each}
+	{#if supporting.length}
+		<ReturnPagination {pages} {current} onchange={(id) => void showPage(id)} />
+	{/if}
 </div>
 
 <style>
+	.return-page-heading {
+		margin: 0;
+		padding: .625rem .875rem;
+		border-block-end: 1px solid var(--border);
+		font: 650 .875rem/1.4 var(--font-sans);
+		scroll-margin-block-start: 4rem;
+	}
+	.paper-sheet:has(> :global(.return-pagination)) > [data-return-page] { border-block-end: 1px solid var(--border); }
+	.return-reference { padding: .75rem .875rem; font-size: .875rem; }
+	.return-reference p { margin: 0; color: var(--fg-muted); }
+	.return-reference ul { margin: .5rem 0 0; padding-inline-start: 1.25rem; }
+	.return-reference li + li { margin-block-start: .375rem; }
+	.form-paper-field :global(input[inputmode="decimal"]) { text-align: end; font-variant-numeric: tabular-nums; }
 	.form-paper-grid {
 		display: flex;
 		flex-wrap: wrap;
@@ -294,9 +444,24 @@
 	.fixed-atc dt { color: var(--fg-muted); font-size: .8rem; }
 	.fixed-atc dd { margin: .375rem 0 0; font-weight: 600; }
 	.form-paper-feedback { margin: 0; padding: .75rem .875rem; border-block-start: 1px solid var(--border); }
+	.return-page-heading + :global(.wh-schedule), .return-page-heading + .form-paper-feedback { border-block-start: 0; }
+	.property-item-controls { display: grid; grid-template-columns: minmax(0, 1fr); gap: .75rem; min-width: 0; }
+	.seller-tin-control { max-inline-size: 19rem; }
+	.property-rdo-control :global([data-slot="form-item"] > div:has(> input)) { max-inline-size: 8rem; }
+	.computation-item-controls { min-width: 0; }
+	.computation-item-controls > p { margin: 0 0 .5rem; font-size: .875rem; }
+	.computation-item-inputs { display: grid; grid-template-columns: minmax(0, 1fr); gap: .75rem; }
+	.form-paper-field :global([data-slot="form-item"]:has(input[inputmode="numeric"])) { max-inline-size: 11rem; }
+	.form-paper-field :global([data-slot="form-item"]:has(input[placeholder="000-000-000-00000"])) { max-inline-size: 19rem; }
+	.form-paper-field :global([data-slot="currency-input"]),
+	.form-paper-field :global([data-slot="date-input"]) { max-inline-size: 18rem; }
+	.form-paper-money :global([data-slot="currency-input"]) { max-inline-size: none; }
 
 	@container paper-form (min-width: 36rem) {
 		.form-paper-grid > .form-paper-field { flex-basis: calc((100% - 1px) / 2); }
+		.form-paper-grid > .property-item-group { flex-basis: 100%; }
+		.property-item-controls { grid-template-columns: repeat(var(--property-control-count), minmax(0, 1fr)); }
+		.computation-item-inputs { grid-template-columns: minmax(0, 1fr) minmax(10rem, 16rem); }
 		.form-paper-money :global([data-slot="currency-input"] > [data-slot="form-item"]) {
 			grid-template-columns: minmax(0, 1fr) minmax(10rem, 16rem);
 			align-items: center;

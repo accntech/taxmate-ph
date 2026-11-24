@@ -1,12 +1,15 @@
 import { expect, test } from '@playwright/test';
 import { execFileSync } from 'node:child_process';
-import { seedWorkspace, taxpayerId } from './fixtures';
+import { seedWorkspace } from './fixtures';
 
 for (const code of ['0619E', '0619F']) {
 	for (const paper of ['letter', 'a4', 'long']) {
 		test(`${code} ${paper} prints selectable HTML labels and preserves populated fields`, async ({ page, context }, testInfo) => {
 			await seedWorkspace(page);
-			await page.goto(`/ebirforms/taxpayers/${taxpayerId}/forms`);
+			await page.route('**/__specialized-print-test', route => route.fulfill({
+				contentType: 'text/html', body: '<!doctype html><title>Remittance print test</title>'
+			}));
+			await page.goto('/__specialized-print-test');
 			const html = await page.evaluate(async ({ code, paper }) => {
 				const base = '/src/lib';
 				const catalog = await import(`${base}/forms/index.ts`);
@@ -20,7 +23,7 @@ for (const code of ['0619E', '0619F']) {
 				});
 				Object.assign(values, {
 					[`frm${code}:txtYear`]: '2025', [`frm${code}:txtMonth`]: '06',
-					[`frm${code}:dueDate`]: '2025-07-10', [`frm${code}:optAmend`]: 'N',
+					[`frm${code}:dueDate`]: '2025-07-10', [`frm${code}:optAmend`]: code === '0619E' ? 'Y' : 'N',
 					[`frm${code}:optWithheld`]: 'Y', [`frm${code}:txtTax14`]: '18500.25',
 					[`frm${code}:txtTax15`]: code === '0619E' ? '500.00' : '0',
 					...(code === '0619F' ? { 'frm0619F:txtTaxTypeCode': 'WF' } : {})

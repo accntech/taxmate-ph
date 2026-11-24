@@ -6,7 +6,6 @@
 .wh-row-label { display: block; width: 100%; margin-bottom: 1rem; font-size: .8rem; font-weight: 600; }
 .wh-schedule-actions { display: flex; align-items: center; gap: .75rem; padding-bottom: 1rem; color: var(--fg-muted); font-size: .75rem; }
 .wh-schedule-totals { padding-top: 1.25rem; }
-.wh-schedule > section:has(> .items) + .wh-schedule-totals { border-top: 1px solid var(--border-soft); }
 .wh-preparation .eq-breakdown dd { max-width: 60%; overflow-wrap: anywhere; }
 .wh-summary-group { margin-block: 1rem .5rem; color: var(--fg-muted); font-size: .75rem; font-weight: 500; }
 .wh-preparation :is(a, [tabindex='-1']):focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: .25rem; }

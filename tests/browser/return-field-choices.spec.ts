@@ -1,4 +1,6 @@
 import { expect, test } from '@playwright/test';
+import { mkdirSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { formPath, seedWorkspace, taxpayerId } from './fixtures';
 
 test.describe('return field behavior', () => {
@@ -6,7 +8,7 @@ test.describe('return field behavior', () => {
 	await seedWorkspace(page);
 	await page.clock.setFixedTime(new Date('2026-11-12T04:00:00Z'));
 	await page.goto(formPath);
-		await expect(page.getByText('Loading saved form…', { exact: true })).toBeHidden();
+		await expect(page.getByRole('combobox', { name: 'Quarter', exact: true })).toBeVisible({ timeout: 20000 });
 	});
 
 test('quarter select shows full labels and preserves keyboard navigation and conditional credits', async ({ page }) => {
@@ -56,6 +58,24 @@ test('Yes/No radios reveal applicable fields and preserve withheld entries acros
 	await expect(row.getByRole('textbox', { name: 'Tax Base', exact: true })).toHaveValue('100,000.00');
 });
 
+test('fourth quarter clears a carry-over choice without discarding remittances', async ({ page }) => {
+	const withheld = page.getByRole('radiogroup', { name: 'Any taxes withheld?' });
+	await withheld.getByRole('radio', { name: 'No', exact: true }).check();
+	const treatment = page.getByRole('combobox', { name: 'Apply over-remittance as', exact: true });
+	await treatment.click();
+	await page.getByRole('option', { name: 'Carry over to next quarter', exact: true }).click();
+	const quarter = page.getByRole('combobox', { name: 'Quarter', exact: true });
+	await quarter.click();
+	await page.getByRole('option', { name: 'Fourth Quarter', exact: true }).click();
+	await treatment.click();
+	await expect(page.getByRole('option', { name: 'Carry over to next quarter', exact: true })).toHaveCount(0);
+	await page.keyboard.press('Escape');
+	await quarter.click();
+	await page.getByRole('option', { name: 'Second Quarter', exact: true }).click();
+	await expect(treatment).not.toContainText('Carry over to next quarter');
+	await expect(page.getByRole('textbox', { name: 'First month', exact: true })).toHaveValue('1,234.56');
+});
+
 test('calculated outputs are separate from editable inputs and update from the tax base', async ({ page }) => {
 	await page.getByRole('button', { name: 'Edit line item 1', exact: true }).click();
 	const row = page.getByRole('group', { name: 'ATC row 1', exact: true });
@@ -66,12 +86,32 @@ test('calculated outputs are separate from editable inputs and update from the t
 	await expect(rate).toHaveText('2.00%');
 	await expect(tax).toHaveText('₱2,000.00');
 	await expect(row.getByText('From ATC', { exact: true })).toBeVisible();
-	await expect(row.getByText('Calculated', { exact: true })).toBeVisible();
+	await expect(rate).toHaveAccessibleDescription('From ATC');
+	await expect(row.getByText('Calculated', { exact: true })).toHaveCount(0);
+	await expect(tax).toHaveCSS('border-bottom-width', '0px');
+	await expect(tax).toHaveAccessibleDescription('');
 	const base = row.getByRole('textbox', { name: 'Tax Base', exact: true });
 	await expect(base).toBeEditable();
 	await base.fill('50000');
 	await base.blur();
 	await expect(tax).toHaveText('₱1,000.00');
+	const output = process.env.FORM_PREVIEW_DIR;
+	if (output) mkdirSync(output, { recursive: true });
+	for (const width of [1440, 390]) {
+		await page.setViewportSize({ width, height: 960 });
+		const placement = await tax.evaluate(node => {
+			const label = document.getElementById(node.getAttribute('aria-labelledby')!);
+			const amount = node.getBoundingClientRect();
+			const text = label!.getBoundingClientRect();
+			return { gap: amount.left - text.right, offset: Math.abs(amount.top - text.top) };
+		});
+		expect(placement.gap).toBeGreaterThanOrEqual(0);
+		expect(placement.offset).toBeLessThan(8);
+		if (output) await row.screenshot({ path: resolve(output, `plain-calculated-values-${width}.png`), animations: 'disabled' });
+	}
+	await base.fill('0');
+	await base.blur();
+	await expect(tax).toHaveText('₱0.00');
 	await base.fill('oops');
 	await base.blur();
 	await expect(tax).toHaveText('—');

@@ -1,6 +1,6 @@
 import { loadCreatedReturnsData, saveCreatedReturnsData, type CreatedReturn, type CreatedReturnStatus } from './created-returns';
 import { getFormDefinition, listForms } from '$lib/forms';
-import { calculateReturn, validateReturnValues, getReturnPeriod, getReturnTin, getManagedTaxpayerValues, getReturnEmail, getReturnEmailFieldId } from '$lib/forms/form-runtime';
+import { calculateReturn, validateReturnValues, getReturnPeriod, getReturnTin, getManagedTaxpayerValues, getReturnEmail, getReturnEmailFieldId, getReturnExportValues } from '$lib/forms/form-runtime';
 import { createWithholdingValues } from '$lib/forms/withholding-rules';
 import { createWorkingReturnsClient } from '$lib/tauri/working-returns';
 import { settings } from '$lib/settings.svelte';
@@ -144,7 +144,7 @@ class EbirformsWorkspace {
 	dispatcherTin = $derived(normalizeTinNumber(this.returnTin));
 	generatedXml = $derived(
 		serializeLegacyXml({
-			...calculateReturn(this.selectedForm?.code ?? '1601EQ', this.formValues),
+			...getReturnExportValues(this.selectedForm?.code ?? '1601EQ', this.formValues),
 			txtEmail: getReturnEmail(this.selectedForm?.code ?? '1601EQ', this.formValues, this.profile),
 			txtFinalFlag: this.finalFlag
 		})

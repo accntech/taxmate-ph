@@ -152,7 +152,7 @@ test('0619F follows the final withholding PDF and reopens the saved tax type and
 	await expect(field(page, 'frm0619F:txtTax19')).toHaveText('₱2,010.25');
 });
 
-test('0619E saves and reloads calculations, finalizes and simulates submission without BIR requests', async ({ page }, testInfo) => {
+test('0619E saves and reloads calculations and finalizes without BIR requests', async ({ page }, testInfo) => {
 	await page.setViewportSize({ width: 1440, height: 1100 });
 	await seedWorkspace(page);
 	const birRequests: string[] = [];
@@ -182,9 +182,7 @@ test('0619E saves and reloads calculations, finalizes and simulates submission w
 	await page.getByRole('menuitem', { name: 'Mark as final', exact: true }).click();
 	await expect(row).toContainText('Final');
 	await row.getByRole('button', { name: /^More actions/ }).click();
-	await page.getByRole('menuitem', { name: 'Mock submit', exact: true }).click();
-	await expect(row).toContainText('Simulated');
-	await expect(page.getByRole('status').last()).toContainText('Nothing sent to BIR');
+	await expect(page.getByRole('menuitem', { name: 'Submit to BIR', exact: true })).toBeDisabled();
 	expect(birRequests).toEqual([]);
 });
 
@@ -268,6 +266,8 @@ test('annual withholding exports its original layout with all monthly rows', asy
 	await page.getByRole('button', { name: 'Save draft', exact: true }).click();
 	await page.evaluate(() => {
 		const native = (window as any).__TAURI_INTERNALS__;
+		native.transformCallback = () => 1;
+		native.unregisterCallback = () => {};
 		const previous = native.invoke;
 		native.invoke = async (command: string, args: any) => {
 			if (command === 'plugin:dialog|save') return '/tmp/1604c-test.pdf';
@@ -356,11 +356,10 @@ test('0605 keeps payment choices and calculated amounts when a draft is reopened
  await page.getByRole('option', { name: '2nd', exact: true }).click();
  const sheets = page.getByRole('textbox', { name: 'Sheets attached', exact: true });
  await sheets.fill('3');
- const mode = field(page, 'frm0605:itemModeOfPayment');
+ const mode = page.getByRole('radiogroup', { name: 'Type of payment', exact: true });
  const installment = field(page, 'frm0605:txtNumOfInstallment');
  await expect(installment).toHaveCount(0);
- await mode.click();
- await page.getByRole('option', { name: 'Installment', exact: true }).click();
+ await mode.getByRole('radio', { name: 'Installment', exact: true }).check();
  await installment.fill('2');
  await field(page, 'frm0605:txtTax19').fill('15000');
  await field(page, 'frm0605:txtTax20A').fill('50.25');

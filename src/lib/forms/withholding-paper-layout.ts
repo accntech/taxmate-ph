@@ -140,6 +140,38 @@ const layouts: Record<string, PaperLayout> = {
 	}
 };
 
+type SupportingPage = { title: string; schedules: string[] } | { title: string; reference: string[] };
+
+// The printed form owns the page breaks, including pages with reference material only.
+const monthlyPayees = { title: 'Monthly alphalist of payees', schedules: ['payees'] };
+const treaty = { title: 'Tax treaty withholding', schedules: ['treaty'] };
+const supportingPages: Partial<Record<string, SupportingPage[]>> = {
+	'1600PTv2018': [monthlyPayees],
+	'1600VTv2018': [monthlyPayees],
+	'1601Cv2018': [{ title: 'Adjustments for previous months', schedules: ['adjustments'] }],
+	'1601F': [treaty],
+	'1601FQ': [treaty],
+	'1602': [{ title: 'Interest expense per books', schedules: ['interest-books'] }],
+	'1602Qv2018': [
+		{ title: 'Details of taxes withheld', schedules: ['interest', 'interest-treaty', 'interest-preferential'] },
+		{ title: 'Reference tables', reference: ['Schedule 5 · Tax treaty codes', 'Schedule 6 · Investment promotion agencies'] }
+	],
+	'1603Qv2018': [{ title: 'Fringe benefits tax computation', schedules: ['fringe'] }],
+	'1604Ev2018': [{ title: 'Alphalist schedules', reference: [
+		'Schedule 3 · Payees subject to expanded withholding tax',
+		'Schedule 4 · Other payees whose payments are exempt from withholding'
+	] }],
+	'1604F': [{ title: 'Alphalist schedules', reference: [
+		'Schedule 4 · Payees subject to final withholding tax',
+		'Schedule 5 · Employees who received fringe benefits',
+		'Schedule 6 · Other payees whose payments are exempt from withholding'
+	] }]
+};
+
+export function getWithholdingSupportingPages(code: string) {
+	return supportingPages[code] ?? [];
+}
+
 export function getWithholdingPaperLayout(code: string): PaperLayout {
 	const layout = layouts[code];
 	if (!layout) throw new Error(`Missing paper layout for BIR Form ${code}`);

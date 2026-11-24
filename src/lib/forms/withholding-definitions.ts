@@ -1342,12 +1342,14 @@ for (const code of ["1604C", "1604CF", "1604E", "1604Ev2018", "1604F"]) {
         yesNo,
         { required: true },
       ),
-      m(p, "txtSelling", "21 Selling price"),
-      m(p, "txtCost", "22 Cost and other expenses"),
-      m(p, "txtMortgage", "23 Mortgage assumed"),
-      m(p, "txtTotalP", "24 Payments in initial year"),
-      m(p, "txtAmount", "25 Amount of this installment"),
-      f(p, "txtTotalN", "26 Number of installments", "number"),
+      ...[
+        m(p, "txtSelling", "21 Selling price"),
+        m(p, "txtCost", "22 Cost and other expenses"),
+        m(p, "txtMortgage", "23 Mortgage assumed"),
+        m(p, "txtTotalP", "24 Payments in initial year"),
+        m(p, "txtAmount", "25 Amount of this installment"),
+        f(p, "txtTotalN", "26 Number of installments", "number"),
+      ].map(field => ({ ...field, showWhen: { field: p + "transactionType", value: "Installment sale" } })),
     ]),
   );
   relief(d);
@@ -1391,11 +1393,22 @@ for (const code of ["1604C", "1604CF", "1604E", "1604Ev2018", "1604F"]) {
     );
   definitions.push(d);
 }
+/** Source amended-return switches enable these prior-return credits. Other credits stay applicable. */
+export const withholdingPriorRemittanceFields: Readonly<Record<string, string>> = {
+  "0619E": "txtTax15", "0619F": "txtTax16",
+  "1600": "txtTax15", "1600WP": "txtTax13", "1601E": "txtTax15A", "1601F": "txtTax17",
+  "1601FQ": "txtTax25", "1601C": "txtTax21A", "1601Cv2018": "txtTax28",
+  "1600PTv2018": "txtPg1P2I19TaxRemittedInRtrn", "1600VTv2018": "txtPg1P2I19TaxRemittedInRtrn",
+  "1602": "txt34", "1602Qv2018": "txt20", "1603": "txt19", "1603Qv2018": "txtTax15", "1606": "txtLess"
+};
+
 // Presentation groups retain each field's original calculation and persistence key.
 for (const d of definitions) {
   for (const section of d.sections) {
     if (section.id !== "computation") continue;
     for (const field of section.fields) {
+      if (field.id === d.prefix + withholdingPriorRemittanceFields[d.code])
+        field.showWhen = { field: d.prefix + "optAmend", value: "Y" };
       if (
         !field.group &&
         /previous|previously|first-month remittance|second-month remittance|other (?:tax )?(?:payments|remittances)|total (?:tax )?(?:payments|remittances|credits)/i.test(

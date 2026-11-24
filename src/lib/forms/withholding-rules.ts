@@ -7,6 +7,7 @@ import {
   withholdingSchedules,
   withholdingSchedulesEnabled,
   withholdingRowCountKey,
+  withholdingPriorRemittanceFields,
   withoutInactiveWithholdingScheduleValues,
   type WithholdingDefinition,
   type WithholdingField,
@@ -68,6 +69,9 @@ export function calculateWithholding(code: string, values: Values): Values {
   const inactiveInputs = new Set(schedulesEnabled ? [] : schedules.flatMap(schedule =>
     schedule.rows.flatMap(row => row.fields.filter(field => !field.readonly).map(field => field.id)),
   ));
+  const priorRemittance = withholdingPriorRemittanceFields[code];
+  if (priorRemittance && values[p + "optAmend"] !== "Y")
+    inactiveInputs.add(p + priorRemittance);
   for (const field of withholdingFields(d, values))
     if (field.readonly && field.defaultValue !== undefined)
       r[field.id] = field.defaultValue;
@@ -722,30 +726,6 @@ export function validateWithholding(
     for (const rdo of ["sellerRdo", "propertyRdo"])
       if (text(rdo) && !isPackagedRdoCode(text(rdo)))
         errors[p + rdo] = "Enter a supported RDO code.";
-  }
-  const priorRemittance: Record<string, string> = {
-    "0619E": "txtTax15",
-    "0619F": "txtTax16",
-    "1600": "txtTax15",
-    "1600WP": "txtTax13",
-    "1601E": "txtTax15A",
-    "1601F": "txtTax17",
-    "1601FQ": "txtTax25",
-    "1601C": "txtTax21A",
-    "1601Cv2018": "txtTax28",
-    "1600PTv2018": "txtPg1P2I19TaxRemittedInRtrn",
-    "1600VTv2018": "txtPg1P2I19TaxRemittedInRtrn",
-    "1602": "txt34",
-    "1602Qv2018": "txt20",
-    "1603": "txt19",
-    "1603Qv2018": "txtTax15",
-    "1606": "txtLess",
-  };
-  if (priorRemittance[code] && text("optAmend") !== "Y") {
-    const key = priorRemittance[code];
-    if (text(key) && Number(text(key).replaceAll(",", "")) !== 0)
-      errors[p + key] =
-        "Previous-return remittance applies only to an amended return.";
   }
   if (code === "0619F") {
     if (text("txtTaxTypeCode") === "WB" && number(values[p + "txtTax14"]) !== 0)

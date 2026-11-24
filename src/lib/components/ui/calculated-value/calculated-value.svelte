@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { FieldErrors } from '../field-errors';
 
-	let { id, label, value = '', source = 'Calculated', error = '', for: inputs }: {
+	let { id, label, value = '', source, error = '', for: inputs }: {
 		id?: string;
 		label: string;
 		value?: string;
@@ -10,6 +10,7 @@
 		for?: string;
 	} = $props();
 	const uid = $props.id();
+	const description = $derived([source && `${uid}-source`, error && `${uid}-error`].filter(Boolean).join(' ') || undefined);
 </script>
 
 <div data-slot="calculated-value" class="calculated-value">
@@ -18,16 +19,24 @@
 		{id}
 		for={inputs}
 		aria-labelledby={`${uid}-label`}
-		aria-describedby={`${uid}-source${error ? ` ${uid}-error` : ''}`}
+		aria-describedby={description}
 		aria-live="off"
 	>{value || '—'}</output>
-	<span id={`${uid}-source`} class="value-source">{source}</span>
+	{#if source}<span id={`${uid}-source`} class="value-source">{source}</span>{/if}
 	{#if error}<FieldErrors id={`${uid}-error`} errors={[error]} />{/if}
 </div>
 
 <style>
-	.calculated-value { display: grid; min-width: 0; gap: var(--form-label-gap); }
+	.calculated-value {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) fit-content(60%);
+		align-items: baseline;
+		min-width: 0;
+		gap: var(--form-label-gap) .625rem;
+		overflow-wrap: anywhere;
+	}
 	.value-label { color: var(--fg-muted); font-size: var(--form-label-size); font-weight: 500; line-height: var(--form-label-line-height); }
-	output { display: block; min-height: var(--form-control-height); padding-block: .5rem; border-bottom: 1px solid var(--border-soft); font-size: var(--form-control-size); font-weight: 600; font-variant-numeric: tabular-nums; text-align: right; overflow-wrap: anywhere; }
-	.value-source { color: var(--fg-muted); font-size: .75rem; line-height: 1.4; text-align: right; }
+	output { font-size: var(--form-control-size); font-weight: 600; font-variant-numeric: tabular-nums; text-align: end; }
+	.value-source { grid-column: 2; color: var(--fg-muted); font-size: .75rem; line-height: 1.4; text-align: end; }
+	.calculated-value > :global([data-slot="form-field-errors"]) { grid-column: 1 / -1; }
 </style>

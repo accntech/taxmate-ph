@@ -13,6 +13,7 @@ import {
   withholdingFields,
   withholdingSchedules,
   withholdingRowCountKey,
+  withholdingPriorRemittanceFields,
 } from "$lib/forms/withholding-definitions";
 
 const calculate = (code: string, v: Record<string, string>) => {
@@ -36,10 +37,11 @@ describe("packaged withholding arithmetic", () => {
     ).toBe("10800.00"));
   it("keeps remittance inputs separate from tax-base calculations", () => {
     expect(
-      total("0619E", { txtTax14: "10000", txtTax15: "2000", txtTax17A: "300" }),
+      total("0619E", { optAmend: "Y", txtTax14: "10000", txtTax15: "2000", txtTax17A: "300" }),
     ).toBe("8300.00");
     expect(
       total("0619F", {
+        optAmend: "Y",
         txtTax13: "7000",
         txtTax14: "3000",
         txtTax16: "2000",
@@ -49,6 +51,7 @@ describe("packaged withholding arithmetic", () => {
   });
   it("derives ATC tax from the packaged rate rather than an altered rate field", () => {
     const r = calculate("1601E", {
+      optAmend: "Y",
       optCategory: "P",
       optWithheld: "Y",
       txtAtcCode1: "WI120",
@@ -101,6 +104,7 @@ describe("packaged withholding arithmetic", () => {
     for (const code of ["1600PTv2018", "1600VTv2018"])
       expect(
         total(code, {
+          optAmend: "Y",
           txtPg1P2I19TaxRemittedInRtrn: "500",
           txtPg1P2I23Surcharge: "100",
         }),
@@ -109,6 +113,7 @@ describe("packaged withholding arithmetic", () => {
   it("uses entered compensation withholding and schedule adjustments", () => {
     expect(
       total("1601C", {
+        optAmend: "Y",
         txtTax18: "10000",
         "sched1:txtShouldTaxDue0": "700",
         "sched1:txtTaxPaid0": "200",
@@ -118,6 +123,7 @@ describe("packaged withholding arithmetic", () => {
     ).toBe("8600.00");
     expect(
       total("1601Cv2018", {
+        optAmend: "Y",
         txtTax25: "10000",
         "sched1:txtShouldTaxDue0": "700",
         "sched1:txtTaxPaid0": "200",
@@ -128,7 +134,7 @@ describe("packaged withholding arithmetic", () => {
   });
   it("grosses up benefits and sums both revised fringe regimes", () => {
     expect(
-      total("1603", { txtFringe360: "65000", txt19: "5000", txt21A: "100" }),
+      total("1603", { optAmend: "Y", txtFringe360: "65000", txt19: "5000", txt21A: "100" }),
     ).toBe("30100.00");
     expect(
       total("1603Qv2018", {
@@ -176,6 +182,7 @@ describe("packaged withholding arithmetic", () => {
   it("selects the transaction-specific real property tax base", () => {
     expect(
       total("1606", {
+        optAmend: "Y",
         transactionType: "Cash sale",
         txtGross: "1000000",
         txtFMVLand: "1200000",
@@ -404,14 +411,18 @@ describe("necessary fields and remittance conditions", () => {
       ),
     ).toBe(true);
   });
-  it("rejects prior-return remittance without the amended flag while preserving drafts", () => {
-    const values = { "frm0619E:optAmend": "N", "frm0619E:txtTax15": "100" };
-    expect(
-      validateWithholding("0619E", values)["frm0619E:txtTax15"],
-    ).toBeTruthy();
-    expect(calculateWithholding("0619E", values)["frm0619E:txtTax15"]).toBe(
-      "100",
-    );
+  it.each([
+    ["0619E", "txtTax15", "txtTax16"],
+    ["0619F", "txtTax16", "txtTax17"],
+  ])("%s excludes prior-return remittance on an original return while preserving draft entries", (code, prior, total) => {
+    const prefix = `frm${code}:`;
+    const values = { [prefix + "optAmend"]: "N", [prefix + prior]: "100", [prefix + "txtTax14"]: "1000" };
+    const original = calculateWithholding(code, values);
+    expect(original[prefix + prior]).toBe("100");
+    expect(original[prefix + total]).toBe("1000.00");
+    expect(validateWithholding(code, values)[prefix + prior]).toBeUndefined();
+    const amended = calculateWithholding(code, { ...values, [prefix + "optAmend"]: "Y" });
+    expect(amended[prefix + total]).toBe("900.00");
   });
   it("requires investigating-office approval choice for assessed 0605 payment", () => {
     expect(
@@ -734,5 +745,20 @@ describe("withholding validation safeguards", () => {
     };
     expect(calculateWithholding("1606", values)["frm1606:txtTaxR"]).toBe("0.00");
     expect(validateWithholding("1606", values)["frm1606:optWithheld"]).toBeUndefined();
+  });
+});
+
+
+describe("amended-return credit applicability", () => {
+  it.each(Object.entries(withholdingPriorRemittanceFields))("%s excludes the inactive credit without erasing an older draft", (code, prior) => {
+    const definition = getWithholdingDefinition(code)!;
+    const p = definition.prefix;
+    const original = { [p + "optAmend"]: "N", [p + prior]: "100" };
+    const amended = { ...original, [p + "optAmend"]: "Y" };
+    const result = calculateWithholding(code, original);
+    expect(result[p + prior]).toBe("100");
+    expect(Number(result[definition.totalField])).toBe(0);
+    expect(Number(calculateWithholding(code, amended)[definition.totalField])).toBe(-100);
+    expect(validateWithholding(code, original)[p + prior]).toBeUndefined();
   });
 });

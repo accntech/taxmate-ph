@@ -25,7 +25,7 @@ describe('withholding return lifecycle', () => {
   expect(getFormDefinition('0619E')).toBeDefined();
   const id = workspace.createReturn(initialProfile.id, '0619E');
   expect(id).toBeTruthy();
-  workspace.updateFormValues({ 'frm0619E:txtYear': '2026', 'frm0619E:txtMonth': '01', 'frm0619E:txtTax14': '10000', 'frm0619E:txtTax15': '2000', 'frm0619E:txtTax17A': '300' });
+  workspace.updateFormValues({ 'frm0619E:txtYear': '2026', 'frm0619E:txtMonth': '01', 'frm0619E:optAmend': 'Y', 'frm0619E:txtTax14': '10000', 'frm0619E:txtTax15': '2000', 'frm0619E:txtTax17A': '300' });
   expect(await workspace.saveActiveReturn()).toBe(true);
   const saved = workspace.createdReturns.find(record => record.id === id)!;
   expect(saved.formCode).toBe('0619E');

@@ -29,7 +29,6 @@ export * from './bulk-actions';
 export * from './bulk-bar';
 export * from './button-selection';
 export * from './checkbox';
-export * from './checkbox-button';
 export * from './checkbox-input';
 export * from './combobox';
 export * from './date-range-filter';

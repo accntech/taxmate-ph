@@ -17,17 +17,19 @@
     class: className = "",
     children,
     label = "Pagination",
+    pageTitle,
   }: {
     page: number;
     pageSize: number;
     total: number;
     href?: (page: number) => string;
     onchange?: (page: number) => void;
-    summary?: boolean;
+    summary?: boolean | "page";
     compact?: boolean;
     class?: string;
     children?: Snippet;
     label?: string;
+    pageTitle?: (page: number) => string;
   } = $props();
 
   const pageCount = $derived(Math.max(1, Math.ceil(total / pageSize)));
@@ -53,8 +55,10 @@
 {/snippet}
 
 <div class={["pcsti-pagination", compact && "is-compact", className]}>
-  <div class="summary">
-    {#if summary}
+  <div class="summary" class:page-status-only={summary === "page" && !children}>
+    {#if summary === "page"}
+      <span class="page-status" aria-live="polite">Page {page} of {pageCount}</span>
+    {:else if summary}
       <span aria-live="polite"
         >Showing <strong class="count">{start}–{end}</strong> of
         <strong class="count">{total.toLocaleString()}</strong></span
@@ -87,7 +91,7 @@
         >{@render previousContent()}</span
       >
     {/if}
-    <div class="page-summary">
+    <div class="page-summary" aria-live={summary === "page" ? "polite" : undefined}>
       <span class="page-label">Page&nbsp;</span><span class="page-count"
         >{page}</span
       ><span class="page-label">&nbsp;of&nbsp;</span><span class="page-count"
@@ -100,6 +104,7 @@
           <a
             href={href(item)}
             aria-label={`Page ${item}`}
+            title={pageTitle?.(item)}
             aria-current={item === page ? "page" : undefined}
             class={["page-button", item === page && "current-page"]}
             data-sveltekit-reset="false">{item}</a
@@ -109,6 +114,7 @@
             type="button"
             onclick={() => go(item)}
             aria-label={`Page ${item}`}
+            title={pageTitle?.(item)}
             aria-current={item === page ? "page" : undefined}
             class={["page-button", item === page && "current-page"]}
             >{item}</button
@@ -282,7 +288,9 @@
   .is-compact .page-count {
     display: inline;
   }
+  .is-compact :is(.page-status, .page-status-only) { display: none; }
   @media (max-width: 767px) {
+    .page-status, .page-status-only { display: none; }
     .pcsti-pagination {
       flex-direction: column;
       align-items: stretch;

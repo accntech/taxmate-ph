@@ -13,6 +13,25 @@ import { createWithholdingPrintModel } from '$lib/printing/withholding-print-mod
 import { initialProfile } from '$lib/ebirforms/ebirforms-workspace.svelte';
 
 describe('source-native withholding print controls', () => {
+ it.each([
+  ['0619E', expandedRemittanceBindings, 'txtTax15', 'txtTax16'],
+  ['0619F', finalRemittanceBindings, 'txtTax16', 'txtTax17']
+ ] as const)('%s prints prior remittance only for amended returns', (code, bindings, prior, total) => {
+  const prefix = `frm${code}:`;
+  const values = {
+   ...createWithholdingValues(code, initialProfile),
+   [prefix + 'optAmend']: 'N', [prefix + 'optWithheld']: 'Y',
+   [prefix + prior]: '100.00', [prefix + 'txtTax14']: '1000.00'
+  };
+  const original = createWithholdingPrintModel(code, values, bindings).text;
+  expect([original[prior], original[prior + '_2']]).toEqual(['', '']);
+  expect([original[total], original[total + '_2']]).toEqual(['1000', '00']);
+  const amended = createWithholdingPrintModel(code, { ...values, [prefix + 'optAmend']: 'Y' }, bindings).text;
+  expect([amended[prior], amended[prior + '_2']]).toEqual(['100', '00']);
+  expect([amended[total], amended[total + '_2']]).toEqual(['900', '00']);
+  expect(values[prefix + prior]).toBe('100.00');
+ });
+
  it('prints 0605 payment details only for their selected payment options', () => {
   const values = {
    ...createWithholdingValues('0605', initialProfile),
@@ -29,6 +48,22 @@ describe('source-native withholding print controls', () => {
   }, printBindings).text;
   expect(active['frm0605:txtNumOfInstallment']).toBe('7');
   expect(active['frm0605:txtOthersName']).toBe('Other payment details');
+ });
+
+ it('prints 0605 investigating-office approval only for assessed or delinquent payments', () => {
+  const values = {
+   ...createWithholdingValues('0605', initialProfile),
+   'frm0605:itemMannerOfPayment': 'Self-assessment',
+   'frm0605:itemApprovedYN': 'Y'
+  };
+  const original = createWithholdingPrintModel('0605', values, printBindings).checks;
+  expect(original['frm0605:itemApprovedYN:_1']).toBe(false);
+  expect(original['frm0605:itemApprovedYN:_2']).toBe(false);
+  for (const manner of ['Preliminary/final assessment / deficiency', 'Accounts receivable / delinquent account']) {
+   const assessed = createWithholdingPrintModel('0605', { ...values, 'frm0605:itemMannerOfPayment': manner }, printBindings).checks;
+   expect(assessed['frm0605:itemApprovedYN:_1']).toBe(true);
+  }
+  expect(values['frm0605:itemApprovedYN']).toBe('Y');
  });
 
  it.each([
@@ -111,6 +146,18 @@ describe('source-native withholding print controls', () => {
   expect(detail('Cash sale')).toEqual(['', '', '']);
   expect(detail('Exempt')).toEqual(['Sample exemption', '', '']);
   expect(detail('Installment sale')).toEqual(['', '2345.00', '8']);
+ });
+
+ it('prints a 1606 refund mark only on a return with overremittance', () => {
+  const values = {
+   ...createWithholdingValues('1606', initialProfile),
+   'frm1606:transactionType': 'Cash sale',
+   'frm1606:overpaymentOption': 'Refund'
+  };
+  const mark = 'frm1606:opt37:_1';
+  expect(createWithholdingPrintModel('1606', values, propertyBindings).checks[mark]).toBe(false);
+  const amended = { ...values, 'frm1606:optAmend': 'Y', 'frm1606:txtLess': '500' };
+  expect(createWithholdingPrintModel('1606', amended, propertyBindings).checks[mark]).toBe(true);
  });
 
  it.each(['', '1'])('leaves the special-law print field blank for No with saved value %j', (savedLaw) => {

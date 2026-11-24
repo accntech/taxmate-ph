@@ -73,7 +73,7 @@
 <style>
 	fieldset { min-width: 0; margin: 0; padding: 0; border: 0; }
 	legend { margin-bottom: var(--form-label-gap); padding: 0; color: var(--fg-muted); font-size: var(--form-label-size); font-weight: 500; line-height: var(--form-label-line-height); }
-	.choices { display: flex; flex-wrap: wrap; gap: 1.25rem; }
+	.choices { display: flex; flex-wrap: wrap; gap: var(--radio-choice-row-gap, 1.25rem) var(--radio-choice-column-gap, 1.25rem); }
 	.choices + :global(*) { margin-top: .5rem; }
 	.choice { display: flex; min-height: 2.375rem; align-items: center; gap: .5rem; padding-block: .375rem; cursor: pointer; }
 	.radio-control { display: inline-flex; width: 1rem; height: 1rem; flex-shrink: 0; border-radius: 50%; }

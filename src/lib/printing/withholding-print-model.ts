@@ -4,6 +4,7 @@ import {
   withholdingFields,
   withholdingSchedules,
 } from "$lib/forms/withholding-definitions";
+import { getWithholdingSupportingPages } from "$lib/forms/withholding-paper-layout";
 import { calculateWithholding } from "$lib/forms/withholding-rules";
 type Values = Record<string, string>;
 const aliases: Record<string, string> = {
@@ -239,7 +240,8 @@ export function originalFieldValue(
     }
     if (lower === "opt37") {
       const key = prefix + "overpaymentOption";
-      return { key, value: values[key]?.startsWith("Refund") ? "R" : "I" };
+      const options: Values = { Refund: "R", "Tax credit certificate": "I" };
+      return { key, value: options[values[key]] ?? "" };
     }
   }
   if (code === "1602" && ["txt22E", "txt22H"].includes(short)) {
@@ -448,6 +450,12 @@ export function createWithholdingPrintModel(
   const inactiveFields = new Set(fields.flatMap(({ id, showWhen }) =>
     showWhen && rawValues[showWhen.field] !== showWhen.value ? [id] : [],
   ));
+  if (code === "0605" && ![
+    "Preliminary/final assessment / deficiency",
+    "Accounts receivable / delinquent account",
+  ].includes(rawValues[prefix + "itemMannerOfPayment"])) {
+    inactiveFields.add(prefix + "itemApprovedYN");
+  }
   if (rawValues[prefix + "optWithheld"] === "N") {
     if (code === "0619E" || code === "0619F") inactiveFields.add(prefix + "txtTax14");
     if (code === "0619F") inactiveFields.add(prefix + "txtTax13");
@@ -456,10 +464,6 @@ export function createWithholdingPrintModel(
     const transaction = rawValues[prefix + "transactionType"];
     if (transaction !== "Exempt" && transaction !== "Others")
       inactiveFields.add(prefix + "txtOthers20");
-    if (transaction !== "Installment sale") {
-      for (const name of ["txtSelling", "txtCost", "txtMortgage", "txtTotalP", "txtAmount", "txtTotalN"])
-        inactiveFields.add(prefix + name);
-    }
   }
   for (const schedule of inactiveSchedules) {
     for (const row of schedule.rows) {
@@ -472,6 +476,11 @@ export function createWithholdingPrintModel(
   const printValues = { ...rawValues };
   for (const id of inactiveFields) printValues[id] = "";
   const values = calculateWithholding(code, printValues);
+  if ((code === "1606" || code === "1602Qv2018") && Number(values[definition.totalField]) >= 0) {
+    const disposition = prefix + "overpaymentOption";
+    inactiveFields.add(disposition);
+    values[disposition] = "";
+  }
   const mapped = new Set<string>();
   const text: Values = {};
   const checks: Record<string, boolean> = {};
@@ -692,21 +701,7 @@ export function createWithholdingPrintModel(
       attached,
       unmapped,
       notOnForm,
-      pages:
-        ((
-          {
-            1602: 2,
-            "1601F": 2,
-            "1601FQ": 2,
-            "1600PTv2018": 2,
-            "1600VTv2018": 2,
-            "1601Cv2018": 2,
-            "1603Qv2018": 2,
-            "1602Qv2018": 3,
-            "1604Ev2018": 2,
-            "1604F": 2,
-          } as Record<string, number>
-        )[code] ?? 1) + continuations.length,
+      pages: 1 + getWithholdingSupportingPages(code).length + continuations.length,
     },
   };
 }

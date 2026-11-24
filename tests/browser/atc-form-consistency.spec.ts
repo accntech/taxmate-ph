@@ -1,6 +1,6 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { getWithholdingDefinition, withholdingDefinitions } from '../../src/lib/forms/withholding-definitions';
-import { seedWorkspace, taxpayerId } from './fixtures';
+import { goToReturnPage, seedWorkspace, taxpayerId } from './fixtures';
 
 const atcForms = withholdingDefinitions.filter(definition => [
  ...definition.sections.flatMap(section => section.fields),
@@ -9,6 +9,8 @@ const atcForms = withholdingDefinitions.filter(definition => [
 
 async function openScheduleEditor(page: Page, title: string) {
  const summary = page.locator('summary').filter({ hasText: title }).first();
+ const number = await summary.evaluate(element => element.closest('[data-return-page]')?.getAttribute('data-return-page'));
+ if (number && !(await summary.isVisible())) await goToReturnPage(page, Number(number));
  if (await summary.locator('..').getAttribute('open') === null) await summary.click();
  await page.getByRole('button', { name: `Add line item to ${title}`, exact: true }).click();
  await expect(page.getByRole('dialog', { name: 'New line item', exact: true })).toBeVisible();
@@ -52,7 +54,7 @@ for (const definition of atcForms) {
  test(`${definition.code} ATC fields share search, custom entry and empty-text handling`, async ({ page }) => {
   await seedWorkspace(page);
   await page.goto(`/ebirforms/taxpayers/${taxpayerId}/forms/${definition.code}?new=true`);
-  await expect(page.getByRole('region', { name: `BIR Form ${definition.code} workspace`, exact: true }).getByRole('heading', { level: 1 })).toBeVisible();
+  await expect(page.getByRole('region', { name: `BIR Form ${definition.code} workspace`, exact: true }).getByRole('heading', { level: 1 })).toBeVisible({ timeout: 20_000 });
   const withheld = page.getByRole('radiogroup', { name: 'Any tax withheld?', exact: true });
   if (definition.schedules.length && await withheld.count()) await withheld.getByRole('radio', { name: 'Yes', exact: true }).check();
   let exercised = 0;

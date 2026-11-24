@@ -2,7 +2,12 @@
 	import * as stylex from '@stylexjs/stylex';
 	import { returnErrors } from './return-errors.styles';
 	import type { FormDefinition } from '$lib/forms';
-	let { definition, errors, taxpayerHref = '' }: { definition: FormDefinition; errors: Record<string, string>; taxpayerHref?: string } = $props();
+	let { definition, errors, taxpayerHref = '', onreveal }: {
+		definition: FormDefinition;
+		errors: Record<string, string>;
+		taxpayerHref?: string;
+		onreveal?: (id: string) => Promise<void>;
+	} = $props();
 	function isTaxpayerField(id: string) {
 		return !!definition.fields.find(field => field.id === id)?.profileKey || id === 'txtEmail' || /^frm[^:]+:(txtTIN[123]|txtBranchCode|txtRDOCode|txtTaxpayerName|optCategory|txtAddress2?|txtZipCode|txtTelNum|txtEmail)$/.test(id);
 	}
@@ -12,8 +17,9 @@
 		if (id.endsWith(':overpaymentOption')) return 'Over-remittance treatment';
 		return definition.fields.find(field => field.id === id)?.label.replace(/^\d+[A-Z]?\s+/, '') || 'Return details';
 	}
-	function focusField(event: MouseEvent, id: string) {
+	async function focusField(event: MouseEvent, id: string) {
 		event.preventDefault();
+		if (onreveal) await onreveal(id);
 		const control = document.getElementById(id);
 		if (!control) return;
 		let ancestor = control.parentElement;

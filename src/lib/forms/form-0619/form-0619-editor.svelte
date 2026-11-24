@@ -23,8 +23,17 @@
 	const penaltyItem = $derived(creditItem + 2);
 	const calculated = $derived(calculateWithholding(code, values));
 	const currency = new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' });
-	const editableAmounts = $derived(Object.values(fields).filter(field => field.type === 'money' && !field.readonly));
+	const editableAmounts = $derived(Object.values(fields).filter(field => field.type === 'money' && !field.readonly &&
+		(!field.showWhen || values[field.showWhen.field] === field.showWhen.value)));
 	const invalidAmounts = $derived(editableAmounts.some(field => normalizeCurrencyInput(values[field.id] ?? '') === null));
+	const amended = $derived(values[prefix + 'optAmend'] === 'Y');
+	const previousRemittance = $derived(prefix + `txtTax${creditItem}`);
+
+	function changePeriod(name: string, value: string) {
+		const patch = { [prefix + name]: value };
+		if (name === 'optAmend' && value === 'N') patch[previousRemittance] = '0';
+		onvaluechange(patch);
+	}
 </script>
 
 {#snippet periodField(name: string)}
@@ -34,11 +43,11 @@
 	{#if type === 'date'}
 		<DateInput {id} {label} {required} {value} {error} onchange={(next) => onvaluechange({ [id]: next })} />
 	{:else if type === 'number'}
-		<NumberInput {id} {label} {required} {value} {error} onchange={(next) => onvaluechange({ [id]: next })} />
+		<NumberInput {id} {label} {required} {value} {error} min={1900} max={9999} maxlength={4} onchange={(next) => onvaluechange({ [id]: next })} />
 	{:else if name === 'txtMonth' || name === 'txtTaxTypeCode'}
 		<Select {id} {label} options={options ?? []} {required} {value} {error} onchange={(next) => onvaluechange({ [id]: next })} />
 	{:else}
-		<RadioGroup {id} {label} options={options ?? []} {required} {value} {error} onchange={(next) => onvaluechange({ [id]: next })} />
+		<RadioGroup {id} {label} options={options ?? []} {required} {value} {error} onchange={(next) => changePeriod(name, next)} />
 	{/if}
 {/snippet}
 
@@ -105,7 +114,9 @@
 		{:else}
 			{@render amount(14, 'txtTax14', 'Amount of remittance')}
 		{/if}
-		{@render amount(creditItem, `txtTax${creditItem}`, 'Amount previously remitted')}
+		{#if amended}
+			{@render amount(creditItem, `txtTax${creditItem}`, 'Amount previously remitted')}
+		{/if}
 		{@render total(creditItem + 1, `txtTax${creditItem + 1}`, 'Net amount of remittance')}
 		<h3 class="penalties-heading"><span class="paper-item-number">{penaltyItem}</span> Add penalties</h3>
 		{@render amount(`${penaltyItem}A`, `txtTax${penaltyItem}A`, 'Surcharge')}
@@ -132,6 +143,7 @@
 	}
 	.period-cell:last-child { border-bottom: 0; }
 	.month-year { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); gap: .5rem; }
+	.period-cell :global([data-slot="date-input"]) { max-inline-size: 18rem; }
 	.period-cell :global([data-slot="form-item"]), .remittance-row :global([data-slot="form-item"]) {
 		grid-template-columns: minmax(0, 1fr);
 	}

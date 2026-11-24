@@ -1,10 +1,10 @@
 <script lang="ts">
+  import type { StyleXStyles } from "@stylexjs/stylex";
   import { selectHeader } from "./list-select-header.styles";
 
   import { styleAttributes } from "../styles/style-attributes";
 
-  import * as stylex from "@stylexjs/stylex";
-  import { Checkbox } from "../checkbox/base";
+  import { CheckboxInput } from "../checkbox-input";
 
   type Props = {
     checked: boolean;
@@ -19,7 +19,7 @@
     onSelectAll,
     sx,
     class: className = "",
-  }: Props & { sx?: stylex.StyleXStyles } = $props();
+  }: Props & { sx?: StyleXStyles } = $props();
 </script>
 
 <th
@@ -29,16 +29,10 @@
     [className].flat(Infinity).filter(Boolean).join(" "),
   )}
 >
-  <label class={[stylex.attrs(selectHeader.label).class]}>
-    <input
-      type="checkbox"
-      aria-label="Select all on page"
-      {checked}
-      {indeterminate}
-      onchange={(e) =>
-        onSelectAll((e.currentTarget as HTMLInputElement).checked)}
-      class={[stylex.attrs(selectHeader.checkbox).class, "peer"]}
-    />
-    <Checkbox {checked} />
-  </label>
+  <CheckboxInput
+    aria-label="Select all on page"
+    {checked}
+    {indeterminate}
+    onchange={(event) => onSelectAll(event.currentTarget.checked)}
+  />
 </th>

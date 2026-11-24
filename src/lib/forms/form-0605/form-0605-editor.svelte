@@ -29,6 +29,22 @@
 		: taxTypeOptions);
 	const amounts = ['txtTax19', 'txtTax20A', 'txtTax20B', 'txtTax20C'];
 	const invalidAmounts = $derived(amounts.some(name => normalizeCurrencyInput(values[prefix + name] ?? '') === null));
+	const approvalApplies = $derived([
+		'Preliminary/final assessment / deficiency',
+		'Accounts receivable / delinquent account'
+	].includes(values[prefix + 'itemMannerOfPayment']));
+
+	function change(name: string, value: string) {
+		const patch = { [prefix + name]: value };
+		if (name === 'itemModeOfPayment' && value !== 'Installment') patch[prefix + 'txtNumOfInstallment'] = '';
+		if (name === 'itemMannerOfPayment') {
+			if (value !== 'Others') patch[prefix + 'txtOthersName'] = '';
+			if (!['Preliminary/final assessment / deficiency', 'Accounts receivable / delinquent account'].includes(value)) {
+				patch[prefix + 'itemApprovedYN'] = '';
+			}
+		}
+		onvaluechange(patch);
+	}
 </script>
 
 {#snippet input(name: string)}
@@ -63,14 +79,17 @@
 			</Combobox>
 			{#if error}<FieldErrors id={`${id}-error`} errors={[error]} />{/if}
 		</div>
-	{:else if name === 'itemApprovedYN'}
-		<RadioGroup {id} {label} options={options ?? []} {value} {error} onchange={(next) => onvaluechange({ [id]: next })} />
+	{:else if name === 'itemApprovedYN' || name === 'itemModeOfPayment'}
+		<RadioGroup {id} {label} options={options ?? []} required={required || name === 'itemApprovedYN'} {value} {error} onchange={(next) => change(name, next)} />
 	{:else if type === 'select'}
 		<Select {id} {label} options={options ?? []} {required} {value} {error}
 			disabled={individual && (name === 'itemFiscalStartMonth' || name === 'itemYearEndMonth')}
-			onchange={(next) => onvaluechange({ [id]: next })} />
+			onchange={(next) => change(name, next)} />
 	{:else if type === 'number'}
-		<NumberInput {id} {label} {required} {value} {error} max={name === 'txtNoOfSheets' ? 99 : undefined}
+		<NumberInput {id} {label} {required} {value} {error}
+			min={name === 'txtYearEnded' ? definition.minYear : name === 'txtNumOfInstallment' ? 1 : 0}
+			max={name === 'txtYearEnded' ? 3000 : name === 'txtNumOfInstallment' ? 20 : 99}
+			maxlength={name === 'txtYearEnded' ? 4 : 2}
 			onchange={(next) => onvaluechange({ [id]: next })} />
 	{:else if type === 'date'}
 		<DateInput {id} {label} {required} {value} {error} onchange={(next) => onvaluechange({ [id]: next })} />
@@ -145,7 +164,9 @@
 		{#if invalidAmounts}
 			<p role="status" class="eq-amount-error payment-feedback">Correct the amounts to calculate the total.</p>
 		{/if}
-		{@render control('itemApprovedYN')}
+		{#if approvalApplies}
+			{@render control('itemApprovedYN')}
+		{/if}
 	</section>
 </div>
 
@@ -171,6 +192,9 @@
 	.payment-cell > .paper-item-number { padding-top: .125rem; }
 	.payment-cell :global([data-slot="form-item"]) { grid-template-columns: minmax(0, 1fr); }
 	.payment-cell :global([data-slot="form-item"] input:not([type="radio"])) { width: 100%; min-width: 0; }
+	.payment-cell :global([data-slot="form-item"]:has(input[inputmode="numeric"])) { max-inline-size: 9rem; }
+	.payment-cell :global([data-slot="date-input"]) { max-inline-size: 18rem; }
+	.payment-choices { --radio-choice-row-gap: .25rem; }
 	.period-grid > .payment-cell:first-child { border-top: 0; }
 	.payment-section-heading {
 		margin: 0;
