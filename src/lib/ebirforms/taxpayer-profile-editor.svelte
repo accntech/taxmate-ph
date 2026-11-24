@@ -507,6 +507,7 @@
 	}
 	.classification-picker {
 		display: grid;
+		grid-template-columns: minmax(0, 1fr);
 		align-content: start;
 		gap: var(--form-label-gap);
 		min-width: 0;

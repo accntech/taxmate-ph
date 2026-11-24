@@ -29,3 +29,39 @@ for (const width of [1440, 390]) {
 		});
 	}
 }
+
+test('classification pickers fit the profile grid and stay usable after resizing', async ({ page }) => {
+	await seedWorkspace(page, 'light', 'loaded', {
+		taxpayerClassification: 'I', psocCode: '4311', psicCode: '82221'
+	});
+	await page.goto(`/ebirforms/taxpayers/${taxpayerId}/edit`);
+	const pickers = [
+		{ label: 'Occupation code (PSOC)', selected: '4311', search: 'Search code or occupation', next: '2411' },
+		{ label: 'PSIC code', selected: '82221', search: 'Search code or industry', next: '47913' }
+	];
+
+	for (const width of [640, 390]) {
+		await page.setViewportSize({ width, height: 900 });
+		for (const { label, selected } of pickers) {
+			const trigger = page.getByRole('combobox', { name: label, exact: true });
+			await expect(trigger).toContainText(selected);
+			await expect.poll(() => trigger.evaluate(button => {
+				const field = button.closest('.classification-picker')!.getBoundingClientRect();
+				const bounds = button.getBoundingClientRect();
+				return Math.abs(bounds.width - field.width);
+			}), `${label} fits its grid cell at ${width}px`).toBeLessThan(1);
+		}
+	}
+
+	for (const { label, search, next } of pickers) {
+		const trigger = page.getByRole('combobox', { name: label, exact: true });
+		await trigger.evaluate(button => button.scrollIntoView({ block: 'center', behavior: 'instant' }));
+		await trigger.click();
+		const input = page.getByPlaceholder(search, { exact: true });
+		await expect(input).toBeFocused();
+		await input.fill(next);
+		await expect(page.getByRole('option', { name: new RegExp(`^${next} `) })).toBeInViewport({ ratio: 1 });
+		await input.press('Enter');
+		await expect(trigger).toContainText(next);
+	}
+});
