@@ -4,9 +4,16 @@
 	import { tick } from 'svelte';
 	import type { FormSummary } from '$lib/forms';
 	import { Button } from '$lib/components/ui';
+	import { Badge } from '$lib/components/ui/badge';
 	import { InputControl } from '$lib/components/ui/input';
 	import Icon from '$lib/components/ui/icon/icon.svelte';
 	import { glyphs } from '$lib/components/ui/icons';
+
+	const formTypeColors = new Map([
+		['Payment', 'var(--success)'],
+		['Withholding Tax', 'var(--info)'],
+		['Individual Income Tax', 'var(--warn)']
+	]);
 
 	let { forms, disabled = false, taxpayerName = '', status = '', oncancel, onselect }: {
 		forms: FormSummary[];
@@ -76,6 +83,7 @@
 	</div>
 	<div id={`${uid}-results`} role="listbox" aria-label="BIR forms" class={stylex.attrs(formCommand.results).class}>
 		{#each matches as form (form.code)}
+			{@const typeColor = form.status === 'ready' ? formTypeColors.get(form.category) : undefined}
 			<button
 				id={`${uid}-${form.code}`}
 				type="button"
@@ -87,12 +95,23 @@
 				onclick={() => select(form.code)}
 				class={stylex.attrs(formCommand.result).class}
 			>
-				<span class={stylex.attrs(formCommand.resultIcon).class}><span class={stylex.attrs(formCommand.icon).class}><Icon icon={glyphs.layers} /></span></span>
+				<span aria-hidden="true" class={stylex.attrs(formCommand.resultIcon).class}>
+					<span class={stylex.attrs(formCommand.icon).class}>
+						<Icon icon={glyphs.layers} />
+					</span>
+				</span>
 				<span class={stylex.attrs(formCommand.resultText).class}>
-					<span class={stylex.attrs(formCommand.resultTitle).class}>BIR Form {form.code}</span>
+					<span
+						class={[stylex.attrs(formCommand.resultMeta).class, { 'colored-form-type': typeColor }]}
+						style:--form-type-color={typeColor}
+					>
+						<span class={stylex.attrs(formCommand.resultTitle).class}>BIR Form {form.code}</span>
+						<Badge size="sm" class="form-type-badge">
+							{form.status === 'ready' ? form.category : 'Coming soon'}
+						</Badge>
+					</span>
 					<span class={stylex.attrs(formCommand.resultDescription).class}>{form.title}</span>
 				</span>
-				<span class={stylex.attrs(formCommand.category).class}>{form.status !== 'ready' ? 'Coming soon' : form.category}</span>
 			</button>
 		{/each}
 		{#if matches.length === 0}
@@ -116,5 +135,11 @@
 </div>
 
 <style>
+	.colored-form-type > :global(.form-type-badge) {
+		background-color: color-mix(in oklab, var(--form-type-color) 16%, var(--bg-elev));
+		border-color: color-mix(in oklab, var(--form-type-color) 40%, var(--bg-elev));
+		color: color-mix(in oklab, var(--form-type-color), var(--fg));
+	}
+
 	kbd { border: 1px solid var(--border); border-radius: 3px; padding: 1px 4px; font-family: inherit; font-size: 11px; line-height: 1.2; color: var(--fg-muted); }
 </style>

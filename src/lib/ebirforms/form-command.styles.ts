@@ -89,11 +89,11 @@ export const formCommand = stylex.create({
   result: {
     display: "flex",
     width: "100%",
-    alignItems: "center",
+    alignItems: "flex-start",
     gap: "0.75rem",
     borderRadius: "0.375rem",
     paddingInline: "0.75rem",
-    paddingBlock: "0.75rem",
+    paddingBlock: "0.625rem",
     textAlign: "left",
     transitionProperty: "color, background-color, border-color, outline-color, text-decoration-color, fill, stroke",
     transitionTimingFunction: "cubic-bezier(0.4, 0, 0.2, 1)",
@@ -130,8 +130,8 @@ export const formCommand = stylex.create({
   },
   resultIcon: {
     display: "grid",
-    width: "2.25rem",
-    height: "2.25rem",
+    width: "2rem",
+    height: "2rem",
     flexShrink: 0,
     placeItems: "center",
     borderRadius: "0.375rem",
@@ -142,14 +142,22 @@ export const formCommand = stylex.create({
     color: "var(--accent)"
   },
   icon: {
-    width: "1.25rem",
-    height: "1.25rem"
+    width: "1rem",
+    height: "1rem"
   },
   resultText: {
     display: "grid",
     minWidth: 0,
     flex: 1,
-    gap: "0.25rem"
+    gap: "0.125rem"
+  },
+  resultMeta: {
+    display: "flex",
+    flexWrap: "wrap",
+    alignItems: "center",
+    justifyContent: "space-between",
+    columnGap: "0.75rem",
+    rowGap: "0.25rem"
   },
   resultTitle: {
     fontSize: "0.875rem",
@@ -159,18 +167,6 @@ export const formCommand = stylex.create({
   resultDescription: {
     fontSize: "0.75rem",
     lineHeight: 1.625,
-    color: "var(--fg-muted)"
-  },
-  category: {
-    display: {
-      default: "none",
-      "@media (width >= 40rem)": "block"
-    },
-    maxWidth: "7rem",
-    flexShrink: 0,
-    textAlign: "right",
-    fontSize: "0.75rem",
-    lineHeight: "calc(1 / 0.75)",
     color: "var(--fg-muted)"
   },
   empty: {

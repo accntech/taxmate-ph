@@ -68,7 +68,7 @@ test('legacy 1701 carries the taxpayer details trade name through a new draft an
 	await page.getByRole('link', { name: fixture.taxpayerName, exact: true }).click();
 	await page.getByRole('button', { name: 'Create return', exact: true }).click();
 	await page.getByRole('combobox', { name: 'Search BIR forms' }).fill('1701');
-	await page.getByRole('option', { name: /BIR Form 1701\s+1701 · June 2013/ }).click();
+	await page.getByRole('option', { name: /^BIR Form 1701\b.*1701 · June 2013/ }).click();
 	const displayName = page.locator(`dl[id="${field}"]`);
 	const displayType = page.locator(`dl[id="${type}"]`);
 	await expect(displayName.locator('dt')).toHaveText('Trade name');

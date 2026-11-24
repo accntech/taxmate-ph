@@ -14,6 +14,10 @@ test('form command drawer reaches both edges of a narrow window', async ({ page 
 		const bounds = await dialog.boundingBox();
 		return bounds && [bounds.x, bounds.x + bounds.width];
 	}).toEqual([0, 428]);
+	const form = dialog.getByRole('option', { name: /^BIR Form 0619E\b/ });
+	const formType = form.getByText('Withholding Tax', { exact: true });
+	await expect(formType).toBeInViewport({ ratio: 1 });
+	await expect(formType).toHaveCSS('white-space', 'nowrap');
 });
 
 test('form command lists forms in ascending form number order', async ({ page }) => {
@@ -29,7 +33,9 @@ test('form command lists forms in ascending form number order', async ({ page })
 	expect(allForms).toEqual([...allForms].sort());
 
 	await search.fill('0605');
-	await expect(paymentForm.getByText('Payment', { exact: true })).toBeVisible();
+	const paymentType = paymentForm.getByText('Payment', { exact: true });
+	await expect(paymentType).toBeVisible();
+	await expect(paymentType).toHaveCSS('white-space', 'nowrap');
 
 	await search.fill('withholding tax');
 	await expect(paymentForm).toHaveCount(0);
@@ -78,6 +84,11 @@ for (const theme of ['light', 'dark']) {
 			const search = page.getByRole('combobox', { name: 'Search BIR forms' });
 			await expect(search).toBeFocused();
 			await expect(page.getByRole('option').first()).toBeInViewport();
+			const options = page.getByRole('option');
+			const typeColors = await Promise.all(['Payment', 'Withholding Tax', 'Individual Income Tax'].map(type =>
+				options.getByText(type, { exact: true }).first().evaluate(badge => getComputedStyle(badge).backgroundColor)
+			));
+			expect(new Set(typeColors).size).toBe(3);
 			const dialog = page.getByRole('dialog');
 			await dialog.evaluate(async element => {
 				await Promise.all(element.getAnimations().map(animation => animation.finished));
