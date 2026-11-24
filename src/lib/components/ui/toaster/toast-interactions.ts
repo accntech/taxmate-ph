@@ -1,5 +1,6 @@
 import type { Attachment } from "svelte/attachments";
 import { untrack } from "svelte";
+import { ACTIVE_MODAL_SELECTOR } from "../dialog/active-modal";
 import { toastState } from "./toast-instance.svelte.js";
 
 export function createToastLayer(): Attachment<HTMLElement> {
@@ -20,7 +21,7 @@ export function createToastLayer(): Attachment<HTMLElement> {
       // layer open throughout that transition, independent of the store count.
       const visible = element.childElementCount > 0;
       const openModals = Array.from(
-        document.querySelectorAll<HTMLDialogElement>("dialog:modal"),
+        document.querySelectorAll<HTMLDialogElement>(ACTIVE_MODAL_SELECTOR),
       );
       modals = modals.filter((dialog) => openModals.includes(dialog));
       for (const dialog of openModals) {

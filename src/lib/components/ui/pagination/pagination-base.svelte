@@ -1,4 +1,10 @@
 <script lang="ts">
+  import {
+    Pagination as SdkPagination,
+    PaginationLink,
+    PaginationNext,
+    PaginationPrevious,
+  } from "@ui-sdk/svelte/pagination";
   import { Icon as SolarIcon } from "../icon/base";
 
   import { glyphs } from "../glyphs";
@@ -40,11 +46,6 @@
   let end = $derived(Math.min(total, page * pageSize));
 
   let pages = $derived(buildPaginationItems(page, pageCount));
-
-  function go(p: number) {
-    if (p === page) return;
-    onchange?.(p);
-  }
 </script>
 
 <div
@@ -83,7 +84,11 @@
       {@render children()}
     {/if}
   </div>
-  <nav
+  <SdkPagination
+    {page}
+    {pageCount}
+    getHref={href}
+    onPageChange={href ? undefined : onchange}
     aria-label="Pagination"
     class={[
       stylex.attrs(
@@ -93,69 +98,35 @@
     ]}
   >
     {#if page > 1}
-      {#if href}
-        <a
-          href={href(page - 1)}
+      <PaginationPrevious
+        class={[
+          stylex.attrs(
+            pagination.stepButton,
+            compact && pagination.compactStep,
+          ).class,
+        ]}
+        aria-label="Previous page"
+        data-sveltekit-reset={href ? "false" : undefined}
+      >
+        <span
+          data-icon
           class={[
             stylex.attrs(
-              pagination.stepButton,
-              compact && pagination.compactStep,
+              pagination.navigationIcon,
+              compact && pagination.compactIcon,
             ).class,
           ]}
-          aria-label="Previous page"
-          data-sveltekit-reset="false"
+          aria-hidden="true"><SolarIcon icon={glyphs.chevronLeft} /></span
         >
-          <span
-            data-icon
-            class={[
-              stylex.attrs(
-                pagination.navigationIcon,
-                compact && pagination.compactIcon,
-              ).class,
-            ]}
-            aria-hidden="true"><SolarIcon icon={glyphs.chevronLeft} /></span
-          >
-          <span
-            class={[
-              stylex.attrs(
-                pagination.stepLabel,
-                compact && pagination.compactHidden,
-              ).class,
-            ]}>Prev</span
-          >
-        </a>
-      {:else}
-        <button
-          type="button"
-          onclick={() => go(page - 1)}
+        <span
           class={[
             stylex.attrs(
-              pagination.stepButton,
-              compact && pagination.compactStep,
+              pagination.stepLabel,
+              compact && pagination.compactHidden,
             ).class,
-          ]}
-          aria-label="Previous page"
+          ]}>Prev</span
         >
-          <span
-            data-icon
-            class={[
-              stylex.attrs(
-                pagination.navigationIcon,
-                compact && pagination.compactIcon,
-              ).class,
-            ]}
-            aria-hidden="true"><SolarIcon icon={glyphs.chevronLeft} /></span
-          >
-          <span
-            class={[
-              stylex.attrs(
-                pagination.stepLabel,
-                compact && pagination.compactHidden,
-              ).class,
-            ]}>Prev</span
-          >
-        </button>
-      {/if}
+      </PaginationPrevious>
     {:else}
       <span
         class={[
@@ -244,28 +215,9 @@
               ).class,
             ]}>…</span
           >
-        {:else if href}
-          <a
-            href={href(p)}
-            aria-label="Page {p}"
-            aria-current={p === page ? "page" : undefined}
-            class={[
-              stylex.attrs(
-                pagination.pageButton,
-                compact && pagination.compactHidden,
-                p === page ? pagination.currentPage : null,
-              ).class,
-            ]}
-            data-sveltekit-reset="false"
-          >
-            {p}
-          </a>
         {:else}
-          <button
-            type="button"
-            onclick={() => go(p)}
+          <PaginationLink page={p}
             aria-label="Page {p}"
-            aria-current={p === page ? "page" : undefined}
             class={[
               stylex.attrs(
                 pagination.pageButton,
@@ -273,76 +225,43 @@
                 p === page ? pagination.currentPage : null,
               ).class,
             ]}
+            data-sveltekit-reset={href ? "false" : undefined}
           >
             {p}
-          </button>
+          </PaginationLink>
         {/if}
       {/each}
     </div>
     {#if page < pageCount}
-      {#if href}
-        <a
-          href={href(page + 1)}
+      <PaginationNext
+        class={[
+          stylex.attrs(
+            pagination.stepButton,
+            compact && pagination.compactStep,
+          ).class,
+        ]}
+        aria-label="Next page"
+        data-sveltekit-reset={href ? "false" : undefined}
+      >
+        <span
           class={[
             stylex.attrs(
-              pagination.stepButton,
-              compact && pagination.compactStep,
+              pagination.stepLabel,
+              compact && pagination.compactHidden,
             ).class,
-          ]}
-          aria-label="Next page"
-          data-sveltekit-reset="false"
+          ]}>Next</span
         >
-          <span
-            class={[
-              stylex.attrs(
-                pagination.stepLabel,
-                compact && pagination.compactHidden,
-              ).class,
-            ]}>Next</span
-          >
-          <span
-            data-icon
-            class={[
-              stylex.attrs(
-                pagination.navigationIcon,
-                compact && pagination.compactIcon,
-              ).class,
-            ]}
-            aria-hidden="true"><SolarIcon icon={glyphs.chevronRight} /></span
-          >
-        </a>
-      {:else}
-        <button
-          type="button"
-          onclick={() => go(page + 1)}
+        <span
+          data-icon
           class={[
             stylex.attrs(
-              pagination.stepButton,
-              compact && pagination.compactStep,
+              pagination.navigationIcon,
+              compact && pagination.compactIcon,
             ).class,
           ]}
-          aria-label="Next page"
+          aria-hidden="true"><SolarIcon icon={glyphs.chevronRight} /></span
         >
-          <span
-            class={[
-              stylex.attrs(
-                pagination.stepLabel,
-                compact && pagination.compactHidden,
-              ).class,
-            ]}>Next</span
-          >
-          <span
-            data-icon
-            class={[
-              stylex.attrs(
-                pagination.navigationIcon,
-                compact && pagination.compactIcon,
-              ).class,
-            ]}
-            aria-hidden="true"><SolarIcon icon={glyphs.chevronRight} /></span
-          >
-        </button>
-      {/if}
+      </PaginationNext>
     {:else}
       <span
         class={[
@@ -373,5 +292,5 @@
         >
       </span>
     {/if}
-  </nav>
+  </SdkPagination>
 </div>

@@ -1,4 +1,4 @@
-@layer theme, base, components, stylex, overrides;
+@layer ui-sdk, theme, base, components, stylex, overrides;
 @import './lib/components/ui/styles/reset.css';
 @import './lib/components/ui/theme.css';
 @import './lib/components/ui/styles/list-controls.css';

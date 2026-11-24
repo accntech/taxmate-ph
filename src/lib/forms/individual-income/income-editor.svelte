@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { ACTIVE_MODAL_SELECTOR } from '$lib/components/ui/dialog/active-modal';
 	import { tick } from 'svelte';
 	import { getTinDigits, splitTinSegments } from '$lib/components/ui/tin-input/tin';
 	import { Button, ButtonLink, CalculatedValue, CheckboxInput, CurrencyInput, DateInput, FieldErrors, Input, Label, NumberInput, RadioGroup, Select, TinInput } from '$lib/components/ui';
@@ -427,10 +428,10 @@
 
 	async function focusDeductionDrawer(targetId?: string) {
 		await tick();
-		const dialog = editor.querySelector<HTMLDialogElement>('dialog[open]');
+		const dialog = editor.querySelector<HTMLElement>(ACTIVE_MODAL_SELECTOR);
 		if (!dialog) return;
 		await Promise.all(dialog.getAnimations().map(animation => animation.finished.catch(() => {})));
-		if (!dialog.open) return;
+		if (!dialog.matches(ACTIVE_MODAL_SELECTOR)) return;
 		const target = targetId ? document.getElementById(targetId) : dialog.querySelector<HTMLElement>('.schedule-drawer-details input');
 		if (target && dialog.contains(target)) {
 			if (!target.matches('input, button, select, textarea')) target.tabIndex = -1;

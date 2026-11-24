@@ -1,5 +1,7 @@
 <script lang="ts">
 	import * as stylex from "@stylexjs/stylex";
+	import { Toggle } from '@ui-sdk/svelte/toggle';
+	import { button as buttonStyles } from '$lib/components/ui/button/button.styles';
 	import { designSystem } from "./design-system.styles";
 	import { Badge, Button, Card, Dialog, Drawer, Input, TinInput, CurrencyInput, NumberInput, Page, PageHeader, Select, Textarea, ToggleGroup } from '$lib/components/ui';
 	import ArrowRight from '@solar-icons/svelte/category/arrows/Linear/ArrowRight.svelte';
@@ -108,6 +110,7 @@
 	];
 
 	let density = $state('comfortable');
+	let previewPinned = $state(false);
 	const densities = [
 		{ value: 'compact', label: 'Compact' },
 		{ value: 'comfortable', label: 'Comfortable' },
@@ -341,6 +344,16 @@
 			<Card variant="panel" padding="lg" class={stylex.attrs(designSystem.specimenPanel).class}>
 				<p class={stylex.attrs(designSystem.specimenLabel).class}>Toggle &amp; select</p>
 				<ToggleGroup bind:value={density} options={densities} ariaLabel="Row density" />
+				<Toggle
+					bind:pressed={previewPinned}
+					class={stylex.attrs(
+						buttonStyles.root,
+						buttonStyles.normal,
+						previewPinned ? buttonStyles.accent : buttonStyles.outlined
+					).class}
+				>
+					Pin preview
+				</Toggle>
 				<Select bind:value={period} options={periods} label="Filing period" />
 			</Card>
 		</div>

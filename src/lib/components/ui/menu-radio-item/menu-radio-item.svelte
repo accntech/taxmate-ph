@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { Button } from "@ui-sdk/svelte/button";
   import type { HTMLButtonAttributes } from "svelte/elements";
   import type { Snippet } from "svelte";
   import type { StyleXStyles } from "@stylexjs/stylex";
@@ -32,14 +33,14 @@
   }
 </script>
 
-<button
+<Button
   {...rest}
   type="button"
   role="menuitemradio"
   aria-checked={checked}
-  {disabled}
+  disabled={disabled ?? false}
   {...styleAttributes([menuRadioItem.root, sx], className, style)}
   onclick={select}
 >
   {@render children?.()}
-</button>
+</Button>

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { Avatar, AvatarFallback, AvatarImage } from "@ui-sdk/svelte/avatar";
   import { avatar } from "./avatar.styles";
 
   import { styleAttributes } from "../styles/style-attributes";
@@ -59,7 +60,7 @@
   }
 </script>
 
-<div
+<Avatar
   {...styleAttributes(
     [avatar.root, sx],
     [className].flat(Infinity).filter(Boolean).join(" "),
@@ -67,21 +68,28 @@
   )}
   aria-hidden={ariaHidden || undefined}
 >
+  {#snippet render({ props, children: content, state })}
+    <div {...props}>
+      {@render content?.(state)}
+    </div>
+  {/snippet}
   {@render children?.()}
   {#if imageResources}
-    <img
+    <AvatarImage
       src={imageResources.src}
       srcset={imageResources.srcset}
       {sizes}
       {alt}
       width={optimizedSize}
       height={optimizedSize}
-      class={[stylex.attrs(imageClass).class]}
+      class={stylex.attrs(imageClass).class}
       {loading}
       {decoding}
       onerror={handleError}
     />
   {:else}
-    <span class={[stylex.attrs(avatar.fallback, fallbackClass).class]}>{fallback}</span>
+    <AvatarFallback class={stylex.attrs(avatar.fallback, fallbackClass).class}>
+      {fallback}
+    </AvatarFallback>
   {/if}
-</div>
+</Avatar>

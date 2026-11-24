@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { Button as SdkButton } from "@ui-sdk/svelte/button";
   import { Icon as SolarIcon } from "../icon/base";
 
   import { glyphs } from "../glyphs";
@@ -64,7 +65,7 @@
     </p>
   {/if}
 </div>
-<button
+<SdkButton
   type="button"
   class={[stylex.attrs(toastItem.dismissButton).class]}
   aria-label={`Dismiss ${item.type} notification`}
@@ -75,7 +76,7 @@
     class={[stylex.attrs([toastItem.dismissIcon]).class]}
     aria-hidden="true"><SolarIcon icon={glyphs.closeSquare} /></span
   >
-</button>
+</SdkButton>
 {#if item.duration !== null}
   <div
     data-slot="toast-progress"

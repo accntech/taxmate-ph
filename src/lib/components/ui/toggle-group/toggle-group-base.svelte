@@ -1,4 +1,5 @@
 <script lang="ts" generics="T extends string">
+  import { Toggle } from "@ui-sdk/svelte/toggle";
   import { Icon as SolarIcon } from "../icon/base";
   import type { IconComponent } from "../icon/base";
 
@@ -206,14 +207,15 @@
   {#each options as opt, i (opt.value)}
     {@const pressed = value === opt.value}
     {#snippet segment()}
-      <button
-        bind:this={buttonRefs[i]}
-        type="button"
+      <Toggle
         aria-label={opt.label}
-        aria-pressed={pressed}
+        {pressed}
         aria-describedby={describedBy}
         {disabled}
-        onclick={() => handleClick(opt.value)}
+        onPressedChange={(next, details) => {
+          details.cancel();
+          if (next) handleClick(opt.value);
+        }}
         class={[
           stylex.attrs(
             toggleGroup.option,
@@ -228,16 +230,22 @@
           ).class,
         ]}
       >
-        {#if opt.icon}
-          <span
-            data-icon
-            class={[stylex.attrs(toggleGroup.icon).class]}
-            aria-hidden="true"><SolarIcon icon={opt.icon} /></span
-          >
-        {:else}
-          {opt.label}
-        {/if}
-      </button>
+        {#snippet render({ props })}
+          <button {...props} bind:this={buttonRefs[i]}>
+            {#if opt.icon}
+              <span
+                data-icon
+                class={stylex.attrs(toggleGroup.icon).class}
+                aria-hidden="true"
+              >
+                <SolarIcon icon={opt.icon} />
+              </span>
+            {:else}
+              {opt.label}
+            {/if}
+          </button>
+        {/snippet}
+      </Toggle>
     {/snippet}
 
     <Tooltip

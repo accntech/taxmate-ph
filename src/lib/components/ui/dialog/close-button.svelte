@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { DialogClose } from "@ui-sdk/svelte/dialog";
   import { Icon as SolarIcon } from "../icon/base";
 
   import { glyphs } from "../glyphs";
@@ -9,21 +10,18 @@
 
   import * as stylex from "@stylexjs/stylex";
   type Props = {
-    onclick: () => void;
     class?: string;
   };
 
   let {
-    onclick,
     sx,
     class: className = "",
   }: Props & { sx?: stylex.StyleXStyles } = $props();
 </script>
 
-<button
+<DialogClose
   type="button"
   aria-label="Close"
-  {onclick}
   {...styleAttributes(
     [closeButton.root, sx],
     ["", className].flat(Infinity).filter(Boolean).join(" "),
@@ -34,4 +32,4 @@
     class={[stylex.attrs([closeButton.icon]).class]}
     aria-hidden="true"><SolarIcon icon={glyphs.closeSquare} /></span
   >
-</button>
+</DialogClose>

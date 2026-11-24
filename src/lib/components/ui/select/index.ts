@@ -1,3 +1,4 @@
+export { Select as SelectRoot } from '@ui-sdk/svelte/select';
 export { default as Select } from './select.svelte';
 export { default as SelectTrigger } from './select-trigger.svelte';
 export { default as SelectContent } from './select-content.svelte';

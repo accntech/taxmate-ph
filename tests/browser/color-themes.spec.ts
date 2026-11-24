@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { openDesignSystemFixture } from './fixtures';
 
 const palettes = [
 	{ value: 'ebirforms', label: 'eBIRForms', light: '#f1f8fc', dark: '#15171b', darkAccent: '#a7bfdf', darkPanel: '#191b1e' },
@@ -80,7 +81,7 @@ function contrast(a: string, b: string) {
 test('dark field outlines distinguish entry areas from their cards', async ({ page }) => {
 	await page.emulateMedia({ reducedMotion: 'reduce' });
 	await page.addInitScript(() => localStorage.setItem('taxmate-ph-theme', 'dark'));
-	await page.goto('/design-system');
+	await openDesignSystemFixture(page);
 	const notes = page.getByRole('textbox', { name: 'Reviewer notes' });
 	const root = page.locator('html');
 	await expect(root).toHaveCSS('--field-border', /^#[\da-f]{6}$/i);

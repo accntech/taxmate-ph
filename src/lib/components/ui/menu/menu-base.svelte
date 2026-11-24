@@ -1,4 +1,7 @@
 <script lang="ts">
+  import type { ChangeDetails } from "@ui-sdk/core";
+  import type { PopoverOpenChangeReason } from "@ui-sdk/core/popover";
+  import { Popover, PopoverContent, PopoverTrigger } from "@ui-sdk/svelte/popover";
   import { menu as menuLayout } from "./menu.styles";
 
   import * as stylex from "@stylexjs/stylex";
@@ -107,25 +110,23 @@
     triggerBtn?.focus();
   }
 
-  function onPointer(e: PointerEvent) {
-    if (!open || !root) return;
-    if (!root.contains(e.target as Node)) {
-      setOpen(false);
+  function onPopoverChange(next: boolean, details: ChangeDetails<PopoverOpenChangeReason>) {
+    if (
+      (next && disabled) ||
+      details.reason === "focus-out" ||
+      details.reason === "window-blur" ||
+      details.reason === "back" ||
+      details.reason === "swipe" ||
+      (details.reason === "outside-press" &&
+        details.event?.target instanceof Node &&
+        root?.contains(details.event.target))
+    ) {
+      details.cancel();
+      return;
     }
+    if (details.reason === "escape-key") close();
+    else setOpen(next);
   }
-
-  function onKey(e: KeyboardEvent) {
-    if (e.key === "Escape" && open) {
-      e.preventDefault();
-      close();
-    }
-  }
-
-  $effect(() => {
-    if (!open) return;
-    document.addEventListener("pointerdown", onPointer, true);
-    return () => document.removeEventListener("pointerdown", onPointer, true);
-  });
 
   function isMobileSheetActive(): boolean {
     return mobileSheet && window.matchMedia("(max-width: 767px)").matches;
@@ -288,70 +289,71 @@
   }
 </script>
 
-<svelte:window onkeydown={onKey} />
-
 {#snippet triggerButton()}
-  <button
-    bind:this={triggerBtn}
-    type="button"
+  <PopoverTrigger
     {disabled}
-    onclick={() => setOpen(!open)}
-    aria-haspopup={panelRole}
-    aria-expanded={open}
     aria-label={label}
-    class={[
-      stylex.attrs(menuLayout.trigger, triggerClass).class,
-      "menu-trigger",
-    ]}
+    class={[stylex.attrs(menuLayout.trigger, triggerClass).class, "menu-trigger"]}
   >
-    {@render trigger({ open })}
-  </button>
+    {#snippet render({ props })}
+      <button {...props} aria-haspopup={panelRole} bind:this={triggerBtn}>
+        {@render trigger({ open })}
+      </button>
+    {/snippet}
+  </PopoverTrigger>
 {/snippet}
 
-<div
-  bind:this={root}
-  class={[stylex.attrs(menuLayout.root, rootClass).class, "menu-root"]}
->
-  {#if tooltip}
-    <Tooltip label={tooltip}>
+<Popover bind:open onOpenChange={onPopoverChange} presentation="popover">
+  <div
+    bind:this={root}
+    class={[stylex.attrs(menuLayout.root, rootClass).class, "menu-root"]}
+  >
+    {#if tooltip}
+      <Tooltip label={tooltip}>
+        {@render triggerButton()}
+      </Tooltip>
+    {:else}
       {@render triggerButton()}
-    </Tooltip>
-  {:else}
-    {@render triggerButton()}
-  {/if}
-  {#if open && mobileSheet}
-    <button
-      type="button"
-      class={[stylex.attrs(menuLayout.backdrop).class]}
-      aria-label="Close menu"
-      onclick={close}
-      transition:fade={{ duration: 150, easing: quartOut }}
-    ></button>
-  {/if}
-  {#if open}
-    <div
-      popover={topLayer ? "manual" : undefined}
-      role={panelRole === "dialog" ? "dialog" : "menu"}
-      aria-label={panelRole === "dialog" ? label : undefined}
-      aria-hidden={disabled || !open}
-      inert={disabled || !open}
-      use:clampPanel
-      style="translate: var(--menu-shift-x, 0px) 0;"
-      data-placement={placement}
-      data-align={sideState}
-      data-mobile-sheet={mobileSheet ? "true" : undefined}
-      in:popIn
-      out:popOut
-      class={[
-        stylex.attrs(menuLayout.panel, originClass, positionClasses, panelClass)
-          .class,
-        "menu-panel",
-      ]}
-    >
-      {@render content({ close })}
-    </div>
-  {/if}
-</div>
+    {/if}
+    {#if open && mobileSheet}
+      <button
+        type="button"
+        class={[stylex.attrs(menuLayout.backdrop).class]}
+        aria-label="Close menu"
+        onclick={close}
+        transition:fade={{ duration: 150, easing: quartOut }}
+      ></button>
+    {/if}
+    {#if open}
+      <PopoverContent inline initialFocus="none" finalFocus="none" aria-label={panelRole === "dialog" ? label : undefined}>
+        {#snippet render({ props })}
+          <div
+            {...props}
+            popover={topLayer ? "manual" : undefined}
+            role={panelRole === "dialog" ? "dialog" : "menu"}
+            aria-label={panelRole === "dialog" ? label : undefined}
+            aria-hidden={disabled || !open}
+            inert={disabled || !open}
+            use:clampPanel
+            style="translate: var(--menu-shift-x, 0px) 0;"
+            data-placement={placement}
+            data-align={sideState}
+            data-mobile-sheet={mobileSheet ? "true" : undefined}
+            in:popIn
+            out:popOut
+            class={[
+              stylex.attrs(menuLayout.panel, originClass, positionClasses, panelClass)
+                .class,
+              "menu-panel",
+            ]}
+          >
+            {@render content({ close })}
+          </div>
+        {/snippet}
+      </PopoverContent>
+    {/if}
+  </div>
+</Popover>
 
 <style>
   .menu-root {

@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { seedWorkspace } from './fixtures';
+import { openDesignSystemFixture, seedWorkspace } from './fixtures';
 
 for (const theme of ['light', 'dark']) {
 	for (const width of [390, 1440]) {
@@ -40,7 +40,7 @@ for (const theme of ['light', 'dark']) {
 for (const theme of ['light', 'dark']) {
 	test(`wrapped inputs have one rounded focus halo in ${theme}`, async ({ page }, testInfo) => {
 		await seedWorkspace(page, theme);
-		await page.goto('/design-system');
+		await openDesignSystemFixture(page);
 		for (const label of ['Amount due', 'TIN and branch code', 'Sheets attached', 'Email']) {
 			const input = page.getByRole('textbox', { name: label, exact: true });
 			await input.focus();

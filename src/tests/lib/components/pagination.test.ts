@@ -32,7 +32,7 @@ describe("footer presentation", () => {
     });
     expect(renderedText(body)).toContain("Showing 0–0 of 0");
     expect(body).toContain('aria-label="Taxpayers pagination"');
-    expect(body).toContain('aria-label="Page 1" aria-current="page"');
+    expect(body).toMatch(/<button(?=[^>]*aria-label="Page 1")(?=[^>]*aria-current="page")[^>]*>/);
     expect(body).not.toContain('aria-label="Previous page"');
     expect(body).not.toContain('aria-label="Next page"');
   });

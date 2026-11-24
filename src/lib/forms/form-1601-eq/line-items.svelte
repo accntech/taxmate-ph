@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { ACTIVE_MODAL_SELECTOR } from '$lib/components/ui/dialog/active-modal';
 	import * as stylex from '@stylexjs/stylex';
 	import { lineItems } from './line-items.styles';
 	import { onDestroy, tick } from 'svelte';
@@ -233,7 +234,7 @@
 	function keydown(event: KeyboardEvent) {
 		if (pointerSession && event.key === 'Escape') { event.preventDefault(); cancelPointer(); return; }
 		if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'i') {
-			if (event.defaultPrevented || values[prefix + 'optTaxesWithheld'] !== 'Y' || document.querySelector('dialog[open]')) return;
+			if (event.defaultPrevented || values[prefix + 'optTaxesWithheld'] !== 'Y' || document.querySelector(ACTIVE_MODAL_SELECTOR)) return;
 			const add = document.getElementById('add-atc-row') as HTMLButtonElement | null;
 			if (!add || add.matches(':disabled')) return;
 			event.preventDefault();

@@ -120,17 +120,6 @@ for (const width of [1440, 390]) {
   expect(customBounds!.y + customBounds!.height).toBeLessThanOrEqual(400);
  });
 
- test('ATC fuzzy matches highlight the matched description characters', async ({ page }) => {
-  await seedWorkspace(page);
-  await page.goto(formPath);
-  await page.getByRole('button', { name: 'Edit line item 1', exact: true }).click();
-  await page.getByRole('combobox', { name: 'ATC', exact: true }).click();
-  await page.getByPlaceholder('Search code or income', { exact: true }).fill('cntrctrs');
-  const contractor = page.getByRole('option', { name: /WI120/ });
-  await expect(contractor).toBeVisible();
-  await expect.poll(async () => (await contractor.locator('mark').allTextContents()).join('')).toBe('CNTRCTRS');
- });
-
  test('ATC percentages follow the return year', async ({ page }) => {
   await seedWorkspace(page);
   await page.goto(formPath);

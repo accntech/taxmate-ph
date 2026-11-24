@@ -1,14 +1,14 @@
 <script lang="ts">
-  import { type InputSize } from "./input.styles";
-
-  import type { InputControlProps } from "./types";
-  import * as stylex from "@stylexjs/stylex";
-
-  import { input as inputLayout } from "./input.styles";
+  import { Input as SdkInput } from "@ui-sdk/svelte/input";
   import { styleAttributes } from "../styles/style-attributes";
+  import { input as inputLayout, type InputSize } from "./input.styles";
+  import type { InputControlProps } from "./types";
 
   let {
     value = $bindable(),
+    defaultValue,
+    defaultvalue,
+    "data-slot": dataSlot,
     invalid = false,
     size = "normal",
     class: className = "",
@@ -38,18 +38,25 @@
   data-invalid={invalid ? "true" : undefined}
 >
   {@render leading?.()}
-  <input
+  <SdkInput
     bind:value
+    defaultValue={(defaultValue ?? defaultvalue)?.toString()}
     size={nativeSize}
     {...rest}
+    disabled={rest.disabled ?? undefined}
+    required={rest.required ?? undefined}
     {...styleAttributes([inputLayout.control, inputSx], "", rest.style)}
     aria-invalid={invalid || rest["aria-invalid"] || undefined}
-  />
+  >
+    {#snippet render({ props })}
+      <input {...props} data-slot={dataSlot} />
+    {/snippet}
+  </SdkInput>
   {@render trailing?.()}
 </div>
 
 <style>
-  input:-webkit-autofill {
+  div :global(input:-webkit-autofill) {
     -webkit-text-fill-color: var(--fg);
     -webkit-box-shadow: 0 0 0 1000px var(--bg-input) inset;
     caret-color: var(--fg);

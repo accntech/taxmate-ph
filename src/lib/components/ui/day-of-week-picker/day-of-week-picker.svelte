@@ -24,6 +24,7 @@
 </script>
 
 <script lang="ts">
+  import { Toggle } from "@ui-sdk/svelte/toggle";
   import * as stylex from "@stylexjs/stylex";
   import type { AriaAttributes } from "svelte/elements";
 
@@ -75,13 +76,15 @@
 >
   {#each WEEKDAYS as day (day)}
     {@const selected = value.includes(day)}
-    <button
-      type="button"
-      aria-pressed={selected}
+    <Toggle
+      pressed={selected}
       aria-describedby={describedBy}
       aria-label={day}
       {disabled}
-      onclick={() => toggle(day)}
+      onPressedChange={(_, details) => {
+        details.cancel();
+        toggle(day);
+      }}
       class={[
         stylex.attrs(
           weekPicker.day,
@@ -94,7 +97,7 @@
       ]}
     >
       {SHORT_LABELS[day]}
-    </button>
+    </Toggle>
   {/each}
   {#if name}
     {#each value as day (day)}

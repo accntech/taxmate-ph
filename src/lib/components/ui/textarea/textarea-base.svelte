@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { Textarea as SdkTextarea } from "@ui-sdk/svelte/textarea";
   import { textarea as textareaLayout } from "./textarea.styles";
 
   import { styleAttributes } from "../styles/style-attributes";
@@ -11,6 +12,8 @@
 
   let {
     value = $bindable(""),
+    defaultValue,
+    defaultvalue,
     invalid = false,
     size = "normal",
     sx,
@@ -35,13 +38,17 @@
   const textareaClass = $derived([baseClass, sizeClasses[size]]);
 </script>
 
-<textarea
+<SdkTextarea
   bind:value
+  defaultValue={(defaultValue ?? defaultvalue)?.toString()}
   {...rest}
+  disabled={rest.disabled ?? undefined}
+  required={rest.required ?? undefined}
   {...styleAttributes(
     [textareaClass, sx],
     [className].flat(Infinity).filter(Boolean).join(" "),
     rest.style,
   )}
   aria-invalid={invalid || rest["aria-invalid"] || undefined}
-  data-invalid={invalid ? "true" : undefined}></textarea>
+  data-invalid={invalid ? "true" : undefined}
+/>

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { ACTIVE_MODAL_SELECTOR } from '$lib/components/ui/dialog/active-modal';
 	import * as stylex from '@stylexjs/stylex';
 	import { scheduleItems } from './schedule-items.styles';
 	import { onDestroy, tick, type Snippet } from 'svelte';
@@ -116,7 +117,7 @@
 	}
 
 	function edit(row?: WithholdingRow, fieldId?: string, opener?: HTMLElement) {
-		if (open || document.querySelector('dialog[open]')) return;
+		if (open || document.querySelector(ACTIVE_MODAL_SELECTOR)) return;
 		cancelPointer();
 		const next = row ? null : nextScheduleDraft(definition, schedule, values);
 		const target = row ?? next?.row;

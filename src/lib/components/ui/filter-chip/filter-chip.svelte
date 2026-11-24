@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { Button as SdkButton } from "@ui-sdk/svelte/button";
   import Icon from "../icon/icon.svelte";
   import { glyphs } from "../icons";
   let {
@@ -11,16 +12,13 @@
 <span class="filter-chip">
   <span class="label">{label}:</span>
   <span class="value">{value}</span>
-  <button
-    type="button"
-    onclick={onclear}
-    aria-label={`Clear ${label} filter`}
-    class="clear-button"
-  >
-    <span data-icon class="clear-icon" aria-hidden="true"
-      ><Icon icon={glyphs.closeCircle} /></span
-    >
-  </button>
+  <SdkButton onclick={onclear} aria-label={`Clear ${label} filter`}>
+    {#snippet render({ props })}
+      <button {...props} class="clear-button">
+        <span data-icon class="clear-icon" aria-hidden="true"><Icon icon={glyphs.closeCircle} /></span>
+      </button>
+    {/snippet}
+  </SdkButton>
 </span>
 
 <style>

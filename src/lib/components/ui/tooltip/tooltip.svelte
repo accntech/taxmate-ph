@@ -1,24 +1,22 @@
 <script lang="ts">
-  import { tooltip as tooltipLayout } from "./tooltip.styles";
+  import { Tooltip, TooltipArrow, TooltipContent, TooltipTrigger } from '@ui-sdk/svelte/tooltip';
+  import * as stylex from '@stylexjs/stylex';
+  import type { Snippet } from 'svelte';
+  import { styleAttributes } from '../styles/style-attributes';
+  import { tooltip as tooltipLayout } from './tooltip.styles';
 
-  import { styleAttributes } from "../styles/style-attributes";
-
-  import * as stylex from "@stylexjs/stylex";
-  import type { Snippet } from "svelte";
-  import { quartOut } from "svelte/easing";
-
-  type Placement = "top" | "right" | "bottom" | "left";
-  type Align = "start" | "center" | "end";
+  type Placement = 'top' | 'right' | 'bottom' | 'left';
+  type Align = 'start' | 'center' | 'end';
 
   let {
     label,
-    placement = "bottom",
-    align = "center",
+    placement = 'bottom',
+    align = 'center',
     clamp = true,
     floating = false,
-    offset = "8px",
+    offset = '8px',
     sx,
-    class: className = "",
+    class: className = '',
     children,
   }: {
     label: string;
@@ -27,306 +25,138 @@
     clamp?: boolean;
     floating?: boolean;
     offset?: string;
+    sx?: stylex.StyleXStyles;
     class?: string;
     children: Snippet;
-  } & { sx?: stylex.StyleXStyles } = $props();
+  } = $props();
 
-  let rootEl = $state<HTMLSpanElement | null>(null);
-  let triggerHovered = $state(false);
-  let focused = $state(false);
-  const floatingOpen = $derived(floating && (triggerHovered || focused));
+  let root = $state<HTMLSpanElement | null>(null);
+  const gap = $derived(Number.isFinite(Number.parseFloat(offset)) ? Number.parseFloat(offset) : 8);
 
-  const sidePositionClass: Partial<Record<Placement, stylex.StyleXStyles>> = {
-    left: [
-      tooltipLayout.sideAnchor,
-      tooltipLayout.left,
-      tooltipLayout.leftOrigin,
-      tooltipLayout.sideViewportShift,
-      tooltipLayout.sideCenterShift,
-    ],
-    right: [
-      tooltipLayout.sideAnchor,
-      tooltipLayout.right,
-      tooltipLayout.rightOrigin,
-      tooltipLayout.sideViewportShift,
-      tooltipLayout.sideCenterShift,
-    ],
-  };
-  const verticalPositionClass: Record<"top" | "bottom", stylex.StyleXStyles> = {
-    top: tooltipLayout.above,
-    bottom: tooltipLayout.below,
-  };
-  const alignPositionClass: Record<Align, stylex.StyleXStyles> = {
-    start: tooltipLayout.alignStart,
-    center: tooltipLayout.alignCenter,
-    end: tooltipLayout.alignEnd,
-  };
-
-  const positionClass = $derived(
-    sidePositionClass[placement] ?? [
-      verticalPositionClass[placement as "top" | "bottom"],
-      alignPositionClass[align],
-    ],
-  );
-
-  function prefersReducedMotion(): boolean {
-    return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  }
-
-  function tooltipIn(_node: Element) {
-    return {
-      duration: prefersReducedMotion() ? 70 : 130,
-      easing: quartOut,
-      css: (t: number) =>
-        prefersReducedMotion()
-          ? `opacity: ${t};`
-          : `opacity: ${t}; transform: scale(${0.97 + t * 0.03});`,
-    };
-  }
-
-  function tooltipOut(_node: Element) {
-    return {
-      duration: prefersReducedMotion() ? 50 : 90,
-      easing: quartOut,
-      css: (t: number) =>
-        prefersReducedMotion()
-          ? `opacity: ${t}; pointer-events: none;`
-          : `opacity: ${t}; transform: scale(${0.97 + t * 0.03}); pointer-events: none;`,
-    };
-  }
-
-  function parsedOffset() {
-    const value = Number.parseFloat(offset);
-    return Number.isFinite(value) ? value : 8;
-  }
-
-  function alignedLeft(triggerRect: DOMRect, tooltipWidth: number) {
-    if (align === "start") return triggerRect.left;
-    if (align === "end") return triggerRect.right - tooltipWidth;
-    return triggerRect.left + triggerRect.width / 2 - tooltipWidth / 2;
-  }
-
-  function sidePosition(triggerRect: DOMRect, tooltipRect: DOMRect) {
-    const gap = parsedOffset();
-    if (placement === "left") {
-      return {
-        top: triggerRect.top + triggerRect.height / 2 - tooltipRect.height / 2,
-        left: triggerRect.left - tooltipRect.width - gap,
-      };
+  // Existing callers supply their own controls inside a parameterless snippet.
+  // Forward the SDK's description from the wrapper to that focusable control.
+  function describeChild(wrapper: HTMLSpanElement) {
+    let control: HTMLElement | null = null;
+    let description = '';
+    function removeDescription() {
+      if (!control || !description) return;
+      const remaining = (control.getAttribute('aria-describedby') ?? '').split(/\s+/).filter(id => id && id !== description);
+      if (remaining.length) control.setAttribute('aria-describedby', remaining.join(' '));
+      else control.removeAttribute('aria-describedby');
     }
-    if (placement === "right") {
-      return {
-        top: triggerRect.top + triggerRect.height / 2 - tooltipRect.height / 2,
-        left: triggerRect.right + gap,
-      };
-    }
-    return {
-      top:
-        placement === "top"
-          ? triggerRect.top - tooltipRect.height - gap
-          : triggerRect.bottom + gap,
-      left: alignedLeft(triggerRect, tooltipRect.width),
-    };
-  }
-
-  function clampPosition(
-    position: { top: number; left: number },
-    tooltipRect: DOMRect,
-  ) {
-    if (!clamp) return position;
-    const pad = 8;
-    const vw =
-      window.visualViewport?.width ?? document.documentElement.clientWidth;
-    const vh =
-      window.visualViewport?.height ?? document.documentElement.clientHeight;
-    return {
-      top: Math.max(pad, Math.min(position.top, vh - pad - tooltipRect.height)),
-      left: Math.max(
-        pad,
-        Math.min(position.left, vw - pad - tooltipRect.width),
-      ),
-    };
-  }
-
-  function setArrowPosition(
-    node: HTMLElement,
-    triggerRect: DOMRect,
-    tooltipRect: DOMRect,
-  ) {
-    const inset = 8;
-    const inline = Math.max(
-      inset,
-      Math.min(
-        triggerRect.left + triggerRect.width / 2 - tooltipRect.left,
-        tooltipRect.width - inset,
-      ),
-    );
-    const block = Math.max(
-      inset,
-      Math.min(
-        triggerRect.top + triggerRect.height / 2 - tooltipRect.top,
-        tooltipRect.height - inset,
-      ),
-    );
-    node.style.setProperty("--tt-arrow-inline", `${inline}px`);
-    node.style.setProperty("--tt-arrow-block", `${block}px`);
-  }
-
-  function positionFloatingTooltip(node: HTMLElement) {
-    document.body.appendChild(node);
-
-    function position() {
-      if (!rootEl) return;
-      node.style.top = "0px";
-      node.style.left = "0px";
-      const triggerRect = rootEl.getBoundingClientRect();
-      const tooltipRect = node.getBoundingClientRect();
-      const next = clampPosition(
-        sidePosition(triggerRect, tooltipRect),
-        tooltipRect,
-      );
-      node.style.top = `${next.top}px`;
-      node.style.left = `${next.left}px`;
-      setArrowPosition(node, triggerRect, node.getBoundingClientRect());
-    }
-
-    queueMicrotask(position);
-    const ro = new ResizeObserver(position);
-    if (rootEl) ro.observe(rootEl);
-    ro.observe(node);
-    ro.observe(document.documentElement);
-    window.addEventListener("resize", position, { passive: true });
-    window.addEventListener("scroll", position, {
-      passive: true,
-      capture: true,
-    });
-
-    return {
-      destroy() {
-        ro.disconnect();
-        window.removeEventListener("resize", position);
-        window.removeEventListener("scroll", position, true);
-        node.remove();
-      },
-    };
-  }
-
-  function captureFloatingTrigger(node: HTMLSpanElement) {
-    rootEl = node;
-    function enter() {
-      triggerHovered = true;
-    }
-    function leave() {
-      triggerHovered = false;
-    }
-    function focusIn() {
-      focused = true;
-    }
-    function focusOut(event: FocusEvent) {
-      const nextTarget = event.relatedTarget;
-      if (nextTarget instanceof Node && node.contains(nextTarget)) return;
-      focused = false;
-    }
-    node.addEventListener("pointerenter", enter);
-    node.addEventListener("pointerleave", leave);
-    node.addEventListener("focusin", focusIn);
-    node.addEventListener("focusout", focusOut);
-    return {
-      destroy() {
-        if (rootEl === node) rootEl = null;
-        node.removeEventListener("pointerenter", enter);
-        node.removeEventListener("pointerleave", leave);
-        node.removeEventListener("focusin", focusIn);
-        node.removeEventListener("focusout", focusOut);
-      },
-    };
-  }
-
-  function clampTooltip(node: HTMLElement) {
-    const parent = node.parentElement;
-    function adjust() {
-      node.style.setProperty("--tt-shift", "0px");
-      if (clamp) {
-        const rect = node.getBoundingClientRect();
-        const pad = 8;
-        const vw = document.documentElement.clientWidth;
-        const leftOverflow = Math.max(0, pad - rect.left);
-        const rightOverflow = Math.min(0, vw - pad - rect.right);
-        const shift = leftOverflow + rightOverflow;
-        node.style.setProperty("--tt-shift", `${shift}px`);
+    function syncDescription() {
+      const next = wrapper.querySelector<HTMLElement>('button, a[href], input, select, textarea, [tabindex]');
+      const nextDescription = wrapper.getAttribute('aria-describedby') ?? '';
+      if (next !== control || nextDescription !== description) {
+        removeDescription();
+        control = next;
+        description = nextDescription;
       }
-      if (parent)
-        setArrowPosition(
-          node,
-          parent.getBoundingClientRect(),
-          node.getBoundingClientRect(),
-        );
+      if (!control || !description) return;
+      const ids = new Set((control.getAttribute('aria-describedby') ?? '').split(/\s+/).filter(Boolean));
+      ids.add(description);
+      const value = [...ids].join(' ');
+      if (control.getAttribute('aria-describedby') !== value) control.setAttribute('aria-describedby', value);
     }
-    adjust();
-    const ro = new ResizeObserver(adjust);
-    const adjustNextFrame = () => requestAnimationFrame(adjust);
-    ro.observe(document.documentElement);
-    if (parent) ro.observe(parent);
-    window.addEventListener("resize", adjust, { passive: true });
-    parent?.addEventListener("pointerenter", adjustNextFrame);
-    parent?.addEventListener("focusin", adjustNextFrame);
-    return {
-      destroy() {
-        ro.disconnect();
-        window.removeEventListener("resize", adjust);
-        parent?.removeEventListener("pointerenter", adjustNextFrame);
-        parent?.removeEventListener("focusin", adjustNextFrame);
-      },
+    syncDescription();
+    const observer = new MutationObserver(syncDescription);
+    observer.observe(wrapper, { subtree: true, childList: true, attributes: true, attributeFilter: ['aria-describedby'] });
+    return () => {
+      observer.disconnect();
+      removeDescription();
     };
+  }
+
+  // Keep the explicit clamp opt-out available while the SDK handles normal positioning.
+  function preserveUnclampedPosition(node: HTMLElement) {
+    $effect(() => {
+      if (clamp || !root) return;
+      const anchor = root;
+      function position() {
+        if (!node.matches(':popover-open')) return;
+        const trigger = anchor.getBoundingClientRect();
+        const tip = { width: node.offsetWidth, height: node.offsetHeight };
+        let left = trigger.left + (trigger.width - tip.width) / 2;
+        let top = placement === 'top' ? trigger.top - tip.height - gap : trigger.bottom + gap;
+        if (align === 'start') left = trigger.left;
+        if (align === 'end') left = trigger.right - tip.width;
+        if (placement === 'left' || placement === 'right') {
+          left = placement === 'left' ? trigger.left - tip.width - gap : trigger.right + gap;
+          top = trigger.top + (trigger.height - tip.height) / 2;
+        }
+        if (node.style.left !== `${left}px`) node.style.left = `${left}px`;
+        if (node.style.top !== `${top}px`) node.style.top = `${top}px`;
+        if (node.dataset.side !== placement) node.dataset.side = placement;
+      }
+      const observer = new MutationObserver(position);
+      observer.observe(node, { attributes: true, attributeFilter: ['style', 'data-side'] });
+      const resize = new ResizeObserver(position);
+      resize.observe(anchor);
+      resize.observe(node);
+      window.addEventListener('scroll', position, true);
+      window.addEventListener('resize', position);
+      position();
+      return () => {
+        observer.disconnect();
+        resize.disconnect();
+        window.removeEventListener('scroll', position, true);
+        window.removeEventListener('resize', position);
+      };
+    });
   }
 </script>
 
-{#if floating}
-  <span
-    use:captureFloatingTrigger
-    {...styleAttributes(
-      [tooltipLayout.floatingTrigger, sx],
-      [className].flat(Infinity).filter(Boolean).join(" "),
-    )}
-  >
-    {@render children()}
-    {#if floatingOpen}
+<Tooltip delay={0} closeDelay={0} closeOnPress={false} type="description">
+  <TooltipTrigger aria-label={label}>
+    {#snippet render({ props })}
       <span
-        role="tooltip"
-        data-placement={placement}
-        use:positionFloatingTooltip
-        in:tooltipIn
-        out:tooltipOut
-        class={[
-          stylex.attrs(tooltipLayout.floatingPopup).class,
-          "tooltip-bubble",
-        ]}>{label}<span aria-hidden="true" class="tooltip-arrow"></span></span
+        {...props}
+        bind:this={root}
+        {@attach describeChild}
+        {...styleAttributes(
+          [floating ? tooltipLayout.floatingTrigger : tooltipLayout.trigger, sx],
+          [className].flat(Infinity).filter(Boolean).join(' '),
+        )}
       >
-    {/if}
-  </span>
-{:else}
-  <span
-    {...styleAttributes(
-      [tooltipLayout.trigger, sx],
-      ["group/tt", className].flat(Infinity).filter(Boolean).join(" "),
-    )}
+        {@render children()}
+      </span>
+    {/snippet}
+  </TooltipTrigger>
+  <TooltipContent
+    side={placement}
+    {align}
+    sideOffset={gap}
+    collisionPadding={clamp ? 8 : 0}
+    container={floating ? root?.ownerDocument.body : undefined}
+    class={[stylex.attrs(tooltipLayout.popup, floating && tooltipLayout.floatingPopup).class, 'tooltip-bubble']}
+    style={`--tooltip-enter-duration: ${floating ? 130 : 150}ms; --tooltip-exit-duration: ${floating ? 90 : 150}ms;`}
   >
-    {@render children()}
-    <span
-      role="tooltip"
-      data-placement={placement}
-      style:--tt-offset={offset}
-      use:clampTooltip
-      class={[
-        stylex.attrs(tooltipLayout.popup, positionClass).class,
-        "tooltip-bubble",
-      ]}>{label}<span aria-hidden="true" class="tooltip-arrow"></span></span
-    >
-  </span>
-{/if}
+    {#snippet render({ props, children: content, state })}
+      <div {...props} {@attach preserveUnclampedPosition}>
+        {@render content?.(state)}
+      </div>
+    {/snippet}
+    {label}
+    <TooltipArrow class="tooltip-arrow" />
+  </TooltipContent>
+</Tooltip>
 
 <style>
-  .tooltip-arrow {
+  :global(.tooltip-bubble) {
+    opacity: 1;
+    scale: 1;
+    transform-origin: var(--transform-origin);
+    transition: opacity var(--tooltip-enter-duration) var(--ease-out), scale var(--tooltip-enter-duration) var(--ease-out);
+  }
+  :global(.tooltip-bubble[data-starting-style]),
+  :global(.tooltip-bubble[data-ending-style]) {
+    opacity: 0;
+    scale: 0.97;
+  }
+  :global(.tooltip-bubble[data-ending-style]) {
+    transition-duration: var(--tooltip-exit-duration);
+  }
+  :global(.tooltip-arrow) {
     position: absolute;
     box-sizing: border-box;
     width: 0.5rem;
@@ -336,32 +166,23 @@
     border-color: var(--border);
     transform: rotate(45deg);
   }
-
-  .tooltip-bubble[data-placement="top"] > .tooltip-arrow {
+  :global(.tooltip-bubble[data-side='top'] .tooltip-arrow) {
     bottom: calc(-0.25rem - 1px);
-    left: var(--tt-arrow-inline, 50%);
-    margin-left: -0.25rem;
     border-width: 0 1px 1px 0;
   }
-
-  .tooltip-bubble[data-placement="right"] > .tooltip-arrow {
-    top: var(--tt-arrow-block, 50%);
-    left: calc(-0.25rem - 1px);
-    margin-top: -0.25rem;
+  :global(.tooltip-bubble[data-side='right'] .tooltip-arrow) {
+    left: calc(-0.25rem - 1px) !important;
     border-width: 0 0 1px 1px;
   }
-
-  .tooltip-bubble[data-placement="bottom"] > .tooltip-arrow {
+  :global(.tooltip-bubble[data-side='bottom'] .tooltip-arrow) {
     top: calc(-0.25rem - 1px);
-    left: var(--tt-arrow-inline, 50%);
-    margin-left: -0.25rem;
     border-width: 1px 0 0 1px;
   }
-
-  .tooltip-bubble[data-placement="left"] > .tooltip-arrow {
-    top: var(--tt-arrow-block, 50%);
+  :global(.tooltip-bubble[data-side='left'] .tooltip-arrow) {
     right: calc(-0.25rem - 1px);
-    margin-top: -0.25rem;
     border-width: 1px 1px 0 0;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    :global(.tooltip-bubble) { transition: none; scale: 1; }
   }
 </style>

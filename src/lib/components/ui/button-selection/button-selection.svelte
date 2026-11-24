@@ -1,4 +1,5 @@
 <script lang="ts" generics="T extends string">
+  import { Button } from "@ui-sdk/svelte/button";
   import { selection as selectionLayout } from "./button-selection.styles";
 
   import { styleAttributes } from "../styles/style-attributes";
@@ -229,14 +230,10 @@
 	></div>
   {#each options as option, i (option.value)}
     {@const checked = value === option.value}
-    <button
-      bind:this={buttonRefs[i]}
+    <Button
       type="button"
       {disabled}
-      role="radio"
       aria-describedby={describedBy ?? ariaDescribedby}
-      aria-checked={checked}
-      tabindex={checked ? 0 : -1}
       onclick={() => select(option.value)}
       class={[
         stylex.attrs(
@@ -252,8 +249,18 @@
         ).class,
       ]}
     >
-      {option.label}
-    </button>
+      {#snippet render({ props })}
+        <button
+          {...props}
+          bind:this={buttonRefs[i]}
+          role="radio"
+          aria-checked={checked}
+          tabindex={checked ? 0 : -1}
+        >
+          {option.label}
+        </button>
+      {/snippet}
+    </Button>
   {/each}
   {#if name}
     <input type="hidden" {name} value={value ?? ""} />

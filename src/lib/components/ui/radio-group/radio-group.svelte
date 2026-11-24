@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { FieldControl, FieldLegend, FieldSet } from '@ui-sdk/svelte/field';
 	import * as stylex from '@stylexjs/stylex';
 	import { wrapperStyles } from './radio-group-wrapper.styles';
 	import { FieldErrors } from '../field-errors';
@@ -29,46 +30,57 @@
 	const descriptionId = `${uid}-description`;
 </script>
 
-<fieldset
-	data-slot="radio-group"
-	role="radiogroup"
+<FieldSet
 	aria-labelledby={`${uid}-legend`}
 	aria-required={required || undefined}
-	aria-invalid={!!error || undefined}
 	aria-describedby={error || help ? descriptionId : undefined}
 	{disabled}
 >
-	<legend id={`${uid}-legend`}>
-		{label}{#if required}<span class={stylex.attrs(wrapperStyles.required).class} aria-hidden="true"> *</span>{/if}
-	</legend>
-	<div class="choices">
-		{#each options as option, index (option.value)}
-			<label class="choice">
-				<span class="radio-control">
-					<input
-						id={index === 0 ? controlId : `${controlId}-${option.value}`}
-						type="radio"
-						name={uid}
-						value={option.value}
-						bind:group={value}
-						{required}
-						aria-describedby={error || help ? descriptionId : undefined}
-						onchange={() => onchange?.(option.value)}
-					/>
-				</span>
-				<span>
-					<span class="choice-label">{option.label}</span>
-					{#if option.description}<span class="choice-description">{option.description}</span>{/if}
-				</span>
-			</label>
-		{/each}
-	</div>
-	{#if error}
-		<FieldErrors id={descriptionId} errors={[error]} />
-	{:else if help}
-		<p id={descriptionId} class="help">{help}</p>
-	{/if}
-</fieldset>
+	{#snippet render({ props })}
+		<fieldset {...props} data-slot="radio-group" role="radiogroup" aria-invalid={!!error || undefined}>
+			<FieldLegend id={`${uid}-legend`}>
+				{#snippet render({ props: legendProps })}
+					<legend {...legendProps}>
+						{label}{#if required}<span class={stylex.attrs(wrapperStyles.required).class} aria-hidden="true"> *</span>{/if}
+					</legend>
+				{/snippet}
+			</FieldLegend>
+			<div class="choices">
+				{#each options as option, index (option.value)}
+					<label class="choice">
+						<span class="radio-control">
+							<FieldControl
+								id={index === 0 ? controlId : `${controlId}-${option.value}`}
+								name={uid}
+								{required}
+								aria-describedby={error || help ? descriptionId : undefined}
+							>
+								{#snippet render({ props: inputProps })}
+									<input
+										{...inputProps}
+										type="radio"
+										value={option.value}
+										bind:group={value}
+										onchange={() => onchange?.(option.value)}
+									/>
+								{/snippet}
+							</FieldControl>
+						</span>
+						<span>
+							<span class="choice-label">{option.label}</span>
+							{#if option.description}<span class="choice-description">{option.description}</span>{/if}
+						</span>
+					</label>
+				{/each}
+			</div>
+			{#if error}
+				<FieldErrors id={descriptionId} errors={[error]} />
+			{:else if help}
+				<p id={descriptionId} class="help">{help}</p>
+			{/if}
+		</fieldset>
+	{/snippet}
+</FieldSet>
 
 <style>
 	fieldset { min-width: 0; margin: 0; padding: 0; border: 0; }

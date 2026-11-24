@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { seedWorkspace, taxpayerId } from './fixtures';
+import { openDesignSystemFixture, seedWorkspace, taxpayerId } from './fixtures';
 
 // Use the actual list and shared form controls; native storage is isolated by the fixture.
 test.beforeEach(async ({ page }) => {
@@ -53,7 +53,7 @@ test('columns stays open during scrolling while the trigger is visible', async (
 });
 
 test('select dismisses after its trigger leaves the viewport', async ({ page }) => {
-  await page.goto('/design-system');
+  await openDesignSystemFixture(page);
   const trigger = page.getByRole('combobox', { name: 'Filing period' });
   await trigger.click();
   await expect(trigger).toHaveAttribute('aria-expanded', 'true');

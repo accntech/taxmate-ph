@@ -23,7 +23,6 @@
     children?: Snippet;
     footer?: Snippet;
     class?: string;
-    onclose: () => void;
   };
 
   let {
@@ -40,7 +39,6 @@
     footer,
     sx,
     class: className = "",
-    onclose,
   }: Props & { sx?: stylex.StyleXStyles } = $props();
 
   const hasHeader = $derived(Boolean(title || description));
@@ -62,7 +60,7 @@
   )}
 >
   {#if showCloseButton}
-    <DialogCloseButton onclick={onclose} sx={dialogContent.closeButton} />
+    <DialogCloseButton sx={dialogContent.closeButton} />
   {/if}
   {#if showHeading}
     <div class={[stylex.attrs(dialogContent.heading).class]}>

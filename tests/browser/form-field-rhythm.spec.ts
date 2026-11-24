@@ -47,7 +47,7 @@ for (const width of [1440, 390]) {
 	test(`shared control sizing matches at ${width}px`, async ({ page }) => {
 		await page.setViewportSize({ width, height: 1000 });
 		await seedWorkspace(page);
-		await page.goto('/design-system');
+		await page.goto('/');
 		await expect(page.locator('main')).toBeVisible();
 		await page.evaluate(async () => {
 			const fixtureModule = '/src/tests/fixtures/mount-form-focus.ts';

@@ -11,6 +11,7 @@
 </script>
 
 <script lang="ts">
+  import { Field as SdkField, FieldLabel } from "@ui-sdk/svelte/field";
   import * as stylex from "@stylexjs/stylex";
   import type { Snippet } from "svelte";
   import { FormMessage } from "../form-message";
@@ -57,23 +58,25 @@
   }
 </script>
 
-<div
+{#snippet fieldLabel()}
+  <FieldLabel
+    for={id}
+    class={[stylex.attrs(field.label, hideLabel && field.hiddenLabel).class]}
+  >
+    {label}
+    {#if required}
+      <span class={[stylex.attrs(field.requiredMarker).class]}>*</span>
+    {/if}
+  </FieldLabel>
+{/snippet}
+
+<SdkField
+  invalid={!!errorMessage}
   {...styleAttributes(
     [classes, sx],
     [className].flat(Infinity).filter(Boolean).join(" "),
   )}
 >
-  {#snippet fieldLabel()}
-    <label
-      for={id}
-      class={[stylex.attrs(field.label, hideLabel && field.hiddenLabel).class]}
-    >
-      {label}
-      {#if required}
-        <span class={[stylex.attrs(field.requiredMarker).class]}>*</span>
-      {/if}
-    </label>
-  {/snippet}
   {#if !hideLabel || meta}
     <div class={[stylex.attrs(field.header).class]}>
       {@render fieldLabel()}
@@ -89,4 +92,4 @@
     </div>
   {/if}
   <FormMessage id={errorId} kind="error" message={errorMessage} />
-</div>
+</SdkField>

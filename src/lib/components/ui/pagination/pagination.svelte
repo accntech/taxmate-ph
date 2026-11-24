@@ -1,4 +1,10 @@
 <script lang="ts">
+  import {
+    Pagination as SdkPagination,
+    PaginationLink,
+    PaginationNext,
+    PaginationPrevious,
+  } from "@ui-sdk/svelte/pagination";
   import type { Snippet } from "svelte";
   import Icon from "../icon/icon.svelte";
   import { glyphs } from "../icons";
@@ -34,9 +40,6 @@
   const start = $derived(total === 0 ? 0 : (page - 1) * pageSize + 1);
   const end = $derived(Math.min(total, page * pageSize));
   const pages = $derived(buildPaginationItems(page, pageCount));
-  function go(next: number) {
-    if (next !== page) onchange?.(next);
-  }
 </script>
 
 {#snippet previousContent()}
@@ -67,81 +70,70 @@
       {@render children()}
     {/if}
   </div>
-  <nav aria-label={label} class="navigation">
+  <SdkPagination {page} {pageCount} getHref={href} onPageChange={href ? undefined : onchange} aria-label={label}>
+    {#snippet render({ props, children: controls, state })}
+      <nav {...props} class="navigation">
+        {@render controls?.(state)}
+      </nav>
+    {/snippet}
     {#if page > 1}
-      {#if href}
-        <a
-          href={href(page - 1)}
-          class="step-button"
-          aria-label="Previous page"
-          data-sveltekit-reset="false">{@render previousContent()}</a
-        >
-      {:else}
-        <button
-          type="button"
-          onclick={() => go(page - 1)}
-          class="step-button"
-          aria-label="Previous page">{@render previousContent()}</button
-        >
-      {/if}
+      <PaginationPrevious aria-label="Previous page">
+        {#snippet render({ props })}
+          {#if href}
+            <a {...props} class="step-button" data-sveltekit-reset="false">{@render previousContent()}</a>
+          {:else}
+            <button {...props} class="step-button">{@render previousContent()}</button>
+          {/if}
+        {/snippet}
+      </PaginationPrevious>
     {:else}
-      <span class="disabled-step" aria-hidden="true"
-        >{@render previousContent()}</span
-      >
+      <span class="disabled-step" aria-hidden="true">{@render previousContent()}</span>
     {/if}
     <div class="page-summary" aria-live={summary === "page" ? "polite" : undefined}>
-      <span class="page-label">Page&nbsp;</span><span class="page-count"
-        >{page}</span
-      ><span class="page-label">&nbsp;of&nbsp;</span><span class="page-count"
-        >{pageCount}</span
-      >
+      <span class="page-label">Page&nbsp;</span><span class="page-count">{page}</span><span
+        class="page-label">&nbsp;of&nbsp;</span
+      ><span class="page-count">{pageCount}</span>
       {#each pages as item, index (`${index}-${item}`)}
         {#if item === "…"}
           <span class="ellipsis">…</span>
-        {:else if href}
-          <a
-            href={href(item)}
-            aria-label={`Page ${item}`}
-            title={pageTitle?.(item)}
-            aria-current={item === page ? "page" : undefined}
-            class={["page-button", item === page && "current-page"]}
-            data-sveltekit-reset="false">{item}</a
-          >
         {:else}
-          <button
-            type="button"
-            onclick={() => go(item)}
-            aria-label={`Page ${item}`}
-            title={pageTitle?.(item)}
-            aria-current={item === page ? "page" : undefined}
-            class={["page-button", item === page && "current-page"]}
-            >{item}</button
-          >
+          <PaginationLink page={item} title={pageTitle?.(item)}>
+            {#snippet render({ props })}
+              {#if href}
+                <a
+                  {...props}
+                  aria-label={`Page ${item}`}
+                  aria-current={item === page ? "page" : undefined}
+                  class={["page-button", item === page && "current-page"]}
+                  data-sveltekit-reset="false">{item}</a
+                >
+              {:else}
+                <button
+                  {...props}
+                  aria-label={`Page ${item}`}
+                  aria-current={item === page ? "page" : undefined}
+                  class={["page-button", item === page && "current-page"]}>{item}</button
+                >
+              {/if}
+            {/snippet}
+          </PaginationLink>
         {/if}
       {/each}
     </div>
     {#if page < pageCount}
-      {#if href}
-        <a
-          href={href(page + 1)}
-          class="step-button"
-          aria-label="Next page"
-          data-sveltekit-reset="false">{@render nextContent()}</a
-        >
-      {:else}
-        <button
-          type="button"
-          onclick={() => go(page + 1)}
-          class="step-button"
-          aria-label="Next page">{@render nextContent()}</button
-        >
-      {/if}
+      <PaginationNext aria-label="Next page">
+        {#snippet render({ props })}
+          {#if href}
+            <a {...props} class="step-button" data-sveltekit-reset="false">{@render nextContent()}</a>
+          {:else}
+            <button {...props} class="step-button">{@render nextContent()}</button>
+          {/if}
+        {/snippet}
+      </PaginationNext>
     {:else}
-      <span class="disabled-step" aria-hidden="true"
-        >{@render nextContent()}</span
-      >
+      <span class="disabled-step" aria-hidden="true">{@render nextContent()}</span>
     {/if}
-  </nav>
+  </SdkPagination>
 </div>
 
 <style>

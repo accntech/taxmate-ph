@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { Progress } from "@ui-sdk/svelte/progress";
   import { lineBar } from "./line-bar-loader.styles";
 
   import { styleAttributes } from "../styles/style-attributes";
@@ -15,14 +16,14 @@
   } & { sx?: stylex.StyleXStyles } = $props();
 </script>
 
-<div class={containerClass}>
+<Progress value={null} aria-label="Loading" class={containerClass}>
   <div
     {...styleAttributes(
       [lineBar.progress, sx],
       ["loader", className].flat(Infinity).filter(Boolean).join(" "),
     )}
   ></div>
-</div>
+</Progress>
 
 <style>
   .loader {

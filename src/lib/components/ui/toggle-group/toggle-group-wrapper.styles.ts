@@ -60,7 +60,10 @@ export const wrapperStyles = stylex.create({
   "pressedOutline": {
     "backgroundColor": "var(--bg-elev)",
     "color": "var(--fg)",
-    "--sx-shadow": "0 1px 3px 0 var(--sx-shadow-color, rgb(0 0 0 / 0.1)), 0 1px 2px -1px var(--sx-shadow-color, rgb(0 0 0 / 0.1))",
+    "--sx-shadow": {
+      "default": "0 1px 3px 0 var(--sx-shadow-color, rgb(0 0 0 / 0.1)), 0 1px 2px -1px var(--sx-shadow-color, rgb(0 0 0 / 0.1))",
+      ":focus-visible": "0 0 0 3px var(--field-focus-halo)"
+    },
     "boxShadow": "var(--sx-inset-shadow), var(--sx-inset-ring-shadow), var(--sx-ring-offset-shadow), var(--sx-ring-shadow), var(--sx-shadow)"
   },
   "idleOutline": {

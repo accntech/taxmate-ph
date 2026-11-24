@@ -1,4 +1,5 @@
 <script lang="ts" generics="T extends string">
+	import { Toggle } from '@ui-sdk/svelte/toggle';
 	import * as stylex from '@stylexjs/stylex';
 	import { wrapperStyles } from './toggle-group-wrapper.styles';
 	type Option<TValue extends string> = {
@@ -43,11 +44,13 @@
 >
 	{#each options as option (option.value)}
 		{@const pressed = value === option.value}
-		<button
-			type="button"
+		<Toggle
 			aria-label={option.label}
-			aria-pressed={pressed}
-			onclick={() => select(option.value)}
+			{pressed}
+			onPressedChange={(next, details) => {
+				details.cancel();
+				if (next) select(option.value);
+			}}
 			class={stylex.attrs(wrapperStyles.option, wrapperStyles.motion, wrapperStyles.focusBorder, wrapperStyles.focusHalo,
 				variant === 'outline' ? pressed ? wrapperStyles.pressedOutline : wrapperStyles.idleOutline : pressed ? wrapperStyles.pressedGhost : wrapperStyles.idleGhost
 			).class}
@@ -57,6 +60,6 @@
 			{:else}
 				{option.label}
 			{/if}
-		</button>
+		</Toggle>
 	{/each}
 </div>

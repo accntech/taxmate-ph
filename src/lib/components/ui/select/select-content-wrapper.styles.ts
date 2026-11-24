@@ -3,8 +3,8 @@ import * as stylex from "@stylexjs/stylex";
 export const wrapperStyles = stylex.create({
   "root": {
     "zIndex": 50,
-    "maxHeight": "min(18rem, var(--bits-select-content-available-height))",
-    "minWidth": "var(--bits-select-anchor-width)",
+    "maxHeight": "min(18rem, var(--available-height))",
+    "minWidth": "var(--anchor-width)",
     "overflowX": "hidden",
     "overflowY": "auto",
     "borderRadius": "var(--radius-md)",
@@ -26,7 +26,7 @@ export const wrapperStyles = stylex.create({
   },
   "viewport": {
     "width": "100%",
-    "minWidth": "var(--bits-select-anchor-width)",
+    "minWidth": "var(--anchor-width)",
     "scrollMarginBlock": "calc(var(--spacing) * 1)",
     "padding": "calc(var(--spacing) * 1)"
   }

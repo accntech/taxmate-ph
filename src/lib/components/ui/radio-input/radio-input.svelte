@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { FieldControl } from "@ui-sdk/svelte/field";
   import type { HTMLInputAttributes } from "svelte/elements";
   import type { StyleXStyles } from "@stylexjs/stylex";
   import { styleAttributes } from "../styles/style-attributes";
@@ -23,11 +24,12 @@
   }
 </script>
 
-<input
+<FieldControl
   {...rest}
-  type="radio"
-  {checked}
-  onchange={change}
   {...styleAttributes(sx, "", style)}
   class={[styleAttributes(sx).class, className]}
-/>
+>
+  {#snippet render({ props })}
+    <input {...props} type="radio" {checked} onchange={change} />
+  {/snippet}
+</FieldControl>

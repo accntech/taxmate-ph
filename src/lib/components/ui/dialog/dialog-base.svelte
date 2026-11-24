@@ -1,12 +1,10 @@
 <script lang="ts">
+  import SdkModal from "./sdk-modal.svelte";
   import { dialog as dialogLayout } from "./dialog.styles";
 
   import * as stylex from "@stylexjs/stylex";
   import type { Snippet } from "svelte";
-  import {
-    DIALOG_SIZE_CLASS,
-    createDialogControls,
-  } from "../utils/dialog-controls.svelte";
+  import { DIALOG_SIZE_CLASS } from "../utils/dialog-controls.svelte";
   import DialogContent from "./content.svelte";
 
   type Size = "sm" | "md" | "lg" | "xl" | "full";
@@ -58,20 +56,13 @@
   const titleId = `${uid}-title`;
   const descId = `${uid}-desc`;
 
-  const modal = createDialogControls({
-    getOpen: () => open,
-    setOpenValue: (next) => (open = next),
-    onOpenChange: (next) => onOpenChange?.(next),
-    closedByBackdrop: () => closedByBackdrop,
-    closedByEscape: () => closedByEscape,
-  });
 </script>
 
-<dialog
-  {@attach modal.syncOpen}
-  onclose={modal.onClose}
-  oncancel={modal.onCancel}
-  onclick={modal.onDialogClick}
+<SdkModal
+  bind:open
+  {onOpenChange}
+  {closedByBackdrop}
+  {closedByEscape}
   aria-labelledby={title ? titleId : undefined}
   aria-label={ariaLabel}
   aria-describedby={description ? descId : undefined}
@@ -79,6 +70,7 @@
   data-backdrop={backdrop}
   data-overflow-visible={overflowVisible}
   class={[
+    "taxmate-base-dialog",
     stylex.attrs(
       dialogLayout.root,
       DIALOG_SIZE_CLASS[size === "full" ? "xl" : size],
@@ -99,12 +91,11 @@
     {footer}
     {sx}
     class={[className].filter(Boolean).join(" ")}
-    onclose={() => modal.setOpen(false)}
   />
-</dialog>
+</SdkModal>
 
 <style>
-  dialog {
+  :global(dialog.taxmate-base-dialog) {
     position: fixed;
     inset-inline: 0;
     inset-block: auto env(safe-area-inset-bottom);
@@ -129,13 +120,13 @@
       display 180ms allow-discrete;
   }
 
-  dialog[open] {
+  :global(dialog.taxmate-base-dialog[data-open]:not([data-starting-style])) {
     opacity: 1;
     translate: 0 0;
     transition-duration: 320ms;
   }
 
-  dialog::backdrop {
+  :global(dialog.taxmate-base-dialog)::backdrop {
     background: rgb(0 0 0 / 0.45);
     opacity: 0;
     transition:
@@ -144,38 +135,38 @@
       display 140ms allow-discrete;
   }
 
-  dialog[open]::backdrop {
+  :global(dialog.taxmate-base-dialog[data-open]:not([data-starting-style]))::backdrop {
     opacity: 1;
     transition-duration: 240ms;
   }
 
-  dialog[data-backdrop="blur"]::backdrop {
+  :global(dialog.taxmate-base-dialog[data-backdrop="blur"])::backdrop {
     background: rgb(0 0 0 / 0.55);
     backdrop-filter: blur(12px);
   }
 
-  dialog[data-backdrop="transparent"]::backdrop,
-  dialog[data-backdrop="transparent"][open]::backdrop {
+  :global(dialog.taxmate-base-dialog[data-backdrop="transparent"])::backdrop,
+  :global(dialog.taxmate-base-dialog[data-backdrop="transparent"][data-open]:not([data-starting-style]))::backdrop {
     background: transparent;
   }
 
-  dialog[data-overflow-visible="true"] {
+  :global(dialog.taxmate-base-dialog[data-overflow-visible="true"]) {
     overflow: visible;
   }
 
   @starting-style {
-    dialog[open] {
+    :global(dialog.taxmate-base-dialog[data-open]:not([data-starting-style])) {
       opacity: 0;
       translate: 0 100%;
     }
 
-    dialog[open]::backdrop {
+    :global(dialog.taxmate-base-dialog[data-open]:not([data-starting-style]))::backdrop {
       opacity: 0;
     }
   }
 
   @media (min-width: 40rem) {
-    dialog {
+    :global(dialog.taxmate-base-dialog) {
       inset: 0;
       margin: auto;
       width: calc(100vw - 2rem);
@@ -187,37 +178,37 @@
       transition-duration: 140ms;
     }
 
-    dialog[open] {
+    :global(dialog.taxmate-base-dialog[data-open]:not([data-starting-style])) {
       scale: 1;
       transition-duration: 240ms;
     }
 
     @starting-style {
-      dialog[open] {
+      :global(dialog.taxmate-base-dialog[data-open]:not([data-starting-style])) {
         opacity: 0;
         scale: 0.96;
         translate: 0 0;
       }
     }
 
-    dialog[data-size="sm"] {
+    :global(dialog.taxmate-base-dialog[data-size="sm"]) {
       max-width: 24rem;
     }
 
-    dialog[data-size="md"] {
+    :global(dialog.taxmate-base-dialog[data-size="md"]) {
       max-width: 28rem;
     }
 
-    dialog[data-size="lg"] {
+    :global(dialog.taxmate-base-dialog[data-size="lg"]) {
       max-width: 32rem;
     }
 
-    dialog[data-size="xl"] {
+    :global(dialog.taxmate-base-dialog[data-size="xl"]) {
       max-width: 42rem;
     }
   }
 
-  dialog[data-size="full"] {
+  :global(dialog.taxmate-base-dialog[data-size="full"]) {
     inset: calc(var(--spacing) * 2);
     margin: auto;
     width: calc(100dvw - var(--spacing) * 4);
@@ -228,15 +219,15 @@
   }
 
   @media (prefers-reduced-motion: reduce) {
-    dialog,
-    dialog[open] {
+    :global(dialog.taxmate-base-dialog),
+    :global(dialog.taxmate-base-dialog[data-open]:not([data-starting-style])) {
       scale: 1;
       translate: 0 0;
       transition-duration: 120ms;
     }
 
-    dialog::backdrop,
-    dialog[open]::backdrop {
+    :global(dialog.taxmate-base-dialog)::backdrop,
+    :global(dialog.taxmate-base-dialog[data-open]:not([data-starting-style]))::backdrop {
       transition-duration: 80ms;
     }
   }

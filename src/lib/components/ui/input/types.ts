@@ -14,6 +14,7 @@ export type InputControlProps = Omit<
   class?: string;
   sx?: StyleXStyles;
   inputSx?: StyleXStyles;
+  "data-slot"?: string;
   leading?: Snippet;
   trailing?: Snippet;
 };

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { Button } from "@ui-sdk/svelte/button";
   import { Icon as SolarIcon } from "../icon/base";
 
   import { glyphs } from "../glyphs";
@@ -83,7 +84,7 @@
     label={mounted ? cycleLabel[userPrefersMode.current ?? "system"] : "Theme"}
     placement="bottom"
   >
-    <button
+    <Button
       type="button"
       {...styleAttributes(
         [themeToggle.cycleButton, sx],
@@ -118,7 +119,7 @@
           aria-hidden="true"><SolarIcon icon={glyphs.monitor} /></span
         >
       {/if}
-    </button>
+    </Button>
   </Tooltip>
 {:else}
   <div
@@ -139,7 +140,7 @@
     {#each options as { pref, label } (pref)}
       {@const on = mounted && userPrefersMode.current === pref}
       <Tooltip {label} placement="bottom">
-        <button
+        <Button
           type="button"
           class={[
             stylex.attrs(
@@ -171,7 +172,7 @@
               aria-hidden="true"><SolarIcon icon={glyphs.moon} /></span
             >
           {/if}
-        </button>
+        </Button>
       </Tooltip>
     {/each}
   </div>

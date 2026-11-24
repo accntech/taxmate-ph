@@ -1,10 +1,10 @@
 import { expect, test } from '@playwright/test';
-import { seedWorkspace } from './fixtures';
+import { openDesignSystemFixture, seedWorkspace } from './fixtures';
 
 for (const overlay of ['dialog', 'drawer']) {
-	test(`${overlay} opens without focusing its close button`, async ({ page }, testInfo) => {
+	test(`${overlay} opens without focusing its close button`, async ({ page, browserName }, testInfo) => {
 		await seedWorkspace(page);
-		await page.goto('/design-system');
+		await openDesignSystemFixture(page);
 		const trigger = page.getByRole('button', { name: `Open ${overlay}`, exact: true });
 		await trigger.focus();
 		await page.keyboard.press('Enter');
@@ -18,7 +18,7 @@ for (const overlay of ['dialog', 'drawer']) {
 			await Promise.all(el.getAnimations().map(animation => animation.finished));
 		});
 		await page.screenshot({ path: testInfo.outputPath(`${overlay}-initial-focus.png`) });
-		await page.keyboard.press('Tab');
+		await page.keyboard.press(browserName === 'webkit' && process.platform === 'darwin' ? 'Alt+Tab' : 'Tab');
 		await expect(close).toBeFocused();
 		await expect(close).not.toHaveCSS('box-shadow', 'none');
 		await page.keyboard.press('Escape');

@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { Toggle } from "@ui-sdk/svelte/toggle";
+
   type T = "compact" | "comfortable";
   import SolarIcon from "../icon/icon.svelte";
   import { glyphs } from "../icons";
@@ -199,21 +201,34 @@
   {/if}
   {#each options as opt, i (opt.value)}
     {@const pressed = value === opt.value}
-    <button
-      bind:this={buttonRefs[i]}
-      type="button"
-      aria-label={opt.label}
-      aria-pressed={pressed}
+    <Toggle
+      {pressed}
       aria-describedby={describedBy}
       {disabled}
-      onclick={() => handleClick(opt.value)}
+      onPressedChange={(next, details) => {
+        details.cancel();
+        if (next) handleClick(opt.value);
+      }}
       title={opt.label}
-      class:pressed
     >
-      {#if opt.icon}<span data-icon class="density-icon" aria-hidden="true"
-          ><SolarIcon icon={opt.icon} /></span
-        >{:else}{opt.label}{/if}
-    </button>
+      {#snippet render({ props: { "aria-pressed": ariaPressed, ...buttonProps } })}
+        <button
+          {...buttonProps}
+          bind:this={buttonRefs[i]}
+          aria-label={opt.label}
+          aria-pressed={ariaPressed as "true" | "false"}
+          class={{ pressed }}
+        >
+          {#if opt.icon}
+            <span data-icon class="density-icon" aria-hidden="true">
+              <SolarIcon icon={opt.icon} />
+            </span>
+          {:else}
+            {opt.label}
+          {/if}
+        </button>
+      {/snippet}
+    </Toggle>
   {/each}
 </div>
 

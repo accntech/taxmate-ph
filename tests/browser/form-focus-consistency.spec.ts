@@ -15,8 +15,9 @@ for (const theme of ['light', 'dark']) {
 		await seedWorkspace(page, theme);
 		// Keep the mounted fixture stable if another workspace task triggers Vite HMR.
 		await page.routeWebSocket('**/*', socket => socket.close());
-		await page.goto('/design-system');
+		await page.goto('/');
 		await expect(page.locator('html')).toHaveAttribute('data-theme', theme);
+		await expect(page.locator('#main-content')).toBeVisible({ timeout: 15_000 });
 		await page.evaluate(async () => {
 			const fixtureModule = '/src/tests/fixtures/mount-form-focus.ts';
 			(await import(/* @vite-ignore */ fixtureModule)).mountFormFocus();
@@ -37,7 +38,7 @@ for (const theme of ['light', 'dark']) {
 				fixture.getByRole('textbox', { name: 'Currency input', exact: true }),
 				fixture.getByRole('textbox', { name: 'TIN input', exact: true }),
 				fixture.getByRole('combobox', { name: 'Period select', exact: true }),
-				fixture.getByRole('button', { name: 'Primitive select', exact: true }),
+				fixture.getByRole('combobox', { name: 'Primitive select', exact: true }),
 				fixture.getByRole('textbox', { name: 'Notes textarea', exact: true }),
 				fixture.getByRole('radiogroup', { name: 'Declaration' }).getByRole('radio', { name: 'No', exact: true }),
 				fixture.getByRole('combobox', { name: 'ATC', exact: true })
@@ -80,7 +81,7 @@ for (const theme of ['light', 'dark']) {
 		await search.press('Escape');
 		await expect(atc).toBeFocused();
 		await page.emulateMedia({ forcedColors: 'active' });
-		for (const control of [reference, fixture.getByLabel('Password input', { exact: true }), fixture.getByRole('combobox', { name: 'Period select', exact: true }), fixture.getByRole('button', { name: 'Primitive select', exact: true }), fixture.getByRole('textbox', { name: 'Notes textarea', exact: true }), atc]) {
+		for (const control of [reference, fixture.getByLabel('Password input', { exact: true }), fixture.getByRole('combobox', { name: 'Period select', exact: true }), fixture.getByRole('combobox', { name: 'Primitive select', exact: true }), fixture.getByRole('textbox', { name: 'Notes textarea', exact: true }), atc]) {
 			await control.focus();
 			await expect(control).toHaveCSS('outline-style', 'solid');
 		}

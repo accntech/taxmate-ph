@@ -1,4 +1,6 @@
 <script lang="ts">
+  import SdkModal from "../dialog/sdk-modal.svelte";
+  import { DialogClose } from "@ui-sdk/svelte/dialog";
   import { Icon as SolarIcon } from "../icon/base";
 
   import { glyphs } from "../glyphs";
@@ -9,10 +11,7 @@
 
   import * as stylex from "@stylexjs/stylex";
   import type { Snippet } from "svelte";
-  import {
-    DIALOG_SIZE_CLASS,
-    createDialogControls,
-  } from "../utils/dialog-controls.svelte";
+  import { DIALOG_SIZE_CLASS } from "../utils/dialog-controls.svelte";
 
   type Side = "right" | "left";
   type Size = "sm" | "md" | "lg" | "xl";
@@ -62,26 +61,20 @@
     side === "right" ? sheetLayout.right : sheetLayout.left,
   );
 
-  const modal = createDialogControls({
-    getOpen: () => open,
-    setOpenValue: (next) => (open = next),
-    onOpenChange: (next) => onOpenChange?.(next),
-    closedByBackdrop: () => closedByBackdrop,
-    closedByEscape: () => closedByEscape,
-  });
 </script>
 
-<dialog
-  {@attach modal.syncOpen}
-  onclose={modal.onClose}
-  oncancel={modal.onCancel}
-  onclick={modal.onDialogClick}
+<SdkModal
+  bind:open
+  {onOpenChange}
+  {closedByBackdrop}
+  {closedByEscape}
   aria-label={header ? title : undefined}
   aria-labelledby={!header && title ? titleId : undefined}
   aria-describedby={description ? descId : undefined}
   data-side={side}
   data-size={size}
   class={[
+    "taxmate-sheet",
     stylex.attrs(sheetLayout.root, sideClass, DIALOG_SIZE_CLASS[size]).class,
   ]}
 >
@@ -132,10 +125,9 @@
       </div>
     {/if}
     {#if showCloseButton}
-      <button
+      <DialogClose
         type="button"
         aria-label="Close"
-        onclick={() => modal.setOpen(false)}
         class={[stylex.attrs(sheetLayout.closeButton).class, ""]}
       >
         <span
@@ -143,7 +135,7 @@
           class={[stylex.attrs([sheetLayout.closeIcon]).class]}
           aria-hidden="true"><SolarIcon icon={glyphs.closeSquare} /></span
         >
-      </button>
+      </DialogClose>
     {/if}
     {#if children}
       <div class={[stylex.attrs(sheetLayout.body).class]}>
@@ -156,15 +148,15 @@
       </div>
     {/if}
   </div>
-</dialog>
+</SdkModal>
 
 <style>
-  dialog,
-  dialog::backdrop {
+  :global(dialog.taxmate-sheet),
+  :global(dialog.taxmate-sheet)::backdrop {
     transition-behavior: allow-discrete;
   }
 
-  dialog {
+  :global(dialog.taxmate-sheet) {
     position: fixed;
     inset-block: 0;
     margin: 0;
@@ -187,22 +179,22 @@
       display 220ms allow-discrete;
   }
 
-  dialog[data-side="right"] {
+  :global(dialog.taxmate-sheet[data-side="right"]) {
     inset-inline: auto 0;
   }
 
-  dialog[data-side="left"] {
+  :global(dialog.taxmate-sheet[data-side="left"]) {
     inset-inline: 0 auto;
     transform: translateX(-100%);
   }
 
-  dialog[open] {
+  :global(dialog.taxmate-sheet[data-open]:not([data-starting-style])) {
     opacity: 1;
     transform: translateX(0);
     transition-duration: 320ms;
   }
 
-  dialog::backdrop {
+  :global(dialog.taxmate-sheet)::backdrop {
     background: rgb(0 0 0 / 0.45);
     opacity: 0;
     transition:
@@ -211,23 +203,23 @@
       display 180ms allow-discrete;
   }
 
-  dialog[open]::backdrop {
+  :global(dialog.taxmate-sheet[data-open]:not([data-starting-style]))::backdrop {
     opacity: 1;
     transition-duration: 240ms;
   }
 
   @starting-style {
-    dialog[data-side="right"][open] {
+    :global(dialog.taxmate-sheet[data-side="right"][data-open]:not([data-starting-style])) {
       opacity: 0;
       transform: translateX(100%);
     }
 
-    dialog[data-side="left"][open] {
+    :global(dialog.taxmate-sheet[data-side="left"][data-open]:not([data-starting-style])) {
       opacity: 0;
       transform: translateX(-100%);
     }
 
-    dialog[open]::backdrop {
+    :global(dialog.taxmate-sheet[data-open]:not([data-starting-style]))::backdrop {
       opacity: 0;
     }
   }
@@ -247,26 +239,26 @@
   }
 
   @media (min-width: 40rem) {
-    dialog[data-size="sm"] {
+    :global(dialog.taxmate-sheet[data-size="sm"]) {
       max-width: 24rem;
     }
 
-    dialog[data-size="md"] {
+    :global(dialog.taxmate-sheet[data-size="md"]) {
       max-width: 28rem;
     }
 
-    dialog[data-size="lg"] {
+    :global(dialog.taxmate-sheet[data-size="lg"]) {
       max-width: 32rem;
     }
 
-    dialog[data-size="xl"] {
+    :global(dialog.taxmate-sheet[data-size="xl"]) {
       max-width: 42rem;
     }
   }
 
   @media (prefers-reduced-motion: reduce) {
-    dialog,
-    dialog::backdrop {
+    :global(dialog.taxmate-sheet),
+    :global(dialog.taxmate-sheet)::backdrop {
       transition-duration: 0.01ms;
     }
   }

@@ -1,4 +1,7 @@
 <script lang="ts">
+  import type { ChangeDetails } from "@ui-sdk/core";
+  import type { PopoverOpenChangeReason } from "@ui-sdk/core/popover";
+  import { Popover, PopoverContent, PopoverTrigger } from "@ui-sdk/svelte/popover";
 
   import { tick, type Snippet } from "svelte";
   import { quartOut } from "svelte/easing";
@@ -64,22 +67,26 @@
     triggerBtn?.focus({ preventScroll: true });
   }
 
-  function onPointer(e: PointerEvent) {
-    if (!open || !root) return;
-    if (!root.contains(e.target as Node)) {
-      setOpen(false);
+  function onPopoverChange(next: boolean, details: ChangeDetails<PopoverOpenChangeReason>) {
+    if (
+      (next && disabled) ||
+      details.reason === "focus-out" ||
+      details.reason === "window-blur" ||
+      details.reason === "back" ||
+      details.reason === "swipe" ||
+      (details.reason === "outside-press" &&
+        details.event?.target instanceof Node &&
+        root?.contains(details.event.target))
+    ) {
+      details.cancel();
+      return;
     }
+    if (details.reason === "escape-key") close();
+    else setOpen(next);
   }
 
   function onKey(e: KeyboardEvent) {
     if (!open) return;
-    // A manual popover stays open when Tab moves focus beyond its root.
-    // Handle Escape dismissal globally before restricting navigation keys.
-    if (e.key === "Escape") {
-      e.preventDefault();
-      close();
-      return;
-    }
     if (!root?.contains(document.activeElement)) return;
     if (["ArrowDown", "ArrowUp", "Home", "End"].includes(e.key)) {
       const items = [
@@ -99,15 +106,8 @@
               ? (current - 1 + items.length) % items.length
               : (current + 1) % items.length;
       items[next]?.focus({ preventScroll: true });
-      return;
     }
   }
-
-  $effect(() => {
-    if (!open) return;
-    document.addEventListener("pointerdown", onPointer, true);
-    return () => document.removeEventListener("pointerdown", onPointer, true);
-  });
 
   function isMobileSheetActive(): boolean {
     return mobileSheet && window.matchMedia("(max-width: 767px)").matches;
@@ -338,51 +338,56 @@
 
 <svelte:window onkeydown={onKey} />
 
-<div bind:this={root} class={["menu-root", rootClass]}>
-  <button
-    bind:this={triggerBtn}
-    type="button"
-    {disabled}
-    onclick={() => setOpen(!open)}
-    onkeydown={onTriggerKey}
-    aria-haspopup={panelRole}
-    aria-expanded={open}
-    aria-label={label}
-    title={tooltip}
-    class={["menu-trigger", triggerClass]}
-  >
-    {@render trigger({ open })}
-  </button>
-  {#if open && mobileSheet}
-    <button
-      type="button"
-      class="menu-backdrop"
-      aria-label="Close menu"
-      onclick={close}
-      transition:fade={{ duration: 150, easing: quartOut }}
-    ></button>
-  {/if}
-  {#if open}
-    <div
-      popover={topLayer ? "manual" : undefined}
-      role={panelRole}
+<Popover bind:open onOpenChange={onPopoverChange} presentation="popover">
+  <div bind:this={root} class={["menu-root", rootClass]}>
+    <PopoverTrigger
+      {disabled}
+      onkeydown={onTriggerKey}
       aria-label={label}
-      aria-hidden={disabled || !open}
-      inert={disabled || !open}
-      {@attach attachPanel}
-      style="translate: var(--menu-shift-x, 0px) 0;"
-      data-placement={placement}
-      data-align={sideState}
-      data-mobile-sheet={mobileSheet ? "true" : undefined}
-      data-top-layer={topLayer ? "true" : undefined}
-      in:popIn
-      out:popOut
-      class={["menu-panel", panelClass]}
+      title={tooltip}
     >
-      {@render content({ close })}
-    </div>
-  {/if}
-</div>
+      {#snippet render({ props })}
+        <button {...props} aria-haspopup={panelRole} bind:this={triggerBtn} class={["menu-trigger", triggerClass]}>
+          {@render trigger({ open })}
+        </button>
+      {/snippet}
+    </PopoverTrigger>
+    {#if open && mobileSheet}
+      <button
+        type="button"
+        class="menu-backdrop"
+        aria-label="Close menu"
+        onclick={close}
+        transition:fade={{ duration: 150, easing: quartOut }}
+      ></button>
+    {/if}
+    {#if open}
+      <PopoverContent inline initialFocus="none" finalFocus="none" aria-label={label}>
+        {#snippet render({ props })}
+          <div
+            {...props}
+            popover={topLayer ? "manual" : undefined}
+            role={panelRole}
+            aria-label={label}
+            aria-hidden={disabled || !open}
+            inert={disabled || !open}
+            {@attach attachPanel}
+            style="translate: var(--menu-shift-x, 0px) 0;"
+            data-placement={placement}
+            data-align={sideState}
+            data-mobile-sheet={mobileSheet ? "true" : undefined}
+            data-top-layer={topLayer ? "true" : undefined}
+            in:popIn
+            out:popOut
+            class={["menu-panel", panelClass]}
+          >
+            {@render content({ close })}
+          </div>
+        {/snippet}
+      </PopoverContent>
+    {/if}
+  </div>
+</Popover>
 
 <style>
   .menu-root {

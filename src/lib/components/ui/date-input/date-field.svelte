@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { Button as SdkButton } from "@ui-sdk/svelte/button";
+  import { Input as SdkInput } from "@ui-sdk/svelte/input";
   import { Icon as SolarIcon } from "../icon/base";
   import { icons as dateFieldIcons } from "./date-field.icons";
 
@@ -50,6 +52,7 @@
     popoverOpen = false,
   }: Props = $props();
 
+  // Date commits clamp the ISO value to configured bounds and expand short years on blur.
   let month = $state<string | null>(null);
   let day = $state<string | null>(null);
   let year = $state<string | null>(null);
@@ -402,7 +405,7 @@
           aria-hidden="true">/</span
         >
       {/if}
-      <input
+      <SdkInput
         {@attach (element) => {
           elements[seg] = element;
           return () => {
@@ -440,7 +443,7 @@
   </div>
 
   {#if picker}
-    <button
+    <SdkButton
       data-icon
       type="button"
       class={[
@@ -458,6 +461,6 @@
       {disabled}
     >
       <SolarIcon icon={dateFieldIcons.calendarButton} />
-    </button>
+    </SdkButton>
   {/if}
 </div>

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { Button as SdkButton } from "@ui-sdk/svelte/button";
   import { Icon as SolarIcon } from "../icon/base";
 
   import { glyphs } from "../glyphs";
@@ -213,7 +214,7 @@
 <div class={[stylex.attrs(calendarLayout.root).class, "root"]}>
   <div class={[stylex.attrs(calendarLayout.header).class]}>
     {#if view === "days"}
-      <button
+      <SdkButton
         type="button"
         class={[stylex.attrs(calendarLayout.navigationButton).class]}
         aria-label="Previous month"
@@ -225,16 +226,16 @@
           class={[stylex.attrs([calendarLayout.navigationIcon]).class]}
           aria-hidden="true"><SolarIcon icon={glyphs.chevronLeft} /></span
         >
-      </button>
-      <button
+      </SdkButton>
+      <SdkButton
         type="button"
         class={[stylex.attrs(calendarLayout.viewButton).class]}
         aria-label="Switch to months view"
         disabled={calendarDisabled}
         onclick={() => (view = "months")}
-        >{months[cursorMonth - 1]} {cursorYear}</button
+        >{months[cursorMonth - 1]} {cursorYear}</SdkButton
       >
-      <button
+      <SdkButton
         type="button"
         class={[stylex.attrs(calendarLayout.navigationButton).class]}
         aria-label="Next month"
@@ -246,9 +247,9 @@
           class={[stylex.attrs([calendarLayout.navigationIcon]).class]}
           aria-hidden="true"><SolarIcon icon={glyphs.chevronRight} /></span
         >
-      </button>
+      </SdkButton>
     {:else if view === "months"}
-      <button
+      <SdkButton
         type="button"
         class={[stylex.attrs(calendarLayout.navigationButton).class]}
         aria-label="Previous year"
@@ -260,15 +261,15 @@
           class={[stylex.attrs([calendarLayout.navigationIcon]).class]}
           aria-hidden="true"><SolarIcon icon={glyphs.chevronLeft} /></span
         >
-      </button>
-      <button
+      </SdkButton>
+      <SdkButton
         type="button"
         class={[stylex.attrs(calendarLayout.viewButton).class]}
         aria-label="Switch to years view"
         disabled={calendarDisabled}
-        onclick={() => (view = "years")}>{cursorYear}</button
+        onclick={() => (view = "years")}>{cursorYear}</SdkButton
       >
-      <button
+      <SdkButton
         type="button"
         class={[stylex.attrs(calendarLayout.navigationButton).class]}
         aria-label="Next year"
@@ -280,10 +281,10 @@
           class={[stylex.attrs([calendarLayout.navigationIcon]).class]}
           aria-hidden="true"><SolarIcon icon={glyphs.chevronRight} /></span
         >
-      </button>
+      </SdkButton>
     {:else}
       {@const decadeStart = Math.floor(cursorYear / 10) * 10}
-      <button
+      <SdkButton
         type="button"
         class={[stylex.attrs(calendarLayout.navigationButton).class]}
         aria-label="Previous decade"
@@ -295,11 +296,11 @@
           class={[stylex.attrs([calendarLayout.navigationIcon]).class]}
           aria-hidden="true"><SolarIcon icon={glyphs.chevronLeft} /></span
         >
-      </button>
+      </SdkButton>
       <span class={[stylex.attrs(calendarLayout.decadeLabel).class]}
         >{decadeStart}–{decadeStart + 9}</span
       >
-      <button
+      <SdkButton
         type="button"
         class={[stylex.attrs(calendarLayout.navigationButton).class]}
         aria-label="Next decade"
@@ -311,7 +312,7 @@
           class={[stylex.attrs([calendarLayout.navigationIcon]).class]}
           aria-hidden="true"><SolarIcon icon={glyphs.chevronRight} /></span
         >
-      </button>
+      </SdkButton>
     {/if}
   </div>
 
@@ -336,7 +337,7 @@
         {@const disabled = calendarDisabled || !isWithin(cell.iso, min, max)}
         {@const selected = cell.iso === value}
         {@const today = cell.iso === todayIso}
-        <button
+        <SdkButton
           type="button"
           role="gridcell"
           data-iso={cell.iso}
@@ -345,13 +346,16 @@
           data-outside-month={cell.outside ? "true" : undefined}
           data-selected={selected ? "true" : undefined}
           data-today={today ? "true" : undefined}
-          data-disabled={disabled ? "true" : undefined}
           tabindex={!disabled && cell.iso === focusedIso ? 0 : -1}
           {disabled}
           onfocus={() => (focusedIso = cell.iso)}
           onclick={() => !disabled && onSelect(cell.iso)}
-          class={[stylex.attrs(calendarLayout.day).class]}>{cell.d}</button
+          class={[stylex.attrs(calendarLayout.day).class]}
         >
+          {#snippet render({ props })}
+            <button {...props} data-disabled={disabled ? "true" : undefined}>{cell.d}</button>
+          {/snippet}
+        </SdkButton>
       {/each}
     </div>
   {:else if view === "months"}
@@ -368,11 +372,10 @@
           calendarDisabled ||
           (max ? firstOfMonth > max : false) ||
           (min ? lastOfMonth < min : false)}
-        <button
+        <SdkButton
           type="button"
           class={[stylex.attrs(calendarLayout.period).class]}
           data-selected={m === cursorMonth ? "true" : undefined}
-          data-disabled={disabled ? "true" : undefined}
           {disabled}
           onclick={() => {
             const day = parseIso(focusedIso)!.d;
@@ -384,8 +387,12 @@
               ),
             );
             view = "days";
-          }}>{name.slice(0, 3)}</button
+          }}
         >
+          {#snippet render({ props })}
+            <button {...props} data-disabled={disabled ? "true" : undefined}>{name.slice(0, 3)}</button>
+          {/snippet}
+        </SdkButton>
       {/each}
     </div>
   {:else}
@@ -398,11 +405,10 @@
           calendarDisabled ||
           (max ? firstOfYear > max : false) ||
           (min ? lastOfYear < min : false)}
-        <button
+        <SdkButton
           type="button"
           class={[stylex.attrs(calendarLayout.period).class]}
           data-selected={y === cursorYear ? "true" : undefined}
-          data-disabled={disabled ? "true" : undefined}
           {disabled}
           onclick={() => {
             const day = parseIso(focusedIso)!.d;
@@ -414,8 +420,12 @@
               ),
             );
             view = "months";
-          }}>{y}</button
+          }}
         >
+          {#snippet render({ props })}
+            <button {...props} data-disabled={disabled ? "true" : undefined}>{y}</button>
+          {/snippet}
+        </SdkButton>
       {/each}
     </div>
   {/if}

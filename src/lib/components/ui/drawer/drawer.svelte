@@ -1,4 +1,6 @@
 <script lang="ts">
+	import SdkModal from "../dialog/sdk-modal.svelte";
+	import { DialogClose } from '@ui-sdk/svelte/dialog';
 	import * as stylex from '@stylexjs/stylex';
 	import { wrapperStyles } from './drawer-wrapper.styles';
 	import type { Snippet } from 'svelte';
@@ -49,57 +51,13 @@
 		xl: wrapperStyles.xl
 	};
 
-	function setOpen(next: boolean) {
-		if (open === next) {
-			return;
-		}
-
-		open = next;
-		onOpenChange?.(next);
-	}
-
-	function syncOpen(el: HTMLDialogElement) {
-		$effect(() => {
-			if (open && !el.open) {
-				el.showModal();
-				el.focus();
-			} else if (!open && el.open) {
-				el.close();
-			}
-		});
-
-		$effect(() => {
-			if (!open) {
-				return;
-			}
-
-			const prevOverflow = document.body.style.overflow;
-			document.body.style.overflow = 'hidden';
-
-			return () => {
-				document.body.style.overflow = prevOverflow;
-			};
-		});
-	}
-
-	function onCancel(event: Event) {
-		if (!closedByEscape) {
-			event.preventDefault();
-		}
-	}
-
-	function onDialogClick(event: MouseEvent) {
-		if (closedByBackdrop && event.target === event.currentTarget) {
-			setOpen(false);
-		}
-	}
 </script>
 
-<dialog
-	{@attach syncOpen}
-	onclose={() => setOpen(false)}
-	oncancel={onCancel}
-	onclick={onDialogClick}
+<SdkModal
+	bind:open
+	{onOpenChange}
+	{closedByBackdrop}
+	{closedByEscape}
 	aria-labelledby={title ? titleId : undefined}
 	aria-describedby={description ? descId : undefined}
 	class={stylex.attrs(wrapperStyles.focus, wrapperStyles.root, wrapperStyles.visibility, sideStyle, sizeStyles[size]).class}
@@ -129,14 +87,13 @@
 			</div>
 		{/if}
 		{#if showCloseButton}
-			<button
+			<DialogClose
 				type="button"
 				aria-label="Close"
-				onclick={() => setOpen(false)}
 				class={stylex.attrs(wrapperStyles.closeButton).class}
 			>
 				<CloseCircle size={17} color="currentColor" aria-hidden="true" />
-			</button>
+			</DialogClose>
 		{/if}
 		{#if children}
 			<div class={stylex.attrs(wrapperStyles.body).class}>
@@ -149,4 +106,4 @@
 			</div>
 		{/if}
 	</div>
-</dialog>
+</SdkModal>

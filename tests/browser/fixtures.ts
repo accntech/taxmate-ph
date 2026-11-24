@@ -5,6 +5,15 @@ import type { CreatedReturn } from '../../src/lib/ebirforms/created-returns';
 export const taxpayerId = '0012345670008';
 export const formPath = `/ebirforms/taxpayers/${taxpayerId}/forms/1601EQ?return=review-return`;
 
+export async function openDesignSystemFixture(page: Page) {
+	await page.goto('/');
+	await expect(page.locator('#main-content')).toBeVisible({ timeout: 15_000 });
+	await page.evaluate(async () => {
+		const fixtureModule = '/src/tests/fixtures/mount-design-system.ts';
+		(await import(/* @vite-ignore */ fixtureModule)).mountDesignSystem();
+	});
+}
+
 export async function goToReturnPage(page: Page, target: number) {
 	const pager = page.getByRole('navigation', { name: 'Return pages' });
 	const current = pager.locator('[aria-current="page"]');
@@ -24,7 +33,7 @@ export async function goToReturnPage(page: Page, target: number) {
 }
 
 /** Isolated browser data: native calls never reach the user's saved profiles. */
-export async function seedWorkspace(page: Page, theme = 'light', profileState: 'loaded' | 'empty' | 'error' = 'loaded', profileOverrides: Partial<TaxpayerProfileInput> = {}, returns?: CreatedReturn[], options: { persistProfile?: boolean } = {}) {
+export async function seedWorkspace(page: Page, theme = 'light', profileState: 'loaded' | 'empty' | 'error' | 'error-once' = 'loaded', profileOverrides: Partial<TaxpayerProfileInput> = {}, returns?: CreatedReturn[], options: { persistProfile?: boolean } = {}) {
 	await page.addInitScript(({ taxpayerId, theme, profileState, profileOverrides, returns, persistProfile }) => {
 		localStorage.setItem('taxmate-ph-theme', theme);
 		const profile = {
@@ -51,13 +60,17 @@ export async function seedWorkspace(page: Page, theme = 'light', profileState: '
 				status: 'Draft', updatedAt: 1794441600000, finalFlag: '0', values
 			}]
 		}));
+		let profileLoadAttempts = 0;
 		Object.assign(window, { __TAURI_INTERNALS__: {
 			invoke: async (command: string, args?: { profile?: typeof profile; data?: unknown }) => {
 				if (command === 'load_working_returns') return JSON.parse(localStorage.getItem('ebirforms-created-returns-v1') || 'null');
 				if (command === 'save_working_returns') { localStorage.setItem('ebirforms-created-returns-v1', JSON.stringify(args?.data)); return; }
 				if (command === 'submit_return') return { status: 'drafted', finalFlag: '2', savePath: 'test.xml', sendPath: '', message: 'Package prepared locally.' };
 				if (command === 'list_taxpayer_profiles') {
-					if (profileState === 'error') throw new Error('Disk unavailable for review');
+					profileLoadAttempts += 1;
+					if (profileState === 'error' || (profileState === 'error-once' && profileLoadAttempts === 1)) {
+						throw new Error('Disk unavailable for review');
+					}
 					const saved = persistProfile && sessionStorage.getItem('ebirforms-test-profile');
 					if (saved) return [JSON.parse(saved)];
 					return profileState === 'empty' ? [] : [profile];

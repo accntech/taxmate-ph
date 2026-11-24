@@ -15,6 +15,7 @@
 </script>
 
 <script lang="ts">
+  import { Button as SdkButton } from "@ui-sdk/svelte/button";
   import type { StyleXStyles } from "@stylexjs/stylex";
   import { styleAttributes } from "../styles/style-attributes";
   import { button as buttonLayout } from "./button.styles";
@@ -110,16 +111,29 @@
     {@render trailing?.()}
   </a>
 {:else}
-  <button
+  <SdkButton
     {...rest}
-    {type}
-    use:shortcutAction={shortcutId}
+    type={type ?? undefined}
+    disabled={rest.disabled ?? undefined}
     {...attributes}
-    data-button-variant={variant}
-    data-button-size={size}
+    onclick={(event) => {
+      rest.onclick?.(event as MouseEvent & {
+        currentTarget: EventTarget & HTMLAnchorElement & HTMLButtonElement;
+      });
+    }}
   >
-    {@render leading?.()}
-    {@render children?.()}
-    {@render trailing?.()}
-  </button>
+    {#snippet render({ props })}
+      <button
+        {...props}
+        {type}
+        use:shortcutAction={shortcutId}
+        data-button-variant={variant}
+        data-button-size={size}
+      >
+        {@render leading?.()}
+        {@render children?.()}
+        {@render trailing?.()}
+      </button>
+    {/snippet}
+  </SdkButton>
 {/if}

@@ -1,3 +1,5 @@
+import { ACTIVE_MODAL_SELECTOR } from '../dialog/active-modal';
+
 export type Side = 'bottom' | 'top';
 
 type Rect = Pick<DOMRect, 'top' | 'bottom' | 'left' | 'width' | 'height'>;
@@ -49,5 +51,5 @@ export function place(anchor: Rect, popover: Rect, viewport: Viewport): Position
 }
 
 export function getPopoverPortalParent(anchor: HTMLElement | undefined, fallback: HTMLElement) {
-	return anchor?.closest('dialog[open]') ?? fallback;
+	return anchor?.closest(ACTIVE_MODAL_SELECTOR) ?? fallback;
 }

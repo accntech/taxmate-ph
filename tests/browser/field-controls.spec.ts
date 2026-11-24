@@ -1,7 +1,8 @@
 import { expect, test } from '@playwright/test';
+import { openDesignSystemFixture } from './fixtures';
 
 test.beforeEach(async ({ page }) => {
-	await page.goto('/design-system');
+	await openDesignSystemFixture(page);
 });
 
 test('currency edits exact raw text, regroups on blur and preserves invalid entries', async ({ page }, testInfo) => {

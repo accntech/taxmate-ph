@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { FieldControl } from "@ui-sdk/svelte/field";
   import type { HTMLInputAttributes } from "svelte/elements";
   import type { StyleXStyles } from "@stylexjs/stylex";
   import { Checkbox } from "../checkbox/base";
@@ -26,17 +27,19 @@
   }: Props = $props();
 </script>
 
-<label class:disabled>
+<label class={{ disabled }}>
   <span class="checkbox-control">
-    <input
+    <!-- The native input keeps checked and indeterminate independently bindable. -->
+    <FieldControl
       {...rest}
-      type="checkbox"
       {disabled}
-      bind:checked
-      bind:indeterminate
       {...styleAttributes(sx, "", style)}
       class={["peer", styleAttributes(sx).class, className]}
-    />
+    >
+      {#snippet render({ props })}
+        <input {...props} type="checkbox" bind:checked bind:indeterminate />
+      {/snippet}
+    </FieldControl>
     <span class="checkbox-mark" aria-hidden="true">
       <Checkbox {checked} {indeterminate} size="md" />
     </span>

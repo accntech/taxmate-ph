@@ -24,6 +24,8 @@
 </script>
 
 <script lang="ts" generics="TValue extends string = string, TData = undefined">
+  import { Button as SdkButton } from "@ui-sdk/svelte/button";
+  import { Input as SdkInput } from "@ui-sdk/svelte/input";
   import CheckIcon from "@solar-icons/svelte-v2/linear/check";
   import AddIcon from "@solar-icons/svelte-v2/linear/add";
   import { Icon as SolarIcon } from "../icon/base";
@@ -591,68 +593,74 @@
   {#if name}
     <input type="hidden" {name} value={hiddenValue} />
   {/if}
-  <button
-    bind:this={triggerEl}
+  <SdkButton
     type="button"
     {id}
-    role="combobox"
-    aria-expanded={open}
-    aria-haspopup="listbox"
-    aria-controls={listboxId}
-    aria-disabled={disabled}
-    aria-required={ariaRequired}
-    aria-describedby={describedBy}
-    aria-invalid={invalid || ariaInvalid || false}
-    data-invalid={invalid ? "true" : undefined}
     {disabled}
     onclick={toggleOpen}
     onkeydown={onKeydown}
-    class={[stylex.attrs(comboboxLayout.trigger).class]}
+    class={stylex.attrs(comboboxLayout.trigger).class}
   >
-    {#if triggerSnippet && selectedOption}
-      {@render triggerSnippet(selectedOption)}
-    {:else if selectedOption}
-      <span class={[stylex.attrs(comboboxLayout.selection).class]}>
-        {#if selectedOption.secondary}
-          <span class={[stylex.attrs(comboboxLayout.secondary).class]}>
-            {selectedOption.secondary}
+    {#snippet render({ props })}
+      <button
+        bind:this={triggerEl}
+        {...props}
+        role="combobox"
+        aria-expanded={open}
+        aria-haspopup="listbox"
+        aria-controls={listboxId}
+        aria-disabled={disabled}
+        aria-required={ariaRequired}
+        aria-describedby={describedBy}
+        aria-invalid={invalid || ariaInvalid || false}
+        data-invalid={invalid ? "true" : undefined}
+      >
+        {#if triggerSnippet && selectedOption}
+          {@render triggerSnippet(selectedOption)}
+        {:else if selectedOption}
+          <span class={[stylex.attrs(comboboxLayout.selection).class]}>
+            {#if selectedOption.secondary}
+              <span class={[stylex.attrs(comboboxLayout.secondary).class]}>
+                {selectedOption.secondary}
+              </span>
+            {/if}
+            <span class={[stylex.attrs(comboboxLayout.label).class]}
+              >{selectedOption.label}</span
+            >
+            {#if selectedOption.badge}
+              {@render itemBadge(selectedOption.badge)}
+            {/if}
+          </span>
+        {:else}
+          <span
+            class={[
+              stylex.attrs(
+                comboboxLayout.label,
+                selectedLabels.length === 0 && comboboxLayout.placeholder,
+              ).class,
+            ]}
+          >
+            {triggerLabel}
           </span>
         {/if}
-        <span class={[stylex.attrs(comboboxLayout.label).class]}
-          >{selectedOption.label}</span
+        <span
+          data-icon
+          class={[
+            stylex.attrs(
+              [comboboxLayout.chevron],
+              canClear && comboboxLayout.clearButtonSpace,
+            ).class,
+          ]}
+          aria-hidden="true"><SolarIcon icon={glyphs.chevronDown} /></span
         >
-        {#if selectedOption.badge}
-          {@render itemBadge(selectedOption.badge)}
-        {/if}
-      </span>
-    {:else}
-      <span
-        class={[
-          stylex.attrs(
-            comboboxLayout.label,
-            selectedLabels.length === 0 && comboboxLayout.placeholder,
-          ).class,
-        ]}
-      >
-        {triggerLabel}
-      </span>
-    {/if}
-    <span
-      data-icon
-      class={[
-        stylex.attrs(
-          [comboboxLayout.chevron],
-          canClear && comboboxLayout.clearButtonSpace,
-        ).class,
-      ]}
-      aria-hidden="true"><SolarIcon icon={glyphs.chevronDown} /></span
-    >
-  </button>
+      </button>
+    {/snippet}
+  </SdkButton>
 
   {#if canClear}
-    <button
+    <SdkButton
       type="button"
-      tabindex="-1"
+      tabindex={-1}
       aria-label="Clear selection"
       onclick={clearSelection}
       onkeydown={(e) => {
@@ -665,7 +673,7 @@
         class={[stylex.attrs([comboboxLayout.clearIcon]).class]}
         aria-hidden="true"><SolarIcon icon={glyphs.closeCircle} /></span
       >
-    </button>
+    </SdkButton>
   {/if}
 
   {#if open}
@@ -685,14 +693,17 @@
             class={[stylex.attrs([comboboxLayout.searchIcon]).class]}
             aria-hidden="true"><SolarIcon icon={glyphs.search} /></span
           >
-          <input
-            bind:this={inputEl}
+          <SdkInput
             bind:value={query}
             placeholder={searchPlaceholder}
             class={[stylex.attrs(comboboxLayout.searchInput).class]}
             oninput={handleSearchInput}
             onkeydown={onKeydown}
-          />
+          >
+            {#snippet render({ props })}
+              <input bind:this={inputEl} {...props} />
+            {/snippet}
+          </SdkInput>
         </label>
       </div>
       {#if filteredOptions.length === 0}
@@ -744,7 +755,7 @@
                       <div
                         class={[stylex.attrs(comboboxLayout.groupBody).class]}
                       >
-                        <button
+                        <SdkButton
                           type="button"
                           id={`${listboxId}-option-${row.position}`}
                           role="option"
@@ -752,7 +763,7 @@
                           aria-disabled={row.option.disabled}
                           aria-posinset={row.position + 1}
                           aria-setsize={filteredOptions.length}
-                          disabled={row.option.disabled}
+                          disabled={row.option.disabled ?? undefined}
                           onclick={() => commit(virtualItem.index)}
                           onmouseenter={() => (highlight = virtualItem.index)}
                           class={[
@@ -762,8 +773,7 @@
                               hl ? comboboxLayout.highlighted : null,
                             ).class,
                           ]}
-                          style:height={wrapOptions ? undefined : `${itemHeight}px`}
-                          style:min-height={wrapOptions ? `${itemHeight}px` : undefined}
+                          style={wrapOptions ? `min-height: ${itemHeight}px` : `height: ${itemHeight}px`}
                         >
                           {#if multiple}
                             <span
@@ -849,7 +859,7 @@
                               focusable="false"
                             />
                           {/if}
-                        </button>
+                        </SdkButton>
                       </div>
                     {/if}
                   </div>
@@ -883,7 +893,7 @@
       {/if}
       {#if showCreate}
         <div class={[stylex.attrs(comboboxLayout.createFooter, wrapOptions && comboboxLayout.wrappingCreateFooter).class]}>
-          <button
+          <SdkButton
             type="button"
             onclick={triggerCreate}
             onmouseenter={() => (highlight = createIndex)}
@@ -894,8 +904,7 @@
                 highlight === createIndex && comboboxLayout.highlighted,
               ).class,
             ]}
-            style:height={wrapOptions ? undefined : `${Math.min(itemHeight, 36)}px`}
-            style:min-height={wrapOptions ? `${Math.min(itemHeight, 36)}px` : undefined}
+            style={wrapOptions ? `min-height: ${Math.min(itemHeight, 36)}px` : `height: ${Math.min(itemHeight, 36)}px`}
           >
             <span
               class={[stylex.attrs(comboboxLayout.createBadge).class]}
@@ -918,7 +927,7 @@
                 {createLabel ?? "Create new"}
               {/if}
             </span>
-          </button>
+          </SdkButton>
         </div>
       {/if}
     </div>

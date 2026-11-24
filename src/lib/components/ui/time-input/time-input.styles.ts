@@ -26,6 +26,13 @@ export const timeInput = stylex.create({
     fontVariantNumeric:
       "var(--sx-ordinal,) var(--sx-slashed-zero,) var(--sx-numeric-figure,) var(--sx-numeric-spacing,) var(--sx-numeric-fraction,)",
   },
+  editable: {
+    width: "calc(2ch + var(--spacing))",
+    minWidth: 0,
+    border: 0,
+    font: "inherit",
+    textAlign: "center",
+  },
   digit: {
     boxShadow: "none",
     borderRadius: "0.25rem",
@@ -33,7 +40,7 @@ export const timeInput = stylex.create({
     "--sx-outline-style": "none",
     outlineStyle: "none",
     backgroundColor: {
-      default: null,
+      default: "transparent",
       ":focus": "var(--accent)",
     },
     color: {
@@ -44,9 +51,6 @@ export const timeInput = stylex.create({
   placeholder: {
     color: "var(--fg-subtle)",
   },
-  filled: {
-    color: "var(--fg)",
-  },
   period: {
     boxShadow: "none",
     marginLeft: "var(--spacing)",
@@ -55,7 +59,7 @@ export const timeInput = stylex.create({
     "--sx-outline-style": "none",
     outlineStyle: "none",
     backgroundColor: {
-      default: null,
+      default: "transparent",
       ":focus": "var(--accent)",
     },
     color: {

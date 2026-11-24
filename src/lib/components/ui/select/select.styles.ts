@@ -61,11 +61,11 @@ export const select = stylex.create({
     },
     cursor: {
       default: null,
-      ":disabled": "not-allowed",
+      ":is(:disabled, [aria-disabled=\"true\"])": "not-allowed",
     },
     opacity: {
       default: null,
-      ":disabled": "50%",
+      ":is(:disabled, [aria-disabled=\"true\"])": "50%",
     },
   },
   open: {
@@ -323,11 +323,11 @@ export const select = stylex.create({
     },
     cursor: {
       default: null,
-      ":disabled": "not-allowed",
+      ":is(:disabled, [aria-disabled=\"true\"])": "not-allowed",
     },
     opacity: {
       default: null,
-      ":disabled": "50%",
+      ":is(:disabled, [aria-disabled=\"true\"])": "50%",
     },
   },
 });
