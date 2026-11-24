@@ -38,4 +38,19 @@ tempfile = "3"
 
 [target.'cfg(target_os = "windows")'.dependencies]
 tokio = { version = "1", features = ["sync"] }
-windows-sys = { version = "0.61.2", features = ["Win32_Foundation", "Win32_System_LibraryLoader"] }
+windows = { version = "0.61.3", features = ["Foundation", "Graphics", "UI"] }
+windows-core = "0.61.2"
+windows-future = "0.2.1"
+windows-sys = { version = "0.61.2", features = [
+    "Win32_Foundation",
+    "Win32_Graphics_Gdi",
+    "Win32_Security",
+    "Win32_Storage_Packaging_Appx",
+    "Win32_System_LibraryLoader",
+    "Win32_System_Memory",
+    "Win32_UI_HiDpi",
+    "Win32_UI_WindowsAndMessaging",
+] }
+
+[target.'cfg(target_os = "windows")'.dev-dependencies]
+windows-sys = { version = "0.61.2", features = ["Win32_System_Ole"] }
