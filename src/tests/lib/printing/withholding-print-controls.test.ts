@@ -25,7 +25,7 @@ describe('source-native withholding print controls', () => {
   };
   const original = createWithholdingPrintModel(code, values, bindings).text;
   expect([original[prior], original[prior + '_2']]).toEqual(['', '']);
-  expect([original[total], original[total + '_2']]).toEqual(['1000', '00']);
+  expect([original[total], original[total + '_2']]).toEqual(['1,000', '00']);
   const amended = createWithholdingPrintModel(code, { ...values, [prefix + 'optAmend']: 'Y' }, bindings).text;
   expect([amended[prior], amended[prior + '_2']]).toEqual(['100', '00']);
   expect([amended[total], amended[total + '_2']]).toEqual(['900', '00']);
@@ -80,7 +80,7 @@ describe('source-native withholding print controls', () => {
   const keys = ['txtRefMonth', 'txtRefDate', 'txtRefYear', 'txt12', 'select13'].map(key => prefix + key);
   expect(keys.map(key => inactive[key])).toEqual(['', '', '', '', '']);
   const active = createWithholdingPrintModel(code, { ...values, [prefix + 'releasedOfFunds']: 'Y' }, bindings).text;
-  expect(keys.slice(0, 4).map(key => active[key])).toEqual(['02', '27', '2025', '4321.00']);
+  expect(keys.slice(0, 4).map(key => active[key])).toEqual(['02', '27', '2025', '4,321.00']);
   expect(active[prefix + 'select13']).toMatch(/February|02/i);
  });
 
@@ -145,7 +145,7 @@ describe('source-native withholding print controls', () => {
   const detail = (transactionType: string) => fields.map(field => print(transactionType)[field]);
   expect(detail('Cash sale')).toEqual(['', '', '']);
   expect(detail('Exempt')).toEqual(['Sample exemption', '', '']);
-  expect(detail('Installment sale')).toEqual(['', '2345.00', '8']);
+  expect(detail('Installment sale')).toEqual(['', '2,345.00', '8']);
  });
 
  it('prints a 1606 refund mark only on a return with overremittance', () => {

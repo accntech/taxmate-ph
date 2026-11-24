@@ -53,3 +53,10 @@ describe("original withholding print formatting", () => {
     );
   });
 });
+
+it("groups monetary print bindings and keeps two cents digits", () => {
+  const values = createWithholdingValues("1606", initialProfile);
+  values["frm1606:txtFMVLand"] = "1234567.8";
+  const model = createWithholdingPrintModel("1606", values, propertyBindings);
+  expect(model.text["frm1606:txtFMVLand"]).toBe("1,234,567.80");
+});

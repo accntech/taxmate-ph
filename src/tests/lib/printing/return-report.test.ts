@@ -18,8 +18,8 @@ describe('BIR 1601EQ print layout', () => {
 		expect(html).toContain('Quarterly Remittance Return');
 		expect(html).toContain('Machine Validation/Revenue Official Receipt Details');
 		expect(html).toContain('1601EQ_p1.png');
-		expect(html).toContain('value="100000"');
-		expect(html).toContain('value="2000.00"');
+		expect(html).toContain('value="100,000.00"');
+		expect(html).toContain('value="2,000.00"');
 		expect(html).not.toContain('Return details');
 	});
 });

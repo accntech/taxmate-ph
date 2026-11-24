@@ -121,9 +121,10 @@ test("ATC rows beyond the original six slots continue in bounded pages without l
   await expect(continuations).toHaveCount(2);
   await expect(continuations.nth(0).locator("tbody tr")).toHaveCount(18);
   await expect(continuations.nth(1).locator("tbody tr")).toHaveCount(1);
+  await expect(page.locator('[id="frm1601FQ:txtTotalOtherTax"]')).toHaveValue("3,860.80");
   for (let row = 1; row <= 25; row++) {
     expect(await page.evaluate(() => document.body.innerText + [...document.querySelectorAll<HTMLInputElement>("input")].map(input => input.value).join("\n"))).toContain(
-      String(1000 + row),
+      `1,${String(row).padStart(3, "0")}.00`,
     );
   }
 });

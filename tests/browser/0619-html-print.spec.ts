@@ -48,10 +48,10 @@ for (const code of ['0619E', '0619F']) {
 			}).length);
 			expect(largeImages, 'the form frame and labels must not be a full-page image').toBe(0);
 			await expect(print.locator('[id="txtTaxpayerName"]')).toContainText('Harborview Trading And Services, Inc.');
-			await expect(print.locator('[id="txtTax14"]')).toHaveText('18500');
+			await expect(print.locator('[id="txtTax14"]')).toHaveText('18,500');
 			await expect(print.locator('[id="txtTax14_2"]')).toHaveText('25');
 			const total = code === '0619E' ? 'txtTax18' : 'txtTax19';
-			await expect(print.locator(`[id="${total}"]`)).toHaveText(code === '0619E' ? '18000' : '18500');
+			await expect(print.locator(`[id="${total}"]`)).toHaveText(code === '0619E' ? '18,000' : '18,500');
 			await expect(print.locator(`[id="${total}_2"]`)).toHaveText('25');
 			const taxpayerPosition = await print.locator('[id="txtTaxpayerName"]').evaluate(element => {
 				const wrapper = element.closest('#wrapper')!;
@@ -65,10 +65,11 @@ for (const code of ['0619E', '0619F']) {
 			expect(taxpayerPosition.x).toBeCloseTo(14, 0);
 			expect(taxpayerPosition.y).toBeCloseTo(code === '0619E' ? 257 : 227, 0);
 			await expect(print.locator('.withholding-print-draft')).toHaveCount(0);
-			const pdf = await print.pdf({ preferCSSPageSize: true, printBackground: true, path: testInfo.outputPath(`${code}-${paper}.pdf`) });
-			const info = execFileSync('pdfinfo', ['-'], { input: pdf }).toString();
+			const path = testInfo.outputPath(`${code}-${paper}.pdf`);
+			await print.pdf({ preferCSSPageSize: true, printBackground: true, path });
+			const info = execFileSync('pdfinfo', [path], { encoding: 'utf8' });
 			expect(info.match(/^Pages:\s+(\d+)/m)?.[1]).toBe('1');
-			const text = execFileSync('pdftotext', ['-', '-'], { input: pdf }).toString().replace(/\s+/g, ' ');
+			const text = execFileSync('pdftotext', [path, '-'], { encoding: 'utf8' }).replace(/\s+/g, ' ');
 			for (const label of ['Monthly Remittance Form', 'Details of Payment', 'Machine Validation/Revenue Official Receipt Details', 'BIR Data Privacy Policy']) {
 				expect(text).toContain(label);
 			}

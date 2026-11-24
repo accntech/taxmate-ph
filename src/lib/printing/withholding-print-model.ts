@@ -1,3 +1,4 @@
+import { formatCurrencyInput, normalizeCurrencyInput } from "$lib/components/ui/currency-input/currency";
 import {
   getWithholdingAtcs,
   getWithholdingDefinition,
@@ -447,6 +448,9 @@ export function createWithholdingPrintModel(
     (rawValues[prefix + "optRelief"] === "N" && reliefScheduleIds.has(id)),
   ));
   const fields = withholdingFields(definition, rawValues);
+  const amountIds = new Set(fields
+    .filter(field => field.type === "money")
+    .map(field => field.id));
   const inactiveFields = new Set(fields.flatMap(({ id, showWhen }) =>
     showWhen && rawValues[showWhen.field] !== showWhen.value ? [id] : [],
   ));
@@ -526,10 +530,12 @@ export function createWithholdingPrintModel(
     }
     value = binding.options?.[value] ?? value;
     value = printDate(value);
-    if (binding.moneyPart !== undefined)
-      value = (Number(value.replaceAll(",", "")) || 0).toFixed(2).split(".")[
-        binding.moneyPart
-      ];
+    if (binding.moneyPart !== undefined) {
+      const amount = normalizeCurrencyInput(value, true) || "0";
+      value = formatCurrencyInput(amount, 2, true).split(".")[binding.moneyPart];
+    } else if (result && (amountIds.has(result.key) || result.key === prefix + "txtTotalOtherTax")) {
+      value = formatCurrencyInput(value, 2, true);
+    }
     if (/fntSched1TaxRate/.test(binding.id) && value && !value.endsWith("%"))
       value += "%";
     text[binding.id] = value;
@@ -586,14 +592,14 @@ export function createWithholdingPrintModel(
     description:
       catalog.find((atc) => atc.code === values[row.fields[0]?.id])
         ?.description ?? "",
-    cells: row.fields.map((field) => ({
-      ...field,
-      value: inactiveFields.has(field.id)
-        ? ""
-        : field.type === "date"
-          ? printDate(values[field.id] ?? "")
-          : (values[field.id] ?? ""),
-    })),
+    cells: row.fields.map((field) => {
+      const value = inactiveFields.has(field.id) ? "" : (values[field.id] ?? "");
+      return {
+        ...field,
+        value: field.type === "date" ? printDate(value)
+          : field.type === "money" ? formatCurrencyInput(value, 2, true) : value,
+      };
+    }),
   });
   const atcSchedule = schedules.find((schedule) => schedule.id === "atc");
   const limit =

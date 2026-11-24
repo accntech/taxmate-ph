@@ -44,7 +44,7 @@ for (const { status, paperSize } of cases) {
 		expect(request.html).toContain('1601-EQ');
 		expect(request.html).toContain('Machine Validation/Revenue Official Receipt Details');
 		expect(request.html).toContain('Example Services Corporation');
-		expect(request.html).toContain('2000.00');
+		expect(request.html).toContain('2,000.00');
 		expect(request.html).toContain('765.44');
 		expect(request.html).toContain('data:image/png;base64,');
 		expect(request.html).not.toContain('Return details');

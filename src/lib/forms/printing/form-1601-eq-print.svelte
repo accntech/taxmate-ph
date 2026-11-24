@@ -1,7 +1,8 @@
 <script lang="ts">
+	import { formatCurrencyInput } from '$lib/components/ui/currency-input/currency';
 	let { values }: { values: Record<string, string> } = $props();
 	function fieldValue(id: string) { return values[id] || ''; }
-	function moneyValue(id: string) { return values[id] || '0.00'; }
+	function moneyValue(id: string, fallback = '0.00') { return formatCurrencyInput(values[id] || fallback, 2, true); }
 	function isQuarter(quarter: string) { return values['frm1601EQ:optQuarter'] === quarter; }
 	function isCategory(category: string) { return values['frm1601EQ:optCategory'] === category; }
 	function isOption(id: string, value: string) { return values[id] === value; }
@@ -387,7 +388,7 @@
 															<input
 																class="legacy-input legacy-atc-money"
 																readonly
-																value={fieldValue(`frm1601EQ:txtTaxBase${line}`)}
+																value={moneyValue(`frm1601EQ:txtTaxBase${line}`, '')}
 															/>
 														</td>
 														<td class="tblFormTd">
@@ -401,7 +402,7 @@
 															<input
 																class="legacy-input legacy-atc-money"
 																readonly
-																value={fieldValue(`frm1601EQ:txtTaxWithheld${line}`)}
+																value={moneyValue(`frm1601EQ:txtTaxWithheld${line}`, '')}
 															/>
 														</td>
 													</tr>
