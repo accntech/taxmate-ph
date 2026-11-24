@@ -1,5 +1,9 @@
 # Repository Instructions
 
+## BIR Forms
+
+- For any BIR form addition or change, load [.agents/skills/bir-form-workflow/SKILL.md](.agents/skills/bir-form-workflow/SKILL.md).
+
 ## Git
 - Never auto-commit. Even when told to "commit changes", surface the proposed grouping and
   messages, then wait for approval before running `git commit`. Staging is fine.
