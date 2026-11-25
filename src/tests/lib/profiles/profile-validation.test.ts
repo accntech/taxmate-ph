@@ -49,7 +49,7 @@ describe('taxpayer profile save validation', () => {
 		['incomplete TIN', { tin3: '78' }],
 		['letters in TIN', { tin1: '12x' }],
 		['all-zero TIN', { tin1: '000', tin2: '000', tin3: '000' }],
-		['incomplete branch', { branchCode: '000' }],
+		['incomplete branch', { branchCode: '00' }],
 		['missing RDO', { rdoCode: '' }],
 		['malformed RDO', { rdoCode: '4x0' }],
 		['placeholder RDO', { rdoCode: '000' }],
@@ -83,7 +83,7 @@ describe('taxpayer profile save validation', () => {
 		expect(workspace.profiles[0].rdoCode).toBe(rdoCode);
 	});
 
-	it.each(['123456789000001', '123456789000', '123abc4567890000'])(
+	it.each(['123456789000001', '12345678900', '123abc4567890000'])(
 		'rejects raw TIN %s instead of silently truncating it',
 		async (rawTin) => {
 			await workspace.saveTaxpayerProfile(rawTin);
@@ -162,8 +162,8 @@ it('saves the selected legacy file when equivalent branch identities coexist', a
  workspace.profiles = [first, second];
  workspace.selectTaxpayerProfile(second.id);
  workspace.profile.taxpayerName = 'Updated second';
- expect(await workspace.saveTaxpayerProfile('123-456-789-00007')).toBe(true);
- expect(save).toHaveBeenCalledWith(expect.objectContaining({ id: second.id, taxpayerName: 'Updated second', branchCode: '00007' }));
+ expect(await workspace.saveTaxpayerProfile('123-456-789-0007')).toBe(true);
+ expect(save).toHaveBeenCalledWith(expect.objectContaining({ id: second.id, taxpayerName: 'Updated second', branchCode: '0007' }));
  expect(workspace.profiles[0]).toEqual(first);
  expect(workspace.selectedProfileId).toBe(second.id);
 });

@@ -269,3 +269,10 @@ it('saves an existing mixed-case return email in lowercase', async () => {
  expect(await workspace.saveActiveReturn()).toBe(true);
  expect(workspace.createdReturns.find(record => record.id === id)?.values.txtEmail).toBe('saved.return@example.com');
 });
+
+it('preserves the stored three-digit branch when selecting a taxpayer', () => {
+ const legacy = { ...other, branchCode: '007' };
+ workspace.profiles = [legacy];
+ workspace.selectTaxpayerProfile(legacy.id);
+ expect(workspace.profile.branchCode).toBe('007');
+});

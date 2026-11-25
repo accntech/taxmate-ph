@@ -50,7 +50,7 @@ describe('profile helpers', () => {
 				tin3: '175',
 				branchCode: '0007'
 			})
-		).toBe('421-539-175-00007');
+		).toBe('421-539-175-0007');
 	});
 
 	it('builds the profile filename from taxpayer id fields', () => {
@@ -185,7 +185,7 @@ describe('profile helpers', () => {
 });
 
 
-describe('five-digit branches', () => {
+describe('three- to five-digit branches', () => {
  const parts = { tin1: '123', tin2: '456', tin3: '789', branchCode: '12345' };
  it('preserves all five branch digits through parsing and formatting', () => {
   expect(parseTinInput('123-456-789-12345')).toEqual(parts);
@@ -193,9 +193,9 @@ describe('five-digit branches', () => {
   expect(normalizeTinParts(parts)).toBe('12345678912345');
   expect(buildProfileFilename(parts)).toBe('12345678912345.xml');
  });
- it('pads older branch codes to five digits for display', () => {
-  expect(formatTinInput({ ...parts, branchCode: '007' })).toBe('123-456-789-00007');
-  expect(formatTinInput({ ...parts, branchCode: '1234' })).toBe('123-456-789-01234');
+ it('preserves older branch codes for display', () => {
+  expect(formatTinInput({ ...parts, branchCode: '007' })).toBe('123-456-789-007');
+  expect(formatTinInput({ ...parts, branchCode: '1234' })).toBe('123-456-789-1234');
  });
  it.each(['007', '0007'])('retains the saved identity when padding legacy branch %s', (branchCode) => {
   const old = { ...parts, branchCode, id: '123456789' + branchCode, taxpayerName: 'Old', rdoCode: '040', address: '', address2: '', zipCode: '', contactNumber: '', category: 'P', email: '' };
@@ -203,11 +203,11 @@ describe('five-digit branches', () => {
   expect(updated).toHaveLength(1);
   expect(updated[0]).toMatchObject({ id: old.id, branchCode: '00007', taxpayerName: 'Updated' });
  });
- it('validates exactly five branch digits and rejects excessive raw digits', () => {
+ it('validates three to five branch digits and rejects excessive raw digits', () => {
   const profile = { ...parts, taxpayerName: 'Taxpayer', rdoCode: '040', address: '', address2: '', zipCode: '', contactNumber: '', category: 'P', email: '' };
   expect(validateTaxpayerProfile(profile, '123-456-789-12345')).toEqual({});
-  for (const branchCode of ['1234', '123456', '12x45']) {
-   expect(validateTaxpayerProfile({ ...profile, branchCode }).tin).toBe('Enter 9 TIN digits and a 5-digit branch code.');
+  for (const branchCode of ['12', '123456', '12x45']) {
+   expect(validateTaxpayerProfile({ ...profile, branchCode }).tin).toBe('Enter 9 TIN digits and a 3- to 5-digit branch code.');
   }
   expect(validateTaxpayerProfile(profile, '123456789123456').tin).toBeTruthy();
  });
@@ -257,3 +257,11 @@ describe('individual profile details', () => {
 		});
 	});
 });
+
+ it.each(['007', '0007', '00007'])('preserves valid profile and spouse branch %s', (branchCode) => {
+  const profile = { tin1: '123', tin2: '456', tin3: '789', branchCode, taxpayerName: 'Taxpayer', rdoCode: '040', address: '', address2: '', zipCode: '', contactNumber: '', category: 'P', email: '', spouse: { tin1: '321', tin2: '654', tin3: '987', branchCode } };
+  expect(validateTaxpayerProfile(profile, `123-456-789-${branchCode}`)).toEqual({});
+  const [saved] = upsertTaxpayerProfile([], profile);
+  expect(saved.branchCode).toBe(branchCode);
+  expect(saved.spouse?.branchCode).toBe(branchCode);
+ });

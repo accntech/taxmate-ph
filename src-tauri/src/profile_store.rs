@@ -256,9 +256,11 @@ fn validate_profile(profile: &TaxpayerProfile) -> Result<(), ProfileStoreError> 
         let branch = spouse.branch_code.as_deref().unwrap_or_default();
         if tin.iter().any(|part| !part.is_empty()) || !branch.is_empty() {
             let valid_tin = tin.iter().all(|part| is_ascii_digits(part, 3));
-            if !valid_tin || !is_ascii_digits(branch, 5) {
+            let valid_branch = (3..=5).contains(&branch.len())
+                && branch.bytes().all(|byte| byte.is_ascii_digit());
+            if !valid_tin || !valid_branch {
                 return Err(ProfileStoreError::new(
-                    "Enter 9 spouse TIN digits and a 5-digit branch code.",
+                    "Enter 9 spouse TIN digits and a 3- to 5-digit branch code.",
                 ));
             }
             if tin == ["000", "000", "000"] {

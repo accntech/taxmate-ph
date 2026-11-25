@@ -198,3 +198,14 @@ fn rejects_invalid_psoc_codes_before_saving_profile() {
     }
     assert!(!root.path().join("profile").exists());
 }
+
+#[test]
+fn preserves_three_digit_taxpayer_and_spouse_branches() {
+    let root = tempfile::tempdir().expect("temp app data root");
+    let mut data = serde_json::to_value(sample_profile()).unwrap();
+    data["branchCode"] = serde_json::json!("007");
+    data["spouse"] = serde_json::json!({ "tin1": "321", "tin2": "654", "tin3": "987", "branchCode": "009" });
+    let profile: TaxpayerProfile = serde_json::from_value(data).unwrap();
+    save_taxpayer_profile_to_root(root.path(), profile.clone()).expect("save three-digit branches");
+    assert_eq!(list_taxpayer_profiles_from_root(root.path()).unwrap(), vec![profile]);
+}

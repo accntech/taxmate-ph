@@ -50,7 +50,7 @@ test('all supported returns show their taxpayer information', async ({ page }) =
 			const contact = form.code === '1701MS'
 				? ['example@example.com', '09171234567']
 				: ['123 Example Street', 'Example City'];
-			for (const value of ['Example Services Corporation', '001-234-567-00008', '040', ...contact]) {
+			for (const value of ['Example Services Corporation', '001-234-567-0008', '040', ...contact]) {
 				await expect(information).toContainText(value);
 			}
 			const labels = taxpayerLabels[form.code];

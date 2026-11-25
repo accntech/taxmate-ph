@@ -474,7 +474,7 @@ class EbirformsWorkspace {
 			this.activeReturnId = null;
 			this.importBuffer = '';
 		}
-		this.profile = { ...foundProfile, branchCode: foundProfile.branchCode.padStart(5, '0') };
+		this.profile = { ...foundProfile };
 		this.selectedProfileId = id;
 		if (!this.activeReturnId) {
 			this.formValues = { ...this.formValues, ...buildTaxpayerProfileFormValues(foundProfile) };

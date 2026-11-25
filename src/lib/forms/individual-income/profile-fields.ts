@@ -173,7 +173,7 @@ function parts(details: Details, code: string): Record<Part, string | undefined>
 	return {
 		...details, surname, givenName, middleName: middle.join(' ') || undefined, birthYear, birthMonth, birthDay,
 		birthDate: birthYear ? `${birthMonth}/${birthDay}/${birthYear}` : undefined,
-		branchCode: details.branchCode?.padStart(5, '0'),
+		branchCode: details.branchCode,
 		email: details.email?.trim().toLowerCase(),
 		civilStatus: details.civilStatus && (civilStatus[code]?.[details.civilStatus] ?? details.civilStatus),
 		taxpayerName: details.taxpayerName, tin1: details.tin1, tin2: details.tin2, tin3: details.tin3,

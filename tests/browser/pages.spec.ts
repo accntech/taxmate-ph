@@ -45,7 +45,7 @@ test('the design system is not an application route', async ({ page }) => {
 test('profile form uses TIN, multiline address, email and telephone controls with leading-zero codes', async ({ page }) => {
 	await seedWorkspace(page);
 	await page.goto(`/ebirforms/taxpayers/${taxpayerId}/edit`);
-	await expect(page.getByRole('textbox', { name: 'TIN and branch code', exact: true })).toHaveValue('001-234-567-00008');
+	await expect(page.getByRole('textbox', { name: 'TIN and branch code', exact: true })).toHaveValue('001-234-567-0008');
 	await expect(page.getByRole('textbox', { name: 'RDO code', exact: true })).toHaveValue('040');
 	await expect(page.getByRole('textbox', { name: 'ZIP code', exact: true })).toHaveValue('0123');
 	await expect(page.getByRole('textbox', { name: 'Address line 1', exact: true })).toHaveJSProperty('tagName', 'TEXTAREA');

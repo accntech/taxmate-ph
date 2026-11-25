@@ -95,7 +95,7 @@ export function incomeProfileValues(
 	values: Values = {},
 	{ openingDraft = true }: IncomeProfileOptions = {}
 ): Values {
-	const branchCode = profile.branchCode.padStart(5, '0');
+	const branchCode = profile.branchCode;
 	const result = Object.fromEntries(Object.entries(form.identity).map(([key, id]) => [id, key === 'email' ? (profile.email ?? '').trim().toLowerCase() : String(profile[key as ProfileKey] ?? '')]));
 	for (const field of form.fields) {
 		const name = field.id.split(':').at(-1) ?? '';
@@ -115,7 +115,6 @@ export function incomeProfileValues(
 		}
 	}
 
-	if (result[form.identity.branchCode!] && /^\d{1,4}$/.test(result[form.identity.branchCode!])) result[form.identity.branchCode!] = result[form.identity.branchCode!].padStart(5, '0');
 	const taxpayerType = incomeTaxpayerTypeValues(form.code, profile, values);
 	const personal = incomePersonalValues(form.code, profile, { ...values, ...taxpayerType });
 	if (form.code === '1701') {
@@ -284,7 +283,9 @@ export function validateIndividualIncome(form: IncomeForm, values: Values): Valu
 	const tin = ['tin1', 'tin2', 'tin3'].map(key => values[form.identity[key as ProfileKey]!] ?? '');
 	if (!tin.every(part => /^\d{3}$/.test(part)) || tin.join('') === '000000000') errors[form.identity.tin1!] = 'Enter a valid nine-digit TIN.';
 	const branch = form.identity.branchCode!;
-	if (!/^\d{5}$/.test(values[branch] ?? '')) errors[branch] = 'Enter a five-digit branch code.';
+	// Both 1701Q revisions have a three-character entry field but copy the full
+	// profile branch into it and validate that it has at least three digits.
+	if (!/^\d{3,5}$/.test(values[branch] ?? '')) errors[branch] = 'Enter a three- to five-digit branch code.';
 	for (const key of ['taxpayerName', 'address', 'zipCode'] as const) {
 		const field = form.identity[key];
 		if (field && !values[field]?.trim()) errors[field] = `Enter the ${{ taxpayerName: 'taxpayer’s name', address: 'registered address', zipCode: 'ZIP code' }[key]}.`;

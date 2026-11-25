@@ -110,11 +110,11 @@ export function validateTaxpayerProfile(
 	}
 	const partsValid =
 		[profile.tin1, profile.tin2, profile.tin3].every((part) => /^\d{3}$/.test(part)) &&
-		/^\d{5}$/.test(profile.branchCode);
+		/^\d{3,5}$/.test(profile.branchCode);
 	const rawValid =
-		rawTin === undefined || (/^[\d\s-]+$/.test(rawTin) && rawTin.replace(/\D/g, '').length === 14);
+		rawTin === undefined || (/^[\d\s-]+$/.test(rawTin) && /^\d{12,14}$/.test(rawTin.replace(/\D/g, '')));
 	if (!partsValid || !rawValid) {
-		errors.tin = 'Enter 9 TIN digits and a 5-digit branch code.';
+		errors.tin = 'Enter 9 TIN digits and a 3- to 5-digit branch code.';
 	} else if (profile.tin1 + profile.tin2 + profile.tin3 === '000000000') {
 		errors.tin = 'TIN cannot be all zeros.';
 	} else {
@@ -163,8 +163,8 @@ export function validateTaxpayerProfile(
 		const tinParts = [tin1, tin2, tin3].map((part) => part?.trim() ?? '');
 		const branch = branchCode?.trim() ?? '';
 		if (tinParts.some(Boolean) || branch) {
-			if (!tinParts.every((part) => /^\d{3}$/.test(part)) || !/^\d{5}$/.test(branch)) {
-				errors.spouseTin = 'Enter 9 spouse TIN digits and a 5-digit branch code.';
+			if (!tinParts.every((part) => /^\d{3}$/.test(part)) || !/^\d{3,5}$/.test(branch)) {
+				errors.spouseTin = 'Enter 9 spouse TIN digits and a 3- to 5-digit branch code.';
 			} else if (tinParts.join('') === '000000000') {
 				errors.spouseTin = 'Spouse TIN cannot be all zeros.';
 			}
@@ -220,7 +220,7 @@ export function formatTinInput(parts: TinParts): string {
 	const tin1 = padPart(parts.tin1, 3);
 	const tin2 = padPart(parts.tin2, 3);
 	const tin3 = padPart(parts.tin3, 3);
-	const branchCode = padPart(parts.branchCode, 5);
+	const branchCode = digitsOnly(parts.branchCode);
 
 	return `${tin1}-${tin2}-${tin3}-${branchCode}`;
 }

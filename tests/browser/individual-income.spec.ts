@@ -144,6 +144,28 @@ test('prefills the quarterly taxpayer type and preserves a saved return override
 	await expect(trust).toBeChecked();
 });
 
+for (const code of ['1701Q', '1701Qv2018']) {
+	test(`${code} preserves a three-digit taxpayer branch when saving and reopening`, async ({ page }, testInfo) => {
+		test.setTimeout(90_000);
+		await seedWorkspace(page, 'light', 'loaded', { ...fixture, branchCode: '078' });
+		await page.goto(`${list}/${code}?new=true`);
+		const information = page.getByRole('region', { name: 'Taxpayer information', exact: true });
+		const tin = information.getByText('001-234-567-078', { exact: true });
+		await expect(tin).toBeVisible({ timeout: 60_000 });
+		await page.getByRole('button', { name: 'Save draft', exact: true }).click();
+		await expect(page).toHaveURL(/\/forms$/);
+		const branchId = code === '1701Q' ? 'frm1701q:txt5BranchCode' : 'frm1701q:txtBranchCode';
+		const savedBranch = await page.evaluate(({ code, branchId }) => {
+			const storage = JSON.parse(localStorage.getItem('ebirforms-created-returns-v1')!);
+			return storage.returns.find((record: { formCode: string }) => record.formCode === code)?.values[branchId];
+		}, { code, branchId });
+		expect(savedBranch).toBe('078');
+		await page.getByRole('row').filter({ hasText: code }).getByRole('link', { name: 'Edit', exact: true }).click();
+		await expect(tin).toBeVisible({ timeout: 30_000 });
+		await tin.screenshot({ path: testInfo.outputPath(`${code}-branch-code.png`) });
+	});
+}
+
 for (const [code, total] of Object.entries({ 1701: '32', '1701v2018': '32', '1701A': '30', '1701MS': '30', '1701Qv2018': '31' })) {
 	test(`${code} presents the total tax payable in a compact table`, async ({ page }) => {
 		await seedWorkspace(page, 'light', 'loaded', { ...fixture, civilStatus: 'Single' });
@@ -748,7 +770,8 @@ for (const [code, count] of Object.entries(cases)) {
 				const { buildReturnReport } = await import(`${base}/printing/return-report.ts`);
 				const form = getIndividualIncomeForm(code);
 
-				const values = { ...createIndividualIncomeValues(form, fixture), [form.year]: ['1700', '1701', '1701Q'].includes(code) ? '2017' : '2025' };
+				const profile = code.startsWith('1701Q') ? { ...fixture, branchCode: '078' } : fixture;
+				const values = { ...createIndividualIncomeValues(form, profile), [form.year]: ['1700', '1701', '1701Q'].includes(code) ? '2017' : '2025' };
 				if (code === '1701') values['frm1701:txtPg5Sc1I1ComIncomeC2'] = '125000.50';
 				if (code === '1701A') Object.assign(values, {
 					'frm1701A:txt36A': '1000000', 'frm1701A:optTaxType': 'S', 'frm1701A:optATC': 'II012',
@@ -825,6 +848,11 @@ for (const [code, count] of Object.entries(cases)) {
 			const path = testInfo.outputPath(`${code}-${paper}.pdf`);
 			await print.pdf({ path, preferCSSPageSize: true, printBackground: true, tagged: true });
 			const pdfinfo = execFileSync('pdfinfo', [path], { encoding: 'utf8' });
+			if (code.startsWith('1701Q')) {
+				const pdfText = execFileSync('pdftotext', ['-layout', path, '-'], { encoding: 'utf8' });
+				expect(pdfText).toMatch(/001\s+234\s+567\s+078\b/);
+				expect(pdfText).not.toContain('00078');
+			}
 			expect(pdfinfo).toMatch(new RegExp(`Pages:\\s+${count}\\b`));
 			await expect(print.locator('.withholding-page-footer .pdf-report-source')).toHaveText(Array(count).fill(sampleSource));
 			if (code === '1700') {

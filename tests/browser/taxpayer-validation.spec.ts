@@ -120,11 +120,11 @@ test('saves a packaged alphanumeric RDO from the taxpayer editor', async ({ page
 });
 
 
-test('preserves a legacy profile identity when saving a padded branch', async ({ page }) => {
- await seedWorkspace(page);
+test('preserves a legacy profile identity and its three-digit branch', async ({ page }) => {
+ await seedWorkspace(page, 'light', 'loaded', { branchCode: '008' });
  await page.goto(`/ebirforms/taxpayers/${taxpayerId}/edit`);
  const tin = page.getByRole('textbox', { name: 'TIN and branch code', exact: true });
- await expect(tin).toHaveValue('001-234-567-00008');
+ await expect(tin).toHaveValue('001-234-567-008');
  await page.evaluate(() => {
   const native = (window as any).__TAURI_INTERNALS__;
   const invoke = native.invoke;
@@ -135,7 +135,7 @@ test('preserves a legacy profile identity when saving a padded branch', async ({
  });
  await page.getByRole('button', { name: 'Save profile', exact: true }).click();
  await expect(page).toHaveURL('/ebirforms/taxpayers');
- expect(await page.evaluate(() => (window as any).__savedProfile)).toMatchObject({ id: taxpayerId, branchCode: '00008' });
+ expect(await page.evaluate(() => (window as any).__savedProfile)).toMatchObject({ id: taxpayerId, branchCode: '008' });
 });
 
 test('saves a new taxpayer with all five branch digits', async ({ page }) => {

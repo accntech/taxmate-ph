@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { getFormDefinition } from '$lib/forms';
-import { calculateReturn, getManagedTaxpayerValues, getReturnAmount, getReturnPeriod, validateReturnValues } from '$lib/forms/form-runtime';
+import { calculateReturn, getManagedTaxpayerValues, getReturnAmount, getReturnExportValues, getReturnPeriod, validateReturnValues } from '$lib/forms/form-runtime';
 import { createIndividualIncomeValues, getIndividualIncomeForm } from '$lib/forms/individual-income';
 import type { TaxpayerProfile } from '$lib/profiles/profile';
 
@@ -11,6 +11,44 @@ const individual: TaxpayerProfile = {
 	contactNumber: '0285550148', email: 'alex.santos@example.test', category: 'P',
 	taxpayerClassification: 'I'
 };
+
+describe.each(codes)('%s taxpayer branch code', (code) => {
+	const form = getIndividualIncomeForm(code)!;
+	const branch = form.identity.branchCode!;
+
+	it.each(['008', '0008', '00008'])('preserves and validates %s through draft autofill and export', (branchCode) => {
+		const profile = { ...individual, branchCode };
+		const values = createIndividualIncomeValues(form, profile);
+		expect(values[branch]).toBe(branchCode);
+		const olderDraft = { ...values, [branch]: '00008' };
+		const reopened = { ...olderDraft, ...getManagedTaxpayerValues(code, profile, 'Draft', olderDraft) };
+		expect(reopened[branch]).toBe(branchCode);
+		expect(validateReturnValues(code, reopened)).not.toHaveProperty(branch);
+		expect(getReturnExportValues(code, reopened)[branch]).toBe(branchCode);
+		if (code === '1701Qv2018' || code === '1701MS') {
+			const repeated = code === '1701Qv2018' ? 'frm1701q:txtPg2BranchCode' : 'frm1701MS:txtPg2BranchCode';
+			expect(getReturnExportValues(code, reopened)[repeated]).toBe(branchCode);
+		}
+	});
+
+	it.each(['', '08', '000008', '0A8'])('rejects an invalid taxpayer branch %j', (branchCode) => {
+		expect(validateReturnValues(code, { ...createIndividualIncomeValues(form, individual), [branch]: branchCode }))
+			.toHaveProperty(branch);
+	});
+});
+
+it('copies a spouse branch code independently from the quarterly taxpayer branch', () => {
+	const code = '1701Qv2018';
+	const profile: TaxpayerProfile = {
+		...individual,
+		spouse: { taxpayerName: 'SANTOS, TAYLOR', tin1: '765', tin2: '432', tin3: '100', branchCode: '007' }
+	};
+	expect(getManagedTaxpayerValues(code, profile, 'Draft', { 'income:useSavedSpouse': 'Y' })).toMatchObject({
+		'frm1701q:txtBranchCode': '00008',
+		'frm1701q:txtSpouseBranchCode': '007'
+	});
+});
+
 
 it('prefills the legacy 1701 trade name and four-digit PSIC class', () => {
 	const profile = { ...individual, tradeName: 'Alex & Reyes Advisory', psicCode: '01121' };
