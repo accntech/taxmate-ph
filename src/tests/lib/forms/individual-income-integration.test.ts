@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { getFormDefinition } from '$lib/forms';
 import { calculateReturn, getManagedTaxpayerValues, getReturnAmount, getReturnExportValues, getReturnPeriod, validateReturnValues } from '$lib/forms/form-runtime';
 import { createIndividualIncomeValues, getIndividualIncomeForm } from '$lib/forms/individual-income';
@@ -49,6 +49,33 @@ it('copies a spouse branch code independently from the quarterly taxpayer branch
 	});
 });
 
+it('defaults June 2013 Form 1700 to a non-joint return for a single taxpayer', () => {
+	const form = getIndividualIncomeForm('1700')!;
+	const jointChoice = 'frm1700:rdoPg1Pt1I3JointFiling';
+	const single: TaxpayerProfile = { ...individual, civilStatus: 'Single' };
+	const married: TaxpayerProfile = { ...individual, civilStatus: 'Married' };
+	const savedChoice = { [jointChoice]: 'frm1700:rdoPg1Pt1I3JointFilingYes' };
+	expect(createIndividualIncomeValues(form, single)[jointChoice]).toBe('frm1700:rdoPg1Pt1I3JointFilingNo');
+	expect(createIndividualIncomeValues(form, married)[jointChoice]).toBeUndefined();
+	expect(createIndividualIncomeValues(form, individual)[jointChoice]).toBeUndefined();
+	expect(getManagedTaxpayerValues('1700', single, 'Draft', savedChoice)).not.toHaveProperty(jointChoice);
+});
+
+it.each([
+	['1701MS', '2025'],
+	['1701Qv2018', '2026']
+])('defaults the filing year for %s at the Manila New Year', (code, expected) => {
+	vi.useFakeTimers().setSystemTime(new Date('2025-12-31T16:30:00Z'));
+	try {
+		const form = getIndividualIncomeForm(code)!;
+		const values = createIndividualIncomeValues(form, individual);
+		expect(values[form.year]).toBe(expected);
+		expect(validateReturnValues(code, values)).not.toHaveProperty(form.year);
+		expect(getManagedTaxpayerValues(code, individual, 'Draft', { [form.year]: '2024' })).not.toHaveProperty(form.year);
+	} finally {
+		vi.useRealTimers();
+	}
+});
 
 it('prefills the legacy 1701 trade name and four-digit PSIC class', () => {
 	const profile = { ...individual, tradeName: 'Alex & Reyes Advisory', psicCode: '01121' };

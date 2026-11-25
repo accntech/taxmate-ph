@@ -104,6 +104,7 @@ describe('source-native withholding print controls', () => {
  it('omits both regular and treaty rows in a 1601F PDF when no tax was withheld', () => {
   const values = {
    ...createWithholdingValues('1601F', initialProfile),
+   'frm1601F:optWithheld': 'N',
    'frm1601F:optRelief': 'Y',
    'frm1601F:txtAtcCode1': 'WI202',
    'frm1601F:txtTaxBase1': '1000.00',

@@ -49,7 +49,7 @@ describe('withholding return lifecycle', () => {
  });
  it('submits 1601EQ using the sending preference and persists actual success', async () => {
   const id = workspace.createReturn(initialProfile.id, '1601EQ');
-  workspace.updateFormValues({ 'frm1601EQ:txtYear': '2026', 'frm1601EQ:optTaxesWithheld': 'N' });
+  workspace.updateFormValues({ 'frm1601EQ:txtYear': '2025', 'frm1601EQ:optQuarter': 'Q1', 'frm1601EQ:optTaxesWithheld': 'N' });
   await workspace.saveActiveReturn();
   const revision = workspace.historyRevision;
   submit.mockResolvedValue({status:'submitted',finalFlag:'1',savePath:'return.xml',sendPath:'',message:'Uploaded'});
@@ -60,7 +60,7 @@ describe('withholding return lifecycle', () => {
  });
  it('honors local preparation selected in Settings without marking submitted', async () => {
   const id = workspace.createReturn(initialProfile.id, '1601EQ');
-  workspace.updateFormValues({ 'frm1601EQ:optTaxesWithheld': 'N' });
+  workspace.updateFormValues({ 'frm1601EQ:txtYear': '2025', 'frm1601EQ:optQuarter': 'Q1', 'frm1601EQ:optTaxesWithheld': 'N' });
   await workspace.saveActiveReturn();
   settings.updatePrefs({ submissionMode: 'dry_run' });
   submit.mockResolvedValue({status:'drafted',finalFlag:'2',savePath:'return.xml',sendPath:'',message:'Prepared locally'});
@@ -98,7 +98,7 @@ it('can finalize a reopened 1601EQ draft after correcting its taxpayer email', a
  const profile = { ...workspace.profiles[0], email: '' };
  workspace.profiles = [profile];
  const id = workspace.createReturn(profile.id, '1601EQ')!;
- workspace.updateFormValues({ 'frm1601EQ:txtYear': '2025', 'frm1601EQ:optTaxesWithheld': 'N' });
+ workspace.updateFormValues({ 'frm1601EQ:txtYear': '2025', 'frm1601EQ:optQuarter': 'Q1', 'frm1601EQ:optTaxesWithheld': 'N' });
  await workspace.saveActiveReturn();
  await workspace.markFinalCopy();
  expect(workspace.validationErrors.txtEmail).toBeTruthy();
@@ -157,7 +157,7 @@ it('keeps escaped saved XML and sends a separate installer-compatible 1601EQ RDO
 it('does not replace saved draft or local preparation XML with the RDO wire format', async () => {
  workspace.createReturn(initialProfile.id, '1601EQ');
  workspace.updateFormValues({ 'frm1601EQ:txtYear': '2025', 'frm1601EQ:optTaxesWithheld': 'N',
-  'frm1601EQ:txtTaxpayerName': 'SANTOS & CO' });
+  'frm1601EQ:optQuarter': 'Q2', 'frm1601EQ:txtTaxpayerName': 'SANTOS & CO' });
  submit.mockResolvedValue({ status: 'drafted', finalFlag: '2', message: 'Prepared' });
  await workspace.saveDraft();
  expect(submit.mock.calls[0][0].rdoXml).toBeUndefined();

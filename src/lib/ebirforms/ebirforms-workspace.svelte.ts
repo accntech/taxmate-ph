@@ -2,6 +2,7 @@ import { createIndividualIncomeValues, getIndividualIncomeForm } from '$lib/form
 import { deleteStoredDrafts, loadCreatedReturnsData, saveCreatedReturnsData, type CreatedReturn, type CreatedReturnStatus } from './created-returns';
 import { getFormDefinition, listForms } from '$lib/forms';
 import { calculateReturn, validateReturnValues, getReturnPeriod, getReturnTin, getManagedTaxpayerValues, getReturnEmail, getReturnEmailFieldId, getReturnExportValues } from '$lib/forms/form-runtime';
+import { philippineCalendarDate } from '$lib/forms/filing-calendar';
 import { createWithholdingValues } from '$lib/forms/withholding-rules';
 import { createWorkingReturnsClient } from '$lib/tauri/working-returns';
 import { settings } from '$lib/settings.svelte';
@@ -49,10 +50,10 @@ export function createInitialFormValues(profile: TaxpayerProfile, code = '1601EQ
 	if (code !== '1601EQ') return createWithholdingValues(code, profile);
 	return {
 		...buildTaxpayerProfileFormValues(profile),
-		'frm1601EQ:txtYear': '2026',
-		'frm1601EQ:optQuarter': 'Q1',
+		'frm1601EQ:txtYear': String(philippineCalendarDate().year),
+		'frm1601EQ:optQuarter': '',
 		'frm1601EQ:optAmendedReturn': 'N',
-		'frm1601EQ:optTaxesWithheld': 'Y',
+		'frm1601EQ:optTaxesWithheld': '',
 		'frm1601EQ:txtSheetsAttached': '0',
 		'frm1601EQ:txtTotalTaxesWithheld': '0.00',
 		'frm1601EQ:txtRemittanceFirstMonth': '0.00',

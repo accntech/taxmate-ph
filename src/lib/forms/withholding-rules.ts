@@ -13,7 +13,11 @@ import {
   type WithholdingField,
 } from "./withholding-definitions";
 
+import { philippineCalendarDate } from "./filing-calendar";
+
 type Values = Record<string, string>;
+const twoDigits = (value: number) => String(value).padStart(2, "0");
+const annualInformationReturns = ["1604C", "1604CF", "1604E", "1604F"];
 /** Input parsing for calculation never changes editable draft strings. Validation rejects invalid text. */
 function number(value: string | undefined): number {
   const s = (value ?? "").replaceAll(",", "").trim();
@@ -34,6 +38,11 @@ function activeField(field: WithholdingField, values: Values): boolean {
   );
 }
 
+export function monthlyRemittanceDueDate(year: string, month: string): string {
+  if (!/^\d{4}$/.test(year) || !/^(?:0[1-9]|1[0-2])$/.test(month)) return "";
+  return month === "12" ? `${Number(year) + 1}-01-10` : `${year}-${twoDigits(Number(month) + 1)}-10`;
+}
+
 export function createWithholdingValues(
   code: string,
   profile?: TaxpayerProfile,
@@ -45,18 +54,24 @@ export function createWithholdingValues(
       field.profileKey && profile
         ? (field.profileKey === "email" ? (profile.email ?? '').toLowerCase() : profile[field.profileKey] ?? "")
         : (field.defaultValue ?? "");
-  const now = new Date();
-  if (d.yearField in values)
-    values[d.yearField] = String(Math.min(now.getFullYear(), d.maxYear ?? now.getFullYear()));
-  if (d.monthField) values[d.monthField] = String(now.getMonth() + 1).padStart(2, "0");
-  if (code.startsWith("0619")) {
-    const completedMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    values[d.yearField] = String(completedMonth.getFullYear());
-    values[d.monthField!] = String(completedMonth.getMonth() + 1).padStart(2, "0");
+  const { year, month, day } = philippineCalendarDate();
+  if (d.yearField in values) {
+    const reportingYear = annualInformationReturns.includes(code) ? year - 1 : year;
+    values[d.yearField] = String(Math.min(reportingYear, d.maxYear ?? reportingYear));
   }
+  if (d.monthField) {
+    values[d.monthField] = code === "1601E" || code === "1601F" ? "01" : twoDigits(month);
+  }
+  if (code.startsWith("0619")) {
+    values[d.yearField] = String(month === 1 ? year - 1 : year);
+    values[d.monthField!] = twoDigits(month === 1 ? 12 : month - 1);
+    values[d.prefix + "dueDate"] = monthlyRemittanceDueDate(values[d.yearField], values[d.monthField!]);
+  }
+  if (code === "1603Qv2018") values[d.yearField] = "2018";
   if (code === "0605") {
-    values[d.prefix + "itemYearEndMonth"] = String(now.getMonth() + 1).padStart(2, "0");
     values[d.prefix + "itemFiscalStartMonth"] = "Calendar";
+  } else if (d.dateField) {
+    values[d.dateField] = `${year}-${twoDigits(month)}-${twoDigits(day)}`;
   }
   return calculateWithholding(code, values);
 }
@@ -454,6 +469,8 @@ export function validateWithholding(
   draftValues: Values,
   now = new Date(),
 ): Values {
+  const { year: currentYear, month: currentMonth, day } = philippineCalendarDate(now);
+  const today = `${currentYear}-${twoDigits(currentMonth)}-${twoDigits(day)}`;
   const d = definition(code),
     p = d.prefix,
     errors: Values = {};
@@ -511,7 +528,7 @@ export function validateWithholding(
     errors[p + "txtSheets"] = "Enter a nonnegative whole number of sheets.";
   if (d.period !== "date") {
     const year = Number(values[d.yearField]);
-    const maximum = d.maxYear ?? now.getFullYear();
+    const maximum = d.maxYear ?? currentYear;
     if (
       !/^\d{4}$/.test(values[d.yearField] ?? "") ||
       year < (d.minYear ?? 1900) ||
@@ -524,10 +541,10 @@ export function validateWithholding(
       if (!Number.isInteger(month) || month < 1 || month > 12)
         errors[d.monthField!] = "Choose a valid month.";
       if (
-        year === now.getFullYear() &&
+        year === currentYear &&
         (code.startsWith("0619")
-          ? month >= now.getMonth() + 1
-          : month > now.getMonth() + 1)
+          ? month >= currentMonth
+          : month > currentMonth)
       )
         errors[d.monthField!] = "Choose a completed reporting month.";
     }
@@ -537,8 +554,8 @@ export function validateWithholding(
         errors[d.quarterField!] = "Choose a quarter.";
       else if (
         code === "1601FQ" &&
-        year === now.getFullYear() &&
-        now.getMonth() < [2, 6, 9, 12][q - 1]
+        year === currentYear &&
+        currentMonth - 1 < [2, 6, 9, 12][q - 1]
       )
         errors[d.quarterField!] =
           "This quarter is not yet selectable for the reporting year.";
@@ -548,7 +565,7 @@ export function validateWithholding(
     const year = Number(values[d.dateField!].slice(0, 4));
     if (
       year < (d.minYear ?? 1900) ||
-      new Date(values[d.dateField!] + "T00:00:00") > now
+      values[d.dateField!] > today
     )
       errors[d.dateField!] = "Enter a valid date no later than today.";
   }
@@ -707,7 +724,7 @@ export function validateWithholding(
     (code === "1604C" || code === "1604CF") &&
     text("releasedOfFunds") === "Y" &&
     validDate(text("refundDate")) &&
-    new Date(text("refundDate") + "T00:00:00") > now
+    text("refundDate") > today
   )
     errors[p + "refundDate"] = "Enter a refund date no later than today.";
   if (code === "1606") {

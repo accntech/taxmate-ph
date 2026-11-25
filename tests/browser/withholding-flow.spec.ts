@@ -8,10 +8,12 @@ const dateControl = (page: Page, id: string) => page.locator('[data-slot="date-i
 async function fillDate(page: Page, id: string, iso: string) {
 	const [year, month, day] = iso.split('-');
 	const date = dateControl(page, id);
-	await date.getByRole('spinbutton', { name: 'Month', exact: true }).fill(month);
-	await date.getByRole('spinbutton', { name: 'Day', exact: true }).fill(day);
+	// Set the year and month first so the day uses the target month's bounds.
 	await date.getByRole('spinbutton', { name: 'Year', exact: true }).fill(year);
-	await date.getByRole('spinbutton', { name: 'Year', exact: true }).press('Tab');
+	await date.getByRole('spinbutton', { name: 'Month', exact: true }).fill(month);
+	const dayField = date.getByRole('spinbutton', { name: 'Day', exact: true });
+	await dayField.fill(day);
+	await dayField.blur();
 }
 
 async function openDisclosure(page: Page, title: string) {
@@ -161,7 +163,10 @@ test('0619E saves and reloads calculations and finalizes without BIR requests', 
 	await field(page, 'frm0619E:txtYear').fill('2025');
 	await page.getByRole('combobox', { name: 'Month', exact: true }).click();
 	await page.getByRole('option', { name: 'February', exact: true }).click();
-	await fillDate(page, 'frm0619E:dueDate', '2025-03-10');
+	const due = dateControl(page, 'frm0619E:dueDate');
+	await expect(due.getByRole('spinbutton', { name: 'Month', exact: true })).toHaveValue('03');
+	await expect(due.getByRole('spinbutton', { name: 'Day', exact: true })).toHaveValue('10');
+	await expect(due.getByRole('spinbutton', { name: 'Year', exact: true })).toHaveValue('2025');
 	await page.getByRole('radiogroup', { name: 'Amended return?' }).getByLabel('Yes', { exact: true }).check();
 	await field(page, 'frm0619E:txtTax14').fill('10000');
 	await field(page, 'frm0619E:txtTax15').fill('2000');
@@ -421,4 +426,69 @@ test('individual 0605 locks December and calendar basis', async ({ page }) => {
  await expect(field(page, 'frm0605:itemYearEndMonth')).toHaveText('December');
  await expect(field(page, 'frm0605:itemYearEndMonth')).toBeDisabled();
  await expect(field(page, 'frm0605:itemFiscalStartMonth')).toBeDisabled();
+});
+
+test('0619F updates its suggested due date with the reporting period and keeps an edited date on reopen', async ({ page }, testInfo) => {
+	await seedWorkspace(page, 'light', 'loaded', {}, []);
+	await page.clock.setFixedTime(new Date('2025-12-31T16:00:00Z'));
+	await create(page, '0619F');
+	const prefix = 'frm0619F:';
+	const due = dateControl(page, prefix + 'dueDate');
+	const month = due.getByRole('spinbutton', { name: 'Month', exact: true });
+	const day = due.getByRole('spinbutton', { name: 'Day', exact: true });
+	const year = due.getByRole('spinbutton', { name: 'Year', exact: true });
+	const withheld = page.getByRole('radiogroup', { name: 'Any tax withheld?' });
+	await expect(month).toHaveValue('01');
+	await expect(day).toHaveValue('10');
+	await expect(year).toHaveValue('2026');
+	await expect(page.getByRole('combobox', { name: 'Tax type', exact: true })).toContainText('WB');
+	await expect(withheld.locator('input:checked')).toHaveCount(0);
+	for (const width of [1280, 390]) {
+		await page.setViewportSize({ width, height: 900 });
+		const box = (await due.boundingBox())!;
+		const calendar = (await due.getByRole('button', { name: 'Open calendar', exact: true }).boundingBox())!;
+		const yearBox = (await year.boundingBox())!;
+		expect(yearBox.x + yearBox.width).toBeLessThanOrEqual(calendar.x);
+		expect(calendar.x + calendar.width).toBeLessThanOrEqual(box.x + box.width);
+		await page.screenshot({ path: testInfo.outputPath(`0619f-fresh-defaults-${width}.png`), fullPage: true });
+	}
+	await page.setViewportSize({ width: 1280, height: 900 });
+
+	const reportingMonth = page.getByRole('combobox', { name: 'Month', exact: true });
+	await reportingMonth.click();
+	await page.getByRole('option', { name: 'November', exact: true }).click();
+	await expect(month).toHaveValue('12');
+	await expect(year).toHaveValue('2025');
+
+	await fillDate(page, prefix + 'dueDate', '2025-12-15');
+	await reportingMonth.click();
+	await page.getByRole('option', { name: 'October', exact: true }).click();
+	await expect(day).toHaveValue('15');
+	await expect(month).toHaveValue('12');
+	await withheld.getByRole('radio', { name: 'No', exact: true }).check();
+	await page.getByRole('button', { name: 'Save draft', exact: true }).click();
+	await page.getByRole('row').filter({ hasText: '0619F' }).getByRole('link', { name: 'Edit', exact: true }).click();
+	await expect(day).toHaveValue('15');
+	await expect(month).toHaveValue('12');
+	await expect(withheld.getByRole('radio', { name: 'No', exact: true })).toBeChecked();
+});
+
+test('1601EQ leaves filing choices open and preserves explicit answers after save', async ({ page }, testInfo) => {
+	await seedWorkspace(page, 'light', 'loaded', {}, []);
+	await page.clock.setFixedTime(new Date('2026-12-31T16:00:00Z'));
+	await create(page, '1601EQ');
+	await expect(field(page, 'frm1601EQ:txtYear')).toHaveValue('2027');
+	const quarter = page.getByRole('combobox', { name: 'Quarter', exact: true });
+	const withheld = page.getByRole('radiogroup', { name: 'Any taxes withheld?' });
+	await expect(quarter).toHaveText('Select an option');
+	await expect(withheld.locator('input:checked')).toHaveCount(0);
+	await page.screenshot({ path: testInfo.outputPath('1601eq-fresh-defaults.png'), fullPage: true });
+
+	await quarter.click();
+	await page.getByRole('option', { name: 'Third Quarter', exact: true }).click();
+	await withheld.getByRole('radio', { name: 'No', exact: true }).check();
+	await page.getByRole('button', { name: 'Save draft', exact: true }).click();
+	await page.getByRole('row').filter({ hasText: '1601EQ' }).getByRole('link', { name: 'Edit', exact: true }).click();
+	await expect(quarter).toHaveText('Third Quarter');
+	await expect(withheld.getByRole('radio', { name: 'No', exact: true })).toBeChecked();
 });

@@ -1,5 +1,6 @@
 import { normalizeCurrencyInput } from '$lib/components/ui/currency-input/currency';
 import { taxpayerEmailError } from '$lib/profiles/profile';
+import { philippineCalendarDate } from '../filing-calendar';
 import { isPackagedRdoCode } from '$lib/profiles/rdo-codes';
 import { get1601EQATCs, get1601EQRate, malformed1601EQATCs } from './form-1601-eq-atcs';
 
@@ -33,7 +34,7 @@ function cents(amount: number): number {
 function paymentApplies(values: Record<string, string>, name: string): boolean {
 	if (name === 'txtTaxRemittedPreviousReturn') return text(values, 'optAmendedReturn') === 'Y';
 	// Item 23 is explicitly limited to the previous quarter of the same taxable year.
-	if (name === 'txtOverremittancePreviousQuarter') return text(values, 'optQuarter') !== 'Q1';
+	if (name === 'txtOverremittancePreviousQuarter') return /^Q[2-4]$/.test(text(values, 'optQuarter'));
 	return true;
 }
 
@@ -119,10 +120,7 @@ export function validate1601EQ(values: Record<string, string>, now = new Date())
 	] as const) {
 		if (!(allowed as readonly string[]).includes(text(values, name))) errors[id(name)] = 'Choose an option.';
 	}
-	// Shift to Philippine civil time, independent of the desktop computer's timezone.
-	const manila = new Date(now.getTime() + 8 * 60 * 60 * 1000);
-	const currentYear = manila.getUTCFullYear();
-	const currentMonth = manila.getUTCMonth();
+	const { year: currentYear, month: currentMonth } = philippineCalendarDate(now);
 	const yearText = text(values, 'txtYear');
 	const year = Number(yearText);
 	if (!/^\d{4}$/.test(yearText) || year < 2018 || year > currentYear) {
@@ -130,7 +128,7 @@ export function validate1601EQ(values: Record<string, string>, now = new Date())
 	}
 	const quarterText = text(values, 'optQuarter');
 	if (!/^Q[1-4]$/.test(quarterText)) errors[id('optQuarter')] = 'Choose a quarter.';
-	else if (year === currentYear && Number(quarterText.slice(1)) * 3 > currentMonth) {
+	else if (year === currentYear && Number(quarterText.slice(1)) * 3 >= currentMonth) {
 		errors[id('optQuarter')] = 'The quarter must end before you finalize or submit this return.';
 	}
 	const sheets = text(values, 'txtSheetsAttached');

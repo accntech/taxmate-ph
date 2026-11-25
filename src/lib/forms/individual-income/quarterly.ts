@@ -1,4 +1,6 @@
 /** Calculations and filing options for quarterly Form 1701Q. */
+import { philippineCalendarDate } from '../filing-calendar';
+
 type Values = Record<string, string>;
 const prefix = 'frm1701q:';
 const field = (name: string) => prefix + name;
@@ -234,7 +236,8 @@ export function validateQuarterly(code: string, values: Values): Values {
  const require = (name: string, label: string) => { if (!values[field(name)]?.trim()) errors[field(name)] = `Enter ${label}.`; };
  const select = (name: string, choices: string[], label: string) => { if (!choices.includes(values[field(name)] || '')) errors[field(name)] = `Select ${label}.`; };
  const year = values[field('txtYear')] || '';
- if (!/^\d{4}$/.test(year) || Number(year) < 1900 || Number(year) > new Date().getFullYear()) errors[field('txtYear')] = 'Enter a valid return year through the current year.';
+ const currentYear = revised ? philippineCalendarDate().year : new Date().getFullYear();
+ if (!/^\d{4}$/.test(year) || Number(year) < 1900 || Number(year) > currentYear) errors[field('txtYear')] = 'Enter a valid return year through the current year.';
  select('DateQuarter', ['1', '2', '3'], 'the first, second, or third quarter');
  select('AmendedRtn', ['Y', 'N'], 'whether this is an amended return');
  const tin = (base: string, required: boolean) => {

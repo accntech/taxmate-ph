@@ -93,6 +93,7 @@ async function validReturn() {
   'frm1601EQ:txtZipCode': '1000',
   'frm1601EQ:txtTelNum': '09171234567',
   'frm1601EQ:txtYear': '2025',
+  'frm1601EQ:optQuarter': 'Q1',
   'frm1601EQ:optTaxesWithheld': 'N'
  });
  await workspace.saveActiveReturn();

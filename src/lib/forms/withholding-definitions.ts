@@ -130,14 +130,14 @@ function base(
   fields.push(
     select(prefix, "optAmend", "Amended return?", yesNo, {
       required: true,
-      defaultValue: "N",
+      ...(code !== "1602Qv2018" && { defaultValue: "N" }),
     }),
   );
   if (!code.startsWith("1604") && code !== "0605")
     fields.push(
       select(prefix, "optWithheld", "Any tax withheld?", yesNo, {
         required: true,
-        defaultValue: "N",
+        ...(["1600PTv2018", "1600VTv2018"].includes(code) && { defaultValue: "N" }),
       }),
     );
   if (!code.startsWith("0619") && code !== "1603")
@@ -234,7 +234,7 @@ function penalties(
 function relief(d: WithholdingDefinition) {
   d.sections[0].fields.push(
     select(d.prefix, "optRelief", "Availing of tax relief?", yesNo, {
-      defaultValue: "N",
+      ...(d.code === "1602Qv2018" ? { required: true } : { defaultValue: "N" }),
     }),
     f(
       d.prefix,
@@ -460,6 +460,7 @@ for (const code of ["0619E", "0619F"]) {
         { value: "WF", label: "WF — Final withholding tax" },
       ], {
         required: true,
+        defaultValue: "WB",
       }),
     );
   moneySection(
@@ -1245,9 +1246,9 @@ for (const code of ["1604C", "1604CF", "1604E", "1604Ev2018", "1604F"]) {
     );
   if (code === "1604C" || code === "1604Ev2018" || code === "1604F")
     d.sections[0].fields.push(
-      select(p, "topAgent", "Top withholding agent?", yesNo, {
-        defaultValue: "N",
-      }),
+      select(p, "topAgent", "Top withholding agent?", yesNo,
+        code === "1604Ev2018" ? {} : { defaultValue: "N" },
+      ),
     );
   if (code === "1604F") relief(d);
   definitions.push(d);

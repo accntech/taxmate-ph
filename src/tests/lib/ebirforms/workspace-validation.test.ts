@@ -27,7 +27,9 @@ describe('return validation at filing boundaries', () => {
   workspace.formValues = createInitialFormValues({
    ...initialProfile, address: '123 Example Street', zipCode: '0123', contactNumber: '09171234567'
   });
-  workspace.formValues['frm1601EQ:txtYear'] = '2025';
+  Object.assign(workspace.formValues, {
+   'frm1601EQ:txtYear': '2025', 'frm1601EQ:optQuarter': 'Q1', 'frm1601EQ:optTaxesWithheld': 'Y'
+  });
   expect(workspace.formValues['frm1601EQ:txtTotalTaxesWithheld']).toBe('0.00');
   await workspace.markFinalCopy();
   expect(workspace.finalFlag).toBe('0');
@@ -44,7 +46,7 @@ describe('return validation at filing boundaries', () => {
    contactNumber: '09171234567', email: 'a#b@example.com'
   });
   Object.assign(workspace.formValues, {
-   'frm1601EQ:txtYear': '2025', 'frm1601EQ:optTaxesWithheld': 'N'
+   'frm1601EQ:txtYear': '2025', 'frm1601EQ:optQuarter': 'Q1', 'frm1601EQ:optTaxesWithheld': 'N'
   });
 
   await workspace.submitCurrentReturn();
@@ -73,7 +75,7 @@ describe('return validation at filing boundaries', () => {
    ...initialProfile, address: '123 Example Street', zipCode: '0123', contactNumber: '09171234567'
   });
   Object.assign(workspace.formValues, {
-   'frm1601EQ:txtYear': '2025', 'frm1601EQ:optTaxesWithheld': 'N',
+   'frm1601EQ:txtYear': '2025', 'frm1601EQ:optQuarter': 'Q1', 'frm1601EQ:optTaxesWithheld': 'N',
    'frm1601EQ:txtATC13': 'WI120', 'frm1601EQ:txtTaxBase13': '100000'
   });
   const before = { ...workspace.formValues };

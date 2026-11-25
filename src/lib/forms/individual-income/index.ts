@@ -2,6 +2,7 @@ import { normalizeCurrencyInput, roundWholePeso, type CurrencyDecimals } from '$
 import { taxpayerEmailError, type TaxpayerProfile } from '../../profiles/profile';
 import { isPackagedRdoCode } from '../../profiles/rdo-codes';
 import type { FormDefinition, FormField } from '..';
+import { philippineCalendarDate } from '../filing-calendar';
 import { annualAmountField, annualFieldApplies, calculateAnnual, validateAnnual } from './annual';
 import { compensationAmountField, calculateCompensation, validateCompensation, isLegacy1700ContactValid, legacy1700DependentClaim, legacy1700FirstYear, legacy1700LastYear, revised1700EmployerAssignment, revised1700EmployerHasEntry, revised1700EmployerRows, revised1700FieldApplies } from './compensation';
 import { quarterlyAmountField, calculateQuarterly, quarterlyIncomeFieldApplies, validateQuarterly } from './quarterly';
@@ -26,6 +27,8 @@ const codeDetails = {
 	'1701Qv2018': ['1701Q · January 2018', 'Quarterly return for individuals, estates and trusts', 'frm1701q', 'txtYear', 'txtTIN1 txtTIN2 txtTIN3 txtBranchCode txtRDOCode txtTaxpayerName txtAddress txtAddress2 txtZipCode - @txtEmail']
 } as const;
 type IncomeCode = keyof typeof codeDetails;
+const first1701MSYear = 2024;
+const firstRevisedIncomeYear = 2018;
 
 const rules: Record<IncomeCode, { calculate: Rule; validate: Rule; amount: (code: string) => string }> = {
 	'1700': { calculate: calculateCompensation, validate: validateCompensation, amount: compensationAmountField },
@@ -143,7 +146,16 @@ export function incomeProfileValues(
 }
 
 export function createIndividualIncomeValues(form: IncomeForm, profile: TaxpayerProfile): Values {
-	return calculateIndividualIncome(form, { ...form.defaults, ...incomeProfileValues(form, profile, form.defaults) });
+	const values = { ...form.defaults, ...incomeProfileValues(form, profile, form.defaults) };
+	if (form.code === '1700' && profile.civilStatus === 'Single') {
+		values['frm1700:rdoPg1Pt1I3JointFiling'] = 'frm1700:rdoPg1Pt1I3JointFilingNo';
+	}
+	if (form.code === '1701MS' || form.code === '1701Qv2018') {
+		const { year } = philippineCalendarDate();
+		if (form.code === '1701MS' && year > first1701MSYear) values[form.year] = String(year - 1);
+		if (form.code === '1701Qv2018' && year >= firstRevisedIncomeYear) values[form.year] = String(year);
+	}
+	return calculateIndividualIncome(form, values);
 }
 
 export const annualFilingFields: Partial<Record<string, { month: string; shortPeriod: string }>> = {
@@ -273,9 +285,10 @@ export function validateIndividualIncome(form: IncomeForm, values: Values): Valu
 	const paymentFields = incomePaymentFieldIds(form.code);
 	for (const field of paymentFields) delete errors[field];
 	const year = fullYear(form, values[form.year]);
-	const currentYear = new Date().getFullYear();
+	const currentYear = form.code === '1701MS' || form.code === '1701Qv2018'
+		? philippineCalendarDate().year : new Date().getFullYear();
 	const legacy = ['1700', '1701', '1701Q'].includes(form.code);
-	const minYear = form.code === '1700' ? legacy1700FirstYear : legacy ? 1900 : form.code === '1701MS' ? 2024 : 2018;
+	const minYear = form.code === '1700' ? legacy1700FirstYear : legacy ? 1900 : form.code === '1701MS' ? first1701MSYear : firstRevisedIncomeYear;
 	if (!/^\d{4}$/.test(year) || Number(year) < minYear || Number(year) > (legacy ? legacy1700LastYear : currentYear)) {
 		errors[form.year] = form.code === '1700' ? `Enter a filing year from ${legacy1700FirstYear} to ${legacy1700LastYear}.` :
 			legacy ? 'Select a filing year through 2017 for this revision.' : `Enter a filing year from ${minYear} through ${currentYear}.`;

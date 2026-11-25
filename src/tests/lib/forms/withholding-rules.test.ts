@@ -66,6 +66,7 @@ describe("packaged withholding arithmetic", () => {
   it("excludes retained 1601FQ draft schedules from No-withholding totals and validation", () => {
     const values = {
       ...createWithholdingValues("1601FQ"),
+      "frm1601FQ:optWithheld": "N",
       "frm1601FQ:treaty:1:income": "1000",
       "frm1601FQ:treaty:1:rate": "5",
       "frm1601FQ:txtAtcCode1": "old draft ATC",

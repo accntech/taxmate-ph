@@ -4,7 +4,7 @@
 	import { normalizeCurrencyInput } from '$lib/components/ui/currency-input/currency';
 	import PaperFormHeader from '../paper-form-header.svelte';
 	import { getWithholdingDefinition } from '../withholding-definitions';
-	import { calculateWithholding } from '../withholding-rules';
+	import { calculateWithholding, monthlyRemittanceDueDate } from '../withholding-rules';
 	import '../form-editor-layout.css';
 
 	let { code, values, errors, onvaluechange, taxpayerInformation }: {
@@ -32,6 +32,15 @@
 	function changePeriod(name: string, value: string) {
 		const patch = { [prefix + name]: value };
 		if (name === 'optAmend' && value === 'N') patch[previousRemittance] = '0';
+		if (name === 'txtYear' || name === 'txtMonth') {
+			const year = prefix + 'txtYear';
+			const month = prefix + 'txtMonth';
+			const dueDate = prefix + 'dueDate';
+			const priorSuggestion = monthlyRemittanceDueDate(values[year] ?? '', values[month] ?? '');
+			if (!values[dueDate] || values[dueDate] === priorSuggestion) {
+				patch[dueDate] = monthlyRemittanceDueDate(patch[year] ?? values[year] ?? '', patch[month] ?? values[month] ?? '');
+			}
+		}
 		onvaluechange(patch);
 	}
 </script>
@@ -43,9 +52,9 @@
 	{#if type === 'date'}
 		<DateInput {id} {label} {required} {value} {error} onchange={(next) => onvaluechange({ [id]: next })} />
 	{:else if type === 'number'}
-		<NumberInput {id} {label} {required} {value} {error} min={1900} max={9999} maxlength={4} onchange={(next) => onvaluechange({ [id]: next })} />
+		<NumberInput {id} {label} {required} {value} {error} min={1900} max={9999} maxlength={4} onchange={(next) => changePeriod(name, next)} />
 	{:else if name === 'txtMonth' || name === 'txtTaxTypeCode'}
-		<Select {id} {label} options={options ?? []} {required} {value} {error} onchange={(next) => onvaluechange({ [id]: next })} />
+		<Select {id} {label} options={options ?? []} {required} {value} {error} onchange={(next) => changePeriod(name, next)} />
 	{:else}
 		<RadioGroup {id} {label} options={options ?? []} {required} {value} {error} onchange={(next) => changePeriod(name, next)} />
 	{/if}
@@ -147,7 +156,7 @@
 	.period-cell :global([data-slot="form-item"]), .remittance-row :global([data-slot="form-item"]) {
 		grid-template-columns: minmax(0, 1fr);
 	}
-	.period-cell :global([data-slot="input"]), .remittance-row :global([data-slot="input"]) { width: 100%; min-width: 0; }
+	.period-cell :global([data-slot="input"]:not([role="spinbutton"])), .remittance-row :global([data-slot="input"]) { width: 100%; min-width: 0; }
 	.constant-codes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); margin: 0; }
 	.constant-codes div { min-width: 0; padding: .75rem .875rem; }
 	.constant-codes div + div { border-inline-start: 1px solid var(--border); }
