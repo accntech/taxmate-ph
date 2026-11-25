@@ -489,6 +489,38 @@ test('revised 1701 resets the deduction when the ATC switches to 8%', async ({ p
 	await expect(deduction.getByRole('radio', { name: /Itemized/ })).not.toBeChecked();
 });
 
+test('revised 1701 keeps Schedule 4 line numbers inside their cells on one line', async ({ page }, testInfo) => {
+	await seedWorkspace(page, 'light', 'loaded', { ...fixture, civilStatus: 'Single' });
+	await page.goto(`${list}/1701v2018?new=true`);
+	await page.getByRole('combobox', { name: 'Alphanumeric tax code (ATC)', exact: true }).click();
+	await page.getByRole('option', { name: /II012/ }).click();
+	await page.getByRole('radiogroup', { name: /method of deduction/i }).getByRole('radio', { name: /Itemized/ }).check();
+	await goToReturnPage(page, 3);
+
+	const schedule = page.getByRole('table', { name: /Schedule 4 · Ordinary itemized deductions/ });
+	for (const width of [1280, 390]) {
+		await page.setViewportSize({ width, height: 900 });
+		await page.evaluate(() => document.fonts.ready.then(() => undefined));
+		for (const item of ['17A', '17B', '17C', '17D']) {
+			const cell = schedule.getByRole('cell', { name: item, exact: true });
+			await expect(cell).toBeVisible();
+			const fitsOnOneLine = await cell.evaluate((element) => {
+				const range = document.createRange();
+				range.selectNodeContents(element);
+				const text = range.getBoundingClientRect();
+				const bounds = element.getBoundingClientRect();
+				return range.getClientRects().length === 1 && text.left >= bounds.left && text.right <= bounds.right;
+			});
+			expect(fitsOnOneLine, `Item ${item} at ${width}px`).toBe(true);
+		}
+		await schedule.screenshot({
+			path: testInfo.outputPath(`schedule-4-${width}.png`),
+			animations: 'disabled',
+			style: '[aria-label="Window title bar"], [aria-label="Return actions"] { visibility: hidden; }'
+		});
+	}
+});
+
 test('revised 1701Q links the ATC to its applicable schedule and hides unused spouse fields', async ({ page }) => {
 	await seedWorkspace(page, 'dark', 'loaded', { ...fixture, civilStatus: 'Single' });
 	await page.goto(`${list}/1701Qv2018?new=true`);

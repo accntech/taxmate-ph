@@ -2234,7 +2234,9 @@
 	.annual-schedule { background: var(--bg-elev); }
 	.annual-schedule tbody tr:last-child > * { border-bottom: 0; }
 	.annual-schedule tbody :is(td, th) { vertical-align: middle; }
+	.full-annual-editor { --schedule-item-width: 2.75rem; }
 	.full-annual-editor :global(.annual-schedule tbody td:first-child) { font-variant-numeric: tabular-nums; font-weight: 600; }
+	.full-annual-editor :global(.annual-schedule tbody tr[data-income-item] > td:first-child) { white-space: nowrap; }
 	.schedule-with-detail > .summary-input { vertical-align: bottom; padding-block-end: .45rem; }
 	.annual-schedule th :global([data-slot="form-item"]) { max-inline-size: 26rem; margin-block-start: .3rem; }
 	.annual-schedule :global([data-slot="form-item"]) { grid-template-columns: minmax(0, 1fr); }
@@ -2308,7 +2310,7 @@
 			background: var(--bg-elev);
 		}
 		.full-annual-editor .joint-schedule-viewport > .annual-schedule tr:not(.schedule-subheading) > :nth-child(2) {
-			inset-inline-start: 2.2rem;
+			inset-inline-start: var(--schedule-item-width);
 			border-inline-end: 1px solid var(--border);
 		}
 	}
@@ -2429,7 +2431,7 @@
 		}
 	}
 	@container paper-form (width < 36rem) {
-		.annual-schedule .summary-number { width: 2.2rem; }
+		.annual-schedule .summary-number { width: var(--schedule-item-width, 2.2rem); }
 		.annual-schedule .summary-amount { width: 9.5rem; }
 		.annual-schedule.joint-summary .summary-amount { width: 9rem; }
 		.annual-schedule :is(td, th) { padding-inline: .375rem; }
