@@ -1,3 +1,4 @@
+import { externalAuditorLabels } from '../external-auditor';
 import type { IncomeEditorField } from './editor-layout';
 
 const scheduleLabels: Record<string, string> = {
@@ -127,6 +128,16 @@ const exemptIncomeLabels: Record<string, string> = {
 	7: 'Amount or fair market value', 8: 'Other exempt income or receipts', 9: 'Amount or fair market value', 10: 'Total exempt income or receipts'
 };
 
+const auditorItems: Record<string, [string, string]> = {
+	txtPg4Pt8I112ExernalEditor: ['112', externalAuditorLabels.name],
+	txtPg4Pt7I113ExternalTIN1: ['113', externalAuditorLabels.tin],
+	txtPg4Pt8I114SigningPartner: ['114', externalAuditorLabels.partnerName],
+	txtPg4Pt7I115SigningTIN1: ['115', externalAuditorLabels.partnerTin],
+	txtPg4Pt8I116BIRAccreditation: ['116', externalAuditorLabels.accreditation],
+	txtPg4Pt8I117Month: ['117', externalAuditorLabels.issueDate],
+	txtPg4Pt8I118Month: ['118', externalAuditorLabels.expiryDate]
+};
+
 function layout(field: IncomeEditorField, section: string, item: string, label: string, extra: Partial<IncomeEditorField> = {}): Partial<IncomeEditorField> {
 	return {
 		section, item, label: `${item} ${label}`,
@@ -219,10 +230,8 @@ export function legacy1701ScheduleLayout(field: IncomeEditorField): Partial<Inco
 		const [number, label] = labels[address[1]];
 		return layout(field, 'Part VIIB · Current address', number, label, { person: undefined });
 	}
-	if (name === 'txtPg4Pt8I112ExernalEditor') return layout(field, field.section, '112', 'External auditor or accredited tax agent');
-	if (name === 'txtPg4Pt8I114SigningPartner') return layout(field, field.section, '114', 'Signing partner');
-	if (name === 'txtPg4Pt8I117Month') return layout(field, field.section, '117', 'Accreditation issue date');
-	if (name === 'txtPg4Pt8I118Month') return layout(field, field.section, '118', 'Accreditation expiry date');
+	const auditorItem = auditorItems[name];
+	if (auditorItem) return layout(field, field.section, ...auditorItem);
 	const reconciliation = name.match(/^txtPg10Sc11([AB])I(\d+)(.*)$/);
 	if (reconciliation) {
 		const [, person, number, control] = reconciliation;

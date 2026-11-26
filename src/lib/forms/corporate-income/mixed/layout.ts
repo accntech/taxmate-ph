@@ -5,7 +5,47 @@ import type {
   CorporateSection,
 } from "../types";
 
+import { legacyMixedSpecialRate } from "./atc";
+
 const p = "frm1702MX:";
+const finalWithholdingColumns = [
+  "Exempt",
+  "Actual amount / fair market value / net capital gains",
+  "Final tax withheld / paid",
+];
+
+function refineLegacyMixedSection(section: CorporateSection) {
+  if (section.title.startsWith("Schedule 13 -")) {
+    section.columns = finalWithholdingColumns;
+  }
+  for (const row of section.rows) {
+    const first = row.fields[0].id.slice(p.length);
+    if (/^txtPg2Pt5I4[0-4]$/.test(first)) {
+      row.fields[0].column = 4;
+      row.fields[0].label = row.label;
+    } else if (first === "txtPg3Sc1I11CA") {
+      const [exempt, regular] = row.fields;
+      row.label = "Applicable income tax rate";
+      row.fields = [
+        { ...exempt, column: 1, kind: "percent", label: "Exempt", defaultValue: "0", readonly: true },
+        { id: legacyMixedSpecialRate, column: 2, kind: "select", label: "Special rate", defaultValue: "0" },
+        { ...regular, column: 3, kind: "percent", label: "Regular rate", readonly: true },
+      ];
+    } else if (first === "txtPg8Sc11I16") {
+      row.label = "Total Equity (Sum of Items 13 to 15)";
+      row.fields[0].label = row.label;
+    } else if (/^txtPg9Sc13I[1-4]CA$/.test(first)) {
+      row.fields.forEach((field, index) => {
+        field.column = index + 1;
+        field.label = finalWithholdingColumns[index];
+      });
+    } else if (first === "drpPg9Sc13I10CA-1") {
+      for (const field of row.fields) {
+        field.label = field.kind === "select" ? "Stock kind (PS/CS)" : "Stock certificate series no.";
+      }
+    }
+  }
+}
 const lossLabels: Record<string, string> = {
   Year: "Year incurred",
   A: "Net operating loss",
@@ -52,11 +92,21 @@ export function refineMixedPages(
           current.rows.push({
             ...sourceRow,
             label: "Alphanumeric tax code (ATC)",
-            fields: [...sourceRow.fields, ...(otherAtc?.fields ?? [])],
+            fields: code === "1702MX" && otherAtc
+              ? [...sourceRow.fields, { ...otherAtc.fields[1], label: "Select another ATC" }, otherAtc.fields[0]]
+              : [...sourceRow.fields, ...(otherAtc?.fields ?? [])],
           });
           continue;
         }
         if (first === "drpPg1I5ATCR2") continue;
+        if (code === "1702MX" && first === "txtPg1Pt1I13MainLine") {
+          const [business, psic] = sourceRow.fields;
+          current.rows.push(
+            { ...sourceRow, fields: [business] },
+            { item: "14", label: "PSIC code", fields: [{ ...psic, label: "PSIC code" }] },
+          );
+          continue;
+        }
         if (/^radPg8Sc12/.test(first)) {
           if (current.rows.length) sections.push(current);
           current = {
@@ -215,6 +265,7 @@ export function refineMixedPages(
         }
       }
     }
+    if (code === "1702MX") sections.forEach(refineLegacyMixedSection);
     page.sections = sections;
   }
   return pages;

@@ -117,35 +117,37 @@ test('June 2013 1702EX switches CTC and SEC and keeps the active identification 
 	}
 });
 
-test('July 2013 1702MX matches the exempt filing identification layout and saves SEC details', async ({ page }) => {
-  const p = 'frm1702MX:';
-  await seedWorkspace(page, 'light', 'loaded', { taxpayerClassification: 'N' }, []);
-  await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto(`${formsPath}/1702MX?new=true`);
-  const identification = page.getByRole('region', { name: 'Filing identification', exact: true });
-  await expect(identification).toBeVisible({ timeout: 45000 });
-  const amount = control(page, p + 'txtPg1Pt2I25AmountCTC');
-  const number = control(page, p + 'txtPg1Pt2I22');
-  await expect(amount).toBeDisabled();
-  await page.getByRole('radio', { name: 'Community tax certificate', exact: true }).check();
-  await expect(number).toHaveAccessibleName('CTC number');
-  await number.fill('00123456');
-  await amount.fill('925');
-  await page.getByRole('radio', { name: 'SEC registration', exact: true }).check();
-  await expect(number).toHaveValue('');
-  await expect(number).toHaveAccessibleName('SEC registration number');
-  await expect(amount).toBeDisabled();
-  await number.fill('CS-00123');
-  const date = identification.getByRole('group', { name: /^Date of issue/ });
-  await date.getByRole('spinbutton', { name: 'Year', exact: true }).fill('2000');
-  await date.getByRole('spinbutton', { name: 'Month', exact: true }).fill('02');
-  await date.getByRole('spinbutton', { name: 'Day', exact: true }).fill('29');
-  await control(page, p + 'txtPg1Pt2I24PlaceofIssue').fill('Example City');
-  await page.getByRole('button', { name: 'Save draft', exact: true }).click();
-  await expect(page).toHaveURL(formsPath);
-  await page.getByRole('link', { name: 'Edit', exact: true }).click();
-  await expect(number).toHaveValue('CS-00123');
-  await expect(page.getByRole('radio', { name: 'SEC registration', exact: true })).toBeChecked();
-  await expect(amount).toBeDisabled();
-  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
-});
+for (const code of ['1702MX', '1702RT'] as const) {
+	test(`June 2013 ${code} switches CTC and SEC and reopens the saved registration`, async ({ page }) => {
+		const p = `frm${code}:`;
+		await seedWorkspace(page, 'light', 'loaded', { taxpayerClassification: 'N' }, []);
+		await page.setViewportSize({ width: 390, height: 844 });
+		await page.goto(`${formsPath}/${code}?new=true`);
+		const identification = page.getByRole('region', { name: 'Filing identification', exact: true });
+		await expect(identification).toBeVisible({ timeout: 45000 });
+		const amount = control(page, p + 'txtPg1Pt2I25AmountCTC');
+		const number = control(page, p + (code === '1702RT' ? 'txtPg1Pt2I22CTC' : 'txtPg1Pt2I22'));
+		await expect(amount).toBeDisabled();
+		await page.getByRole('radio', { name: 'Community tax certificate', exact: true }).check();
+		await expect(number).toHaveAccessibleName('CTC number');
+		await number.fill('00123456');
+		await amount.fill('925');
+		await page.getByRole('radio', { name: 'SEC registration', exact: true }).check();
+		await expect(number).toHaveValue('');
+		await expect(number).toHaveAccessibleName('SEC registration number');
+		await expect(amount).toBeDisabled();
+		await number.fill('CS-00123');
+		const date = identification.getByRole('group', { name: /^Date of issue/ });
+		await date.getByRole('spinbutton', { name: 'Year', exact: true }).fill('2000');
+		await date.getByRole('spinbutton', { name: 'Month', exact: true }).fill('02');
+		await date.getByRole('spinbutton', { name: 'Day', exact: true }).fill('29');
+		await identification.getByRole('textbox', { name: 'Place of issue', exact: true }).fill('Example City');
+		await page.getByRole('button', { name: 'Save draft', exact: true }).click();
+		await expect(page).toHaveURL(formsPath);
+		await page.getByRole('link', { name: 'Edit', exact: true }).click();
+		await expect(number).toHaveValue('CS-00123');
+		await expect(page.getByRole('radio', { name: 'SEC registration', exact: true })).toBeChecked();
+		await expect(amount).toBeDisabled();
+		expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+	});
+}

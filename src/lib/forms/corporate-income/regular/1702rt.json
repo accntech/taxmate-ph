@@ -36,10 +36,6 @@
                 "kind": "select",
                 "options": [
                   {
-                    "value": "",
-                    "label": ""
-                  },
-                  {
                     "value": "01",
                     "label": "01 - January"
                   },
@@ -157,13 +153,7 @@
                 "label": "Regular income tax",
                 "kind": "checkbox",
                 "defaultValue": "Y"
-              }
-            ],
-            "item": "5"
-          },
-          {
-            "label": "Applicable ATC",
-            "fields": [
+              },
               {
                 "id": "frm1702RT:drpPg1I5AtcOther",
                 "label": "Applicable ATC",
@@ -192,7 +182,8 @@
                 ],
                 "defaultValue": "IC010"
               }
-            ]
+            ],
+            "item": "5"
           }
         ]
       },
@@ -521,76 +512,78 @@
                 "readonly": true
               }
             ]
-          },
+          }
+        ]
+      },
+      {
+        "title": "Filing identification",
+        "rows": [
           {
-            "label": "Community Tax Certificate(CTC) Number SEC Reg No.",
+            "label": "Identification type and number",
+            "item": "22",
             "fields": [
               {
                 "id": "frm1702RT:rdoPg1Pt2I22",
-                "label": "22 Community Tax Certificate(CTC) Number SEC Reg No.",
+                "label": "Identification type",
                 "kind": "radio",
                 "options": [
                   {
                     "value": "CTC",
-                    "label": "22 Community Tax Certificate(CTC) Number SEC Reg No."
+                    "label": "Community tax certificate"
                   },
                   {
                     "value": "SEC",
-                    "label": "22 Community Tax Certificate(CTC) Number SEC Reg No."
+                    "label": "SEC registration"
                   }
-                ]
-              }
-            ],
-            "item": "22"
-          },
-          {
-            "label": "Community Tax Certificate(CTC) Number SEC Reg No.",
-            "fields": [
+                ],
+                "required": true
+              },
               {
                 "id": "frm1702RT:txtPg1Pt2I22CTC",
-                "label": "22 Community Tax Certificate(CTC) Number SEC Reg No.",
+                "label": "Certificate or registration number",
                 "kind": "text",
                 "maxLength": 10
               }
-            ],
-            "item": "22"
+            ]
           },
           {
-            "label": "Date of Issue (MM/DD/YYYY)",
+            "label": "Date of issue",
+            "item": "23",
             "fields": [
               {
                 "id": "frm1702RT:txtPg1Pt2I23Date",
-                "label": "23 Date of Issue (MM/DD/YYYY)",
+                "label": "Date of issue",
                 "kind": "date",
-                "maxLength": 10
+                "maxLength": 10,
+                "required": true
               }
-            ],
-            "item": "23"
+            ]
           },
           {
-            "label": "Place of Issue",
+            "label": "Place of issue",
+            "item": "24",
             "fields": [
               {
                 "id": "frm1702RT:txtPg1Pt2I24PlaceOfIssue",
-                "label": "24 Place of Issue",
+                "label": "Place of issue",
                 "kind": "text",
-                "maxLength": 33
+                "maxLength": 33,
+                "required": true
               }
-            ],
-            "item": "24"
+            ]
           },
           {
-            "label": "Amount, if CTC",
+            "label": "CTC amount",
+            "item": "25",
             "fields": [
               {
                 "id": "frm1702RT:txtPg1Pt2I25AmountCTC",
-                "label": "25 Amount, if CTC",
+                "label": "CTC amount",
                 "kind": "money",
                 "maxLength": 12,
                 "defaultValue": "0"
               }
-            ],
-            "item": "25"
+            ]
           }
         ]
       },
@@ -3110,23 +3103,17 @@
             "item": "9"
           },
           {
-            "label": "10",
+            "label": "Other Credits/Payments (Specify)",
             "fields": [
               {
                 "id": "frm1702RT:txtPg6Sc7I10C1",
-                "label": "10",
+                "label": "Description",
                 "kind": "text",
                 "maxLength": 50
-              }
-            ],
-            "item": "10"
-          },
-          {
-            "label": "10",
-            "fields": [
+              },
               {
                 "id": "frm1702RT:txtPg5Sc7I10C2",
-                "label": "10",
+                "label": "Amount",
                 "kind": "money",
                 "maxLength": 12,
                 "defaultValue": "0"
@@ -5150,7 +5137,7 @@
               {
                 "id": "frm1702RT:ddlPg8Sc12I10C1",
                 "label": "A Share class",
-                "kind": "select",
+                "kind": "radio",
                 "options": [
                   {
                     "value": "PS",
@@ -5189,7 +5176,7 @@
               {
                 "id": "frm1702RT:ddlPg8Sc12I10C2",
                 "label": "B Share class",
-                "kind": "select",
+                "kind": "radio",
                 "options": [
                   {
                     "value": "PS",

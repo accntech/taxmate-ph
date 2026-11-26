@@ -2,14 +2,17 @@ import { corporateOwnerRequired, corporateOwnerSelection, corporateRecordSection
 import { exemptForms } from './exempt';
 import { corporateContinuationRowsPerPage } from './continuation-pagination';
 import { mixedForms } from './mixed';
+import { legacyMixedOtherAtcElected } from './mixed/atc';
 import { quarterlyForms } from './quarterly';
 import { regularForms } from './regular';
 import type { FormDefinition } from '..';
 import { taxpayerEmailError, type TaxpayerProfile } from '$lib/profiles/profile';
 import { isPackagedRdoCode } from '$lib/profiles/rdo-codes';
+import { psicClassCode } from '$lib/profiles/psic';
 import { normalizeCurrencyInput } from '$lib/components/ui/currency-input/currency';
 import { philippineCalendarDate } from '../filing-calendar';
-import type { CorporateField, CorporateForm, CorporatePage, CorporateRow, CorporateValues } from './types';
+import { externalAuditorLabels } from '../external-auditor';
+import type { CorporateField, CorporateForm, CorporatePage, CorporateRow, CorporateSection, CorporateValues } from './types';
 
 const forms = [...exemptForms, ...mixedForms, ...quarterlyForms, ...regularForms];
 const catalog = new Map(forms.map(form => [form.code, form]));
@@ -28,6 +31,47 @@ export function corporateAttachmentInstances(form: CorporateForm, values: Corpor
 			group, id: `${group.key}${index + 1}`, title: `${group.label} ${index + 1}`
 		}));
 	});
+}
+
+function corporateCoverSection(section: CorporateSection, pagesFiledField?: string): CorporateSection {
+	const rows = section.rows.flatMap((row): CorporateRow[] => {
+		const fields = row.fields.filter(field => field.id !== pagesFiledField &&
+			!/:txt(?:Signature(?:President|Treasurer)|Pg1Pt2(?:AuthorizedRepresentative|Treasurer|Signatory(?:Tin)?[12]?|TitleofSignatory2?|TINofSignatory2?))$/i.test(field.id));
+		if (!fields.length) return [];
+		const attachment = fields.find(field =>
+			/^(?:frm1702(?:EX|MX):txtPg1P2I23NumOfAttachments|frm1702RT:txtPg1Pt2PagesFilled|frm1702q:txtSheets)$/.test(field.id));
+		if (!attachment) return [fields.length === row.fields.length ? row : { ...row, fields }];
+
+		const label = attachment.id === 'frm1702q:txtSheets' ? row.label : 'Number of attachments';
+		const countRow: CorporateRow = {
+			item: row.item ?? '22',
+			label,
+			fields: [{ ...attachment, label, kind: 'integer', maxLength: attachment.maxLength ?? 2 }]
+		};
+		const otherFields = fields.filter(field => field !== attachment);
+		return otherFields.length ? [{ ...row, fields: otherFields }, countRow] : [countRow];
+	});
+	return { ...section, rows };
+}
+
+export const corporateAuditorSectionTitle = 'Part VI - Information - External Auditor/Accredited Tax Agent';
+
+function corporateAuditorRows(section: CorporateSection, code: string): CorporateSection {
+	if (section.title !== corporateAuditorSectionTitle) return section;
+	const firstItem = code === '1702RT' ? 55 : 45;
+	const fields = section.rows.flatMap(row => row.fields);
+	const rows = Object.values(externalAuditorLabels).map((label, index): CorporateRow => {
+		const item = String(firstItem + index);
+		const prefix = `frm${code}:txtPg2Pt6I${item}`;
+		return {
+			item, label,
+			fields: fields.filter(field => field.id.startsWith(prefix)).map(field => ({
+				...field, label,
+				kind: label === externalAuditorLabels.issueDate || label === externalAuditorLabels.expiryDate ? 'date' : field.kind
+			}))
+		};
+	});
+	return { ...section, rows };
 }
 
 export function corporateEditorPages(form: CorporateForm, values: CorporateValues): CorporatePage[] {
@@ -49,18 +93,13 @@ export function corporateEditorPages(form: CorporateForm, values: CorporateValue
 		}));
 		return group.expandPages?.(pages, values, id) ?? pages;
 	});
-	return [...fixed, ...attachments].map(page => ({
+	return [...fixed, ...attachments].map((page, index) => ({
 		...page,
 		sections: page.sections
 			.filter(section => !/\b(?:details of payment|payment details)\b/i.test(section.title))
-			.filter(section => !['1702EX', '1702MX'].includes(form.code) || section.title !== 'Signatories')
-			.map(section => form.code === '1702EXv2018C' ? {
-				...section,
-				rows: section.rows.map(row => ({
-					...row,
-					fields: row.fields.filter(field => !/^frm1702EX:txtPg1Pt2(?:AuthorizedRepresentative|Treasurer|TitleofSignatory2?|TINofSignatory2?)$/.test(field.id))
-				}))
-			} : section)
+			.map(section => index === 0 ? corporateCoverSection(section, form.pagesFiledField) : section)
+			.map(section => corporateAuditorRows(section, form.code))
+			.filter(section => section.rows.length > 0)
 			.map(corporateRecordSection)
 			.map(section => form.fieldReadonly ? {
 				...section,
@@ -105,7 +144,13 @@ export function corporateProfileValues(form: CorporateForm, profile: TaxpayerPro
 	const result: CorporateValues = {};
 	for (const { id, profileKey } of corporateFields(form)) {
 		if (!profileKey) continue;
+		if (form.code === '1702MX' && profileKey === 'psicCode') {
+			const code = psicClassCode(profile.psicCode);
+			if (code) result[id] = code;
+			continue;
+		}
 		const value = profile[profileKey];
+		if (form.code === '1702MX' && profileKey === 'lineOfBusiness' && !profile.lineOfBusiness?.trim()) continue;
 		if (typeof value === 'string') result[id] = profileKey === 'email' ? value.trim().toLowerCase() : value;
 		else result[id] = '';
 	}
@@ -182,6 +227,7 @@ export function corporateFieldRequired(form: CorporateForm, field: CorporateFiel
 	if (field.kind === 'date' && /(?:Incorporation|txtPg1Pt1I(?:8|10)$)/.test(key)) return true;
 	if (/^(?:lstTaxTreaty|txtTxRlfSpcfy|Pg1Pt2I21|rdoPg1(?:Pt2I21)?Overpayment)$/.test(key)) return true;
 	if (form.code.startsWith('1702EX') && /^txtPg1Pt1I\d+(?:LegalBasis|Investment|RegisteredActivity|EffectivityFrom|EffectivityTo)$/.test(key)) return true;
+	if (form.code === '1702MX' && key === 'drpPg1I5ATCR2') return legacyMixedOtherAtcElected(values);
 	if (form.code.startsWith('1702MX') && key === 'drpPg1I5ATCR2') {
 		return !['Y', 'IC055', 'true', '1'].includes(values['frm1702MX:chkPg1I5ATCR1']);
 	}

@@ -31,6 +31,7 @@ const regular: Transfer[] = [
 	['txtPg2Pt4I34OrdinaryAllowable', 'txtPg3Sc1I18TotalOrdinaryAllowable'],
 	['txtPg2Pt4I35SpecialAllowable', 'txtPg3Sc2I5TotalSpecialAllowable'],
 	['txtPg2Pt4I36Nolco', 'txtPg4Sc4I8TotalNOLCO'],
+	['txtPg4Sc3AI4C2', 'txtPg4Sc3I3NetOperatingLoss'],
 	['txtPg2Pt4I47ExcessMCIT', 'txtPg4Sc4I4TotalExcessMCIT']
 ];
 const legacyRegular: Transfer[] = [
@@ -44,9 +45,14 @@ const legacyRegular: Transfer[] = [
 	['txtPg2Pt4I35OrdinaryAllowable', 'txtPg5Sc4I40TotalOrdinaryAllowable'],
 	['txtPg2Pt4I36SpecialAllowable', 'txtPg5Sc5I5TotalSpecialAllowable'],
 	['txtPg2Pt4I37Nolco', 'txtPg5Sc6AI8TotalNOLCO'],
+	['txtPg5Sc6AI4C2', 'txtPg5Sc6I3NetOperatingLoss'],
 	['txtPg2Pt4I45LessTotalTax', 'txtPg6Sc7I12TotalTaxCredits']
 ];
 const mixed: Transfer[] = [
+	['txtPg2Sc2It10C', 'txtPg3IShed78D'],
+	['txtPg2Sc2It10B', 'txtPg3IShed88D'],
+	['txtPg3IShed7_7A', 'txtPg6Sc7I3'],
+	['txtPg4IShed8_7A', 'txtPg4Sc8It3'],
 	['txtPg1Pt2I14TotalIncome', 'txtPg2Sc2It19D'],
 	['txtPg1Pt2I15LessTotalTax', 'txtPg2Sc3It32D'],
 	['txtPg2Sc3It23C', 'txtPg7Sc9I4'],
@@ -57,6 +63,15 @@ const mixed: Transfer[] = [
 	])
 ];
 const legacyMixed: Transfer[] = [
+	['txtPg3Sc1I1CD', 'txtPg4Sc3I6CD'],
+	['txtPg3Sc1I2CD', 'txtPg4Sc3CI27CD'],
+	['txtPg3Sc1I4CD', 'txtPg5Sc4I4CD'],
+	['txtPg3Sc1I6CD', 'txtPg6Sc5I40CD'],
+	['txtPg3Sc1I7CD', 'txtPg6Sc6I5CD'],
+	['txtPg3Sc2I6CD', 'txtPg7Sc8I10CD'],
+	['txtPg6Sc8I4CD', 'txtPg7Sc9I4'],
+	['txtPg3Sc1I8CC', 'txtPg6Sc7AI8'],
+	['txtPg6Sc7AI4CA', 'txtPg6Sc7I3'],
 	['txtPg1Pt2I16TotalIncome', 'txtPg2Pt5I37CD'],
 	['txtPg1Pt2I17LessTotalTax', 'txtPg2Pt5I38CD'],
 	['txtPg1Pt2I18NetTaxPayable', 'txtPg2Pt5I39CD'],
@@ -85,7 +100,7 @@ export function corporateScheduleReferences(
 		for (const field of row.fields) {
 			if (!applies(field) || locations.has(field.id)) continue;
 			const attachment = page.title.match(/^(.+?) · Mandatory attachment /)?.[1];
-			const heading = section.title.match(/^(?:Part [IVX]+|Schedule (?:\d+(?:\.\d+)?[A-Z]?|[IVXLCDM]+|[A-Z](?:\.\d+)?))\b/i)?.[0];
+			const heading = section.title.match(/^(?:Part [IVX]+|Schedule (?:\d+(?:\.\d+)?[A-Z]?|[IVXLCDM]+A?|[A-Z](?:\.\d+)?))\b/i)?.[0];
 			const item = row.item || field.id.match(/(?:Itm|It|I)(\d+)/)?.[1];
 			const column = field.column && section.columns?.[field.column - 1];
 			const label = [heading || section.title || `Page ${index + 1}`, item && `Item ${item}`].filter(Boolean).join(', ');
@@ -113,14 +128,19 @@ function activityTransfers(code: string, activityIds: string[]): Transfer[] {
 	return activityIds.flatMap((id): Transfer[] => {
 		const column = id.startsWith('EX') ? 'A' : 'B';
 		if (legacy) {
-			return [1, 2, 3, 5].map(item => [`txtPg4Sc3I${item}C${column}`, `txtPg2${id}ScDI${item}`]);
+			return [
+				...[1, 2, 3, 5].map((item): Transfer => [`txtPg4Sc3I${item}C${column}`, `txtPg2${id}ScDI${item}`]),
+				[`txtPg1${id}ScBI8`, `txtPg4${id}ScIAI8CD`]
+			];
 		}
 		return [
 			[`txtPg2Sc2Itm1${column}`, `txtPg1${id}ScBI1`],
 			[`txtPg2Sc2Itm2${column}`, `txtPg1${id}ScBI2`],
 			[`txtPg2Sc2Itm4${column}`, `txtPg1${id}ScBI4`],
 			[`txtPg2Sc2Itm6${column}`, `txtPg1${id}ScBI56`],
-			[`txtPg2Sc2It10${column}`, `txtPg1${id}ScBI10`]
+			[`txtPg2Sc2It10${column}`, `txtPg1${id}ScBI10`],
+			[`txtPg1${id}ScBI10`, `txtPg2${id}ScF1I8D`],
+			[`txtPg2${id}ScF1I7A`, `txtPg2${id}ScFI3`]
 		];
 	});
 }

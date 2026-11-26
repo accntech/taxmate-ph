@@ -1228,8 +1228,7 @@
 		{@const parts = legacyEmployerTin ? legacyEmployerTinFields(id) : legacyAnnual ? [1, 2, 3, 4].map(part => id.replace('TIN1', `TIN${part}`)) :
 			['TIN1', 'TIN2', 'TIN3', 'BranchCode'].map(part => id.replace(/TIN1$/, part))}
 		{@const segments = parts.map(part => values[part] ?? '')}
-		{@const tinLabel = /ExternalTIN/.test(id) ? 'Auditor or tax agent TIN and branch code' :
-			/SigningTIN/.test(id) ? 'Signing partner TIN and branch code' : 'Employer TIN and branch code'}
+		{@const tinLabel = /(?:External|Signing)TIN1$/.test(id) ? label : 'Employer TIN and branch code'}
 		<div class="employer-tin">
 			<TinInput {id} label={tinLabel} value={segments.join('-')} {preserveSegments}
 				error={[...new Set(parts.map(part => errors[part]).filter(Boolean))].join(' ')} onchange={(next) => {
@@ -1622,6 +1621,7 @@
 		{@const summaryPart = /^Part ([IVX]+)/i.exec(group.title)?.[1]}
 		{@const revisedEmployer = (form.code === '1700v2018' || form.code === '1701v2018' || legacyAnnual) && /^Schedule 1 · Employer \d+$/.test(group.title)}
 		{@const legacyEmployer = legacy1700 && /^Part IV · Employer [1-3]$/.test(group.title)}
+		{@const externalAuditor = legacyAnnual && group.title.startsWith('Part VIII - Information - External Auditor')}
 		{@const revisedSpouseSection = form.code === '1700v2018' && /^Part II - Background Information on Spouse$/i.test(group.title)}
 		{@const revisedCompensationSchedule = form.code === '1700v2018' && /^Part V\.[ABC] · /.test(group.title)}
 		{@const legacyCompensationSchedule = legacy1700 && /^Part IV · (?:Tax computation|Tax credits|Amount payable)$/.test(group.title)}
@@ -1772,7 +1772,8 @@
 					{#if block.columns.length}
 						{@render columnSchedule(group.title, block.rows, block.columns)}
 					{:else}
-						<div class="income-fields" class:annual-spouse-fields={annualSpouse} class:revised-employer={revisedEmployer} class:legacy-schedule={legacy1700 && selectedPage !== '1'}
+						<div class={['income-fields', externalAuditor && 'external-auditor-grid']} class:annual-spouse-fields={annualSpouse} class:revised-employer={revisedEmployer} class:legacy-schedule={legacy1700 && selectedPage !== '1'}
+							style:--income-amount-width={externalAuditor ? '17rem' : undefined}
 							class:dependent-fields={legacyAnnual && /^Part VIIA · Dependent/.test(group.title)}
 							class:legacy-filing={legacy1700 && filingDetails} class:return-filing={!legacy1700 && filingDetails} class:quarter-filing={!!form.quarter && filingDetails}
 							class:ms-declaration-fields={msDeclaration}>

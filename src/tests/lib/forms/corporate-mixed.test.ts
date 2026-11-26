@@ -309,7 +309,7 @@ describe("June 2013 special-rate eligibility", () => {
     expect(
       calculateMixed("1702MX", {
         ...input,
-        [p + "txtPg2Pt4I34SpecialTaxRate"]: "10",
+        [p + "txtPg2Pt4I31CB"]: "",
       })[p + "txtPg3Sc1I12CB"],
     ).toBe("30000");
   });

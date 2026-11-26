@@ -11,6 +11,181 @@ const revisions = [
 	['1702RT', 8], ['1702RTv2018', 4], ['1702RTv2018C', 4]
 ] as const;
 
+for (const [code] of revisions) {
+	test(`${code} groups filing details and keeps the cover within the viewport`, async ({ page }, info) => {
+		await seedWorkspace(page, 'light', 'loaded', {
+			taxpayerClassification: 'N',
+			taxpayerName: 'Example Manufacturing and Business Management Services Corporation',
+			address: 'Unit 1206, 123 Example Building, Example Business District',
+			email: 'corporatefiling@example.com'
+		}, []);
+		await page.setViewportSize({ width: 1280, height: 900 });
+		await page.goto(`/ebirforms/taxpayers/${taxpayerId}/forms/${code}?new=true`);
+		const filing = page.getByRole('region', { name: /^(?:taxpayer and )?filing (?:information|details)$/i });
+		const background = page.getByRole('region', { name: /background information/i });
+		const cells = filing.locator('[data-corporate-item]');
+		const month = filing.getByRole('combobox', { name: 'Year-end month', exact: true });
+		const year = filing.getByRole('textbox', { name: 'Year ended', exact: true }).locator('..');
+		await expect(filing).toBeVisible({ timeout: 20_000 });
+		await expect(cells.locator('> .paper-item-number')).toHaveText(['1', '2', '3', '4', '5']);
+		await expect(filing.locator('.corporate-row')).toHaveCount(5);
+		await expect(filing.getByRole('radiogroup', { name: 'Accounting period', exact: true })).toBeVisible();
+		await expect(filing.locator('legend').filter({ hasText: /^\d+\s+/ })).toHaveCount(0);
+		await expect(background.getByRole('link', { name: 'Edit taxpayer information' })).toBeVisible();
+		for (const [label, value] of [
+			['Registered name', 'Example Manufacturing and Business Management Services Corporation'],
+			['Registered address', 'Unit 1206, 123 Example Building, Example Business District']
+		]) {
+			await expect(background.getByRole('status', { name: label, exact: true })).toContainText(value);
+			await expect(background.getByRole('textbox', { name: label, exact: true })).toHaveCount(0);
+		}
+		if (code.startsWith('1702EX')) {
+			await filing.getByRole('radio', { name: 'Fiscal', exact: true }).check();
+		}
+		for (const width of [1280, 760, 390]) {
+			await page.setViewportSize({ width, height: 900 });
+			await page.keyboard.press('Escape');
+			await expect.poll(async () => {
+				const first = (await cells.nth(0).boundingBox())!;
+				const second = (await cells.nth(1).boundingBox())!;
+				return width === 390
+					? first.y + first.height <= second.y + 1
+					: first.y === second.y && first.x + first.width <= second.x + 1;
+			}).toBe(true);
+			const filingColumns = await cells.evaluateAll(elements => elements.map((cell, index) => {
+				const previous = elements[index - 1];
+				const style = getComputedStyle(cell);
+				return {
+					item: cell.getAttribute('data-corporate-item'),
+					sharesRow: !!previous && previous.getBoundingClientRect().top === cell.getBoundingClientRect().top,
+					startBorder: style.borderInlineStartWidth,
+					endBorder: style.borderInlineEndWidth
+				};
+			}));
+			for (const { item, sharesRow, startBorder, endBorder } of filingColumns) {
+				expect(startBorder, `Item ${item} at ${width}px`).toBe(sharesRow ? '1px' : '0px');
+				expect(endBorder).toBe('0px');
+			}
+			await expect.poll(async () => {
+				const monthBox = (await month.boundingBox())!;
+				const yearBox = (await year.boundingBox())!;
+				return Math.abs(monthBox.y - yearBox.y) <= 1 && monthBox.x + monthBox.width < yearBox.x;
+			}).toBe(true);
+			await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+			if (process.env.EBIRFORMS_CAPTURE_TEST_PDFS === '1') {
+				await filing.evaluate(element => element.scrollIntoView({ block: 'center' }));
+				await filing.screenshot({ path: info.outputPath(`${code}-filing-${width}.png`), animations: 'disabled' });
+				await background.screenshot({ path: info.outputPath(`${code}-background-${width}.png`), animations: 'disabled' });
+			}
+		}
+		if (code.startsWith('1702RT')) {
+			const atc = cells.nth(4);
+			const regular = atc.getByRole('checkbox', { name: 'Regular income tax' });
+			const selection = atc.getByRole('combobox', { name: 'Applicable ATC' });
+			await expect(selection).toBeVisible();
+			await regular.uncheck();
+			await expect(selection).toHaveCount(0);
+			await regular.check();
+			await expect(selection).toBeVisible();
+		}
+	});
+}
+
+test('1702-RT shows full month names and omits the empty option in the year-end combobox', async ({ page }, info) => {
+	const code = '1702RTv2018';
+	const id = 'blank-closing-month';
+	await seedWorkspace(page, 'light', 'loaded', { taxpayerClassification: 'N' }, [{
+		id, taxpayerId, formCode: code, returnPeriod: '2025',
+		status: 'Draft', updatedAt: 1794441600000, finalFlag: '0',
+		values: { 'frm1702RT:txtPg1I2Year': '2025', 'frm1702RT:ddlPg1I2Month': '' }
+	}]);
+	await page.setViewportSize({ width: 1280, height: 900 });
+	await page.goto(`/ebirforms/taxpayers/${taxpayerId}/forms/${code}?return=${id}`);
+	const filing = page.getByRole('region', { name: 'Filing details', exact: true });
+	const month = filing.getByRole('combobox', { name: 'Year-end month', exact: true });
+	await expect(month).toHaveText('Select an option');
+	await filing.getByRole('radio', { name: 'Fiscal', exact: true }).check();
+	for (const width of [1280, 390]) {
+		await page.setViewportSize({ width, height: 900 });
+		await page.keyboard.press('Escape');
+		for (const name of ['12 - December', '09 - September']) {
+			await month.click();
+			await expect(page.getByRole('option', { name: '', exact: true })).toHaveCount(0);
+			await page.getByRole('option', { name, exact: true }).click();
+			const selected = month.getByText(name, { exact: true });
+			await expect(selected).toBeVisible();
+			await expect.poll(() => selected.evaluate(label => {
+				const text = label.getBoundingClientRect();
+				const trigger = label.closest('[role="combobox"]')!.getBoundingClientRect();
+				return label.scrollWidth <= label.clientWidth + 1 && text.right <= trigger.right && text.bottom <= trigger.bottom;
+			})).toBe(true);
+		}
+		if (process.env.EBIRFORMS_CAPTURE_TEST_PDFS === '1') {
+			await filing.screenshot({ path: info.outputPath(`1702rt-year-end-${width}.png`), animations: 'disabled' });
+		}
+	}
+});
+
+test('1702-Q retains blank registered fields for missing profile values', async ({ page }) => {
+	await seedWorkspace(page, 'light', 'loaded', { taxpayerClassification: 'N', taxpayerName: '', address: '', address2: '' }, []);
+	await page.goto(`/ebirforms/taxpayers/${taxpayerId}/forms/1702Qv2018C?new=true`);
+	const background = page.getByRole('region', { name: /background information/i });
+	await expect(background).toBeVisible({ timeout: 20_000 });
+	for (const label of ['Registered name', 'Registered address']) {
+		const field = background.getByRole('textbox', { name: label, exact: true });
+		await expect(field).toHaveValue('');
+		await expect(field).toHaveJSProperty('readOnly', true);
+	}
+	await expect(background.getByRole('link', { name: 'Edit taxpayer information' })).toBeVisible();
+});
+
+test('1702-RT groups registered name and address while preserving their saved lines', async ({ page }, info) => {
+	const code = '1702RTv2018';
+	await seedWorkspace(page, 'light', 'loaded', { taxpayerClassification: 'N' }, []);
+	await page.setViewportSize({ width: 1280, height: 900 });
+	await page.goto(`/ebirforms/taxpayers/${taxpayerId}/forms/${code}?new=true`);
+	const background = page.getByRole('region', { name: /background information/i });
+	const name = background.getByRole('status', { name: 'Registered name', exact: true });
+	const address = background.getByRole('status', { name: 'Registered address', exact: true });
+	const nameLine2 = background.getByRole('textbox', { name: 'Registered name line 2', exact: true });
+	const nameLine3 = background.getByRole('textbox', { name: 'Registered name line 3', exact: true });
+	const addressLine3 = background.getByRole('textbox', { name: 'Registered address line 3', exact: true });
+	const profileName = 'Example Services Corporation';
+	const profileAddress = '123 Example Street\nExample City';
+	await expect(name).toHaveText(profileName);
+	await expect(address).toHaveText(profileAddress);
+	await nameLine2.fill('Manufacturing Division');
+	await nameLine3.pressSequentially('Philippines');
+	await addressLine3.fill('Building 2');
+	for (const width of [1280, 390]) {
+		await page.setViewportSize({ width, height: 900 });
+		await page.keyboard.press('Escape');
+		await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+		if (process.env.EBIRFORMS_CAPTURE_TEST_PDFS === '1') {
+			await background.screenshot({ path: info.outputPath(`1702rt-registered-information-${width}.png`), animations: 'disabled' });
+		}
+	}
+	await page.setViewportSize({ width: 1280, height: 900 });
+	await page.getByRole('button', { name: 'Save draft', exact: true }).click();
+	const edit = page.getByRole('link', { name: 'Edit', exact: true });
+	await expect(edit).toBeVisible();
+	const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('ebirforms-created-returns-v1')!).returns
+		.find((entry: { formCode: string }) => entry.formCode === '1702RTv2018').values);
+	expect(saved).toMatchObject({
+		'frm1702RT:txtPg1Pt1I8Name1': 'Example Services Corporation',
+		'frm1702RT:txtPg1Pt1I8Name2': 'Manufacturing Division',
+		'frm1702RT:txtPg1Pt1I8Name3': 'Philippines',
+		'frm1702RT:txtPg1Pt1I9Address2': 'Example City',
+		'frm1702RT:txtPg1Pt1I9Address3': 'Building 2'
+	});
+	await edit.click();
+	await expect(name).toHaveText(profileName);
+	await expect(address).toHaveText(profileAddress);
+	await expect(nameLine2).toHaveValue('Manufacturing Division');
+	await expect(nameLine3).toHaveValue('Philippines');
+	await expect(addressLine3).toHaveValue('Building 2');
+});
+
 test('corporate tax and schedule dividers span the form with content inset', async ({ page }, info) => {
 	await seedWorkspace(page, 'light', 'loaded', { taxpayerClassification: 'N' }, []);
 	await page.goto(`/ebirforms/taxpayers/${taxpayerId}/forms/1702EX?new=true`);
@@ -56,9 +231,13 @@ test('older quarterly filing grids have a single full-width bottom divider', asy
 		const filing = page.locator('.corporate-section.filing');
 		const cells = filing.locator('.corporate-row');
 		await expect(cells).toHaveCount(5);
-		await expect(cells.nth(2)).not.toHaveCSS('box-shadow', 'none');
-		await expect(cells.nth(3)).toHaveCSS('box-shadow', 'none');
-		await expect(cells.nth(4)).toHaveCSS('box-shadow', 'none');
+		await expect(cells.nth(2)).toHaveCSS('border-block-start-width', '0px');
+		await expect(cells.nth(3)).toHaveCSS('border-block-start-width', '1px');
+		await expect(cells.nth(4)).toHaveCSS('border-block-start-width', '1px');
+		const amended = (await cells.nth(3).boundingBox())!;
+		const attachments = (await cells.nth(4).boundingBox())!;
+		expect(Math.abs(amended.x + amended.width - attachments.x)).toBeLessThan(1);
+		expect(amended.y).toBe(attachments.y);
 		await expect(filing).toHaveCSS('border-block-end-width', '1px');
 		if (process.env.EBIRFORMS_CAPTURE_TEST_PDFS === '1') {
 			await filing.screenshot({ path: info.outputPath(`${code}-filing.png`), animations: 'disabled' });
@@ -79,24 +258,61 @@ test('corporate filing grid shares the outer right edge with the form border', a
 			return rows.filter(row => Math.abs(row.getBoundingClientRect().right - right) < 1)
 				.map(row => getComputedStyle(row).borderInlineEndWidth);
 		});
-		expect(edges).toHaveLength(code === '1702Q' ? 1 : 2);
+		expect(edges).toHaveLength(2);
 		expect(edges).toEqual(Array(edges.length).fill('0px'));
 		await expect(sheet).toHaveCSS('border-inline-end-width', '1px');
 	}
 });
 
-test('corporate cover keeps the group boundaries around signatory and certificate fields', async ({ page }) => {
+test('the legacy regular cover separates filing identification from the tax summary', async ({ page }) => {
 	await seedWorkspace(page, 'light', 'loaded', { taxpayerClassification: 'N' }, []);
 	await page.goto(`/ebirforms/taxpayers/${taxpayerId}/forms/1702RT?new=true`);
 	const summary = page.getByRole('region', { name: /Part II.*Total Tax Payable/ });
-	const row = (input: RegExp) => summary.locator('.corporate-row').filter({ has: page.getByRole('textbox', { name: input }) });
+	await expect(summary).toBeVisible({ timeout: 30_000 });
 	await expect(summary.locator('.corporate-row.total')).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
-	await expect(row(/authorized representative/i)).toHaveCSS('border-block-start-width', '1px');
-	await expect(row(/treasurer/i)).toHaveCSS('border-block-start-width', '0px');
-	await expect(summary.locator('[data-corporate-item="22"]').first()).toHaveCSS('border-block-start-width', '1px');
-	await expect(summary.locator('[data-corporate-item="22"]').last()).toHaveCSS('border-block-start-width', '0px');
-	await expect(summary.locator('[data-corporate-item="23"]')).toHaveCSS('border-block-start-width', '0px');
+	await expect(summary.getByRole('textbox', { name: /authorized representative|treasurer|signatory/i })).toHaveCount(0);
+	await expect(summary.locator('[data-corporate-item="22"]')).toHaveCount(0);
+	const identification = page.getByRole('region', { name: 'Filing identification', exact: true });
+	const item22 = identification.locator('[data-corporate-item="22"]');
+	await expect(item22).toHaveCount(1);
+	await expect(item22.getByRole('radio')).toHaveCount(2);
+	await expect(item22.getByRole('textbox')).toBeVisible();
 });
+
+for (const [code, item] of [
+	['1702RTv2018', '22'], ['1702RTv2018C', '22'], ['1702MXv2018', '22'], ['1702MXv2018C', '22'],
+	['1702EXv2018', '23'], ['1702EXv2018C', '23'], ['1702Qv2018C', '26'],
+	['1702Q', '5'], ['1702Qv2008C', '5']
+] as const) {
+	test(`${code} displays a compact standalone attachment count`, async ({ page }, info) => {
+		await seedWorkspace(page, 'light', 'loaded', { taxpayerClassification: 'N' }, []);
+		await page.goto(`/ebirforms/taxpayers/${taxpayerId}/forms/${code}?new=true`);
+		const editor = page.locator('.corporate-editor');
+		const count = page.getByRole('textbox', { name: /^Number of (?:attachments|sheets attached)$/ });
+		const row = editor.locator(`[data-corporate-item="${item}"]`).filter({ has: count });
+		await expect(editor.locator('input[id*="Signatory" i], input[id*="Signature" i], input[id$="AuthorizedRepresentative" i], input[id$="Treasurer" i]')).toHaveCount(0);
+		await expect(editor.getByText(/Title of Signatory TIN/i)).toHaveCount(0);
+		await expect(count).toHaveAttribute('inputmode', 'numeric');
+		await expect(row.locator('.paper-item-number')).toHaveText(item);
+		await expect(row.getByRole('textbox')).toHaveCount(1);
+		await count.fill('03');
+		for (const width of [1280, 390]) {
+			await page.setViewportSize({ width, height: 900 });
+			await expect(count).toHaveValue('03');
+			await expect.poll(async () => (await count.boundingBox())!.width).toBeLessThanOrEqual(160);
+			await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+			if (process.env.EBIRFORMS_CAPTURE_TEST_PDFS === '1') {
+				await row.screenshot({ path: info.outputPath(`${code}-attachments-${width}.png`), animations: 'disabled' });
+			}
+		}
+		if (code === '1702RTv2018') {
+			await page.setViewportSize({ width: 1280, height: 900 });
+			await page.getByRole('button', { name: 'Save draft', exact: true }).click();
+			await page.getByRole('link', { name: 'Edit', exact: true }).click();
+			await expect(count).toHaveValue('03');
+		}
+	});
+}
 
 test('the UI agent creates, saves, reopens and exports a corporate return', async ({ page }, info) => {
 	await page.routeWebSocket('**/*', socket => socket.close());
@@ -561,3 +777,112 @@ test('revised quarterly OSD saves and prints the computed deduction and rate', a
 	}
 	await printed.close();
 });
+
+test('1702RT January 2018 adds NOLCO in a drawer and keeps the total and transfer visible', async ({ page }, info) => {
+	await seedWorkspace(page, 'light', 'loaded', { taxpayerClassification: 'N' }, []);
+	await page.setViewportSize({ width: 1280, height: 900 });
+	await page.goto(`/ebirforms/taxpayers/${taxpayerId}/forms/1702RTv2018?new=true`);
+	await goToReturnPage(page, 4);
+	const schedule = page.getByRole('region', { name: /^Schedule IIIA / });
+	const total = schedule.locator('[id="frm1702RT:txtPg4Sc4I8TotalNOLCO"]');
+	const transfer = schedule.getByRole('button', { name: 'To Part IV, Item 36' });
+	await expect(total).toBeVisible();
+	await expect(transfer).toBeVisible();
+	const add = schedule.getByRole('button', { name: 'Add item', exact: true });
+	await expect(add).toBeVisible();
+	await add.click();
+	const drawer = page.getByRole('dialog', { name: 'Add item', exact: true });
+	await drawer.getByRole('button', { name: 'Add item', exact: true }).click();
+	await expect(drawer.getByText('Enter the four-digit year the loss was incurred.')).toBeVisible();
+	await drawer.getByRole('textbox', { name: 'Year incurred', exact: true }).fill('2023');
+	await drawer.getByRole('textbox', { name: 'Net operating loss', exact: true }).fill('1000');
+	await drawer.getByRole('textbox', { name: 'NOLCO applied current year', exact: true }).fill('250');
+	await expect(drawer.locator('output').filter({ hasText: '750' })).toBeVisible();
+	await drawer.getByRole('button', { name: 'Add item', exact: true }).click();
+	await expect(drawer).toBeHidden();
+	await expect(schedule.getByRole('button', { name: '2023', exact: true })).toBeVisible();
+	await expect(total).toHaveText(/250/);
+	await schedule.getByRole('button', { name: '2023', exact: true }).click();
+	const edit = page.getByRole('dialog', { name: 'Edit item', exact: true });
+	const applied = edit.getByRole('textbox', { name: 'NOLCO applied current year', exact: true });
+	await applied.fill('1200');
+	await edit.getByRole('button', { name: 'Update', exact: true }).click();
+	await expect(edit.getByText('NOLCO applied and expired cannot exceed the loss available.')).toBeVisible();
+	await edit.getByRole('button', { name: 'Cancel', exact: true }).click();
+	await expect(total).toHaveText(/250/);
+	await page.getByRole('button', { name: 'Save draft', exact: true }).click();
+	await page.getByRole('link', { name: 'Edit', exact: true }).click();
+	await goToReturnPage(page, 4);
+	await expect(total).toHaveText(/250/);
+	await schedule.getByRole('button', { name: '2023', exact: true }).click();
+	await expect(applied).toHaveValue('250');
+	await edit.screenshot({ path: info.outputPath('nolco-drawer.png'), animations: 'disabled' });
+	await edit.getByRole('button', { name: 'Cancel', exact: true }).click();
+	for (const width of [1280, 390]) {
+		await page.setViewportSize({ width, height: 900 });
+		await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+		await schedule.screenshot({ path: info.outputPath(`nolco-${width}.png`), animations: 'disabled' });
+	}
+	await transfer.click();
+	await expect(page.locator('[id="frm1702RT:txtPg2Pt4I36Nolco"]')).toBeFocused();
+	await page.getByRole('link', { name: /Back to forms/ }).click();
+	const printed = await printSavedReturn(page, '1702RTv2018', info.outputPath('nolco-return.pdf'));
+	await expect(printed.locator('[data-field-id="frm1702RT:txtPg4Sc3AI5C6"]')).toHaveValue('750');
+	await expect(printed.locator('[data-field-id="frm1702RT:txtPg4Sc4I8TotalNOLCO"]')).toHaveValue('250');
+	await printed.close();
+});
+
+const corporateNolcoSchedules = [
+	['1702RT', 5, /^Schedule 6A /, 'frm1702RT:txtPg5Sc6AI8TotalNOLCO'],
+	['1702RTv2018C', 4, /^Schedule IIIA /, 'frm1702RT:txtPg4Sc4I8TotalNOLCO'],
+	['1702MX', 6, /^Schedule 7A /, 'frm1702MX:txtPg6Sc7AI8'],
+	['1702MX', 13, /^Schedule IA /, 'frm1702MX:txtPg4SP1ScIAI8CD'],
+	['1702MXv2018', 4, /^Schedule 7\.1 /, 'frm1702MX:txtPg3IShed78D'],
+	['1702MXv2018', 4, /^Schedule 8\.1 /, 'frm1702MX:txtPg3IShed88D'],
+	['1702MXv2018', 6, /^Schedule F\.1 /, 'frm1702MX:txtPg2SP1ScF1I8D'],
+	['1702MXv2018C', 4, /^Schedule 7\.1 /, 'frm1702MX:txtPg3IShed78D'],
+	['1702MXv2018C', 4, /^Schedule 8\.1 /, 'frm1702MX:txtPg3IShed88D'],
+	['1702MXv2018C', 6, /^Schedule F\.1 /, 'frm1702MX:txtPg2SP1ScF1I8D']
+] as const;
+
+for (const [code, number, heading, totalId] of corporateNolcoSchedules) {
+	test(`${code} uses an Add Item drawer for NOLCO ${totalId.split(':')[1]}`, async ({ page }, info) => {
+		const attachment = totalId.includes('SP1');
+		const values: Record<string, string> = attachment
+			? {
+				[code === '1702MX' ? 'frm1702MX:chkPg2Pt4I30MoreThanOne' : 'frm1702MX:rdoPg2I1']: code === '1702MX' ? 'Y' : 'F',
+				'frm1702MX:totalSPAttach': '1'
+			}
+			: {};
+		await seedWorkspace(page, 'light', 'loaded', { taxpayerClassification: 'N' }, [{
+			id: 'nolco', taxpayerId, formCode: code, returnPeriod: '2025',
+			status: 'Draft', updatedAt: 1794441600000, finalFlag: '0', values
+		}]);
+		await page.setViewportSize({ width: 1280, height: 900 });
+		await page.goto(`/ebirforms/taxpayers/${taxpayerId}/forms/${code}?return=nolco`);
+		await goToReturnPage(page, number);
+		const schedule = page.getByRole('region', { name: heading });
+		const total = schedule.locator(`[id="${totalId}"]`);
+		const transfer = schedule.getByRole('button', { name: /^To / });
+		await expect(total).toBeVisible();
+		await expect(transfer).toBeVisible();
+		await schedule.getByRole('button', { name: 'Add item', exact: true }).click();
+		const drawer = page.getByRole('dialog', { name: 'Add item', exact: true });
+		await expect(drawer.getByRole('textbox', { name: 'Year incurred', exact: true })).toBeFocused();
+		await drawer.getByRole('textbox', { name: 'Year incurred', exact: true }).fill('2023');
+		await drawer.getByRole('textbox', { name: 'Net operating loss', exact: true }).fill('1000');
+		await drawer.getByRole('textbox', { name: /applied (current|this) year/i }).fill('250');
+		await expect(drawer.locator('output').filter({ hasText: '750' })).toBeVisible();
+		await drawer.getByRole('button', { name: 'Add item', exact: true }).click();
+		await expect(drawer).toBeHidden();
+		await expect(total).toHaveText(/250/);
+		for (const width of [1280, 390]) {
+			await page.setViewportSize({ width, height: 900 });
+			await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+			await schedule.screenshot({ path: info.outputPath(`nolco-${width}.png`), animations: 'disabled' });
+		}
+		const target = await transfer.getAttribute('data-reference-target');
+		await transfer.click();
+		await expect(page.locator(':focus')).toHaveAttribute('id', target ?? '');
+	});
+}

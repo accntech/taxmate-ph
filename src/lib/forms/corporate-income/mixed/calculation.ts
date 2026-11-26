@@ -11,6 +11,13 @@ import {
   mixedActivityCount,
   mixedHasActivities,
 } from "./attachments";
+import {
+  legacyMixedAtc,
+  legacyMixedOtherAtcElected,
+  legacyMixedRateOptions,
+  legacyMixedReliefRate,
+  legacyMixedSpecialRate,
+} from "./atc";
 
 const prefix = "frm1702MX:";
 export const mixedSourceData = {
@@ -29,12 +36,87 @@ export function mixedLegalBasis(values: CorporateValues): string {
   return (values[prefix + "txtPg2Pt4I32CB"] ?? "").toUpperCase().replace(/[. ]/g, "");
 }
 
+const legacyFivePercentAgencies = new Set([
+  "PEZA", "ECOZONE", "BCDA", "SBMA", "CDC", "PPMC", "JHSEZ", "MSEZ", "CEZA",
+  "ZCSEZA", "APECO", "AFAB", "TEZ", "EPZA", "MEPZA",
+]);
+const legacyFivePercentLaws = new Set([
+  "7227", "9400", "7916", "8748", "7922", "7903", "9490", "10083", "9728", "9593",
+]);
+
+function legacySpecialActivityCount(values: CorporateValues): number {
+  return mixedHasActivities("1702MX", values) ? mixedActivityCount(values, "SP") : 0;
+}
+
+/** Returns the forced Schedule 1 Item 11 special-rate fraction, if applicable. */
+export function legacyMixedForcedRate(values: CorporateValues): number | undefined {
+  if (legacySpecialActivityCount(values) > 0) return;
+  const basis = mixedLegalBasis(values).replace(/^RA/, "");
+  const ipa = (values[prefix + "txtPg2Pt4I31CB"] ?? "").toUpperCase();
+  const qualifiesForFivePercent =
+    (legacyFivePercentAgencies.has(ipa) || legacyFivePercentLaws.has(basis)) &&
+    mixedNumber(values[legacyMixedReliefRate]) === 5;
+  const isIC030or031 =
+    legacyMixedOtherAtcElected(values) && ["IC030", "IC031"].includes(values[legacyMixedAtc]);
+  const regularSales = mixedNumber(values[prefix + "txtPg3Sc1I1CC"]);
+  const specialSales = mixedNumber(values[prefix + "txtPg3Sc1I1CB"]);
+  const regularSalesShare = Math.round((regularSales / (regularSales + specialSales)) * 100);
+
+  if (isIC030or031 && qualifiesForFivePercent) {
+    const grossTax = mixedNumber(values[prefix + "txtPg3Sc1I5CB"]) * 0.05;
+    const netTax = mixedNumber(values[prefix + "txtPg3Sc1I10CB"]) * 0.3;
+    return regularSalesShare > 50 && grossTax <= netTax ? 0.3 : 0.05;
+  }
+  if (isIC030or031) return regularSalesShare > 50 ? 0.3 : undefined;
+  if (qualifiesForFivePercent) return 0.05;
+  if (basis === "10693") return 0.02;
+}
+
+function legacySupplementalAmounts(
+  values: CorporateValues,
+  group: string,
+  amountIds: string[],
+): number {
+  const count = Math.min(99, Math.max(0, Math.trunc(mixedNumber(values[prefix + "txtCtrmodal" + group]))));
+  return amountIds.reduce((total, amountId) => {
+    const entered = mixedNumber(values[prefix + amountId]);
+    const additional = Array.from({ length: count }, (_, index) =>
+      mixedNumber(values[prefix + `${amountId}-${index + 1}`]),
+    ).reduce((sum, amount) => sum + amount, 0);
+    return total + entered + additional;
+  }, 0);
+}
+
+// The June 2013 HTA sums these regime amounts in field blur and detail-save handlers.
+const legacyRegimeAmountRows = [
+  ["txtPg4Sc3I", [1, 2, 3, 5]],
+  ["txtPg4Sc3AI", [1, 2, 4]],
+  ["txtPg4Sc3BI", [6, 7, 9, 11, 12, 14, 15, 17, 18]],
+  ["txtPg4Sc3CI", [20, 21, 22, 23, 24, 25]],
+  ["txtPg5Sc5I", Array.from({ length: 35 }, (_, index) => index + 1)],
+  ["txtPg6Sc5I", [36, 37, 38, 39]],
+  ["txtPg6Sc6I", [1, 2, 3, 4]],
+  ["txtPg6Sc8I", [1, 2, 3, 5, 6]],
+  ["txtPg7Sc8I", [7, 8, 9, 10, 11, 12]],
+  ["txtPg7Sc10I", [1, 2, 3, 5, 6, 7, 8]],
+] as const;
+
 /** Source helper operations with literal IDs and no conditional or dynamic inputs. */
 function sourceSchedules(
   code: MixedCode,
   values: CorporateValues,
 ): CorporateValues {
   const result = { ...values };
+  if (code === "1702MX") {
+    for (const [group, items] of legacyRegimeAmountRows) {
+      for (const item of items) {
+        const stem = prefix + group + item + "C";
+        const total = mixedNumber(result[stem + "A"]) +
+          mixedNumber(result[stem + "B"]) + mixedNumber(result[stem + "C"]);
+        result[stem + "D"] = String(Math.round(total));
+      }
+    }
+  }
   const operations = mixedSourceData[code].operations;
   for (let pass = 0; pass < 12; pass += 1) {
     let changed = false;
@@ -83,21 +165,39 @@ function calculateMixedPass(
     );
   }
   if (code === "1702MX") {
-    for (const column of ["A", "B", "C"]) {
+    const currentLoss = Math.max(0, -n("txtPg6Sc7I3"));
+    result[prefix + "txtPg6Sc7AI4year"] = currentLoss
+      ? result[prefix + "txtPg1I2YearEnd"] ?? ""
+      : "";
+    put("txtPg6Sc7AI4CA", currentLoss);
+    for (const row of [4, 5, 6, 7]) {
+      const stem = `txtPg6Sc7AI${row}C`;
+      put(stem + "E", n(stem + "A") - sum(stem + "B", stem + "C", stem + "D"));
+    }
+    put("txtPg3Sc1I8CC", n("txtPg6Sc7AI8"));
+    const multiple = mixedHasActivities(code, result);
+    for (const column of ["A", "B", "C"] as const) {
+      const group = column === "A" ? "EX" : "SP";
+      const activityCount = multiple && column !== "C" ? mixedActivityCount(result, group) : 0;
+      const activityAmount = (item: number) => Array.from(
+        { length: activityCount },
+        (_, index) => n(`txtPg1${group}${index + 1}ScBI${item}`),
+      ).reduce((total, value) => total + value, 0);
       const suffix = `C${column}`;
       put(`txtPg3Sc1I1${suffix}`, n(`txtPg4Sc3I6${suffix}`));
-      put(`txtPg3Sc1I2${suffix}`, n(`txtPg4Sc3CI27${suffix}`));
+      put(`txtPg3Sc1I2${suffix}`, n(`txtPg4Sc3CI27${suffix}`) + activityAmount(2));
       put(
         `txtPg3Sc1I3${suffix}`,
         n(`txtPg3Sc1I1${suffix}`) - n(`txtPg3Sc1I2${suffix}`),
       );
-      put(`txtPg3Sc1I4${suffix}`, n(`txtPg5Sc4I4${suffix}`));
+      put(`txtPg3Sc1I4${suffix}`, n(`txtPg5Sc4I4${suffix}`) + activityAmount(4));
       put(
         `txtPg3Sc1I5${suffix}`,
         sum(`txtPg3Sc1I3${suffix}`, `txtPg3Sc1I4${suffix}`),
       );
       put(`txtPg3Sc1I6${suffix}`, n(`txtPg6Sc5I40${suffix}`));
       put(`txtPg3Sc1I7${suffix}`, n(`txtPg6Sc6I5${suffix}`));
+      if (column !== "C") put(`txtPg3Sc1I8${suffix}`, activityAmount(8));
       put(
         `txtPg3Sc1I9${suffix}`,
         sum(
@@ -111,87 +211,38 @@ function calculateMixedPass(
         n(`txtPg3Sc1I5${suffix}`) - n(`txtPg3Sc1I9${suffix}`),
       );
     }
-    const atc = result[prefix + "drpPg1I5ATCR2"];
-    const basis = mixedLegalBasis(result);
-    const ipa = (result[prefix + "txtPg2Pt4I31CB"] ?? "").toUpperCase();
-    const recognizedIpa = [
-      "PEZA",
-      "ECOZONE",
-      "BCDA",
-      "SBMA",
-      "CDC",
-      "PPMC",
-      "JHSEZ",
-      "MSEZ",
-      "CEZA",
-      "ZCSEZA",
-      "APECO",
-      "AFAB",
-      "TEZ",
-      "EPZA",
-      "MEPZA",
-    ].includes(ipa);
-    const recognizedBasis = [
-      "RA7227",
-      "7227",
-      "RA9400",
-      "9400",
-      "RA7916",
-      "7916",
-      "RA8748",
-      "8748",
-      "RA7922",
-      "7922",
-      "RA7903",
-      "7903",
-      "RA9490",
-      "9490",
-      "RA10083",
-      "10083",
-      "RA9728",
-      "9728",
-      "RA9593",
-      "9593",
-    ].includes(basis);
-    const qualifiesForFivePercent =
-      (recognizedIpa || recognizedBasis) &&
-      n("txtPg2Pt4I34SpecialTaxRate") === 5;
-    const isIC030or031 =
-      elected("chkPg1I5ATCR2") && ["IC030", "IC031"].includes(atc);
-    const totalSales = n("txtPg3Sc1I1CB") + n("txtPg3Sc1I1CC");
-    const regularSalesShare = Math.round(
-      (n("txtPg3Sc1I1CC") / totalSales) * 100,
-    );
-    let forcedRate = 0;
-    let grossRate = false;
-    if (!mixedHasActivities(code, result)) {
-      if (isIC030or031 && qualifiesForFivePercent) {
-        const grossTax = n("txtPg3Sc1I5CB") * 0.05;
-        const netTax = n("txtPg3Sc1I10CB") * 0.3;
-        forcedRate = regularSalesShare > 50 && grossTax <= netTax ? 30 : 5;
-        grossRate = forcedRate === 5;
-      } else if (isIC030or031) {
-        if (regularSalesShare > 50) forcedRate = 30;
-      } else if (qualifiesForFivePercent) {
-        forcedRate = 5;
-        grossRate = true;
-      } else if (["RA10693", "10693"].includes(basis)) {
-        result[prefix + "txtPg2Pt4I34SpecialTaxRate"] = "2.0";
-        forcedRate = 2;
-      }
-      if (forcedRate > 0)
-        result[prefix + "drpPg3Sc1I11CB"] = String(forcedRate / 100);
+    for (let item = 1; item <= 10; item += 1) {
+      const stem = `txtPg3Sc1I${item}C`;
+      put(stem + "D", sum(stem + "A", stem + "B", stem + "C"));
     }
+    put("txtPg3Sc1I11CA", 0);
+    result[prefix + "txtPg3Sc1I11CC"] = "30.0";
+
+    const forcedRate = legacyMixedForcedRate(result);
+    const specialActivityCount = legacySpecialActivityCount(result);
+    if (specialActivityCount === 0) {
+      if (forcedRate !== undefined) {
+        result[legacyMixedSpecialRate] = String(forcedRate);
+        if (forcedRate === 0.02) result[legacyMixedReliefRate] = "2.0";
+      } else {
+        const options = legacyMixedRateOptions(result);
+        const savedRate = Number(result[legacyMixedSpecialRate]);
+        const savedOption = options.find(option => Number(option.value) === savedRate);
+        result[legacyMixedSpecialRate] = savedOption?.value ?? options[0].value;
+      }
+    }
+    const atc = result[legacyMixedAtc];
+    const basis = mixedLegalBasis(result);
     const salesRate =
       ["IC080", "IC190", "IC191"].includes(atc) ||
       ["RA10693", "10693"].includes(basis);
-    const specialBase = grossRate
+    const specialBase = forcedRate === 0.05
       ? n("txtPg3Sc1I5CB")
       : salesRate
         ? n("txtPg3Sc1I1CB")
         : Math.max(0, n("txtPg3Sc1I10CB"));
     const attachmentTax = Array.from(
-      { length: mixedActivityCount(result, "SP") },
+      { length: specialActivityCount },
       (_, index) => n(`txtPg1SP${index + 1}ScBI12`),
     ).reduce((total, value) => total + value, 0);
     for (const column of ["A", "B", "C"]) {
@@ -201,18 +252,21 @@ function calculateMixedPass(
       );
       put(`txtPg3Sc2I2C${column}`, n(`txtPg6Sc6I5C${column}`) * 0.3);
     }
+    put("txtPg3Sc2I1CD", sum("txtPg3Sc2I1CA", "txtPg3Sc2I1CB", "txtPg3Sc2I1CC"));
     put(
       "txtPg3Sc1I12CB",
-      mixedHasActivities(code, result)
+      specialActivityCount > 0
         ? attachmentTax
         : specialBase * n("drpPg3Sc1I11CB"),
     );
     put("txtPg3Sc1I12CC", Math.max(0, n("txtPg3Sc1I10CC")) * 0.3);
+    put("txtPg3Sc1I12CD", sum("txtPg3Sc1I12CB", "txtPg3Sc1I12CC"));
     put("txtPg3Sc1I14CB", n("txtPg3Sc1I12CB") - n("txtPg3Sc1I13CB"));
     put(
       "txtPg3Sc1I15CC",
       elected("chkPg1I5ATCR1") ? Math.max(0, n("txtPg3Sc1I5CC")) * 0.02 : 0,
     );
+    put("txtPg3Sc1I15CD", n("txtPg3Sc1I15CC"));
     put("txtPg3Sc1I16CB", n("txtPg3Sc1I14CB"));
     put("txtPg3Sc1I16CC", Math.max(n("txtPg3Sc1I12CC"), n("txtPg3Sc1I15CC")));
     put("txtPg3Sc1I16CD", sum("txtPg3Sc1I16CB", "txtPg3Sc1I16CC"));
@@ -244,6 +298,18 @@ function calculateMixedPass(
     put(
       "txtPg1Pt2I20TotalAmount",
       sum("txtPg1Pt2I18NetTaxPayable", "txtPg1Pt2I19TotalPenalties"),
+    );
+    put("txtPg9Sc13I19",
+      sum("txtPg9Sc13I1CC", "txtPg9Sc13I2CC", "txtPg9Sc13I3CC") +
+      legacySupplementalAmounts(result, "Pg9Sc13I", ["txtPg9Sc13I4CC"]) +
+      legacySupplementalAmounts(result, "Pg9Sc13II", ["txtPg9Sc13I9CA", "txtPg9Sc13I9CB"]) +
+      legacySupplementalAmounts(result, "Pg9Sc13III", ["txtPg9Sc13I15CA", "txtPg9Sc13I15CB"]) +
+      legacySupplementalAmounts(result, "Pg9Sc13IV", ["txtPg9Sc13I18CA", "txtPg9Sc13I18CB"]),
+    );
+    put("txtPg9Sc14I8",
+      n("txtPg9Sc14I1") +
+      legacySupplementalAmounts(result, "Pg9Sc14I", ["txtPg9Sc14I5CA", "txtPg9Sc14I5CB"]) +
+      legacySupplementalAmounts(result, "Pg9Sc14II", ["txtPg9Sc14I7CA", "txtPg9Sc14I7CB"]),
     );
   } else {
     const optional = result[prefix + "rdoPg1Pt1I13MethodOfDeduc"] === "O";

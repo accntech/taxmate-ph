@@ -1,3 +1,10 @@
+import {
+  legacyMixedAtc,
+  legacyMixedOtherAtc,
+  legacyMixedOtherAtcElected,
+  legacyMixedRateOptions,
+  legacyMixedSpecialRate,
+} from "./atc";
 import { philippineCalendarDate } from '../../filing-calendar';
 import { validateLegacyExemptIdentification } from '../exempt/identification';
 import { legacyMixedIdentificationFields } from './identification';
@@ -6,6 +13,7 @@ import { refineMixedPages } from "./layout";
 import type { CorporateForm, CorporatePage, CorporateValues } from "../types";
 import {
   calculateMixed,
+  legacyMixedForcedRate,
   mixedLegalBasis,
   mixedNumber,
   mixedSourceData,
@@ -39,17 +47,17 @@ const fieldLabels: Record<string, string> = {
   txtPg1Pt1I7RDO: "7 RDO code",
   txtPg1Pt1I8: "8 Date of incorporation (MM/DD/YYYY)",
   txtPg1Pt1I9RegisteredName: "9 Registered name",
-  txtPg1Pt1I9RegisteredName2: "9 Registered name, line 2",
-  txtPg1Pt1I9RegisteredName3: "9 Registered name, line 3",
+  txtPg1Pt1I9RegisteredName2: "Registered name, line 2",
+  txtPg1Pt1I9RegisteredName3: "Registered name, line 3",
   txtPg1Pt1I10RegisteredAddress: "10 Registered address",
-  txtPg1Pt1I10RegisteredAddress2: "10 Address, line 2",
-  txtPg1Pt1I10RegisteredAddress3: "10 Address, line 3",
-  txtZIP: "10A ZIP code",
+  txtPg1Pt1I10RegisteredAddress2: "Registered address, line 2",
+  txtPg1Pt1I10RegisteredAddress3: "Registered address, line 3",
+  txtZIP: "9A ZIP code",
   txtPg1Pt1I11ContactNumber: "11 Contact number",
   txtPg1Pt1I12Email: "12 Email address",
   rdoPg1Pt1I13MethodOfDeduc: "13 Method of deduction",
   txtPg1Pt1I13MainLine: "13 Main line of business",
-  txtPg1Pt1I14PSIC: "14 PSIC code",
+  txtPg1Pt1I14PSICCode: "14 PSIC code",
   rdoPg1Pt1I15MethodofDeduction: "15 Method of deduction",
   rdoPg1Pt2I21Overpayment: "Overpayment election",
   rdoPg1AttMTaxRegime: "Tax regime for this activity",
@@ -65,6 +73,12 @@ const columns = {
 
 function pagesFor(code: MixedCode): CorporatePage[] {
   const pages = structuredClone(mixedSourceData[code].pages) as CorporatePage[];
+  const labels: Record<string, string> = code === "1702MX" ? fieldLabels : {
+    ...fieldLabels,
+    txtPg1Pt1I8: "10 Date of incorporation (MM/DD/YYYY)",
+    txtPg1Pt1I9RegisteredName: "8 Registered name",
+    txtPg1Pt1I10RegisteredAddress: "9 Registered address",
+  };
   const pageTitles =
     code === "1702MX"
       ? [
@@ -111,7 +125,7 @@ function pagesFor(code: MixedCode): CorporatePage[] {
         section.columns = ["Exempt", "Special rate", "Regular rate", "Total"];
       for (const row of section.rows) {
         const first = row.fields[0].id.slice(p.length);
-        if (fieldLabels[first]) row.label = fieldLabels[first];
+        if (labels[first]) row.label = labels[first];
         if (/^txtPg\d+(?:AttM)?TIN1$/.test(first))
           row.label = "Taxpayer identification";
         if (row.label === first) row.label = section.title;
@@ -122,7 +136,7 @@ function pagesFor(code: MixedCode): CorporatePage[] {
         }
         for (const field of row.fields) {
           const name = field.id.slice(p.length);
-          field.label = fieldLabels[name] ?? field.label;
+          field.label = labels[name] ?? field.label;
           if (name === "rdoPg2I1")
             field.options = [
               { value: "C", label: "One activity or project" },
@@ -191,6 +205,11 @@ function pagesFor(code: MixedCode): CorporatePage[] {
           if (/AttMScAI[123]$/.test(name) || /AttMScHI\d+C[12]$/.test(name)) {
             field.kind = "text";
             field.readonly = false;
+          }
+          const specialDeductionField = /AttMScHI1C([123])$/.exec(name)?.[1];
+          if (specialDeductionField) {
+            field.label = ["Description", "Legal basis", "Amount"][Number(specialDeductionField) - 1];
+            row.item ??= "1";
           }
           if (/AttMSc[AB]I(?:4|11|13)$/.test(name) && /Rate/i.test(row.label)) {
             field.kind = "percent";
@@ -317,7 +336,16 @@ export function validateMixed(
   need("ddlPg1I2Date", "Select the year-end month.");
   need("txtPg1Pt1I8", "Enter the date of incorporation.");
   const election = values[p + "chkPg1I5ATCR1"];
-  if (
+  if (code === "1702MX") {
+    const otherElected = legacyMixedOtherAtcElected(values);
+    if (!otherElected && !["Y", "IC055", "true", "1"].includes(election))
+      errors[legacyMixedOtherAtc] = "Select at least one alphanumeric tax code.";
+    if (otherElected)
+      if (!values[legacyMixedAtc]) errors[legacyMixedAtc] = "Choose an alphanumeric tax code.";
+    need("txtPg1Pt1I13MainLine", "Enter the main line of business.");
+    if (!/^\d{4}$/.test(values[p + "txtPg1Pt1I14PSICCode"] ?? ""))
+      errors[p + "txtPg1Pt1I14PSICCode"] = "Enter a four-digit PSIC code.";
+  } else if (
     !["Y", "IC055", "true", "1"].includes(election) &&
     !values[p + "drpPg1I5ATCR2"]
   )
@@ -481,7 +509,15 @@ export const mixedForms: CorporateForm[] = (
   decimals: 0,
   pages: editorPages[code],
   pagesFiledField: code === "1702MX" ? p + "txtPg1Pt2NumberofPagesFiled" : undefined,
-  expandPages: (values) => expandMixedDetails(code, editorPages[code], values),
+  expandPages: (values) => {
+    const pages = expandMixedDetails(code, editorPages[code], values);
+    if (code === "1702MX") {
+      const rate = pages[2].sections.flatMap(section => section.rows)
+        .flatMap(row => row.fields).find(field => field.id === legacyMixedSpecialRate);
+      if (rate) rate.options = legacyMixedRateOptions(values);
+    }
+    return pages;
+  },
   continuations: (values) => mixedDetailContinuations(code, values),
   attachmentGroups: (["EX", "SP"] as const).map((key) => ({
     key,
@@ -513,6 +549,8 @@ export const mixedForms: CorporateForm[] = (
   calculate: (values) => calculateMixed(code, values),
   validate: (values) => validateMixed(code, values),
   fieldReadonly: (id, values) => {
+    if (code === "1702MX" && id === legacyMixedSpecialRate)
+      return legacyMixedForcedRate(values) !== undefined;
     if (mixedHasActivities(code, values)) return mixedActivityRollupField(code, id);
     return code === "1702MX" && id === p + "txtPg2Pt4I34SpecialTaxRate" &&
       ["RA10693", "10693"].includes(mixedLegalBasis(values)) && mixedNumber(values[id]) === 2;
@@ -529,6 +567,8 @@ export const mixedForms: CorporateForm[] = (
           ],
         ) < 0
       );
+    if (code === "1702MX" && id === legacyMixedSpecialRate)
+      return !mixedHasActivities(code, values) || mixedActivityCount(values, "SP") === 0;
     if (id.includes("AttM")) return false;
     if (id.includes("totalEXAttach") || id.includes("totalSPAttach"))
       return mixedHasActivities(code, values);

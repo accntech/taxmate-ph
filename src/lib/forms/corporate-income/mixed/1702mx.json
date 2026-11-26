@@ -38,10 +38,6 @@
                   "kind": "select",
                   "options": [
                     {
-                      "value": "",
-                      "label": ""
-                    },
-                    {
                       "value": "01",
                       "label": "01"
                     },
@@ -225,7 +221,7 @@
                       "label": "IC 191 - Foreign Currency Deposit Units (FCDU)("
                     }
                   ],
-                  "defaultValue": "IC010"
+                  "defaultValue": ""
                 },
                 {
                   "id": "frm1702MX:chkPg1I5ATCR2",
@@ -359,12 +355,15 @@
                   "label": "txtPg1Pt1I13MainLine",
                   "kind": "text",
                   "defaultValue": "",
-                  "maxLength": 50
+                  "maxLength": 50,
+                  "profileKey": "lineOfBusiness"
                 },
                 {
                   "id": "frm1702MX:txtPg1Pt1I14PSICCode",
                   "label": "txtPg1Pt1I14PSICCode",
                   "kind": "text",
+                  "profileKey": "psicCode",
+                  "required": true,
                   "defaultValue": "",
                   "maxLength": 4
                 }
@@ -378,10 +377,11 @@
                   "label": "Itemized Deductions [Section 34 (A-J), NIRC]",
                   "kind": "radio",
                   "defaultValue": "MoD",
+                  "readonly": true,
                   "options": [
                     {
                       "value": "MoD",
-                      "label": "MoD"
+                      "label": "Itemized deductions"
                     }
                   ]
                 }

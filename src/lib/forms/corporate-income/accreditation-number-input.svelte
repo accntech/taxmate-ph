@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { Input } from '$lib/components/ui';
+	import { externalAuditorLabels } from '../external-auditor';
 	import type { CorporateField, CorporateValues } from './types';
 
 	let { fields, values, errors, onvaluechange }: {
@@ -74,7 +75,7 @@
 
 <Input
 	id={fields[0].id}
-	label="BIR Accreditation No."
+	label={externalAuditorLabels.accreditation}
 	class="font-mono"
 	placeholder="00-000000-000-0000"
 	autocomplete="off"

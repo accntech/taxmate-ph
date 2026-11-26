@@ -38,10 +38,6 @@
                   "kind": "select",
                   "options": [
                     {
-                      "value": "",
-                      "label": ""
-                    },
-                    {
                       "value": "01",
                       "label": "01"
                     },

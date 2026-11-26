@@ -32,10 +32,21 @@ test('June 2013 Form 1702EX page one shows every source item and pairs related f
 	await expect(background.locator('[data-corporate-item="15"] input')).toHaveCount(0);
 	await expect(background.locator('[data-corporate-item="19"] [data-slot="date-input"]')).toHaveCount(2);
 	await setLayoutWidth(page, 390);
-	const first = (await filing.locator('[data-corporate-item="1"]').boundingBox())!;
-	const second = (await filing.locator('[data-corporate-item="2"]').boundingBox())!;
-	expect(first.y).toBe(second.y);
-	expect(first.x + first.width).toBeLessThanOrEqual(second.x + 1);
+	const period = filing.locator('[data-corporate-item="2"]');
+	const calendar = filing.getByRole('radio', { name: 'Calendar', exact: true });
+	const monthControl = period.getByRole('combobox', { name: 'Year-end month', exact: true });
+	const yearControl = period.getByRole('textbox', { name: 'Year ended', exact: true });
+	await expect(calendar).toBeChecked();
+	await expect(monthControl).toBeHidden();
+	await expect(yearControl).toBeVisible();
+	await filing.getByRole('radio', { name: 'Fiscal', exact: true }).check();
+	await expect(monthControl).toBeVisible();
+	const month = (await monthControl.boundingBox())!;
+	const year = (await yearControl.locator('..').boundingBox())!;
+	expect(Math.abs(month.y - year.y)).toBeLessThanOrEqual(1);
+	expect(month.x + month.width).toBeLessThan(year.x);
+	await calendar.check();
+	await expect(monthControl).toBeHidden();
 });
 
 test('June 2013 Form 1702EX shows one Item 20 reference and aligns the Item 21 penalty row', async ({ page }, info) => {
@@ -142,12 +153,13 @@ test('June 2013 Form 1702EX orders the four numbered filing identification field
 	}
 });
 
-test('June 2013 Form 1702EX edits the accreditation number in one textbox beside the two dates', async ({ page, context }, info) => {
+test('June 2013 Form 1702EX saves the accreditation number and dates in their original fields', async ({ page, context }, info) => {
 	await goToReturnPage(page, 2);
-	const row = page.getByRole('region', { name: /Part VI - Information/ }).locator('[data-corporate-item="49"]');
-	const number = row.getByRole('textbox', { name: 'BIR Accreditation No.', exact: true });
-	const issueDate = row.getByRole('group', { name: 'Issue Date', exact: true });
-	const expiryDate = row.getByRole('group', { name: 'Expiry Date', exact: true });
+	const section = page.getByRole('region', { name: /Part VI - Information/ });
+	const row = section.locator('[data-corporate-item="49"]');
+	const number = row.getByRole('textbox', { name: 'BIR accreditation number', exact: true });
+	const issueDate = section.locator('[data-corporate-item="50"]').getByRole('group', { name: 'Accreditation issue date', exact: true });
+	const expiryDate = section.locator('[data-corporate-item="51"]').getByRole('group', { name: 'Accreditation expiry date', exact: true });
 	await expect(number).toBeVisible({ timeout: 3000 });
 	await expect(row.getByRole('textbox')).toHaveCount(1);
 	await expect(number).toHaveValue('');
@@ -183,25 +195,6 @@ test('June 2013 Form 1702EX edits the accreditation number in one textbox beside
 		await dayInput.blur();
 	}
 
-	for (const width of [1280, 390]) {
-		await setLayoutWidth(page, width);
-		const [numberBox, issueBox, expiryBox] = await Promise.all([number.locator('..'), issueDate, expiryDate].map(control => control.boundingBox()));
-		if (width === 1280) {
-			expect(Math.abs(numberBox!.y - issueBox!.y)).toBeLessThan(3);
-			expect(Math.abs(issueBox!.y - expiryBox!.y)).toBeLessThan(2);
-			expect(numberBox!.x + numberBox!.width).toBeLessThan(issueBox!.x);
-			expect(issueBox!.x + issueBox!.width).toBeLessThan(expiryBox!.x);
-		} else {
-			const rowBox = (await row.boundingBox())!;
-			for (const box of [numberBox, issueBox, expiryBox]) {
-				expect(box!.x + box!.width).toBeLessThanOrEqual(rowBox.x + rowBox.width);
-			}
-			await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
-		}
-		await row.screenshot({ path: info.outputPath(`1702ex-item-49-${width}.png`), animations: 'disabled' });
-	}
-
-	await setLayoutWidth(page, 1280);
 	await page.getByRole('button', { name: 'Save draft', exact: true }).click();
 	await expect(page).toHaveURL(`/ebirforms/taxpayers/${taxpayerId}/forms`);
 	const edit = page.getByRole('link', { name: 'Edit', exact: true });

@@ -36,10 +36,6 @@
                 "kind": "select",
                 "options": [
                   {
-                    "value": "",
-                    "label": ""
-                  },
-                  {
                     "value": "01",
                     "label": "01 - January"
                   },
@@ -157,13 +153,7 @@
                 "label": "Regular income tax",
                 "kind": "checkbox",
                 "defaultValue": "Y"
-              }
-            ],
-            "item": "5"
-          },
-          {
-            "label": "Applicable ATC",
-            "fields": [
+              },
               {
                 "id": "frm1702RT:drpPg1I5AtcOther",
                 "label": "Applicable ATC",
@@ -192,7 +182,8 @@
                 ],
                 "defaultValue": "IC010"
               }
-            ]
+            ],
+            "item": "5"
           }
         ]
       },
@@ -314,7 +305,8 @@
                 "readonly": true,
                 "profileKey": "zipCode"
               }
-            ]
+            ],
+            "item": "9A"
           },
           {
             "label": "Date of incorporation/organization",
@@ -1520,11 +1512,11 @@
             "item": "16"
           },
           {
-            "label": "a Janitorial and Messengerial Services",
+            "label": "Janitorial and Messengerial Services",
             "fields": [
               {
                 "id": "frm1702RT:txtPg3Sc1I17aJanitorial",
-                "label": "a Janitorial and Messengerial Services",
+                "label": "Janitorial and Messengerial Services",
                 "kind": "money",
                 "maxLength": 12,
                 "defaultValue": "0"
@@ -1533,11 +1525,11 @@
             "item": "17a"
           },
           {
-            "label": "b Professional Fees",
+            "label": "Professional Fees",
             "fields": [
               {
                 "id": "frm1702RT:txtPg3Sc1I17bProfessionalFees",
-                "label": "b Professional Fees",
+                "label": "Professional Fees",
                 "kind": "money",
                 "maxLength": 12,
                 "defaultValue": "0"
@@ -1546,11 +1538,11 @@
             "item": "17b"
           },
           {
-            "label": "c Security Services",
+            "label": "Security Services",
             "fields": [
               {
                 "id": "frm1702RT:txtPg3Sc1I17cSecurityServices",
-                "label": "c Security Services",
+                "label": "Security Services",
                 "kind": "money",
                 "maxLength": 12,
                 "defaultValue": "0"
@@ -1673,11 +1665,11 @@
             "item": "17i"
           },
           {
-            "label": "Total Ordinary Allowable Itemized Deductions (Sum of Items 1 to 17i)",
+            "label": "Total Ordinary Allowable Itemized Deductions (Sum of Items 1 to 17I)",
             "fields": [
               {
                 "id": "frm1702RT:txtPg3Sc1I18TotalOrdinaryAllowable",
-                "label": "18 Total Ordinary Allowable Itemized Deductions (Sum of Items 1 to 17i)",
+                "label": "18 Total Ordinary Allowable Itemized Deductions (Sum of Items 1 to 17I)",
                 "kind": "money",
                 "maxLength": 12,
                 "readonly": true,

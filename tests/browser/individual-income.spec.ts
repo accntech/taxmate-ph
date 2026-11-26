@@ -582,7 +582,7 @@ test('June 2013 Form 1701 keeps employer fields and historical tax regime amount
 	await goToReturnPage(page, 4);
 	await expect(page.getByRole('region', { name: 'Dependents', exact: true })).toBeVisible();
 	await expect(page.getByRole('region', { name: 'Part VIIB · Current address' })).toBeVisible();
-	await expect(page.getByText('Auditor or tax agent TIN and branch code', { exact: true })).toBeVisible();
+	await expect(page.getByRole('textbox', { name: 'External auditor or tax agent TIN', exact: true })).toBeVisible();
 	await goToReturnPage(page, 5);
 	const employer = await addRecord(page);
 	await expect(employer.getByText('Employer TIN and branch code', { exact: true })).toBeVisible();
@@ -1216,10 +1216,17 @@ test('legacy 1700 summarizes profile fields and reveals the applicable identific
 	await expect(address).toHaveCount(0);
 	await expect(page.getByText('This schedule applies', { exact: false })).toBeVisible();
 	await goToReturnPage(page, 2);
-	await expect(income).toHaveValue('420,000');
+	await page.getByRole('button', { name: 'Example Employer', exact: true }).click();
+	const savedEmployer = page.getByRole('dialog', { name: 'Edit employer', exact: true });
+	const savedIncome = savedEmployer.getByRole('textbox', { name: 'Compensation income', exact: true });
+	const savedWithheld = savedEmployer.getByRole('textbox', { name: 'Tax withheld', exact: true });
+	await expect(savedIncome).toHaveValue('420,000');
+	await expect(savedWithheld).toHaveValue('18,000');
 	await page.setViewportSize({ width: 390, height: 920 });
 	expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
-	expect((await income.boundingBox())!.y).toBeLessThan((await withheld.boundingBox())!.y);
+	expect((await savedIncome.boundingBox())!.y).toBeLessThan((await savedWithheld.boundingBox())!.y);
+	await savedEmployer.getByRole('button', { name: 'Cancel', exact: true }).click();
+	await expect(savedEmployer).toBeHidden();
 	await page.keyboard.press('Escape');
 	await expect.poll(async () => (await page.locator('aside.sidebar').boundingBox())!.x).toBeLessThan(-245);
 	await capture('mobile-pagination', pager);

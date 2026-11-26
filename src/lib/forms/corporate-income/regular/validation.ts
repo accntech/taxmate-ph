@@ -1,3 +1,6 @@
+import { philippineCalendarDate } from '$lib/forms/filing-calendar';
+import { validateLegacyExemptIdentification } from '../exempt/identification';
+import { legacyRegularIdentificationFields } from './identification';
 import { taxpayerEmailError } from '$lib/profiles/profile';
 import type { CorporatePage, CorporateValues } from '../types';
 import { regularField as field, regularNumber as number, regularUsesOsd } from './calculations';
@@ -75,6 +78,11 @@ export function validateRegular(code: string, pages: CorporatePage[], values: Co
  const taxable = legacy ? 'txtPg2Pt4I40NetTaxable' : 'txtPg2Pt4I39NetTaxable';
  if (number(values, reconciliation) !== number(values, taxable)) errors[field(reconciliation)] = 'The reconciliation must equal net taxable income in the computation of tax.';
  if (legacy) {
+  const identification = legacyRegularIdentificationFields;
+  Object.assign(errors, validateLegacyExemptIdentification(values, philippineCalendarDate(), identification, null));
+  if (values[identification.type] === 'CTC' && number(values, 'txtPg1Pt2I25AmountCTC') <= 0) {
+   errors[identification.amount] ??= 'Enter a community tax certificate amount.';
+  }
   const assets = number(values, 'txtPg7Sc10I7TotalAssets');
   const liabilities = number(values, 'txtPg7Sc10I17TotalLiabilitiesEquity');
   if (!regularUsesOsd(values, true) && (assets <= 0 || liabilities <= 0)) errors[field('txtPg7Sc10I7TotalAssets')] = 'Complete the balance sheet with positive total assets and liabilities/equity.';

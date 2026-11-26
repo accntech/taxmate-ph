@@ -3,6 +3,7 @@ import { getFormDefinition, listForms } from '$lib/forms';
 import { createInitialFormValues, initialProfile } from '$lib/ebirforms/ebirforms-workspace.svelte';
 import { getReturnExportValues, getReturnTin, getReturnEmail, getReturnPeriod, validateReturnValues } from '$lib/forms/form-runtime';
 import { calculateCorporateIncome, corporateEditorPages, getCorporateIncomeForm } from '$lib/forms/corporate-income';
+import { corporateBackgroundRows } from '$lib/forms/corporate-income/background-layout';
 
 const codes = [
 	'1702EX', '1702EXv2018', '1702EXv2018C', '1702MX', '1702MXv2018', '1702MXv2018C',
@@ -10,6 +11,18 @@ const codes = [
 ];
 
 describe('corporate income returns', () => {
+	it.each(codes.filter(code => /^1702(?:RT|MX)/.test(code)))('lists only valid year-end months in %s', code => {
+		const form = getCorporateIncomeForm(code)!;
+		const month = form.month!;
+		const field = getFormDefinition(code)!.fields.find(field => field.id === month);
+		expect(field?.options).toEqual(Array.from({ length: 12 }, (_, index) => String(index + 1).padStart(2, '0')));
+		const values = createInitialFormValues(initialProfile, code);
+		expect(values[month]).toBe('12');
+		const incomplete = { ...values, [month]: '' };
+		expect(calculateCorporateIncome(form, incomplete)[month]).toBe('');
+		expect(validateReturnValues(code, incomplete)[month]).toBeTruthy();
+	});
+
 	it('recalculates June 2013 regular and mixed page counts from generated sheets', () => {
 		const regularCount = 'frm1702RT:txtPg1Pt2PagesFilled';
 		const mixedCount = 'frm1702MX:txtPg1Pt2NumberofPagesFiled';
@@ -25,20 +38,37 @@ describe('corporate income returns', () => {
 		expect(getReturnExportValues('1702MX', { [mixedCount]: '17', ...mixedActivities, 'frm1702MX:chkPg2Pt4I30MoreThanOne': 'N' })[mixedCount]).toBe('9');
 	});
 
-	it('shows only the attachment count from the ENCS exempt cover signatory fields', () => {
-		const code = '1702EXv2018C';
-		const hidden = ['AuthorizedRepresentative', 'Treasurer', 'TitleofSignatory', 'TitleofSignatory2', 'TINofSignatory', 'TINofSignatory2']
-			.map(name => `frm1702EX:txtPg1Pt2${name}`);
-		const attachment = 'frm1702EX:txtPg1P2I23NumOfAttachments';
-		const draft = { [hidden[0]]: 'Sample Representative', [attachment]: '03' };
-		const { field } = getCorporateFields(code, draft);
-		expect(field(attachment)?.label).toBe('Number of attachments');
-		for (const id of hidden) {
-			expect(field(id)).toBeUndefined();
-			expect(getFormDefinition(code)!.fields.some(field => field.id === id)).toBe(true);
-			expect(getCorporateFields('1702EXv2018', draft).field(id)).toBeDefined();
-		}
-		expect(getReturnExportValues(code, draft)).toMatchObject(draft);
+	const attachmentRows = [
+		['1702EXv2018', 'frm1702EX:txtPg1P2I23NumOfAttachments', '23', 'Number of attachments', 2],
+		['1702EXv2018C', 'frm1702EX:txtPg1P2I23NumOfAttachments', '23', 'Number of attachments', 2],
+		['1702MXv2018', 'frm1702MX:txtPg1P2I23NumOfAttachments', '22', 'Number of attachments', 2],
+		['1702MXv2018C', 'frm1702MX:txtPg1P2I23NumOfAttachments', '22', 'Number of attachments', 2],
+		['1702RTv2018', 'frm1702RT:txtPg1Pt2PagesFilled', '22', 'Number of attachments', 3],
+		['1702RTv2018C', 'frm1702RT:txtPg1Pt2PagesFilled', '22', 'Number of attachments', 3],
+		['1702Q', 'frm1702q:txtSheets', '5', 'Number of sheets attached', 2],
+		['1702Qv2008C', 'frm1702q:txtSheets', '5', 'Number of sheets attached', 2],
+		['1702Qv2018C', 'frm1702q:txtSheets', '26', 'Number of attachments', 2]
+	] as const;
+
+	it.each(attachmentRows)('keeps the standalone attachment count on the %s cover', (code, id, item, label, maxLength) => {
+		const form = getCorporateIncomeForm(code)!;
+		const rows = corporateEditorPages(form, { [id]: '03' })[0].sections.flatMap(section => section.rows);
+		const row = rows.find(row => row.fields.some(field => field.id === id));
+		expect(row).toMatchObject({ item, label });
+		expect(row?.fields).toMatchObject([{ id, label, kind: 'integer', maxLength }]);
+		expect(getReturnExportValues(code, { [id]: '03' })[id]).toBe('03');
+	});
+
+	it.each(codes)('omits signer controls on the %s cover and preserves saved signer data', code => {
+		const form = getCorporateIncomeForm(code)!;
+		const signer = /signature|signatory|authorizedrepresentative|treasurer/i;
+		const field = form.pages[0].sections.flatMap(section => section.rows.flatMap(row => row.fields))
+			.find(field => signer.test(field.id));
+		const draft = field ? { [field.id]: 'Sample Signer' } : {};
+		const cover = corporateEditorPages(form, draft)[0].sections;
+		expect(cover.some(section => section.title === 'Signatories')).toBe(false);
+		expect(cover.flatMap(section => section.rows.flatMap(row => row.fields)).filter(field => signer.test(field.id))).toEqual([]);
+		if (field) expect(getReturnExportValues(code, draft)[field.id]).toBe('Sample Signer');
 	});
 
 	it('requires descriptions for populated exempt income but leaves unused rows optional', () => {
@@ -75,6 +105,34 @@ describe('corporate income returns', () => {
 		expect(getReturnTin(code, values, initialProfile)).toEqual({ tin1: '007', tin2: '456', tin3: '789', branchCode: '00012' });
 		expect(getReturnEmail(code, values, initialProfile)).toBe('corp@example.com');
 		expect(getReturnPeriod(code, values)).toMatch(/^\d{4}/);
+	});
+
+	it.each(['1702RT', '1702RTv2018', '1702RTv2018C'])('keeps the conditional regular ATC inside Item 5 in %s', code => {
+		const form = getCorporateIncomeForm(code)!;
+		const [filing] = corporateEditorPages(form, {})[0].sections;
+		expect(filing.rows.map(row => row.item)).toEqual(['1', '2', '3', '4', '5']);
+		const [mcit, regular, atc] = filing.rows[4].fields.map(field => field.id);
+		expect([mcit, regular, atc]).toEqual([
+			'frm1702RT:rdoPg1I5Atc', 'frm1702RT:rdoPg1I5AtcOther', 'frm1702RT:drpPg1I5AtcOther'
+		]);
+		expect(form.fieldApplies?.(atc, { [regular]: 'N' })).toBe(false);
+		expect(form.fieldApplies?.(atc, { [regular]: 'Y' })).toBe(true);
+	});
+
+	it.each(codes.filter(code => /^1702(?:EX|MX|RT)v2018/.test(code)))('keeps the revised identity item numbers in %s', code => {
+		const form = getCorporateIncomeForm(code)!;
+		const section = corporateEditorPages(form, {})[0].sections.find(section => /background information/i.test(section.title))!;
+		const rows = corporateBackgroundRows(form, section.rows);
+		const item = (profileKey: string) => rows.find(row => row.fields[0].profileKey === profileKey)?.item;
+		expect(['tin1', 'rdoCode', 'taxpayerName', 'address', 'zipCode'].map(item)).toEqual(['6', '7', '8', '9', '9A']);
+		expect(rows.filter(row => row.item === '8' || row.item === '9').map(row => row.item)).toEqual(['8', '9']);
+		const [name, address] = ['8', '9'].map(item => rows.find(row => row.item === item)!);
+		const original = section.rows.flatMap(row => row.fields);
+		expect(name.fields.map(field => field.id)).toEqual(original.filter(field =>
+			field.profileKey === 'taxpayerName' || /(?:RegisteredName|Pt1I8Name)[23]$/.test(field.id)).map(field => field.id));
+		expect(address.fields.map(field => field.id)).toEqual(original.filter(field =>
+			field.profileKey === 'address' || field.profileKey === 'address2' ||
+			/(?:RegisteredAddress|Pt1I9Address)[23]$/.test(field.id)).map(field => field.id));
 	});
 });
 
@@ -182,6 +240,44 @@ describe('corporate calculated fields', () => {
 		for (const name of ['ScFI1', 'ScFI2', 'ScF1I7year']) {
 			expect(field(mx + 'txtPg2SP1' + name)?.readonly).toBe(true);
 		}
+	});
+
+	it('presents June 2013 penalties and payable in the total column', () => {
+		const { field } = getCorporateFields('1702MX', {});
+		for (const item of [40, 41, 42, 43, 44]) {
+			expect(field(mx + 'txtPg2Pt5I' + item)?.column).toBe(4);
+		}
+	});
+
+	it('offers the June 2013 special rate from the filing election and keeps fixed rates read-only', () => {
+		const rate = mx + 'drpPg3Sc1I11CB';
+		const { field } = getCorporateFields('1702MX', {
+			[mx + 'txtPg2Pt4I34SpecialTaxRate']: '5',
+			[mx + 'chkPg1I5ATCR2']: 'Y',
+			[mx + 'drpPg1I5ATCR2']: 'IC030'
+		});
+		expect(field(rate)).toMatchObject({ column: 2, options: [
+			{ value: '0.05', label: '5.0%' },
+			{ value: '0.1', label: '10.0%' },
+			{ value: '0.3', label: '30.0%' }
+		] });
+		expect(field(mx + 'txtPg3Sc1I11CA')).toMatchObject({ column: 1, readonly: true });
+		expect(field(mx + 'txtPg3Sc1I11CC')).toMatchObject({ column: 3, readonly: true });
+	});
+
+	it('shows the saved June 2013 special rate in a sparse draft', () => {
+		const id = mx + 'drpPg3Sc1I11CB';
+		const { field, values } = getCorporateFields('1702MX', { [id]: '0.075' });
+		expect(values[id]).toBe('0.075');
+		expect(field(id)?.options).toContainEqual({ value: '0.075', label: '7.5%' });
+	});
+
+	it('identifies the source amounts on June 2013 Schedule 13', () => {
+		const { field } = getCorporateFields('1702MX', {});
+		expect(field(mx + 'txtPg9Sc13I1CB')).toMatchObject({
+			column: 2, label: 'Actual amount / fair market value / net capital gains'
+		});
+		expect(field(mx + 'txtPg9Sc13I1CC')).toMatchObject({ column: 3, label: 'Final tax withheld / paid' });
 	});
 
 	it('shows the June 2013 mixed rate as fixed only when RA 10693 sets it', () => {

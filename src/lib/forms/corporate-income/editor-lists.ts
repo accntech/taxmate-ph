@@ -51,6 +51,52 @@ export function corporateLists(section: CorporateSection): Map<CorporateRow, Cor
 	return byAnchor;
 }
 
+export const nolcoListLabel = 'NOLCO carryovers';
+
+const mixedLossColumns = {
+	year: 'Year incurred',
+	A: 'Net operating loss',
+	B: 'Applied in previous years',
+	C: 'Expired',
+	D: 'Applied this year',
+	E: 'Remaining balance'
+} as const;
+
+function nolcoRows(section: CorporateSection): CorporateSection {
+	const byItem = new Map<string, CorporateRow>();
+	const rows = section.rows.flatMap(row => {
+		if (row.entry) return [row];
+		const match = row.fields[0]?.id.match(/(?:Sc(?:3A|6A|7A|IA|F1)I|IShed[78]_)([4-7])/);
+		if (!match) {
+			const total = row.fields.length === 1 && /Total NOLCO/i.test(row.label);
+			return [total ? { ...row, fields: row.fields.map(field => ({ ...field, kind: 'money' as const })) } : row];
+		}
+
+		const item = match[1];
+		const fields = row.fields.map(field => {
+			if (!field.id.startsWith('frm1702MX:')) return field;
+			const column = field.id.match(/(year|[A-E])$/i)?.[1];
+			const key = (column?.toLowerCase() === 'year' ? 'year' : column) as keyof typeof mixedLossColumns;
+			if (!mixedLossColumns[key]) return field;
+			return {
+				...field, label: mixedLossColumns[key],
+				kind: key === 'year' ? 'integer' as const : 'money' as const,
+				maxLength: key === 'year' ? 4 : field.maxLength,
+				readonly: field.readonly || (key === 'year' && /Sc7AI4year$/.test(field.id))
+			};
+		});
+		const existing = byItem.get(item);
+		if (existing) {
+			existing.fields.push(...fields);
+			return [];
+		}
+		const entry = { ...row, item, list: nolcoListLabel, fields };
+		byItem.set(item, entry);
+		return [entry];
+	});
+	return { ...section, columns: undefined, rows };
+}
+
 export const ownerListLabel = 'Stockholders, partners or members';
 
 const fixedLists = [
@@ -82,11 +128,10 @@ const fixedLists = [
 	[/^frm1702MX:txtPg7Sc10I([23])$/, 'Reconciliation additions'],
 	[/^frm1702MX:txtPg7Sc10I([56])$/, 'Reconciliation income exclusions'],
 	[/^frm1702MX:txtPg7Sc10I([78])$/, 'Reconciliation deductions'],
-	[/^frm1702RT:txtPg5Sc6AI([1-7])C1$/, 'NOLCO carryovers'],
 	[/^frm1702RT:txtPg8Sc12I(4)C1$/, 'Prizes and winnings subject to final withholding'],
 	[/^frm1702EX:txtPg7Sc9I(4)PrizesC1$/, 'Additional prizes and winnings'],
 	[/^frm1702RT:txtPg2Pt4I(53)C1$/, 'Other tax credits'],
-	[/^frm1702RT:txtPg3Sc1I(17[d-h])C1$/, 'Other ordinary allowable deductions'],
+	[/^frm1702RT:txtPg3Sc1I(17[d-i])C1$/, 'Other ordinary allowable deductions'],
 	[/^frm1702RT:txtPg3Sc2I([1-3])C1$/, 'Special allowable deductions'],
 	[/^frm1702RT:txtPg4Sc5I(2)C1$/, 'Reconciliation additions'],
 	[/^frm1702RT:txtPg4Sc5I(5)C1$/, 'Reconciliation income exclusions'],
@@ -94,7 +139,6 @@ const fixedLists = [
 	[/^frm1702MX:txtPg6Sc5I(3[6-8])other$/, 'Other ordinary allowable deductions'],
 	[/^frm1702MX:txtPg6Sc6I([1-3])description$/, 'Special allowable deductions'],
 	[/^frm1702MX:txtPg3Sc6I(4)description$/, 'Special allowable deductions'],
-	[/^frm1702MX:txtPg6Sc7AI([4-7])year$/, 'NOLCO carryovers'],
 	[/^frm1702MX:txtPg7Sc8I(11)$/, 'Other tax credits'],
 	[/^frm1702MX:txtPg4Sc10Itm(2)$/, 'Reconciliation additions'],
 	[/^frm1702MX:txtPg4Sc10Itm(5)$/, 'Reconciliation income exclusions'],
@@ -158,6 +202,7 @@ export function corporateOwnerRequired(code: string, row: CorporateRow, field: C
 
 /** Each numbered source column represents a complete transaction record. */
 export function corporateRecordSection(section: CorporateSection): CorporateSection {
+ if (/Computation of Available Net Operating Loss Carry Over/i.test(section.title)) return nolcoRows(section);
  const supplemental = [
   [/^frm1702EX:txtPg7Sc9I([5-9])/, 'Real properties subject to final tax'],
   [/^frm1702EX:txtPg7Sc9I(1[0-5])/, 'Shares of stock subject to final tax'],

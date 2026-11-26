@@ -2,6 +2,7 @@ import type { CorporatePage, CorporateRow, CorporateSection, CorporateValues } f
 import { regularField as field, regularNumber as number } from './calculations';
 
 type Group = { base: string; label: string };
+const nolcoBase = 'txtPg5Sc6AI7';
 const revisedGroups: Group[] = [
  { base: 'txtPg2Pt4I54', label: 'Other tax credits' },
  { base: 'txtPg3Sc1I17i', label: 'Other ordinary allowable deductions' },
@@ -15,7 +16,7 @@ const legacyGroups: Group[] = [
  { base: 'txtPg4Sc4I4', label: 'Other amortization' },
  { base: 'txtPg5Sc4I39', label: 'Other ordinary allowable deductions' },
  { base: 'txtPg5Sc5I4', label: 'Special allowable deductions' },
- { base: 'txtPg5Sc6AI7', label: 'NOLCO carryovers' },
+ { base: nolcoBase, label: 'NOLCO carryovers' },
  { base: 'txtPg6Sc7I11', label: 'Other tax credits' },
  { base: 'txtPg6Sc9I3', label: 'Reconciliation additions' },
  { base: 'txtPg6Sc9I6', label: 'Reconciliation income exclusions' },
@@ -44,7 +45,7 @@ function detailRows(group: Group, row: CorporateRow, values: CorporateValues): C
   label: `${group.label} ${index + 1}`,
   entry: { group: field(group.base + "CtrModal"), index },
   fields: baseFields(row, group).map(item => ({
-   ...item, readonly: false, id: field(`${group.base}.${index + 1}${item.id.slice(-2)}`)
+   ...item, readonly: group.base === nolcoBase && item.id.endsWith('C6'), id: field(`${group.base}.${index + 1}${item.id.slice(-2)}`)
   }))
  }));
 }
@@ -80,6 +81,13 @@ export function rollupRegularDetails(code: string, pages: CorporatePage[], input
   if (!hasSavedDetails) {
    // Opening the detailed list carries the existing entry into its first row.
    for (const item of fields) values[field(group.base + '.1' + item.id.slice(-2))] = values[item.id] ?? '';
+  }
+  if (group.base === nolcoBase) {
+   for (let index = 1; index <= length; index++) {
+    const stem = `${group.base}.${index}C`;
+    values[field(stem + '6')] = String(number(values, stem + '2')
+     - number(values, stem + '3') - number(values, stem + '4') - number(values, stem + '5'));
+   }
   }
   for (const item of fields) {
    const column = item.id.slice(-2);

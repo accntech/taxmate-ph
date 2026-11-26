@@ -5,35 +5,263 @@ import type { CorporateField } from '../../src/lib/forms/corporate-income/types'
 
 const id = (name: string) => `[id="frm1702RT:${name}"]`;
 
+test('legacy 1702RT share classes save as independent radio selections', async ({ page }, info) => {
+ const formCode = '1702RT';
+ const draftId = 'share-class-draft';
+ const formsPath = `/ebirforms/taxpayers/${taxpayerId}/forms`;
+ await seedWorkspace(page, 'light', 'loaded', { taxpayerClassification: 'N' }, [{
+  id: draftId, taxpayerId, formCode, returnPeriod: '2025-12', status: 'Draft', updatedAt: 1794441600000, finalFlag: '0',
+  values: { 'frm1702RT:ddlPg8Sc12I10C2': 'PS' }
+ }]);
+ await page.setViewportSize({ width: 1440, height: 1000 });
+ await page.goto(`${formsPath}/${formCode}?return=${draftId}`);
+ await goToReturnPage(page, 8);
+ await expect(page.getByRole('heading', { name: /^Real properties subject to final tax/ })).toBeVisible();
+
+ const shareClassA = page.getByRole('radiogroup', { name: 'A Share class', exact: true });
+ const shareClassB = page.getByRole('radiogroup', { name: 'B Share class', exact: true });
+ const preferred = (group: typeof shareClassA) => group.getByRole('radio', { name: 'Preferred shares', exact: true });
+ const common = (group: typeof shareClassA) => group.getByRole('radio', { name: 'Common shares', exact: true });
+ await expect(shareClassA.getByRole('radio', { checked: true })).toHaveCount(0);
+ await expect(preferred(shareClassB)).toBeChecked();
+ await common(shareClassA).check();
+ await expect(preferred(shareClassB)).toBeChecked();
+ await common(shareClassA).press('ArrowLeft');
+ await expect(preferred(shareClassA)).toBeChecked();
+ await common(shareClassB).check();
+ await expect(preferred(shareClassA)).toBeChecked();
+ await expect(preferred(shareClassB)).not.toBeChecked();
+
+ for (const [device, width] of [['desktop', 1440], ['narrow', 390]] as const) {
+  await page.setViewportSize({ width, height: 1000 });
+  await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+  await shareClassA.evaluate(element => element.scrollIntoView({ block: 'center', behavior: 'instant' }));
+  await page.screenshot({ path: info.outputPath(`1702rt-share-classes-${device}.png`), animations: 'disabled' });
+ }
+ await page.getByRole('button', { name: 'Save draft', exact: true }).click();
+ await page.getByRole('link', { name: 'Edit', exact: true }).click();
+ await goToReturnPage(page, 8);
+ await expect(preferred(shareClassA)).toBeChecked();
+ await expect(common(shareClassB)).toBeChecked();
+});
+
+test('legacy 1702RT Schedule 7 keeps item 10 on one numbered row', async ({ page }, info) => {
+ const draftId = 'other-tax-credit-draft';
+ await seedWorkspace(page, 'light', 'loaded', { taxpayerClassification: 'N' }, [{
+  id: draftId, taxpayerId, formCode: '1702RT', returnPeriod: '2025-12', status: 'Draft',
+  updatedAt: 1794441600000, finalFlag: '0',
+  values: {
+   'frm1702RT:txtPg6Sc7I10C1': 'Other tax payment',
+   'frm1702RT:txtPg5Sc7I10C2': '1250'
+  }
+ }]);
+ await page.setViewportSize({ width: 1440, height: 1000 });
+ await page.goto(`/ebirforms/taxpayers/${taxpayerId}/forms/1702RT?return=${draftId}`);
+ await goToReturnPage(page, 6);
+
+ const schedule = page.getByRole('region', { name: /^Schedule 7 - Tax Credits/ });
+ const item = schedule.locator('[data-corporate-item="10"]');
+ await expect(item).toHaveCount(1);
+ await expect(item.getByText('10', { exact: true })).toHaveCount(1);
+ const description = item.getByRole('textbox', { name: 'Description', exact: true });
+ const amount = item.getByRole('textbox', { name: 'Amount', exact: true });
+ await expect(description).toHaveValue('Other tax payment');
+ await expect(amount).toHaveValue('1,250');
+ const item9Amount = schedule.locator(id('txtPg6Sc7I9SpecialTaxCredits'));
+
+ const descriptionBox = (await description.boundingBox())!;
+ const amountBox = (await amount.boundingBox())!;
+ const item9Box = (await item9Amount.boundingBox())!;
+ expect(descriptionBox.x + descriptionBox.width).toBeLessThan(amountBox.x);
+ expect(Math.abs(descriptionBox.y - amountBox.y)).toBeLessThan(1);
+ expect(Math.abs(amountBox.x - item9Box.x)).toBeLessThan(1);
+ expect(Math.abs(amountBox.width - item9Box.width)).toBeLessThan(1);
+ await description.press('Tab');
+ await expect(amount).toBeFocused();
+ await amount.fill('2500');
+ await amount.press('Tab');
+ await expect(schedule.locator(id('txtPg6Sc7I12TotalTaxCredits'))).toHaveText('2,500');
+
+ for (const [device, width] of [['desktop', 1440], ['narrow', 390]] as const) {
+  await page.setViewportSize({ width, height: 1000 });
+  await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+  if (device === 'narrow') {
+   const narrowDescription = (await description.boundingBox())!;
+   const narrowAmount = (await amount.boundingBox())!;
+   expect(narrowAmount.y).toBeGreaterThan(narrowDescription.y + narrowDescription.height);
+  }
+  await item.evaluate(element => element.scrollIntoView({ block: 'center', behavior: 'instant' }));
+  await page.screenshot({ path: info.outputPath(`1702rt-schedule-7-item-10-${device}.png`), animations: 'disabled' });
+ }
+
+ await page.setViewportSize({ width: 1440, height: 1000 });
+ await page.getByRole('button', { name: 'Save draft', exact: true }).click();
+ await page.getByRole('link', { name: 'Edit', exact: true }).click();
+ await goToReturnPage(page, 6);
+ await expect(description).toHaveValue('Other tax payment');
+ await expect(amount).toHaveValue('2,500');
+});
+
+test('legacy 1702RT Schedule 12 aligns income amounts and labels narrow fields', async ({ page }, info) => {
+ const formsPath = `/ebirforms/taxpayers/${taxpayerId}/forms`;
+ await seedWorkspace(page, 'light', 'loaded', { taxpayerClassification: 'N' }, []);
+ await page.setViewportSize({ width: 1440, height: 1000 });
+ await page.goto(`${formsPath}/1702RT?new=true`);
+ await goToReturnPage(page, 8);
+
+ const schedule = page.getByRole('region', { name: /^Schedule 12 - Supplemental Information/ });
+ const headers = schedule.locator('.supplemental-headers');
+ const topics = ['Interests', 'Royalties', 'Dividends'];
+ const amounts = ['Exempt', 'Actual amount/fair market value/net capital gains', 'Final tax withheld/paid'];
+ await expect(headers).toBeVisible();
+ await expect(headers.getByText(amounts[1], { exact: true })).toBeVisible();
+ for (const [index, topic] of topics.entries()) {
+  const row = schedule.locator(`[data-corporate-item="${index + 1}"]`);
+  const number = (await row.locator('.paper-item-number').boundingBox())!;
+  const caption = (await row.getByText(topic, { exact: true }).boundingBox())!;
+  expect(Math.abs(number.y + number.height / 2 - caption.y - caption.height / 2)).toBeLessThan(2);
+  for (const amount of amounts) {
+   const input = row.getByRole('textbox', { name: `${topic} · ${amount}`, exact: true });
+   const box = (await input.boundingBox())!;
+   const fieldLeft = await input.evaluate(element => element.closest('[data-slot="currency-input"]')!.getBoundingClientRect().left);
+   const header = (await headers.getByText(amount, { exact: true }).boundingBox())!;
+   expect(Math.abs(box.y + box.height / 2 - caption.y - caption.height / 2)).toBeLessThan(2);
+   expect(Math.abs(fieldLeft - header.x)).toBeLessThan(3);
+  }
+ }
+
+ const interestTax = schedule.getByRole('textbox', { name: 'Interests · Final tax withheld/paid', exact: true });
+ await interestTax.fill('250');
+ await interestTax.press('Tab');
+ await expect(schedule.getByRole('textbox', { name: 'Royalties · Exempt', exact: true })).toBeFocused();
+ await expect(schedule.locator(id('txtSc12I19TotalFinalTaxWitheld'))).toHaveText('250');
+ const prizes = schedule.locator('.line-list').filter({ has: page.getByRole('heading', { name: /^Prizes and winnings subject to final withholding/ }) });
+ const addPrize = prizes.getByRole('button', { name: 'Add item' });
+ await addPrize.click();
+ const dialog = page.getByRole('dialog');
+ for (const amount of amounts) await expect(dialog.getByRole('textbox', { name: amount, exact: true })).toBeVisible();
+ await dialog.getByRole('button', { name: 'Cancel', exact: true }).click();
+ await expect(addPrize).toBeFocused();
+
+ for (const [device, width] of [['desktop', 1440], ['narrow', 390]] as const) {
+  await page.setViewportSize({ width, height: 1000 });
+  await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+  if (device === 'narrow') {
+   await expect(headers).toBeHidden();
+   const interest = schedule.locator('[data-corporate-item="1"]');
+   await expect(interest.getByText('Interests', { exact: true })).toBeVisible();
+   let previousY = 0;
+   for (const amount of amounts) {
+    const label = interest.getByText(amount, { exact: true });
+    await expect(label).toBeVisible();
+    const box = (await label.boundingBox())!;
+    expect(box.height).toBeGreaterThan(1);
+    expect(box.y).toBeGreaterThan(previousY);
+    previousY = box.y;
+   }
+  }
+  await schedule.getByRole('heading', { level: 3 }).evaluate(element => element.scrollIntoView({ block: 'start', behavior: 'instant' }));
+  await page.screenshot({ path: info.outputPath(`1702rt-schedule-12-${device}.png`), animations: 'disabled' });
+ }
+ await expect(interestTax).toHaveValue('250');
+});
+
+test('corporate return pagination survives reload and resets on a fresh open', async ({ page }, info) => {
+ const formCode = '1702RTv2018C';
+ const draftId = 'pagination-draft';
+ const formsPath = `/ebirforms/taxpayers/${taxpayerId}/forms`;
+ await seedWorkspace(page, 'light', 'loaded', { taxpayerClassification: 'N' }, [{
+  id: draftId, taxpayerId, formCode, returnPeriod: '2025-12', status: 'Draft',
+  updatedAt: 1794441600000, finalFlag: '0', values: {}
+ }]);
+ const pager = page.getByRole('navigation', { name: 'Return pages' });
+ const current = pager.locator('[aria-current="page"]');
+ const edit = page.getByRole('link', { name: 'Edit', exact: true });
+ const back = page.getByRole('link', { name: '← Back to forms', exact: true });
+
+ await page.goto(formsPath);
+ await edit.click();
+ await expect(current).toHaveText('1');
+ await goToReturnPage(page, 2);
+ await page.reload();
+ await expect(current).toHaveText('2');
+ await pager.screenshot({ path: info.outputPath('corporate-pagination-after-reload.png') });
+ await goToReturnPage(page, 1);
+ await page.reload();
+ await expect(current).toHaveText('1');
+ await goToReturnPage(page, 2);
+
+ await back.click();
+ await edit.click();
+ await expect(current).toHaveText('1');
+ await goToReturnPage(page, 2);
+ await back.click();
+ await page.getByRole('button', { name: 'Create return', exact: true }).click();
+ await page.getByRole('combobox', { name: 'Search BIR forms' }).fill(formCode);
+ await page.getByRole('option', { name: /^BIR Form 1702RTv2018C\b/ }).click();
+ await expect(current).toHaveText('1');
+ await goToReturnPage(page, 2);
+ await page.reload();
+ await expect(current).toHaveText('2');
+
+ await page.goto(`${formsPath}/${formCode}?return=${draftId}&page=99`);
+ await expect(current).toHaveText('1');
+});
+
 test('regular CREATE details save, reopen and switch deductions at desktop and narrow widths', async ({ page }, info) => {
  await page.setViewportSize({ width: 1440, height: 1000 });
  await seedWorkspace(page, 'light', 'loaded', { taxpayerClassification: 'N' }, []);
  await page.goto(`/ebirforms/taxpayers/${taxpayerId}/forms/1702RTv2018C?new=true`);
- await expect(page.getByRole('navigation', { name: 'Return pages' })).toBeVisible();
+ await expect(page.getByRole('navigation', { name: 'Return pages' })).toBeVisible({ timeout: 20_000 });
  await page.locator(id('rdoPg1Pt1I13ItemizedDeduction')).check();
  await goToReturnPage(page, 2);
  await page.locator(id('txtPg2Pt4I27Sales')).fill('1000000');
  await page.locator(id('Pg2Pt4I40IncomeTaxRate')).fill('25');
  await page.locator(id('Pg2Pt4I40IncomeTaxRate')).blur();
  await goToReturnPage(page, 3);
- for (const [entry, description, amount] of [[1, 'POSTAGE', '1000'], [2, 'STATIONERY', '2000']] as const) {
-  await page.locator('.line-list').filter({ has: page.getByRole('heading', { name: /^Other ordinary allowable deductions \(/ }) }).getByRole('button', { name: 'Add item', exact: true }).click();
-  const dialog = page.getByRole('dialog', { name: 'Add item' });
+ const group = page.locator('.line-list').filter({ has: page.getByRole('heading', { name: 'Other ordinary allowable deductions', exact: true }) });
+ const addDeduction = group.getByRole('button', { name: 'Add deduction', exact: true });
+ await expect(addDeduction).toBeVisible();
+ await expect(page.getByRole('heading', { name: '17 Others (Deductions Subject to Withholding Tax and Other Expenses)', exact: true })).toBeVisible();
+ for (const [item, name] of [['17a', 'Janitorial and Messengerial Services'], ['17b', 'Professional Fees'], ['17c', 'Security Services']] as const) {
+  const row = page.locator(`[data-corporate-item="${item}"]`);
+  await expect(row.locator('.paper-item-number')).toHaveText(item.toUpperCase());
+  await expect(row.getByRole('textbox', { name, exact: true })).toBeVisible();
+  expect(await row.evaluate(element => {
+   const item = element.querySelector('.paper-item-number')!.getBoundingClientRect();
+   const amount = element.querySelector('input')!.getBoundingClientRect();
+   return Math.abs(item.y + item.height / 2 - amount.y - amount.height / 2);
+  })).toBeLessThanOrEqual(2);
+ }
+ await expect(page.locator(id('txtPg3Sc1I17iC1'))).toHaveCount(0);
+ await expect(group.getByText('No deductions added', { exact: true })).toBeVisible();
+ await group.evaluate(element => element.scrollIntoView({ block: 'center', behavior: 'instant' }));
+ await page.screenshot({ path: info.outputPath('regular-deductions-empty.png'), animations: 'disabled' });
+ for (const [description, amount] of [['POSTAGE', '1000'], ['STATIONERY', '2000']] as const) {
+  await addDeduction.click();
+  const dialog = page.getByRole('dialog', { name: 'Add deduction' });
   await dialog.getByRole('textbox', { name: 'Description', exact: true }).fill(description);
   await dialog.getByRole('textbox', { name: 'Amount', exact: true }).fill(amount);
-  await dialog.getByRole('button', { name: 'Add item', exact: true }).click();
+  await dialog.getByRole('button', { name: 'Add deduction', exact: true }).click();
+  await expect(dialog).toBeHidden();
+  await expect(addDeduction).toBeFocused();
  }
  await expect(page.locator(id('txtPg3Sc1I18TotalOrdinaryAllowable'))).toHaveText('3,000');
- await page.screenshot({ path: info.outputPath('regular-detailed-deductions-desktop.png'), fullPage: true });
- await page.setViewportSize({ width: 390, height: 920 });
- await page.keyboard.press('Escape');
- await page.screenshot({ path: info.outputPath('regular-detailed-deductions-narrow.png'), fullPage: true });
- expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+ for (const [device, width] of [['desktop', 1440], ['narrow', 390]] as const) {
+  await page.setViewportSize({ width, height: 1000 });
+  if (width === 390 && await page.locator('aside.sidebar').getAttribute('data-mobile-open') === 'true') {
+   await page.getByRole('button', { name: 'Toggle sidebar', exact: true }).click();
+  }
+  await group.evaluate(element => element.scrollIntoView({ block: 'center', behavior: 'instant' }));
+  await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+  await page.screenshot({ path: info.outputPath(`regular-detailed-deductions-${device}.png`), animations: 'disabled' });
+ }
  await page.getByRole('button', { name: 'Save draft', exact: true }).click();
  await page.getByRole('link', { name: 'Edit', exact: true }).click();
  await goToReturnPage(page, 3);
  const deductions = page.getByRole('list', { name: 'Other ordinary allowable deductions line items' });
  await expect(deductions.getByText('STATIONERY')).toBeVisible();
+ await expect(deductions.getByRole('listitem').filter({ hasText: 'STATIONERY' }).getByText('17E', { exact: true })).toBeVisible();
  await expect(deductions.getByText('2,000', { exact: true })).toBeVisible();
  await deductions.getByRole('button', { name: 'POSTAGE', exact: true }).click();
  await page.getByRole('dialog').getByRole('button', { name: 'Delete item', exact: true }).click();
@@ -46,6 +274,46 @@ test('regular CREATE details save, reopen and switch deductions at desktop and n
  await goToReturnPage(page, 2);
  await expect(page.locator(id('txtPg2Pt4I38OptionalStandard'))).toHaveText('400,000');
  await expect(page.locator(id('txtPg2Pt4I34OrdinaryAllowable'))).toHaveText('0');
+});
+
+test('regular deductions preserve a saved 17i when adding a continuation', async ({ page }) => {
+ const formCode = '1702RTv2018';
+ const draftId = 'direct-deduction-draft';
+ const prefix = 'frm1702RT:txtPg3Sc1I17';
+ await seedWorkspace(page, 'light', 'loaded', { taxpayerClassification: 'N' }, [{
+  id: draftId, taxpayerId, formCode, returnPeriod: '2025-12', status: 'Draft', updatedAt: 1794441600000, finalFlag: '0',
+  values: {
+   'frm1702RT:rdoPg1Pt1I13ItemizedDeduction': 'frm1702RT:rdoPg1Pt1I13ItemizedDeduction',
+   ...Object.fromEntries(['d', 'e', 'f', 'g', 'h'].flatMap(letter => [
+    [`${prefix}${letter}C1`, `Fixed deduction ${letter}`],
+    [`${prefix}${letter}C2`, '100']
+   ])),
+   [`${prefix}iC1`]: 'Saved postage',
+   [`${prefix}iC2`]: '200'
+  }
+ }]);
+ await page.goto(`/ebirforms/taxpayers/${taxpayerId}/forms/${formCode}?return=${draftId}`);
+ await goToReturnPage(page, 3);
+ const deductions = page.getByRole('list', { name: 'Other ordinary allowable deductions line items' });
+ const add = page.getByRole('button', { name: 'Add deduction', exact: true });
+ const dialog = page.getByRole('dialog', { name: 'Add deduction' });
+ const total = page.locator(id('txtPg3Sc1I18TotalOrdinaryAllowable'));
+ await expect(deductions.getByRole('listitem').filter({ hasText: 'Saved postage' }).getByText('17I', { exact: true })).toBeVisible();
+ await expect(deductions.getByRole('listitem')).toHaveCount(6);
+ await expect(total).toHaveText('700');
+ await add.click();
+ await dialog.getByRole('button', { name: 'Cancel', exact: true }).click();
+ await expect(add).toBeFocused();
+ await expect(total).toHaveText('700');
+ await add.click();
+ await dialog.getByRole('textbox', { name: 'Description', exact: true }).fill('Courier supplies');
+ await dialog.getByRole('textbox', { name: 'Amount', exact: true }).fill('300');
+ await dialog.getByRole('button', { name: 'Add deduction', exact: true }).click();
+ await expect(deductions.getByRole('listitem')).toHaveCount(7);
+ await expect(deductions.getByRole('listitem').filter({ hasText: 'Saved postage' }).getByText('17I.1', { exact: true })).toBeVisible();
+ await expect(deductions.getByRole('listitem').filter({ hasText: 'Courier supplies' }).getByText('17I.2', { exact: true })).toBeVisible();
+ await expect(page.locator(id('txtPg3Sc1I17iC1'))).toHaveCount(0);
+ await expect(total).toHaveText('1,000');
 });
 
 test('regular CREATE native print binds populated amounts, two-digit year and detailed continuation', async ({ page, context }, info) => {

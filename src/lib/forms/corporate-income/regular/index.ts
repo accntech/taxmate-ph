@@ -1,3 +1,5 @@
+import { normalizeLegacyExemptIdentification } from '../exempt/identification';
+import { legacyRegularIdentificationFields } from './identification';
 import type { CorporateForm, CorporatePage, CorporateValues } from '../types';
 import legacyPages from './1702rt.json';
 import revisedPages from './1702rtv2018.json';
@@ -40,6 +42,7 @@ export const regularForms: CorporateForm[] = revisions.map(({ code, revision, pa
   calculate: (values: CorporateValues) => {
    const result = calculateRegular(code, rollupRegularDetails(code, editorPages, values));
    if (legacy) {
+    normalizeLegacyExemptIdentification(result, legacyRegularIdentificationFields);
     for (const [name, additional] of [
      ['txtSc12I19TotalFinalTaxWitheld', supplementalAdditionalTax(result)],
      ['txtPg8Sc13I8TotalIncome', supplementalAdditionalExempt(result)]

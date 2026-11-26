@@ -1,6 +1,13 @@
 import { compareFormItems } from '../withholding-paper-layout';
 import type { CorporateField, CorporateForm, CorporateRow } from './types';
 
+const registeredLine = /(?:Registered|Pt1I[89])(Name|Address)([23])$/;
+
+export function isRegisteredInformationRow(row: CorporateRow) {
+	const key = row.fields[0]?.profileKey;
+	return key === 'taxpayerName' || key === 'address';
+}
+
 export function corporateBackgroundRows(form: CorporateForm, rows: CorporateRow[]): CorporateRow[] {
 	const cells = rows.flatMap(row => {
 		const [first] = row.fields;
@@ -16,17 +23,28 @@ export function corporateBackgroundRows(form: CorporateForm, rows: CorporateRow[
 
 	// Legacy quarterly stores contact after ZIP even though the source numbers it before address.
 	const ordered = form.quarter ? cells.sort((a, b) => compareFormItems(a.item || '99', b.item || '99')) : cells;
-	return ordered.map(row => ({
-		...row,
-		fields: row.fields.map(field => ({ ...field, label: backgroundLabel(field, row) }))
-	}));
+	const grouped: CorporateRow[] = [];
+	for (const row of ordered) {
+		const fields = row.fields.map(field => ({ ...field, label: backgroundLabel(field, row) }));
+		const [first] = fields;
+		const line = registeredLine.exec(first?.id ?? '');
+		const owner = first?.profileKey === 'address2' || line?.[1] === 'Address' ? 'address'
+			: line?.[1] === 'Name' ? 'taxpayerName' : undefined;
+		const previous = grouped.at(-1);
+		if (owner && fields.length === 1 && previous?.fields[0]?.profileKey === owner) {
+			previous.fields.push(first);
+		} else {
+			grouped.push({ ...row, fields });
+		}
+	}
+	return grouped;
 }
 
 function backgroundLabel(field: CorporateField, row: CorporateRow): string {
 	const label = field.label || row.label;
-	const line = field.id.match(/(?:Name|Address)([23])$/)?.[1];
-	if (line && /(?:RegisteredName|RegisteredAddress|Pt1I8Name|Pt1I9Address)/.test(field.id)) {
-		return `Registered ${/Name[23]$/.test(field.id) ? 'name' : 'address'} line ${line}`;
+	const line = registeredLine.exec(field.id);
+	if (line) {
+		return `Registered ${line[1].toLowerCase()} line ${line[2]}`;
 	}
 	switch (field.profileKey) {
 		case 'rdoCode': return 'RDO code';
@@ -41,10 +59,12 @@ function backgroundLabel(field: CorporateField, row: CorporateRow): string {
 }
 
 export function corporateBackgroundCell(row: CorporateRow) {
-	const key = row.fields[0]?.profileKey;
+	const field = row.fields[0];
+	const key = field?.profileKey;
 	if (key === 'tin1' || key === 'rdoCode') return 'identity-cell';
-	if (key === 'zipCode' || key === 'contactNumber') return 'short-cell';
+	if (key === 'zipCode' || key === 'contactNumber' || key === 'psicCode') return 'short-cell';
 	if (key === 'address' || key === 'address2' || key === 'taxpayerName' || key === 'email'
-		|| row.fields.length > 1 || row.fields[0]?.kind === 'radio') return 'wide-cell';
+		|| key === 'lineOfBusiness' || row.fields.length > 1 || field?.kind === 'radio'
+		|| registeredLine.test(field?.id ?? '')) return 'wide-cell';
 	return '';
 }

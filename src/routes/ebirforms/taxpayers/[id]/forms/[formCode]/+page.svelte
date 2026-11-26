@@ -135,6 +135,8 @@
 						{:else if corporateForm && editor?.kind === 'corporate'}
 							{#key `${params.formCode}:${recordId ?? ''}`}
 								<editor.Component bind:this={corporateEditor} form={corporateForm} values={workspace.formValues}
+									hasProfileBusinessLine={!!workspace.profile.lineOfBusiness?.trim()}
+									profilePsicCode={workspace.profile.psicCode}
 									errors={workspace.validationErrors} taxpayerHref={`/ebirforms/taxpayers/${params.id}/edit`}
 									onvaluechange={(patch) => workspace.updateFormValues(patch)} />
 							{/key}

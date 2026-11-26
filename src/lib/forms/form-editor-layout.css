@@ -29,6 +29,28 @@
 .eq-fields > * + * { border-top: 1px solid var(--border-soft); }
 .eq-section { min-width: 0; padding: 1.25rem 1rem; }
 .eq-section-header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; }
+
+@container paper-form (min-width: 52rem) {
+	div.external-auditor-grid:is(.corporate-rows, .income-fields) {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) repeat(2, minmax(0, 18rem));
+	}
+
+	div.external-auditor-grid:is(.corporate-rows, .income-fields) > :is([data-corporate-item], [data-income-item]) {
+		grid-column: auto;
+		padding-block: .5rem;
+		border-block: 0;
+	}
+
+	/* Pair the first two names with their TINs, then place the three accreditation fields together. */
+	div.external-auditor-grid:is(.corporate-rows, .income-fields) > :nth-child(-n + 3):nth-child(odd) {
+		grid-column: span 2;
+	}
+
+	div.external-auditor-grid:is(.corporate-rows, .income-fields) > :nth-child(n + 3) {
+		border-block-start: 1px solid var(--border-soft);
+	}
+}
 .schedule-empty-message {
 	margin: 0;
 	padding-block: .5rem .75rem;

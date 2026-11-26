@@ -52,7 +52,8 @@ export function normalizeLegacyExemptIdentification(values: CorporateValues, fie
 export function validateLegacyExemptIdentification(
 	values: CorporateValues,
 	today: { year: number; month: number; day: number },
-	fields: LegacyCorporateIdentificationFields = legacyExemptIdentificationFields
+	fields: LegacyCorporateIdentificationFields = legacyExemptIdentificationFields,
+	maxRegistrationAge: number | null = 50
 ): CorporateValues {
 	const errors: CorporateValues = {};
 	const type = identificationType(values[fields.type]);
@@ -72,7 +73,7 @@ export function validateLegacyExemptIdentification(
 	else if (!issue || issue.y < 1800) errors[fields.issueDate] = 'Enter a valid date of issue.';
 	else if (iso > formatIso(today.year, today.month, today.day)) errors[fields.issueDate] = 'The date of issue cannot be in the future.';
 	else if (type === 'CTC' && issue.y !== today.year) errors[fields.issueDate] = 'Use a community tax certificate issued this year.';
-	else if (type === 'Reg' && issue.y < today.year - 50) errors[fields.issueDate] = 'The SEC registration date must be within the last 50 calendar years.';
+	else if (type === 'Reg' && maxRegistrationAge !== null && issue.y < today.year - maxRegistrationAge) errors[fields.issueDate] = `The SEC registration date must be within the last ${maxRegistrationAge} calendar years.`;
 	if (!values[fields.issuePlace]?.trim()) errors[fields.issuePlace] = 'Enter the place of issue.';
 	return errors;
 }

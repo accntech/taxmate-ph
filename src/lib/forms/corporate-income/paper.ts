@@ -1,5 +1,6 @@
 import { formatCurrencyInput } from '$lib/components/ui/currency-input/currency';
 import { corporateAttachmentInstances, corporateFields } from '.';
+import { legacyMixedRateLabel, legacyMixedSpecialRate } from './mixed/atc';
 import { corporateContinuationRowsPerPage as rowsPerPage } from './continuation-pagination';
 import type { CorporateForm, CorporateSection, CorporateValues } from './types';
 
@@ -87,6 +88,9 @@ export async function renderCorporatePaper(surface: HTMLElement, form: Corporate
 			continue;
 		}
 		if (value === undefined) continue;
+		if (form.code === '1702MX' && sourceId === legacyMixedSpecialRate && value) {
+			value = legacyMixedRateLabel(Number(value) * 100);
+		}
 		if (definition?.kind === 'money') {
 			value = formatCurrencyInput(value, form.decimals ?? 2, true);
 			control.style.textAlign = 'right';

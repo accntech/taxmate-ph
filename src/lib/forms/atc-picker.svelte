@@ -7,7 +7,7 @@
 	import { filterATCOptions, getLegacyInterestATCOptions } from './atc-picker';
 	import { getWithholdingAtcs } from './withholding-definitions';
 
-	let { id, label = 'ATC', value, category, year = NaN, formCode = '1601EQ', fieldOptions = [], error = '', required = true, allowCustom = true, onchange }: {
+	let { id, label = 'ATC', value, category, year = NaN, formCode = '1601EQ', fieldOptions = [], error = '', required = true, allowCustom = true, disabled = false, onchange }: {
 		id: string;
 		label?: string;
 		value: string;
@@ -18,6 +18,7 @@
 		error?: string;
 		required?: boolean;
 		allowCustom?: boolean;
+		disabled?: boolean;
 		onchange: (code: string) => void;
 	} = $props();
 	const options = $derived.by(() => {
@@ -49,6 +50,7 @@
 	</Label>
 	<Combobox
 		{id}
+		{disabled}
 		value={value || null}
 		{options}
 		placeholder="Choose ATC"

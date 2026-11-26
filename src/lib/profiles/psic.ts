@@ -8,8 +8,15 @@ const options = [
 	...Array.from(titles, ([code, label]) => ({ value: code, label, secondary: code }))
 ];
 
-export function psicOptionsForCode(code?: string) {
-	return code && !titles.has(code)
-		? [{ value: code, label: 'Previously saved code', secondary: code }, ...options]
-		: options;
+const classOptions = options.filter(option => /^\d{4}$/.test(option.value));
+
+export function psicClassCode(code = '') {
+	return /^\d{4,5}$/.test(code.trim()) ? code.trim().slice(0, 4) : '';
+}
+
+export function psicOptionsForCode(code?: string, classesOnly = false) {
+	const availableOptions = classesOnly ? classOptions : options;
+	return code && (!titles.has(code) || (classesOnly && code.length !== 4))
+		? [{ value: code, label: 'Previously saved code', secondary: code }, ...availableOptions]
+		: availableOptions;
 }
