@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { seedWorkspace, taxpayerId } from './fixtures';
 
 for (const scenario of [
 	{ stored: 'dark', system: 'light', expected: 'dark' },
@@ -66,4 +67,22 @@ test('reload waits for StyleX before showing the app', async ({ page }) => {
 
 	await expect(page.locator('html')).toHaveAttribute('data-first-nav-display', 'grid');
 	await expect(page.getByRole('heading', { name: 'Tax workspaces' })).toBeVisible();
+});
+
+test('StyleX refreshes through a stylesheet link while opening Form 1701v2018', async ({ page }) => {
+	await seedWorkspace(page, 'dark', 'loaded', {
+		taxpayerClassification: 'I',
+		taxpayerType: 'professional'
+	});
+	const [stylesheet] = await Promise.all([
+		page.waitForResponse(response => {
+			const url = new URL(response.url());
+			return url.pathname === '/virtual:stylex.css' && url.searchParams.has('t');
+		}),
+		page.goto(`/ebirforms/taxpayers/${taxpayerId}/forms/1701v2018?new=true`)
+	]);
+	expect(stylesheet.request().resourceType()).toBe('stylesheet');
+	expect(stylesheet.ok()).toBe(true);
+	await expect(page.getByRole('region', { name: 'BIR Form 1701v2018 workspace' })).toBeVisible({ timeout: 15_000 });
+	await expect(page.getByRole('button', { name: 'Save draft' })).toBeEnabled();
 });

@@ -18,10 +18,11 @@
 	import UsersGroupRounded from
 		'@solar-icons/svelte/category/users/Linear/UsersGroupRounded.svelte';
 	import Settings from '@solar-icons/svelte/category/settings/Linear/Settings.svelte';
-	import { onMount } from 'svelte';
+	import { onDestroy, onMount } from 'svelte';
 	import { isTauri } from '@tauri-apps/api/core';
 	import WindowTitlebar from '$lib/window-titlebar.svelte';
 	import { Badge, Sidebar, Topbar, type Crumb } from '$lib/components/ui';
+	import { refreshDevStylesheet } from '$lib/components/ui/stylex-dev';
 	import '@fontsource-variable/inter';
 	import '@fontsource-variable/source-serif-4';
 	import '@fontsource/arimo/400.css';
@@ -32,6 +33,7 @@
 	let { children } = $props();
 	const waitForStyleX = browser && import.meta.env.DEV;
 	let stylesReady = $state(!waitForStyleX);
+	let stopStyleXRefresh: (() => void) | undefined;
 	let mobileOpen = $state(false);
 	let isMobile = $state(false);
 	let historyPosition = $state(0);
@@ -110,12 +112,15 @@
 		return pathname === item.href || pathname.startsWith(`${item.href}/`);
 	}
 
-	function finishStyleXStartup() {
+	function finishStyleXStartup(event: Event) {
+		const link = event.currentTarget;
+		if (stylesReady || !(link instanceof HTMLLinkElement)) return;
 		stylesReady = true;
-		void import('virtual:stylex:runtime');
+		stopStyleXRefresh = refreshDevStylesheet(link);
 	}
 
 	onMount(() => settings.init());
+	onDestroy(() => stopStyleXRefresh?.());
 	onMount(() => {
 		if (!isTauri()) return;
 		const subscription = import('$lib/ui-agent').then(({ listenForUiAgentRequests }) => listenForUiAgentRequests());
