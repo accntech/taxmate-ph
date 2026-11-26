@@ -22638,7 +22638,7 @@
     },
     {
       "id": "frm1701:txtPg3IShed4_18A",
-      "label": "18 Total Ordinary Allowable itemized Deductions (Sum of Items 1 to 17d) (To part V Schedule 3.A Item 13)",
+      "label": "18 Total Ordinary Allowable itemized Deductions (Sum of Items 1 to 17D) (To part V Schedule 3.A Item 13)",
       "type": "number",
       "defaultValue": "0.00",
       "options": [],
@@ -22650,7 +22650,7 @@
     },
     {
       "id": "frm1701:txtPg3IShed4_18B",
-      "label": "18 Total Ordinary Allowable itemized Deductions (Sum of Items 1 to 17d) (To part V Schedule 3.A Item 13)",
+      "label": "18 Total Ordinary Allowable itemized Deductions (Sum of Items 1 to 17D) (To part V Schedule 3.A Item 13)",
       "type": "number",
       "defaultValue": "0.00",
       "options": [],
@@ -27528,7 +27528,7 @@
     },
     {
       "id": "frm1701:txtPg2mI18ASchdC",
-      "label": "18 Total Ordinary Allowable Itemized Deductions (Sum of Items 1 to 17d) (To Part X Schedule B Item 6)",
+      "label": "18 Total Ordinary Allowable Itemized Deductions (Sum of Items 1 to 17D) (To Part X Schedule B Item 6)",
       "type": "number",
       "defaultValue": "0.00",
       "options": [],
@@ -27540,7 +27540,7 @@
     },
     {
       "id": "frm1701:txtPg2mI18BSchdC",
-      "label": "18 Total Ordinary Allowable Itemized Deductions (Sum of Items 1 to 17d) (To Part X Schedule B Item 6)",
+      "label": "18 Total Ordinary Allowable Itemized Deductions (Sum of Items 1 to 17D) (To Part X Schedule B Item 6)",
       "type": "number",
       "defaultValue": "0.00",
       "options": [],
@@ -27552,7 +27552,7 @@
     },
     {
       "id": "frm1701:txtPg2mI18CSchdC",
-      "label": "18 Total Ordinary Allowable Itemized Deductions (Sum of Items 1 to 17d) (To Part X Schedule B Item 6)",
+      "label": "18 Total Ordinary Allowable Itemized Deductions (Sum of Items 1 to 17D) (To Part X Schedule B Item 6)",
       "type": "number",
       "defaultValue": "0.00",
       "options": [],
@@ -27564,7 +27564,7 @@
     },
     {
       "id": "frm1701:txtPg2mI18DSchdC",
-      "label": "18 Total Ordinary Allowable Itemized Deductions (Sum of Items 1 to 17d) (To Part X Schedule B Item 6)",
+      "label": "18 Total Ordinary Allowable Itemized Deductions (Sum of Items 1 to 17D) (To Part X Schedule B Item 6)",
       "type": "number",
       "defaultValue": "0.00",
       "options": [],
@@ -28950,7 +28950,7 @@
     },
     {
       "id": "frm1701:txtPg4mSchedC_18ATYPE",
-      "label": "18 Total Ordinary Allowable Itemized Deductions (Sum of Items 1 to 17d) (To Schedule B Item 6)",
+      "label": "18 Total Ordinary Allowable Itemized Deductions (Sum of Items 1 to 17D) (To Schedule B Item 6)",
       "type": "number",
       "defaultValue": "0.00",
       "options": [],
@@ -28962,7 +28962,7 @@
     },
     {
       "id": "frm1701:txtPg4mSchedC_18BTYPE",
-      "label": "18 Total Ordinary Allowable Itemized Deductions (Sum of Items 1 to 17d) (To Schedule B Item 6)",
+      "label": "18 Total Ordinary Allowable Itemized Deductions (Sum of Items 1 to 17D) (To Schedule B Item 6)",
       "type": "number",
       "defaultValue": "0.00",
       "options": [],
