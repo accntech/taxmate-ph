@@ -2,11 +2,12 @@
 	import * as stylex from '@stylexjs/stylex';
 	import { returnErrors } from './return-errors.styles';
 	import type { FormDefinition } from '$lib/forms';
-	let { definition, errors, taxpayerHref = '', onreveal }: {
+	let { definition, errors, taxpayerHref = '', onreveal, fieldLabel }: {
 		definition: FormDefinition;
 		errors: Record<string, string>;
 		taxpayerHref?: string;
-		onreveal?: (id: string) => Promise<void>;
+		onreveal?: (id: string) => Promise<string | void>;
+		fieldLabel?: (id: string) => string | undefined;
 	} = $props();
 	function isTaxpayerField(id: string) {
 		return !!definition.fields.find(field => field.id === id)?.profileKey || id === 'txtEmail' || /^frm[^:]+:(txtTIN[123]|txtBranchCode|txtRDOCode|txtTaxpayerName|optCategory|txtAddress2?|txtZipCode|txtTelNum|txtEmail)$/.test(id);
@@ -15,18 +16,19 @@
 		const row = id.match(/:txt(ATC|TaxBase|TaxRate|TaxWithheld)(1[3-8])$/);
 		if (row) return `ATC row ${Number(row[2]) - 12} · ${{ ATC: 'ATC', TaxBase: 'Tax base', TaxRate: 'Rate', TaxWithheld: 'Tax withheld' }[row[1]]}`;
 		if (id.endsWith(':overpaymentOption')) return 'Over-remittance treatment';
-		return definition.fields.find(field => field.id === id)?.label.replace(/^\d+[A-Z]?\s+/, '') || 'Return details';
+		return (fieldLabel?.(id) ?? definition.fields.find(field => field.id === id)?.label)?.replace(/^\d+[A-Z]?\s+/, '') || 'Return details';
 	}
 	async function focusField(event: MouseEvent, id: string) {
 		event.preventDefault();
-		if (onreveal) await onreveal(id);
-		const control = document.getElementById(id);
+		const target = await onreveal?.(id);
+		const control = document.getElementById(target || id);
 		if (!control) return;
 		let ancestor = control.parentElement;
 		while (ancestor) {
 			if (ancestor instanceof HTMLDetailsElement) ancestor.open = true;
 			ancestor = ancestor.parentElement;
 		}
+		if (control instanceof HTMLOutputElement) control.tabIndex = -1;
 		control.focus({ preventScroll: true });
 		control.scrollIntoView({ block: 'center', behavior: 'instant' });
 	}

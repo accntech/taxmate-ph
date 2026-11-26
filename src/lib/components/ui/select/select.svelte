@@ -18,6 +18,7 @@
 		required = false,
 		error = '',
 		disabled = false,
+		wrapLabels = false,
 		class: className = '',
 		leading
 	}: {
@@ -31,6 +32,7 @@
 		required?: boolean;
 		error?: string;
 		disabled?: boolean;
+		wrapLabels?: boolean;
 		class?: string;
 		leading?: Snippet;
 	} = $props();
@@ -52,6 +54,8 @@
 		{placeholder}
 		invalid={invalid || !!error}
 		disabled={disabled || options.length === 0}
+		labelSx={wrapLabels && wrapperStyles.wrapLabel}
+		triggerSx={wrapLabels && wrapperStyles.wrapTrigger}
 		aria-labelledby={label ? labelId : undefined}
 		aria-label={label ? undefined : placeholder}
 		aria-required={required || undefined}
@@ -65,7 +69,7 @@
 			<span class={stylex.attrs(wrapperStyles.option).class}>
 				{#if selected}{@render leading?.()}{/if}
 				<span class={stylex.attrs(wrapperStyles.optionDetails).class}>
-					<span class={stylex.attrs(wrapperStyles.optionLabel).class}>{option.label}</span>
+					<span class={stylex.attrs(wrapperStyles.optionLabel, wrapLabels && wrapperStyles.wrapLabel).class}>{option.label}</span>
 					{#if !selected && option.description}<span class={stylex.attrs(wrapperStyles.optionDescription).class}>{option.description}</span>{/if}
 				</span>
 			</span>

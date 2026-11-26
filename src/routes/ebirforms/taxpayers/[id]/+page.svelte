@@ -62,7 +62,13 @@
 					{#each rows as [label, value] (label)}
 						<div>
 							<dt class={stylex.attrs(styles.summaryLabel).class}>{label}</dt>
-							<dd class={stylex.attrs(styles.detailValue).class}>{value}</dd>
+							<dd class={stylex.attrs(styles.detailValue).class}>
+								{#if label === 'Occupation code (PSOC)'}
+									<span class="font-mono">{value?.split(' · ')[0]}</span>{value?.includes(' · ') ? value.slice(value.indexOf(' · ')) : ''}
+								{:else if label && ['TIN and branch code', 'RDO code', 'Date of birth', 'ZIP code', 'Contact number'].includes(label)}
+									<span class="font-mono">{value}</span>
+								{:else}{value}{/if}
+							</dd>
 						</div>
 					{/each}
 				</dl>

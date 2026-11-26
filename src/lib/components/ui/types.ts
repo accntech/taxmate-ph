@@ -1,6 +1,7 @@
 export type Crumb = {
 	label: string;
 	href?: string;
+	monospace?: boolean;
 };
 
 export type NavLeaf = {

@@ -38,7 +38,7 @@
 		overflow-wrap: anywhere;
 	}
 	.value-label { color: var(--fg-muted); font-size: var(--form-label-size); font-weight: 500; line-height: var(--form-label-line-height); }
-	output { font-size: var(--form-control-size); font-weight: 600; font-variant-numeric: tabular-nums; text-align: end; }
+	output { font-size: var(--form-control-size); font-weight: 600; font-family: var(--font-mono); font-variant-numeric: tabular-nums; text-align: end; }
 	.amount-column { margin-inline-end: var(--paper-amount-inset, calc(.75rem + 1px)); }
 	.value-source { grid-column: 2; color: var(--fg-muted); font-size: .75rem; line-height: 1.4; text-align: end; }
 	.calculated-value > :global([data-slot="form-field-errors"]) { grid-column: 1 / -1; }

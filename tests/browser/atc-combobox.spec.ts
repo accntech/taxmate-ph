@@ -1,12 +1,17 @@
 import { expect, test } from '@playwright/test';
 import { formPath, seedWorkspace } from './fixtures';
 
+test.beforeEach(async ({ page }) => {
+	await page.routeWebSocket('**/*', socket => socket.close());
+});
+
 for (const width of [1440, 390]) {
  test(`ATC combobox searches and selects at ${width}px`, async ({ page }, testInfo) => {
   await page.setViewportSize({ width, height: 960 });
   await seedWorkspace(page);
   await page.goto(formPath);
   await page.getByRole('button', { name: 'Edit line item 1', exact: true }).click();
+  await expect(page.getByRole('dialog')).toHaveCSS('opacity', '1');
   const row = page.getByRole('group', { name: 'ATC row 1', exact: true });
   const atc = row.getByRole('combobox', { name: 'ATC', exact: true });
   await expect(atc).toHaveText('WI120');
@@ -17,7 +22,7 @@ for (const width of [1440, 390]) {
   await search.fill('WI01');
   await expect(page.getByRole('option', { name: /WI010/ })).toContainText('5%');
   await expect(page.getByRole('option', { name: /WI011/ })).toContainText('10%');
-  const popup = page.locator('[popover="manual"]');
+  const popup = page.locator('[popover="manual"]:not(dialog)');
   await expect(popup).toHaveCSS('opacity', '1');
   const triggerBounds = (await atc.boundingBox())!;
   const popupBounds = (await popup.boundingBox())!;
@@ -25,7 +30,11 @@ for (const width of [1440, 390]) {
   expect(Math.abs(popupBounds.x - triggerBounds.x)).toBeLessThan(1);
   const first = page.getByRole('option', { name: /^WI010 / });
   const second = page.getByRole('option', { name: /^WI011 / });
+  await expect(atc.getByText('WI120')).toHaveCSS('font-family', /\bmonospace$/);
+  await expect(first.getByText('WI010', { exact: true })).toHaveCSS('font-family', /\bmonospace$/);
+  await expect(first.getByText('5%', { exact: true })).toHaveCSS('font-family', /\bmonospace$/);
   const description = first.getByText(/^PROFESSIONAL/);
+  await expect(description).not.toHaveCSS('font-family', /\bmonospace$/);
   await expect.poll(() => description.evaluate(element => {
    const bounds = element.getBoundingClientRect();
    const row = element.closest('[role="option"]')!.getBoundingClientRect();
@@ -46,7 +55,7 @@ for (const width of [1440, 390]) {
   const contractor = page.getByRole('option', { name: /WI120/ });
   await expect(contractor).toBeVisible();
   await expect.poll(async () => (await contractor.locator('mark').allTextContents()).join('')).toBe('CNTRCTRS');
-  await expect(page.locator('[popover="manual"]')).toHaveCSS('opacity', '1');
+  await expect(page.locator('[popover="manual"]:not(dialog)')).toHaveCSS('opacity', '1');
   await page.screenshot({ path: testInfo.outputPath('atc-fuzzy-description.png'), fullPage: true });
   await search.fill('w120');
   await expect(contractor).toBeVisible();
@@ -69,7 +78,7 @@ for (const width of [1440, 390]) {
   await expect(atc).toHaveAttribute('aria-expanded', 'false');
   await atc.click();
   await search.fill('WI010');
-  await expect(page.locator('[popover="manual"]')).toHaveCSS('opacity', '1');
+  await expect(page.locator('[popover="manual"]:not(dialog)')).toHaveCSS('opacity', '1');
   await page.screenshot({ path: testInfo.outputPath('atc-combobox.png'), fullPage: true });
   const bounds = await option.boundingBox();
   expect(bounds!.x).toBeGreaterThanOrEqual(0);
@@ -77,18 +86,19 @@ for (const width of [1440, 390]) {
  });
 }
 
- test('a narrow inline ATC popup wraps options and supports keyboard selection', async ({ page }) => {
+ test('a narrow drawer ATC popup wraps options and supports keyboard selection', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await seedWorkspace(page, 'dark');
   await page.goto(formPath);
-  const trigger = page.getByRole('combobox', { name: 'Item 13 ATC', exact: true });
-  await expect(trigger).toHaveCSS('height', '38px');
+  await page.getByRole('button', { name: 'Edit line item 1', exact: true }).click();
+  await expect(page.getByRole('dialog')).toHaveCSS('opacity', '1');
+  const trigger = page.getByRole('dialog').getByRole('combobox', { name: 'ATC', exact: true });
   await trigger.evaluate(element => element.scrollIntoView({ block: 'center' }));
   await trigger.click();
   const search = page.getByPlaceholder('Search code or income', { exact: true });
   await expect(search).toBeFocused();
   await search.fill('WI01');
-  const popup = page.locator('[popover="manual"]');
+  const popup = page.locator('[popover="manual"]:not(dialog)');
   await expect(popup).toHaveCSS('opacity', '1');
   const triggerBounds = (await trigger.boundingBox())!;
   const popupBounds = (await popup.boundingBox())!;
@@ -96,7 +106,10 @@ for (const width of [1440, 390]) {
   expect(popupBounds.x).toBeGreaterThanOrEqual(0);
   expect(popupBounds.x + popupBounds.width).toBeLessThanOrEqual(390);
   const first = page.getByRole('option', { name: /^WI010 / });
-  await expect.poll(async () => (await first.boundingBox())?.height ?? 0).toBeGreaterThan(80);
+  await expect.poll(() => first.getByText(/^PROFESSIONAL/).evaluate(element => {
+   const bounds = element.getBoundingClientRect();
+   return bounds.height > Number.parseFloat(getComputedStyle(element).lineHeight) && element.scrollWidth <= element.clientWidth + 1;
+  })).toBe(true);
   await search.press('ArrowDown');
   await search.press('Enter');
   await expect(trigger).toHaveText('WI011');
@@ -108,8 +121,9 @@ for (const width of [1440, 390]) {
   await seedWorkspace(page);
   await page.goto(formPath);
   await page.getByRole('button', { name: 'Edit line item 1', exact: true }).click();
+  await expect(page.getByRole('dialog')).toHaveCSS('opacity', '1');
   await page.getByRole('combobox', { name: 'ATC', exact: true }).click();
-  const popup = page.locator('[popover="manual"]');
+  const popup = page.locator('[popover="manual"]:not(dialog)');
   await expect(popup).toBeVisible();
   const bounds = await popup.boundingBox();
   expect(bounds!.y).toBeGreaterThanOrEqual(0);
@@ -128,14 +142,17 @@ for (const width of [1440, 390]) {
   const search = page.getByPlaceholder('Search code or income', { exact: true });
   await year.fill('2018');
   await page.getByRole('button', { name: 'Edit line item 1', exact: true }).click();
+  await expect(page.getByRole('dialog')).toHaveCSS('opacity', '1');
   await atc.click();
   await search.fill('WI650');
   await expect(page.getByRole('option', { name: /WI650/ })).toContainText('25%');
   await search.press('Enter');
   await expect(page.getByLabel('Rate (%)', { exact: true })).toHaveText('25.00%');
   await page.getByRole('dialog').getByRole('button', { name: 'Update', exact: true }).click();
+  await expect(page.getByRole('dialog')).toBeHidden();
   await year.fill('2026');
   await page.getByRole('button', { name: 'Edit line item 1', exact: true }).click();
+  await expect(page.getByRole('dialog')).toHaveCSS('opacity', '1');
   await atc.click();
   await search.fill('WI650');
   await expect(page.getByRole('option', { name: /WI650/ })).toContainText('15%');
@@ -147,6 +164,7 @@ for (const width of [1440, 390]) {
   await seedWorkspace(page);
   await page.goto(formPath);
   await page.getByRole('button', { name: 'Edit line item 1', exact: true }).click();
+  await expect(page.getByRole('dialog')).toHaveCSS('opacity', '1');
   const atc = page.getByRole('combobox', { name: 'ATC', exact: true });
   await atc.click();
   const search = page.getByPlaceholder('Search code or income', { exact: true });

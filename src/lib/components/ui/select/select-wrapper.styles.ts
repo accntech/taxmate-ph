@@ -27,6 +27,15 @@ export const wrapperStyles = stylex.create({
     "--sx-font-weight": "var(--font-weight-medium)",
     "fontWeight": "var(--font-weight-medium)"
   },
+  "wrapLabel": {
+    "whiteSpace": "normal",
+    "overflowWrap": "anywhere"
+  },
+  "wrapTrigger": {
+    "height": "auto",
+    "minHeight": "calc(var(--spacing) * 9.5)",
+    "paddingBlock": "calc(var(--spacing) * 1.5)"
+  },
   "optionDescription": {
     "fontSize": "var(--text-xs)",
     "lineHeight": "var(--sx-leading, var(--text-xs--line-height))",

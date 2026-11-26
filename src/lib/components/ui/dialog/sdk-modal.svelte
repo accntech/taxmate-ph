@@ -29,7 +29,11 @@
   closeOnOutsidePress={closedByBackdrop}
   dismissible={closedByBackdrop || closedByEscape}
   onOpenChange={(next, details) => {
-    if (details.reason === "escape-key" && !closedByEscape) {
+    const target = details.event?.target;
+    const nestedPopup = details.reason === "escape-key" &&
+      target instanceof Element &&
+      target.closest('[popover="manual"]:not(dialog)');
+    if (details.reason === "escape-key" && (!closedByEscape || nestedPopup)) {
       details.cancel();
     } else {
       onOpenChange?.(next);

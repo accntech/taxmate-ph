@@ -76,15 +76,16 @@
 			const profile = workspace.profiles.find(profile => profile.id === id);
 			const taxpayer = {
 				label: profile ? formatTinInput(profile) : 'Taxpayer',
-				href: taxpayerPath
+				href: taxpayerPath,
+				monospace: !!profile
 			};
 			if (pathname === `${taxpayerPath}/edit`) return [directory, taxpayer, { label: 'Edit taxpayer' }];
 			if (pathname === `${taxpayerPath}/forms`) return [directory, taxpayer, { label: 'Tax Returns' }];
 			if (page.params.formCode) {
 				return [directory, taxpayer, { label: 'Tax Returns', href: `${taxpayerPath}/forms` },
-					{ label: `BIR Form ${page.params.formCode}` }];
+					{ label: `BIR Form ${page.params.formCode}`, monospace: true }];
 			}
-			return [directory, { label: taxpayer.label }];
+			return [directory, { label: taxpayer.label, monospace: taxpayer.monospace }];
 		}
 
 		const current = navItems.find((item) => isCurrent(item));
@@ -119,8 +120,8 @@
 		stopStyleXRefresh = refreshDevStylesheet(link);
 	}
 
-	onMount(() => settings.init());
 	onDestroy(() => stopStyleXRefresh?.());
+	onMount(() => settings.init());
 	onMount(() => {
 		if (!isTauri()) return;
 		const subscription = import('$lib/ui-agent').then(({ listenForUiAgentRequests }) => listenForUiAgentRequests());

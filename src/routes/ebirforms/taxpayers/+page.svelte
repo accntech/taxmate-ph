@@ -198,6 +198,8 @@
           >
         {:else if key === "tin"}
           <span class={stylex.attrs(styles.tin).class}>{row.tin}</span>
+        {:else if key === "rdo"}
+          <span class={[stylex.attrs(styles.mutedCell).class, "font-mono"]}>{row.rdo}</span>
         {:else}
           <span class={stylex.attrs(styles.mutedCell).class}>{row[key]}</span>
         {/if}

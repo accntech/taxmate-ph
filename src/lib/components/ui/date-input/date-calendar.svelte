@@ -233,7 +233,7 @@
         aria-label="Switch to months view"
         disabled={calendarDisabled}
         onclick={() => (view = "months")}
-        >{months[cursorMonth - 1]} {cursorYear}</SdkButton
+        >{months[cursorMonth - 1]} <span class="font-mono">{cursorYear}</span></SdkButton
       >
       <SdkButton
         type="button"
@@ -264,7 +264,7 @@
       </SdkButton>
       <SdkButton
         type="button"
-        class={[stylex.attrs(calendarLayout.viewButton).class]}
+        class={[stylex.attrs(calendarLayout.viewButton).class, "font-mono"]}
         aria-label="Switch to years view"
         disabled={calendarDisabled}
         onclick={() => (view = "years")}>{cursorYear}</SdkButton
@@ -297,7 +297,7 @@
           aria-hidden="true"><SolarIcon icon={glyphs.chevronLeft} /></span
         >
       </SdkButton>
-      <span class={[stylex.attrs(calendarLayout.decadeLabel).class]}
+      <span class={[stylex.attrs(calendarLayout.decadeLabel).class, "font-mono"]}
         >{decadeStart}–{decadeStart + 9}</span
       >
       <SdkButton
@@ -350,7 +350,7 @@
           {disabled}
           onfocus={() => (focusedIso = cell.iso)}
           onclick={() => !disabled && onSelect(cell.iso)}
-          class={[stylex.attrs(calendarLayout.day).class]}
+          class={[stylex.attrs(calendarLayout.day).class, "font-mono"]}
         >
           {#snippet render({ props })}
             <button {...props} data-disabled={disabled ? "true" : undefined}>{cell.d}</button>
@@ -407,7 +407,7 @@
           (min ? lastOfYear < min : false)}
         <SdkButton
           type="button"
-          class={[stylex.attrs(calendarLayout.period).class]}
+          class={[stylex.attrs(calendarLayout.period).class, "font-mono"]}
           data-selected={y === cursorYear ? "true" : undefined}
           {disabled}
           onclick={() => {

@@ -99,9 +99,9 @@
 					<div class="eq-heading">
 						<div class="eq-title-row">
 							<Badge tone={workspace.currentReturnStatus === 'Submitted' ? 'success' : workspace.currentReturnStatus === 'Final' ? 'info' : 'neutral'}>
-								{workspace.currentReturnStatus}
+								{recordId ? workspace.currentReturnStatus : 'New draft'}
 							</Badge>
-							{#if workspace.hasUnsavedChanges}
+							{#if recordId && workspace.hasUnsavedChanges}
 								<span class="eq-muted">Unsaved changes</span>
 							{/if}
 						</div>

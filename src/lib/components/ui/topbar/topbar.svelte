@@ -68,12 +68,12 @@
 			{#if crumb.href}
 				<a
 					href={crumb.href}
-					class={stylex.attrs(wrapperStyles.link).class}
+					class={[stylex.attrs(wrapperStyles.link).class, crumb.monospace && 'font-mono']}
 				>
 					{crumb.label}
 				</a>
 			{:else}
-				<span data-tauri-drag-region aria-current={index === crumbs.length - 1 ? 'page' : undefined} class={stylex.attrs(wrapperStyles.currentPage).class}>{crumb.label}</span>
+				<span data-tauri-drag-region aria-current={index === crumbs.length - 1 ? 'page' : undefined} class={[stylex.attrs(wrapperStyles.currentPage).class, crumb.monospace && 'font-mono']}>{crumb.label}</span>
 			{/if}
 		{/each}
 	</nav>

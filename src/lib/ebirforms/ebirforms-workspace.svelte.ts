@@ -70,6 +70,8 @@ export function createInitialFormValues(profile: TaxpayerProfile, code = '1601EQ
 	};
 }
 
+const newDraftMessage = 'Save draft to keep this return on this device.';
+
 class EbirformsWorkspace {
 	#pendingReturn = $state<CreatedReturn | null>(null);
 	#profileLoad: Promise<void> | null = null;
@@ -126,7 +128,9 @@ class EbirformsWorkspace {
 		}
 		this.finalFlag = '0';
 		this.submissionReceipt = null;
-		this.statusMessage = 'Unsaved changes.';
+		this.statusMessage = this.#pendingReturn?.id === this.activeReturnId
+			? newDraftMessage
+			: 'Save draft to keep your changes.';
 		if (Object.keys(this.validationErrors).length) {
 			this.validationErrors = validateReturnValues(this.selectedForm?.code ?? '1601EQ', this.formValues);
 		}
@@ -229,7 +233,7 @@ class EbirformsWorkspace {
 		};
 		this.#pendingReturn = record;
 		this.openReturn(id);
-		this.statusMessage = 'New form. Choose Save to create it on this device.';
+		this.statusMessage = newDraftMessage;
 		return id;
 	}
 

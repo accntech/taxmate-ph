@@ -1,3 +1,5 @@
+import { ACTIVE_MODAL_SELECTOR } from '../dialog/active-modal';
+
 /** Whether some part of an anchor is visible, including clipping and sticky overlays. */
 function triggerIsVisible(trigger: HTMLElement, panel: HTMLElement, backdrop?: HTMLElement): boolean {
   if (!trigger.isConnected || !trigger.getClientRects().length) return false;
@@ -23,6 +25,8 @@ function triggerIsVisible(trigger: HTMLElement, panel: HTMLElement, backdrop?: H
       top = Math.max(top, bounds.top + element.clientTop);
       bottom = Math.min(bottom, bounds.top + element.clientTop + element.clientHeight);
     }
+    // Top-layer dialogs escape the clipping of their document ancestors.
+    if (element.matches(ACTIVE_MODAL_SELECTOR)) break;
   }
   if (right <= left || bottom <= top) return false;
 

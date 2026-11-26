@@ -256,7 +256,7 @@
 		<div role="alert"><h1 class={stylex.attrs(styles.notFoundHeading).class}>Taxpayer not found</h1><p class={stylex.attrs(styles.notFoundDescription).class}>Return to the taxpayers list and select a saved profile.</p></div>
 	{:else}
 		<header class={stylex.attrs(styles.header).class}>
-			<div><h1 class={stylex.attrs(styles.heading).class}>Tax Returns</h1><p class={stylex.attrs(styles.description).class}>{profile.taxpayerName} · <span class={stylex.attrs(styles.tin).class}>{formatTinInput(profile)}</span> · {rows.length} {rows.length === 1 ? 'return' : 'returns'}</p></div>
+			<div><h1 class={stylex.attrs(styles.heading).class}>Tax Returns</h1><p class={stylex.attrs(styles.description).class}>{profile.taxpayerName} · <span class={stylex.attrs(styles.tin).class}>{formatTinInput(profile)}</span> · <span class="font-mono">{rows.length}</span> {rows.length === 1 ? 'return' : 'returns'}</p></div>
 			<Button data-taxmate-agent="Create return" data-taxmate-agent-sdk="" disabled={busy || archived || !storageReady} onclick={() => { createError = ''; createOpen = true; }}><AddCircle size={18} color="currentColor" />Create return</Button>
 		</header>
 		{#if archived}<p class={stylex.attrs(styles.status).class}>This taxpayer is archived. Restore the profile to create new returns.</p>{/if}
@@ -289,8 +289,9 @@
 			{#snippet cell(row, key)}
 				{#if key === 'form'}<span class={stylex.attrs(styles.formCode).class}>BIR Form {row.form}</span>
 				{:else if key === 'status'}<Badge size="sm" tone={row.status === 'Submitted' ? 'success' : row.status === 'Final' ? 'info' : row.status === 'For resubmission' ? 'warn' : 'neutral'}>{row.status}</Badge>
-				{:else if key === 'updatedAt'}<span class={stylex.attrs(styles.updatedAt).class}>{date(Number(row.updatedAt))}</span>
-				{:else if key === 'amount'}{row.amount === '—' ? '—' : amount(Number(row.amount))}
+				{:else if key === 'updatedAt'}<span class={[stylex.attrs(styles.updatedAt).class, "font-mono"]}>{date(Number(row.updatedAt))}</span>
+				{:else if key === 'amount'}<span class="font-mono">{row.amount === '—' ? '—' : amount(Number(row.amount))}</span>
+				{:else if key === 'period'}<span class="font-mono">{row.period}</span>
 				{:else}{row[key]}{/if}
 			{/snippet}
 			{#snippet actions(row)}

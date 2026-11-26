@@ -26,12 +26,17 @@
 	const uid = $props.id();
 	let query = $state('');
 	let activeCode = $state('');
+	const terms = $derived(normalizeSearch(query.trim()).split(/\s+/));
 	const matches = $derived(forms.filter(form => {
-		const text = `BIR Form ${form.code} ${form.title} ${form.category}`.toLowerCase();
-		return query.trim().toLowerCase().split(/\s+/).every(word => text.includes(word));
+		const text = normalizeSearch(`BIR Form ${form.code} ${form.title} ${form.category}`);
+		return terms.every(word => text.includes(word));
 	}).sort((a, b) => a.code.localeCompare(b.code, 'en', { numeric: true })));
 	const available = $derived(matches.filter(form => form.status === 'ready'));
 	const active = $derived(available.find(form => form.code === activeCode) ?? available[0]);
+
+	function normalizeSearch(text: string) {
+		return text.toLowerCase().replace(/([a-z0-9])[-‐‑–](?=[a-z0-9])/g, '$1');
+	}
 
 	function focusSearch(node: HTMLElement) {
 		void tick().then(() => { if (node.isConnected) node.focus(); });
@@ -106,7 +111,7 @@
 						class={[stylex.attrs(formCommand.resultMeta).class, { 'colored-form-type': typeColor }]}
 						style:--form-type-color={typeColor}
 					>
-						<span class={stylex.attrs(formCommand.resultTitle).class}>BIR Form {form.code}</span>
+						<span class={stylex.attrs(formCommand.resultTitle).class}>BIR Form <span class="font-mono">{form.code}</span></span>
 						<Badge size="sm" class="form-type-badge">
 							{form.status === 'ready' ? form.category : 'Coming soon'}
 						</Badge>
@@ -126,7 +131,7 @@
 	<div class={stylex.attrs(formCommand.footer).class}>
 		<div class={stylex.attrs(formCommand.footerStatus).class}>
 			<Button variant="ghost" size="sm" onclick={oncancel}>Cancel</Button>
-			<p role="status" class={stylex.attrs(formCommand.hint).class}>{matches.length} {matches.length === 1 ? 'form' : 'forms'} found</p>
+			<p role="status" class={stylex.attrs(formCommand.hint).class}><span class="font-mono">{matches.length}</span> {matches.length === 1 ? 'form' : 'forms'} found</p>
 		</div>
 		<div class={stylex.attrs(formCommand.footerActions).class}>
 			<span class={stylex.attrs(formCommand.navigationHint).class}><kbd>↑</kbd><kbd>↓</kbd><span class={stylex.attrs(formCommand.navigationLabel).class}>Navigate</span></span>

@@ -74,6 +74,7 @@
     name?: string;
     popupWidth?: number;
     wrapOptions?: boolean;
+    monospace?: "label" | "secondary";
     itemHeight?: number;
     maxVisibleItems?: number;
     class?: string;
@@ -101,6 +102,7 @@
     name,
     popupWidth,
     wrapOptions = false,
+    monospace,
     itemHeight = 32,
     maxVisibleItems = 8,
     sx,
@@ -269,11 +271,22 @@
   const canScrollUp = $derived(scrollTop > 0);
   const canScrollDown = $derived(totalHeight - scrollTop - ($rowVirtualizer.scrollRect?.height ?? viewportHeight) > 1);
 
-  function toggleOpen() {
+  let openRequest = 0;
+
+  async function toggleOpen() {
+    const request = ++openRequest;
     if (disabled) return;
     if (open) {
       open = false;
       return;
+    }
+
+    // A drawer's transform moves the trigger without resizing it. Wait for
+    // that movement before placing and observing its fixed-position popup.
+    const dialog = triggerEl?.closest("dialog");
+    if (dialog) {
+      await Promise.all(dialog.getAnimations().map((animation) => animation.finished.catch(() => {})));
+      if (!dialog.hasAttribute("open") || request !== openRequest || !triggerEl?.isConnected) return;
     }
 
     query = "";
@@ -298,6 +311,7 @@
   }
 
   function close() {
+    openRequest++;
     open = false;
     triggerEl?.focus();
   }
@@ -620,11 +634,11 @@
         {:else if selectedOption}
           <span class={[stylex.attrs(comboboxLayout.selection).class]}>
             {#if selectedOption.secondary}
-              <span class={[stylex.attrs(comboboxLayout.secondary).class]}>
+              <span class={[stylex.attrs(comboboxLayout.secondary).class, monospace === "secondary" && "font-mono"]}>
                 {selectedOption.secondary}
               </span>
             {/if}
-            <span class={[stylex.attrs(comboboxLayout.label).class]}
+            <span class={[stylex.attrs(comboboxLayout.label).class, monospace === "label" && "font-mono"]}
               >{selectedOption.label}</span
             >
             {#if selectedOption.badge}
@@ -822,6 +836,7 @@
                                     class={[
                                       stylex.attrs(comboboxLayout.secondary)
                                         .class,
+                                      monospace === "secondary" && "font-mono",
                                     ]}
                                   >
                                     {@render highlightedText(
@@ -834,6 +849,7 @@
                                   class={[
                                     stylex.attrs(comboboxLayout.optionLabel)
                                       .class,
+                                    monospace === "label" && "font-mono",
                                   ]}
                                 >
                                   {@render highlightedText(

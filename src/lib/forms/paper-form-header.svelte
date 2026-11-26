@@ -1,13 +1,14 @@
 <script lang="ts">
-	let { number, revision, title, subtitle }: {
+	let { number, revision, title, subtitle, centered = false }: {
 		number: string;
 		revision: string;
 		title: string;
 		subtitle?: string;
+		centered?: boolean;
 	} = $props();
 </script>
 
-<header class="paper-form-header">
+<header class={['paper-form-header', centered && 'centered']}>
 	<h1>
 		{title}
 		{#if subtitle}<span>{subtitle}</span>{/if}
@@ -17,7 +18,7 @@
 			<span>BIR Form No.</span>
 			<strong>{number}</strong>
 		</span>
-		<span>{revision}</span>
+		<span class="form-revision font-mono">{revision}</span>
 	</div>
 </header>
 
@@ -46,6 +47,8 @@
 		font-weight: 500;
 		line-height: 1.4;
 	}
+	.centered h1 { text-align: center; }
+	.centered .form-number { justify-content: center; }
 	.form-number {
 		display: flex;
 		flex-wrap: wrap;
@@ -65,7 +68,12 @@
 		color: var(--fg);
 		font-size: 1rem;
 		font-weight: 700;
+		font-family: var(--font-mono);
 		font-variant-numeric: tabular-nums;
+	}
+	.form-revision {
+		font-size: .875rem;
+		font-weight: 600;
 	}
 
 	@container paper-form (min-width: 40rem) {
@@ -77,5 +85,10 @@
 			flex-direction: column;
 			align-items: flex-end;
 		}
+		.centered {
+			grid-template-columns: minmax(8rem, 1fr) minmax(0, 3fr) minmax(8rem, 1fr);
+		}
+		.centered h1 { grid-column: 2; }
+		.centered .form-number { justify-content: start; }
 	}
 </style>

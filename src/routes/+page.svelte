@@ -183,7 +183,7 @@
 	.workflow { margin-top: 0.25rem; }
 	.workflow ol { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 1.5rem; list-style: none; padding: 0; margin: 1rem 0 0; }
 	.step-title { display: flex; gap: 0.5rem; align-items: center; }
-	.step-number { color: var(--fg-muted); font-size: 0.75rem; font-variant-numeric: tabular-nums; }
+	.step-number { color: var(--fg-muted); font-size: 0.75rem; font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
 	.step-title h3 { font-size: 0.875rem; font-weight: 600; }
 	.workflow li p { margin-top: 0.5rem; font-size: 0.8125rem; line-height: 1.6; color: var(--fg-muted); }
 

@@ -7,7 +7,7 @@
 	import { filterATCOptions, getLegacyInterestATCOptions } from './atc-picker';
 	import { getWithholdingAtcs } from './withholding-definitions';
 
-	let { id, label = 'ATC', value, category, year = NaN, formCode = '1601EQ', fieldOptions = [], error = '', required = true, onchange }: {
+	let { id, label = 'ATC', value, category, year = NaN, formCode = '1601EQ', fieldOptions = [], error = '', required = true, allowCustom = true, onchange }: {
 		id: string;
 		label?: string;
 		value: string;
@@ -17,6 +17,7 @@
 		fieldOptions?: { value: string; label: string }[];
 		error?: string;
 		required?: boolean;
+		allowCustom?: boolean;
 		onchange: (code: string) => void;
 	} = $props();
 	const options = $derived.by(() => {
@@ -61,7 +62,7 @@
 		maxVisibleItems={4}
 		clearable
 		createLabel="Use ATC"
-		onCreate={(query) => { if (query.trim()) onchange(query.trim().toUpperCase()); }}
+		onCreate={allowCustom ? (query) => { if (query.trim()) onchange(query.trim().toUpperCase()); } : undefined}
 		onValueChange={(code) => onchange(typeof code === 'string' ? code : '')}
 	>
 		{#snippet trigger(option)}<span class={stylex.attrs(atcPicker.selectedLabel).class}>{option.label}</span>{/snippet}

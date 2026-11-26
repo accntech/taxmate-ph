@@ -53,6 +53,7 @@
 		'frm1700:rdoPg1Pt1I13SingleInd': 'Single', 'frm1700:rdoPg1Pt1I13MarriedInd': 'Married',
 		'frm1700:rdoPg1Pt1I13LegalSeparatedInd': 'Legally separated', 'frm1700:rdoPg1Pt1I13WidowerInd': 'Widowed'
 	};
+	const monospaceKeys = new Set(['tin', 'rdoCode', 'zipCode', 'contactNumber', 'birthDate', 'psocCode']);
 	const profileLabels: Partial<Record<TaxpayerItemKey, string>> = {
 		tin: 'TIN and branch code', rdoCode: 'RDO code', taxpayerName: 'Withholding agent’s name',
 		address: 'Registered address', zipCode: 'ZIP code', category: 'Category of withholding agent',
@@ -93,24 +94,24 @@
 	].sort((a, b) => compareFormItems(a.item, b.item)));
 
 	const details = $derived(remittance ? [
-		{ item: remittanceTinItem, label: 'TIN and branch code', content: tin },
-		{ item: remittanceTinItem + 1, label: 'RDO code', content: value('rdoCode') },
+		{ item: remittanceTinItem, key: 'tin', label: 'TIN and branch code', content: tin },
+		{ item: remittanceTinItem + 1, key: 'rdoCode', label: 'RDO code', content: value('rdoCode') },
 		{ item: remittanceTinItem + 2, label: 'Withholding agent’s name', content: value('taxpayerName') },
 		{ item: remittanceTinItem + 3, label: 'Registered address', content: address },
-		{ item: `${remittanceTinItem + 3}A`, label: 'ZIP code', content: value('zipCode') },
-		{ item: remittanceTinItem + 4, label: 'Contact number', content: value('contactNumber') },
+		{ item: `${remittanceTinItem + 3}A`, key: 'zipCode', label: 'ZIP code', content: value('zipCode') },
+		{ item: remittanceTinItem + 4, key: 'contactNumber', label: 'Contact number', content: value('contactNumber') },
 		{ item: remittanceTinItem + 5, label: 'Category of withholding agent', content: category === 'P' ? 'Private' : category === 'G' ? 'Government' : '' },
 		{ item: remittanceTinItem + 6, label: 'Email address', content: value('email') }
 	] : [
 		{ item: payment ? 13 : 8, label: 'Taxpayer name', content: value('taxpayerName') },
-		{ item: payment ? 9 : 6, label: 'TIN and branch code', content: tin },
-		{ item: payment ? 10 : 7, label: 'RDO code', content: value('rdoCode') },
+		{ item: payment ? 9 : 6, key: 'tin', label: 'TIN and branch code', content: tin },
+		{ item: payment ? 10 : 7, key: 'rdoCode', label: 'RDO code', content: value('rdoCode') },
 		{ item: payment ? 15 : 9, label: 'Registered address', content: address },
 		...(payment ? [
 			{ item: 11, label: 'Taxpayer classification', content: classification === 'I' ? 'Individual' : classification === 'N' ? 'Non-individual' : '' },
 			{ item: 12, label: 'Line of business / occupation', content: value('lineOfBusiness') },
-			{ item: 14, label: 'Telephone number', content: value('contactNumber') },
-			{ item: 16, label: 'ZIP code', content: value('zipCode') }
+			{ item: 14, key: 'contactNumber', label: 'Telephone number', content: value('contactNumber') },
+			{ item: 16, key: 'zipCode', label: 'ZIP code', content: value('zipCode') }
 		] : [])
 	]);
 </script>
@@ -135,7 +136,7 @@
 				{:else}
 					<dl data-profile-key={row.key} data-income-item={revised1700 ? row.item : undefined}>
 						<dt><span class="taxpayer-item">{row.item}</span> {row.label}</dt>
-						<dd class:profile-required={!!legacyProfileNotice[row.key]}>{legacyProfileNotice[row.key] || row.content || '—'}</dd>
+						<dd class:font-mono={monospaceKeys.has(row.key) && !legacyProfileNotice[row.key]} class:profile-required={!!legacyProfileNotice[row.key]}>{legacyProfileNotice[row.key] || row.content || '—'}</dd>
 						{#if row.fieldIds && extraField}
 							<dd class="profile-item-controls">
 								{#each row.fieldIds as id (id)}{@render extraField(id)}{/each}
@@ -147,10 +148,10 @@
 		</div>
 	{:else}
 		<dl>
-			{#each (paper && !remittance ? [...details].sort((a, b) => Number(a.item) - Number(b.item)) : details) as { item, label, content } (item)}
+			{#each (paper && !remittance ? [...details].sort((a, b) => Number(a.item) - Number(b.item)) : details) as detail (detail.item)}
 				<div>
-				<dt>{#if paper}<span class="taxpayer-item">{item}</span>{/if} {label}</dt>
-					<dd>{content || '—'}</dd>
+					<dt>{#if paper}<span class="taxpayer-item">{detail.item}</span>{/if} {detail.label}</dt>
+					<dd class:font-mono={'key' in detail && monospaceKeys.has(detail.key ?? '')}>{detail.content || '—'}</dd>
 				</div>
 			{/each}
 		</dl>
@@ -169,7 +170,7 @@
 	.paper .eq-section-header { margin: 0; padding: .375rem .875rem; background: var(--paper-section-background, var(--bg-hover)); }
 	.paper dl { gap: 0; }
 	.paper dl > div { padding: .75rem .875rem; border-top: 1px solid var(--border); }
-	.taxpayer-item { margin-inline-end: .5rem; color: var(--fg); font-weight: 650; }
+	.taxpayer-item { font-family: var(--font-mono); margin-inline-end: .5rem; color: var(--fg); font-weight: 650; }
 	@container paper-form (min-width: 36rem) {
 		.paper:not(.payment, .remittance, .mapped-paper) dl { grid-template-columns: minmax(0, 1.2fr) minmax(0, .6fr) minmax(0, 2fr); }
 		.paper:not(.payment, .remittance, .mapped-paper) dl > div:nth-child(n + 2):nth-child(-n + 3) { border-inline-start: 1px solid var(--border); }
@@ -229,7 +230,7 @@
 		.legacy-1700 [data-profile-key="address"] > :is(dt, dd:not(.profile-item-controls)) { grid-column: 1; }
 		.legacy-1700 .profile-item-controls { grid-area: 1 / 2 / 3; align-self: center; margin: 0; }
 	}
-	.profile-extra > .taxpayer-item { margin-inline-end: 0; font-size: .8rem; }
+	.profile-extra > .taxpayer-item { font-family: var(--font-mono); margin-inline-end: 0; font-size: .8rem; }
 	.profile-extra :global([data-slot="form-item"]) { grid-template-columns: minmax(0, 1fr); }
 	@container paper-form (min-width: 36rem) {
 		.profile-grid { --profile-cell-width: calc((100% - 1px) / 2); }
@@ -243,7 +244,7 @@
 	.revised-1700 .profile-extra, .revised-1700 .profile-grid > dl > dt { grid-template-columns: 1.4rem minmax(0, 1fr); gap: .375rem; }
 	.revised-1700 .profile-grid > dl > dt { display: grid; }
 	.revised-1700 .profile-grid > dl > dd { padding-inline-start: 1.775rem; }
-	.revised-1700 .profile-grid > dl .taxpayer-item { margin-inline-end: 0; }
+	.revised-1700 .profile-grid > dl .taxpayer-item { font-family: var(--font-mono); margin-inline-end: 0; }
 	@container paper-form (width >= 54rem) {
 		.revised-1700 .profile-grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); }
 		.revised-1700 [data-income-item="4"] { grid-column: 1 / 5; }

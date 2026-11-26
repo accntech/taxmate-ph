@@ -3,6 +3,12 @@
 @import './lib/components/ui/theme.css';
 @import './lib/components/ui/styles/list-controls.css';
 
+/* Numeric entry may use type="text" to preserve leading zeroes and formatting. */
+.font-mono,
+input:is([type="number"], [type="tel"], [inputmode="numeric"], [inputmode="decimal"], [inputmode="tel"]) {
+	font-family: var(--font-mono);
+}
+
 /* Keep native caption controls outside the sidebar and page navigation. */
 html[data-tauri-platform] {
 	--desktop-titlebar-height: 48px;

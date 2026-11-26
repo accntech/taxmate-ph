@@ -1,10 +1,11 @@
 <script lang="ts">
 	import { Pagination } from '$lib/components/ui';
+	import ReturnPageCommand from './return-page-command.svelte';
 
 	let { pages, current, onchange }: {
 		pages: { id: string; title: string }[];
 		current: string;
-		onchange: (page: string) => void;
+		onchange: (page: string) => void | Promise<void>;
 	} = $props();
 
 	const page = $derived(Math.max(1, pages.findIndex((item) => item.id === current) + 1));
@@ -15,12 +16,16 @@
 		{page}
 		pageSize={1}
 		total={pages.length}
-		summary="page"
+		summary={false}
 		label="Return pages"
 		class="return-pagination"
 		pageTitle={(index) => pages[index - 1].title}
-		onchange={(index) => onchange(pages[index - 1].id)}
-	/>
+		onchange={(index) => void onchange(pages[index - 1].id)}
+	>
+		{#snippet pagePicker()}
+			<ReturnPageCommand {pages} {current} {onchange} />
+		{/snippet}
+	</Pagination>
 {:else}
 	<p class="single-page-status">Page 1 of 1</p>
 {/if}

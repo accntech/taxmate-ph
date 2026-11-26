@@ -13,6 +13,7 @@ export const atcPicker = stylex.create({
     color: "var(--danger)"
   },
   selectedLabel: {
+    fontFamily: "var(--font-mono)",
     overflow: "hidden",
     textOverflow: "ellipsis",
     whiteSpace: "nowrap"
@@ -23,6 +24,7 @@ export const atcPicker = stylex.create({
     textAlign: "left"
   },
   optionHeading: {
+    fontFamily: "var(--font-mono)",
     display: "flex",
     alignItems: "center",
     gap: "0.5rem",

@@ -189,6 +189,7 @@
 						</div>
 						<Input
 							label="RDO code"
+							class="font-mono"
 							maxlength={3}
 							pattern={'[0-9A-Z]{3}'}
 							required
@@ -228,6 +229,7 @@
 									<Label for="taxpayer-psoc">Occupation code (PSOC)</Label>
 									<Combobox
 										id="taxpayer-psoc"
+										monospace="secondary"
 										options={psocOptions}
 										value={workspace.profile.psocCode || null}
 										placeholder="Choose occupation"
@@ -265,6 +267,7 @@
 							<Label for="taxpayer-psic">PSIC code</Label>
 							<Combobox
 								id="taxpayer-psic"
+								monospace="secondary"
 								options={psicOptionsForCode(workspace.profile.psicCode)}
 								value={workspace.profile.psicCode || null}
 								placeholder="Choose industry"

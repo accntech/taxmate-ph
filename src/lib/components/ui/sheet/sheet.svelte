@@ -25,6 +25,7 @@
     closedByEscape?: boolean;
     hideCloseButton?: boolean;
     title?: string;
+    context?: string;
     description?: string;
     header?: Snippet;
     children?: Snippet;
@@ -41,6 +42,7 @@
     closedByEscape = true,
     hideCloseButton = false,
     title,
+    context,
     description,
     header,
     children,
@@ -55,7 +57,11 @@
 
   const uid = $props.id();
   const titleId = `${uid}-title`;
+  const contextId = `${uid}-context`;
   const descId = `${uid}-desc`;
+  const describedBy = $derived(
+    !header ? [context && contextId, description && descId].filter(Boolean).join(" ") || undefined : undefined,
+  );
 
   const sideClass = $derived(
     side === "right" ? sheetLayout.right : sheetLayout.left,
@@ -70,7 +76,7 @@
   {closedByEscape}
   aria-label={header ? title : undefined}
   aria-labelledby={!header && title ? titleId : undefined}
-  aria-describedby={description ? descId : undefined}
+  aria-describedby={describedBy}
   data-side={side}
   data-size={size}
   class={[
@@ -95,7 +101,7 @@
       >
         {@render header()}
       </div>
-    {:else if title || description}
+    {:else if title || context || description}
       <div
         class={[
           stylex.attrs(
@@ -109,13 +115,21 @@
             {title}
           </h2>
         {/if}
+        {#if context}
+          <p
+            id={contextId}
+            class={stylex.attrs(sheetLayout.context, title ? sheetLayout.belowTitle : null).class}
+          >
+            {context}
+          </p>
+        {/if}
         {#if description}
           <p
             id={descId}
             class={[
               stylex.attrs(
                 sheetLayout.description,
-                title ? sheetLayout.belowTitle : null,
+                title || context ? sheetLayout.belowTitle : null,
               ).class,
             ]}
           >

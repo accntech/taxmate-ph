@@ -22,6 +22,7 @@
     children,
     label = "Pagination",
     pageTitle,
+    pagePicker,
   }: {
     page: number;
     pageSize: number;
@@ -34,6 +35,7 @@
     children?: Snippet;
     label?: string;
     pageTitle?: (page: number) => string;
+    pagePicker?: Snippet;
   } = $props();
 
   const pageCount = $derived(Math.max(1, Math.ceil(total / pageSize)));
@@ -56,9 +58,12 @@
 {/snippet}
 
 <div class={["taxmate-pagination", compact && "is-compact", className]}>
-  <div class="summary" class:page-status-only={summary === "page" && !children}>
+  <div
+    class={["summary", summary === "page" && !children && "page-status-only"]}
+    hidden={!!pagePicker && !summary && !children}
+  >
     {#if summary === "page"}
-      <span class="page-status" aria-live="polite">Page {page} of {pageCount}</span>
+      <span class="page-status" aria-live="polite">Page <span class="font-mono">{page}</span> of <span class="font-mono">{pageCount}</span></span>
     {:else if summary}
       <span aria-live="polite"
         >Showing <strong class="count">{start}–{end}</strong> of
@@ -72,7 +77,10 @@
   </div>
   <SdkPagination {page} {pageCount} getHref={href} onPageChange={href ? undefined : onchange} aria-label={label}>
     {#snippet render({ props, children: controls, state })}
-      <nav {...props} class="navigation">
+      <nav {...props} class={["navigation", pagePicker && "has-page-picker"]}>
+        {#if pagePicker}
+          <div class="page-picker">{@render pagePicker()}</div>
+        {/if}
         {@render controls?.(state)}
       </nav>
     {/snippet}
@@ -90,9 +98,11 @@
       <span class="disabled-step" aria-hidden="true">{@render previousContent()}</span>
     {/if}
     <div class="page-summary" aria-live={summary === "page" ? "polite" : undefined}>
-      <span class="page-label">Page&nbsp;</span><span class="page-count">{page}</span><span
-        class="page-label">&nbsp;of&nbsp;</span
-      ><span class="page-count">{pageCount}</span>
+      {#if !pagePicker}
+        <span class="page-label">Page&nbsp;</span><span class="page-count font-mono">{page}</span><span
+          class="page-label">&nbsp;of&nbsp;</span
+        ><span class="page-count font-mono">{pageCount}</span>
+      {/if}
       {#each pages as item, index (`${index}-${item}`)}
         {#if item === "…"}
           <span class="ellipsis">…</span>
@@ -152,6 +162,16 @@
     display: flex;
     align-items: center;
     gap: 0.5rem;
+  }
+  .summary[hidden] {
+    display: none;
+  }
+  .has-page-picker {
+    flex: 1;
+  }
+  .page-picker {
+    flex: none;
+    margin-inline-end: auto;
   }
   .count {
     font-family: var(--font-mono);
@@ -278,8 +298,10 @@
   .is-compact .page-count {
     display: inline;
   }
+  .is-compact .has-page-picker .page-summary,
   .is-compact :is(.page-status, .page-status-only) { display: none; }
   @media (max-width: 767px) {
+    .has-page-picker .page-summary,
     .page-status, .page-status-only { display: none; }
     .taxmate-pagination {
       flex-direction: column;

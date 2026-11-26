@@ -144,7 +144,7 @@
 	}
 
 	.step-heading { display: flex; align-items: baseline; gap: 0.625rem; }
-	.step-number { color: var(--fg-muted); font-size: 0.75rem; font-variant-numeric: tabular-nums; }
+	.step-number { color: var(--fg-muted); font-size: 0.75rem; font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
 	h3 { font-size: 0.875rem; font-weight: 600; line-height: 1.5; }
 	li p { margin-top: 0.5rem; color: var(--fg-muted); font-size: 0.8125rem; line-height: 1.6; }
 
