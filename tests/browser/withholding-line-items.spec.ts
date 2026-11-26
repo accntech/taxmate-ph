@@ -95,7 +95,7 @@ for (const code of otherGatedForms) {
 		await seedWorkspace(page);
 		await page.goto(`/ebirforms/taxpayers/${taxpayerId}/forms/${code}?new=true`);
 		const withheld = page.getByRole('radiogroup', { name: 'Any tax withheld?', exact: true });
-		await expect(withheld.getByRole('radio', { name: 'No', exact: true })).toBeChecked();
+		await withheld.getByRole('radio', { name: 'No', exact: true }).check();
 		await expect(page.locator('.wh-schedule')).toHaveCount(0);
 		await withheld.getByRole('radio', { name: 'Yes', exact: true }).check();
 		await expect(page.locator('.wh-schedule')).toHaveCount(getWithholdingDefinition(code)!.schedules.length);
@@ -110,7 +110,7 @@ test('an empty schedule has no extra divider above its totals', async ({ page })
 	for (const width of [1440, 390]) {
 		await page.setViewportSize({ width, height: 960 });
 		await expect(emptyState).toBeVisible();
-		await expect(emptyState).toHaveCSS('border-bottom-style', 'dashed');
+		await expect(emptyState).toHaveCSS('border-bottom-width', '0px');
 		await expect(totals).toBeVisible();
 		await expect(totals).toHaveCSS('border-top-width', '0px');
 	}
@@ -166,14 +166,16 @@ for (const [code, scheduleId, tuples] of [
 		const target = await list.getByRole('button', { name: 'Drag line item 1', exact: true }).boundingBox();
 		await page.mouse.move(source!.x + source!.width / 2, source!.y + source!.height / 2);
 		await page.mouse.down();
-		await page.mouse.move(target!.x + target!.width / 2, target!.y + target!.height / 2, { steps: 8 });
+		await page.mouse.move(target!.x + target!.width / 2, target!.y + target!.height / 2 - 2, { steps: 8 });
 		await expect(list.getByRole('listitem').first()).toContainText(tuples[1][0]);
 		await page.mouse.up();
 		expect(await original!.textContent()).toContain(tuples[0][0]);
 		await list.getByRole('button', { name: 'Drag line item 1', exact: true }).press('ArrowDown');
 		await expect.poll(() => original!.evaluate(element => element.getAnimations().some(animation => animation.playState === 'running' && (animation.effect as KeyframeEffect).getKeyframes().some(frame => frame.transform && frame.transform !== 'none')))).toBe(true);
 		await list.getByRole('button', { name: 'Drag line item 2', exact: true }).press('ArrowUp');
-		await list.getByRole('button', { name: 'Remove line item 1', exact: true }).click();
+		await list.getByRole('button', { name: 'Edit line item 1', exact: true }).click();
+		await page.getByRole('dialog', { name: 'Edit line item 1', exact: true }).getByRole('button', { name: 'Delete item', exact: true }).click();
+		await expect(page.getByRole('dialog')).toBeHidden();
 		await page.getByRole('region', { name: schedule.title, exact: true }).getByRole('button', { name: 'Undo', exact: true }).click();
 		await expect(list.getByRole('listitem').first()).toContainText(tuples[1][0]);
 		await page.getByRole('button', { name: 'Save draft', exact: true }).click();
@@ -194,6 +196,7 @@ test('overflow drafts allocate row 11 only on commit', async ({ page }) => {
 	const editor = page.getByRole('dialog', { name: 'New line item', exact: true });
 	await expect(editor.locator('[id="frm1601E:txtAtcCode11"]')).toBeVisible();
 	await editor.getByRole('button', { name: 'Cancel', exact: true }).click();
+	await expect(editor).toBeHidden();
 	await expect(list.getByRole('listitem')).toHaveCount(10);
 	await add.click();
 	await editor.getByRole('combobox', { name: 'ATC', exact: true }).click();
@@ -238,6 +241,20 @@ test('fixed fringe-benefit rows keep their prescribed category and tax rate', as
 	await expect(list).toContainText('Citizens and resident / engaged aliens');
 	await expect(list).toContainText('350.00');
 	await expect(list.getByRole('button', { name: /^Drag line item/ })).toHaveCount(0);
+});
+
+test('1601E reopens a schedule item after closing its drawer', async ({ page }) => {
+	const schedule = await seededSchedule(page, '1601E', 'atc', [['WI120', '100000', '2', '2000']]);
+	const edit = scheduleList(page, schedule).getByRole('button', { name: 'Edit line item 1', exact: true });
+	const drawer = page.getByRole('dialog', { name: 'Edit line item 1', exact: true });
+
+	await edit.click();
+	await expect(drawer).toBeVisible();
+	await drawer.getByRole('button', { name: 'Close', exact: true }).click();
+	await expect(drawer).toBeHidden();
+
+	await edit.click();
+	await expect(drawer.getByRole('combobox', { name: 'ATC', exact: true })).toBeFocused();
 });
 
 test('validation opens the affected schedule from the return summary page', async ({ page }) => {
@@ -337,3 +354,17 @@ for (const definition of withholdingDefinitions.filter(definition => definition.
 		}
 	});
 }
+
+test('withholding schedules keep Add in the header and delete through the item drawer', async ({ page }) => {
+	const schedule = await seededSchedule(page, '1601E', 'atc', [['WI120', '100000', '2', '2000']]);
+	const panel = page.getByRole('region', { name: schedule.title, exact: true });
+	await expect(panel.locator('.schedule-actions').getByRole('button', { name: `Add line item to ${schedule.title}`, exact: true })).toBeVisible();
+	await scheduleList(page, schedule).getByRole('button', { name: 'Edit line item 1', exact: true }).click();
+	const drawer = page.getByRole('dialog', { name: 'Edit line item 1', exact: true });
+	await drawer.getByRole('button', { name: 'Delete item', exact: true }).click();
+	await expect(drawer).toBeHidden();
+	await expect(scheduleList(page, schedule).getByRole('listitem')).toHaveCount(0);
+	await expect(panel.locator('.schedule-actions').getByRole('button', { name: `Add line item to ${schedule.title}`, exact: true })).toBeFocused();
+	await panel.getByRole('button', { name: 'Undo', exact: true }).click();
+	await expect(scheduleList(page, schedule)).toContainText('WI120');
+});

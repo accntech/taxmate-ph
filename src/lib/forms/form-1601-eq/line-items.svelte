@@ -7,10 +7,6 @@
 	import { cubicOut } from 'svelte/easing';
 	import { prefersReducedMotion } from 'svelte/motion';
 	import { Sheet } from '$lib/components/ui/sheet';
-	import TrashBinTrash from '@solar-icons/svelte/category/ui/Linear/TrashBinTrash.svelte';
-	import Icon from '$lib/components/ui/icon/icon.svelte';
-	import { glyphs } from '$lib/components/ui/icons';
-	import BillList from '@solar-icons/svelte/category/money/Linear/BillList.svelte';
 	import { Button, CalculatedValue, CurrencyInput } from '$lib/components/ui';
 	import { normalizeCurrencyInput } from '$lib/components/ui/currency-input/currency';
 	import AtcPicker from '../atc-picker.svelte';
@@ -127,12 +123,6 @@
 		close();
 	}
 
-	function updateInline(part: 'txtATC' | 'txtTaxBase', row: number, value: string) {
-		const id = prefix + part + row;
-		if ((values[id] || '') === value) return;
-		removed = null;
-		onchange(part === 'txtATC' ? { [id]: value, [prefix + 'txtTaxRate' + row]: '' } : { [id]: value });
-	}
 
 	function remove(row: number) {
 		removed = snapshot();
@@ -140,6 +130,13 @@
 		onchange(Object.fromEntries(parts.map(part => [prefix + part + row, ''])));
 		announcement = 'Line item removed.';
 		void focus('add-atc-row');
+	}
+
+	function deleteItem() {
+		if (isNew) return;
+		remove(line);
+		returnFocus = document.getElementById('add-atc-row');
+		close();
 	}
 
 	function undo() {
@@ -274,7 +271,7 @@
 
 {#snippet rowSummary(row: number)}
 	{@const atc = values[prefix + 'txtATC' + row] || ''}
-	<span class="item-number">Item {row}</span>
+	<span class="item-number">Item <span class="font-mono">{row}</span></span>
 	<strong>{atc || 'ATC not selected'}</strong>
 	<span>{money(values[prefix + 'txtTaxBase' + row])}</span>
 	<strong>{money(calculated[prefix + 'txtTaxWithheld' + row])}</strong>
@@ -292,16 +289,14 @@
 <section aria-label="Taxes withheld" class="tax-lines">
 	<header class="eq-section-header">
 		<h2>Part II · Computation of Tax</h2>
-		{#if values[prefix + 'optTaxesWithheld'] === 'Y'}<span class="count">{rows.length} / 6 line items</span>{/if}
+		{#if values[prefix + 'optTaxesWithheld'] === 'Y'}
+			<span class="count">({rows.length}/6)</span>
+			<Button id="add-atc-row" aria-label="Add line item" variant="secondary" size="sm" disabled={rows.length >= 6} onclick={(event) => edit(undefined, undefined, event.currentTarget)} aria-keyshortcuts="Meta+i Control+i">Add item</Button>
+		{/if}
 	</header>
 	{#if values[prefix + 'optTaxesWithheld'] === 'Y'}
 		{#if rows.length === 0}
-			<div class="empty">
-				<span class="empty-icon" aria-hidden="true"><BillList size={28} color="currentColor" /></span>
-				<p class="empty-title">No line items yet</p>
-				<p>Add an ATC and tax base to record taxes withheld.</p>
-				<Button id="add-atc-row" aria-label="Add first line item" variant="secondary" size="sm" onclick={(event) => edit(undefined, undefined, event.currentTarget)} aria-keyshortcuts="Meta+i Control+i">Add first line item <kbd>⌘/Ctrl+I</kbd></Button>
-			</div>
+			<p class="schedule-empty-message">No items added</p>
 		{:else}
 			<p id="atc-drag-help" class="help">Drag the grip to reorder. With the grip focused, use ↑ or ↓.</p>
 			<div class="column-head" aria-hidden="true">
@@ -312,22 +307,23 @@
 			<ol bind:this={listElement} aria-label="ATC line items" class="items" onpointermove={movePointer} onpointerup={finishPointer} onpointercancel={cancelPointer} onlostpointercapture={cancelPointer}>
 				{#each displayRows as row, index (rowKeys[row])}
 					{@const invalid = parts.some(part => errors[prefix + part + row])}
-					{@const inlineId = `eq-inline-${row}`}
 					{@const rate = calculated[prefix + 'txtTaxRate' + row]}
 					{@const taxBase = values[prefix + 'txtTaxBase' + row] || ''}
 					<li animate:flip={{ duration: prefersReducedMotion.current ? 0 : 180, easing: cubicOut }} class={['item', dragging === row && 'dragging', invalid && 'invalid']}>
 						<div class="line-cells">
-							<div class="item-number"><span class="mobile-label">Item</span>{row}</div>
+							<div class="item-number"><span class="mobile-label">Item</span><span class="font-mono">{row}</span></div>
 							<div class="entry-cell">
 								<span class="mobile-label" aria-hidden="true">ATC</span>
-								<AtcPicker id={inlineId + '-atc'} label={`Item ${row} ATC`} value={values[prefix + 'txtATC' + row] || ''}
-									category={values[prefix + 'optCategory'] || ''} year={Number(values[prefix + 'txtYear'])}
-									error={errors[prefix + 'txtATC' + row] || ''} onchange={(code) => updateInline('txtATC', row, code)} />
+								<button type="button" class="entry-link" aria-label={`Edit line item ${index + 1}`}
+									onclick={(event) => edit(row, undefined, event.currentTarget)}>
+									{#if values[prefix + 'txtATC' + row]}
+										<span class="font-mono">{values[prefix + 'txtATC' + row]}</span>
+									{:else}ATC not selected{/if}
+								</button>
 							</div>
-							<div class="entry-cell">
+							<div class="number-cell">
 								<span class="mobile-label" aria-hidden="true">Tax base</span>
-								<CurrencyInput id={inlineId + '-base'} aria-label={`Item ${row} Tax base`} value={taxBase}
-									error={errors[prefix + 'txtTaxBase' + row] || ''} onchange={(value) => updateInline('txtTaxBase', row, value)} />
+								<output aria-label={`Item ${row} Tax base`}>{money(taxBase)}</output>
 							</div>
 							<div class="number-cell">
 								<span class="mobile-label" aria-hidden="true">Tax rate</span>
@@ -346,14 +342,9 @@
 							onpointerdown={(event) => startPointer(event, row)} onkeydown={(event) => reorderKey(event, index)}>
 							{@render gripIcon()}
 						</button>
-						<div class="row-actions">
-							<Button variant="ghost" size="icon" aria-label={`Edit line item ${index + 1}`} title="Edit line item" onclick={(event) => edit(row, undefined, event.currentTarget)}><span class="edit-icon"><Icon icon={glyphs.pencil} /></span></Button>
-							<Button variant="ghost" size="icon" aria-label={`Remove line item ${index + 1}`} title="Remove line item" data-agent-confirm="delete" onclick={() => remove(row)}><TrashBinTrash size={18} color="currentColor" aria-hidden="true" /></Button>
-						</div>
 					</li>
 				{/each}
 			</ol>
-			<div class="add-row"><Button id="add-atc-row" aria-label="Add line item" variant="secondary" size="sm" disabled={rows.length >= 6} onclick={(event) => edit(undefined, undefined, event.currentTarget)} aria-keyshortcuts="Meta+i Control+i">Add line item <kbd>⌘/Ctrl+I</kbd></Button>{#if rows.length >= 6}<span class="help">All six ATC lines are in use.</span>{/if}</div>
 		{/if}
 		{#if removed}<div class="eq-undo"><span>Line item removed.</span><Button variant="ghost" size="sm" onclick={undo}>Undo</Button></div>{/if}
 		{#if rows.length === 0 && errors[prefix + 'txtATC13']}<p class="error">{errors[prefix + 'txtATC13']}</p>{/if}
@@ -365,7 +356,14 @@
 	<p class={stylex.attrs(lineItems.announcement).class} role="status">{announcement}</p>
 </section>
 
-<Sheet {open} onOpenChange={(next) => { if (!next) close(); }} {title} description="Choose an ATC and enter its tax base. Add or update to apply this line to the return." size="md">
+<Sheet
+	{open}
+	onOpenChange={(next) => { if (!next) close(); }}
+	{title}
+	context="Taxes withheld"
+	description="Choose an ATC and enter its tax base."
+	size="md"
+>
 	{#if open}
 		<fieldset class="editor-fields" aria-label={`ATC row ${line - 12}`}>
 			<AtcPicker id={prefix + 'txtATC' + line} value={draft[prefix + 'txtATC' + line] || ''} category={values[prefix + 'optCategory'] || ''} year={Number(values[prefix + 'txtYear'])}
@@ -376,79 +374,56 @@
 			<CalculatedValue id={prefix + 'txtTaxWithheld' + line} label="Tax withheld" for={prefix + 'txtTaxBase' + line} value={normalizeCurrencyInput(draft[prefix + 'txtTaxBase' + line] || '') === null ? '' : money(draftCalculated[prefix + 'txtTaxWithheld' + line])} amountColumn />
 		</fieldset>
 	{/if}
-	{#snippet footer()}<div class="editor-actions"><Button variant="secondary" onclick={close}>Cancel</Button><Button onclick={commit}>{isNew ? 'Add' : 'Update'}</Button></div>{/snippet}
+	{#snippet footer()}<div class="editor-actions">{#if !isNew}<Button variant="danger" data-agent-confirm="delete" onclick={deleteItem}>Delete item</Button>{/if}<Button variant="secondary" onclick={close}>Cancel</Button><Button onclick={commit}>{isNew ? 'Add' : 'Update'}</Button></div>{/snippet}
 </Sheet>
 
 <style>
-	.count, .help, .empty > p { color: var(--fg-muted); font-size: .8rem; }
-	.count { white-space: nowrap; font-variant-numeric: tabular-nums; }
-	.empty { display: grid; justify-items: center; gap: .75rem; padding: 2rem 1rem; border: 1px dashed var(--border); background: var(--bg); text-align: center; }
-	.empty-icon { display: grid; width: 2.5rem; height: 2.5rem; place-items: center; border: 1px solid var(--border); border-radius: .5rem; color: var(--fg-muted); font-size: 1.5rem; }
-	.empty .empty-title { color: var(--fg); font-size: .95rem; font-weight: 600; }
-	kbd { margin-left: .4rem; color: var(--fg-subtle); font-family: var(--font-sans); font-size: .7rem; }
+	.count, .help { color: var(--fg-muted); font-size: .8rem; }
+	.count { font-family: var(--font-mono); white-space: nowrap; font-variant-numeric: tabular-nums; }
 	.help { margin-bottom: .75rem; }
 	.tax-lines { min-width: 0; }
-	.eq-section-header { flex-wrap: wrap; margin: 0; padding: .625rem .875rem; border-block: 1px solid var(--border); background: var(--paper-section-background, var(--bg-hover)); }
-	.tax-lines > .help, .tax-lines > .add-row, .tax-lines > .eq-muted, .tax-lines > .eq-undo, .tax-lines > .error { margin: .75rem .875rem; }
-	.empty, .items, .column-head { margin-inline: .875rem; }
+	.eq-section-header { flex-wrap: wrap; gap: .5rem; margin: 0; padding: .625rem .875rem; border-block: 1px solid var(--border); background: var(--paper-section-background, var(--bg-hover)); }
+	.eq-section-header :global(#add-atc-row) { margin-inline-start: auto; }
+	.tax-lines > .help, .tax-lines > .eq-muted, .tax-lines > .eq-undo, .tax-lines > .error { margin: .75rem .875rem; }
+	.items, .column-head { margin-inline: .875rem; }
 	.items { margin-block: 0; padding: 0; list-style: none; }
-	.item, .column-head { display: grid; grid-template-columns: 2.75rem minmax(0, 1fr) 5.5rem; align-items: stretch; border-inline: 1px solid var(--border); background: var(--bg-elev); }
-	.item { border-bottom: 1px solid var(--border); }
-	.column-head { border-block: 1px solid var(--border); background: var(--bg); color: var(--fg-muted); font-size: .75rem; font-weight: 600; }
-	.line-cells { grid-column: 2; grid-row: 1; display: grid; grid-template-columns: 3.125rem minmax(0, 1fr) minmax(0, 1.25fr) minmax(0, .7fr) minmax(0, 1fr); min-width: 0; }
-	.line-cells > * { min-width: 0; padding: .5rem; border-left: 1px solid var(--border); }
-	.line-cells > :last-child { border-right: 1px solid var(--border); }
+	.item, .column-head { display: grid; grid-template-columns: 2rem minmax(0, 1fr); align-items: stretch; background: var(--bg-elev); }
+	.item { border-bottom: 1px solid var(--border-soft); }
+	.column-head { border-bottom: 1px solid var(--border-soft); color: var(--fg-muted); font-size: .75rem; font-weight: 600; }
+	.line-cells { grid-column: 2; grid-row: 1; display: grid; grid-template-columns: 2rem minmax(0, 1fr) minmax(0, 1.25fr) minmax(0, .7fr) minmax(0, 1fr); min-width: 0; }
+	.line-cells > * { min-width: 0; padding: .5rem; }
 	.item.dragging { opacity: .3; }
-	.item.invalid { border-inline-color: var(--danger); }
-	.item-number { font-weight: 650; color: var(--accent); }
-	.grip { grid-column: 1; grid-row: 1; display: grid; width: 2.75rem; min-height: 2.75rem; place-items: center; border: 1px solid transparent; border-radius: 4px; color: var(--fg-muted); background: transparent; cursor: grab; touch-action: none; user-select: none; }
+	.item.invalid { border-color: var(--danger); }
+	.item-number { color: var(--fg-muted); font-size: .8rem; font-variant-numeric: tabular-nums; }
+	.grip { grid-column: 1; grid-row: 1; display: grid; width: 2rem; min-height: 2.5rem; place-items: center; border: 1px solid transparent; border-radius: 4px; color: var(--fg-muted); background: transparent; cursor: grab; touch-action: none; user-select: none; }
 	.grip:active { cursor: grabbing; }
 	.grip:disabled { opacity: .35; cursor: default; }
 	.grip:hover:not(:disabled):not(:focus-visible) { background: var(--bg-hover); }
-	.grip:focus-visible { position: relative; z-index: 1; outline: none; border-color: var(--field-focus-border); box-shadow: 0 0 0 3px var(--field-focus-halo); }
-	.row-actions { grid-column: 3; grid-row: 1; display: flex; align-items: flex-start; justify-content: end; }
-	.row-actions :global(button) { min-width: 2.75rem; min-height: 2.75rem; }
-	.edit-icon { display: inline-flex; width: 1.125rem; height: 1.125rem; }
-	.entry-cell :global([data-slot='form-item']) { min-width: 0; }
-	.entry-cell :global([data-slot='currency-input'] > [data-slot='form-item']) { grid-template-columns: minmax(0, 1fr); }
-	.entry-cell :global([data-slot='form-item'] > :not(label)) { min-width: 0; }
-	.entry-cell :global([data-slot='form-item'] > label), .entry-cell :global(p[id$='-atc-description']) { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-	.number-cell { display: grid; align-content: center; text-align: end; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+	.grip:focus-visible, .entry-link:focus-visible { position: relative; z-index: 1; outline: none; border-color: var(--field-focus-border); box-shadow: 0 0 0 3px var(--field-focus-halo); }
+	.entry-cell { display: grid; align-content: center; }
+	.entry-link { justify-self: start; min-height: 2rem; padding: 0; border: 1px solid transparent; border-radius: .25rem; background: transparent; color: var(--accent); font: inherit; font-size: .875rem; text-decoration: underline; text-underline-offset: .15em; cursor: pointer; overflow-wrap: anywhere; }
+	.number-cell output { font-family: var(--font-mono); }
+	.number-cell { display: grid; align-content: center; text-align: end; font-size: .875rem; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 	.withheld-cell { font-weight: 650; }
 	.row-error { grid-column: 1 / -1; }
 	.mobile-label { display: none; }
 	.drag-preview { position: fixed; top: 0; left: 0; z-index: 100; pointer-events: none; border: 1px solid var(--accent); box-shadow: 0 12px 32px rgb(0 0 0 / .25); }
-	.preview-content { grid-column: 2 / -1; display: flex; flex-wrap: wrap; gap: .375rem 1rem; align-content: center; padding: .5rem; }
+	.preview-content { grid-column: 2; display: flex; flex-wrap: wrap; gap: .375rem 1rem; align-content: center; padding: .5rem; }
 	@container return-fields (max-width: 42rem) {
 		.column-head { display: none; }
-		.items { border-top: 1px solid var(--border); }
-		.item { grid-template-columns: 38px minmax(0, 1fr) auto; }
-		.item .line-cells { grid-column: 1 / -1; grid-template-columns: repeat(2, minmax(0, 1fr)); padding: .625rem .75rem; gap: .5rem .75rem; }
-		.line-cells > * { padding: 0; border: 0; }
-		.line-cells > :last-child { border: 0; }
+		.item .line-cells { grid-template-columns: repeat(2, minmax(0, 1fr)); padding: .375rem .25rem; gap: .25rem .75rem; }
+		.line-cells > * { padding: 0; }
 		.item-number { grid-column: 1 / -1; }
 		.item-number > .mobile-label { margin-inline-end: .25em; }
 		.mobile-label { display: inline; }
-		.entry-cell > .mobile-label, .number-cell > .mobile-label { display: block; margin-bottom: .25rem; color: var(--fg-muted); font-size: .75rem; }
-		.entry-cell :global([data-slot='form-item'] > div:has(> input)) { min-height: 38px; }
-		.entry-cell :global([role='combobox']) { min-height: 38px; }
-		.entry-cell :global(input), .entry-cell :global([role='combobox']) { font-size: 14px; }
-		.grip { width: 38px; }
-		.grip, .row-actions :global(button), .add-row :global(button), .empty :global(button) { min-width: 38px; min-height: 38px; }
-		.grip, .row-actions { grid-row: 2; }
-		.number-cell { text-align: start; }
-		.withheld-cell output { text-align: end; }
-		@media (pointer: coarse) {
-			.entry-cell :global(input) { font-size: 16px; }
-		}
+		.entry-cell > .mobile-label, .number-cell > .mobile-label { display: block; margin-bottom: .125rem; color: var(--fg-muted); font-size: .75rem; }
+		.number-cell output { font-family: var(--font-mono); }
+	.number-cell { text-align: start; }
+		.withheld-cell { text-align: end; }
 	}
-	@container return-fields (max-width: 22rem) {
-		.entry-cell, .withheld-cell { grid-column: 1 / -1; }
-	}
-	.add-row { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem; margin-top: .875rem; }
-	.add-row .help { margin: 0; }
 	.error { color: var(--danger); font-size: .8rem; }
 	.editor-fields { display: grid; gap: var(--form-field-row-gap); min-width: 0; margin: 0; padding: 1.25rem; border: 0; }
-	.editor-actions { display: flex; justify-content: end; gap: .5rem; }
-	@media (forced-colors: active) { .grip:focus-visible { outline: 2px solid Highlight; box-shadow: none; } }
+	.editor-actions { display: flex; justify-content: end; flex-wrap: wrap; gap: .5rem; }
+	.editor-actions :global(button[data-agent-confirm]) { margin-inline-end: auto; }
+	@media (forced-colors: active) { .grip:focus-visible, .entry-link:focus-visible { outline: 2px solid Highlight; box-shadow: none; } }
 </style>

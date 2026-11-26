@@ -4,7 +4,7 @@
 	import { normalizeCurrencyInput } from '$lib/components/ui/currency-input/currency';
 	import PaperFormHeader from '../paper-form-header.svelte';
 	import { getWithholdingDefinition } from '../withholding-definitions';
-	import { calculateWithholding, monthlyRemittanceDueDate } from '../withholding-rules';
+	import { calculateWithholding, inactiveMonthlyRemittanceAmounts, monthlyRemittanceDueDate } from '../withholding-rules';
 	import '../form-editor-layout.css';
 
 	let { code, values, errors, onvaluechange, taxpayerInformation }: {
@@ -22,8 +22,10 @@
 	const creditItem = $derived(finalTax ? 16 : 15);
 	const penaltyItem = $derived(creditItem + 2);
 	const calculated = $derived(calculateWithholding(code, values));
+	const inactiveAmounts = $derived(inactiveMonthlyRemittanceAmounts(code, values));
 	const currency = new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' });
 	const editableAmounts = $derived(Object.values(fields).filter(field => field.type === 'money' && !field.readonly &&
+		!inactiveAmounts.includes(field.id.slice(prefix.length)) &&
 		(!field.showWhen || values[field.showWhen.field] === field.showWhen.value)));
 	const invalidAmounts = $derived(editableAmounts.some(field => normalizeCurrencyInput(values[field.id] ?? '') === null));
 	const amended = $derived(values[prefix + 'optAmend'] === 'Y');
@@ -32,6 +34,11 @@
 	function changePeriod(name: string, value: string) {
 		const patch = { [prefix + name]: value };
 		if (name === 'optAmend' && value === 'N') patch[previousRemittance] = '0';
+		if (name === 'optWithheld' || name === 'txtTaxTypeCode') {
+			for (const item of inactiveMonthlyRemittanceAmounts(code, { ...values, ...patch })) {
+				patch[prefix + item] = '0.00';
+			}
+		}
 		if (name === 'txtYear' || name === 'txtMonth') {
 			const year = prefix + 'txtYear';
 			const month = prefix + 'txtMonth';
@@ -54,7 +61,7 @@
 	{:else if type === 'number'}
 		<NumberInput {id} {label} {required} {value} {error} min={1900} max={9999} maxlength={4} onchange={(next) => changePeriod(name, next)} />
 	{:else if name === 'txtMonth' || name === 'txtTaxTypeCode'}
-		<Select {id} {label} options={options ?? []} {required} {value} {error} onchange={(next) => changePeriod(name, next)} />
+		<Select {id} {label} options={options ?? []} {required} {value} {error} wrapLabels={name === 'txtTaxTypeCode'} onchange={(next) => changePeriod(name, next)} />
 	{:else}
 		<RadioGroup {id} {label} options={options ?? []} {required} {value} {error} onchange={(next) => changePeriod(name, next)} />
 	{/if}
@@ -69,11 +76,15 @@
 
 {#snippet amount(item: number | string, name: string, label: string)}
 	{@const id = prefix + name}
-	<div class="remittance-row">
-		<span class="paper-item-number" aria-hidden="true">{item}</span>
-		<CurrencyInput {id} {label} required={fields[id].required} value={values[id] ?? ''} error={errors[id] ?? ''}
-			onchange={(next) => onvaluechange({ [id]: next })} />
-	</div>
+	{#if inactiveAmounts.includes(name)}
+		{@render total(item, name, label)}
+	{:else}
+		<div class="remittance-row">
+			<span class="paper-item-number" aria-hidden="true">{item}</span>
+			<CurrencyInput {id} {label} required={fields[id].required} value={values[id] ?? ''} error={errors[id] ?? ''}
+				onchange={(next) => onvaluechange({ [id]: next })} />
+		</div>
+	{/if}
 {/snippet}
 
 {#snippet total(item: number | string, name: string, label: string, final = false)}
@@ -82,13 +93,13 @@
 		<span class="paper-item-number" aria-hidden="true">{item}</span>
 		<span id={`${id}-label`}>{label}</span>
 		<output {id} aria-labelledby={`${id}-label`} aria-live="off">
-			{invalidAmounts ? '—' : currency.format(Number(calculated[id]))}
+			{invalidAmounts && !inactiveAmounts.includes(name) ? '—' : currency.format(Number(calculated[id]))}
 		</output>
 	</div>
 {/snippet}
 
 <div class="paper-sheet">
-	<PaperFormHeader number={finalTax ? '0619-F' : '0619-E'} revision="January 2018" title="Monthly Remittance Form"
+	<PaperFormHeader centered number={finalTax ? '0619-F' : '0619-E'} revision="January 2018" title="Monthly Remittance Form"
 		subtitle={finalTax ? 'of Final Income Taxes Withheld' : 'of Creditable Income Taxes Withheld (Expanded)'} />
 
 	<section class={['remittance-period', { 'final-tax': finalTax }]} aria-label="Return period">
@@ -153,6 +164,8 @@
 	.period-cell:last-child { border-bottom: 0; }
 	.month-year { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); gap: .5rem; }
 	.period-cell :global([data-slot="date-input"]) { max-inline-size: 18rem; }
+	.period-cell :global(legend) { white-space: nowrap; }
+	.period-cell :global(legend > span[aria-hidden="true"]) { margin-inline-start: .25rem; }
 	.period-cell :global([data-slot="form-item"]), .remittance-row :global([data-slot="form-item"]) {
 		grid-template-columns: minmax(0, 1fr);
 	}
@@ -178,7 +191,7 @@
 		font-size: .875rem;
 		font-weight: 600;
 	}
-	.remittance-total output { margin-inline-end: var(--paper-amount-inset); text-align: end; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+	.remittance-total output { margin-inline-end: var(--paper-amount-inset); text-align: end; font-family: var(--font-mono); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 	.final { border-bottom: 0; background: var(--bg-hover); }
 	.final output { font-size: 1.125rem; }
 	.remittance-feedback { margin: 0; padding: .75rem .875rem; border-top: 1px solid var(--border); }
@@ -192,15 +205,28 @@
 			align-items: center;
 		}
 	}
-	@container paper-form (min-width: 57rem) {
-		.remittance-period { grid-template-columns: minmax(12rem, 1.4fr) minmax(11rem, 1.3fr) minmax(8rem, 1fr) minmax(9rem, 1fr) minmax(10rem, 1fr); }
+	@container paper-form (min-width: 70rem) {
+		.remittance-period { grid-template-columns: minmax(15rem, 1.4fr) minmax(14rem, 1.3fr) minmax(12rem, 1fr) minmax(12rem, 1fr) minmax(13rem, 1fr); }
 		.period-cell + .period-cell, .constant-codes { border-inline-start: 1px solid var(--border); }
 		.period-cell { border-bottom: 0; }
-		.constant-codes, .final-tax > .period-cell:last-child { grid-column: auto; }
-	}
-	@container paper-form (min-width: 64rem) {
+		.constant-codes { grid-column: auto; }
 		.remittance-period.final-tax {
-			grid-template-columns: minmax(12rem, 1.4fr) minmax(11rem, 1.3fr) minmax(8rem, 1fr) minmax(9rem, 1fr) minmax(15rem, 1.45fr);
+			grid-template-columns: minmax(15rem, 1.4fr) minmax(14rem, 1.3fr) minmax(12rem, 1fr) minmax(12rem, 1fr);
+		}
+		.final-tax > .period-cell:last-child {
+			border-inline-start: 0;
+			border-block-start: 1px solid var(--border);
+		}
+		.final-tax > .period-cell:last-child :global(.form-select) { max-inline-size: 32rem; }
+	}
+	@container paper-form (min-width: 76rem) {
+		.remittance-period.final-tax {
+			grid-template-columns: minmax(15rem, 1.4fr) minmax(14rem, 1.3fr) minmax(12rem, 1fr) minmax(12rem, 1fr) minmax(18rem, 1.45fr);
+		}
+		.final-tax > .period-cell:last-child {
+			grid-column: auto;
+			border-inline-start: 1px solid var(--border);
+			border-block-start: 0;
 		}
 	}
 </style>

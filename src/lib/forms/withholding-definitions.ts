@@ -1340,7 +1340,7 @@ for (const code of ["1604C", "1604CF", "1604E", "1604Ev2018", "1604F"]) {
         { required: true },
       ),
       ...[
-        m(p, "txtSelling", "21 Selling price"),
+        m(p, "txtSelling", "21 Selling price", true),
         m(p, "txtCost", "22 Cost and other expenses"),
         m(p, "txtMortgage", "23 Mortgage assumed"),
         m(p, "txtTotalP", "24 Payments in initial year"),

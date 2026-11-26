@@ -3,13 +3,14 @@
 	import type { TaxpayerProfile } from '$lib/profiles/profile';
 	import PaperFormHeader from './paper-form-header.svelte';
 	import ReturnPagination from './return-pagination.svelte';
+	import ReturnRecord from './return-record.svelte';
 	import ReturnTaxpayerInformation from './return-taxpayer-information.svelte';
 	import { compareFormItems, getWithholdingPaperLayout, getWithholdingSupportingPages } from './withholding-paper-layout';
 	import AtcPicker from './atc-picker.svelte';
-	import { CalculatedValue, CurrencyInput, DateInput, Input, NumberInput, RadioGroup, Select, TinInput } from '$lib/components/ui';
-	import { normalizeCurrencyInput } from '$lib/components/ui/currency-input/currency';
+	import { Button, CalculatedValue, CurrencyInput, DateInput, Input, NumberInput, RadioGroup, Select, TinInput } from '$lib/components/ui';
+	import { commitCurrencyInput, normalizeCurrencyInput } from '$lib/components/ui/currency-input/currency';
 	import { withholdingPriorRemittanceFields, withholdingSchedules, withholdingSchedulesEnabled, type WithholdingDefinition, type WithholdingField, type WithholdingSchedule } from './withholding-definitions';
-	import { calculateWithholding } from './withholding-rules';
+	import { calculateWithholding, hasConflictingInstallmentPrices } from './withholding-rules';
 	import ScheduleItems from './schedule-items.svelte';
 	import './withholding-layout.css';
 	import './form-editor-layout.css';
@@ -34,9 +35,12 @@
 		!supporting.some(page => 'schedules' in page && page.schedules.includes(schedule.id))
 	));
 	let current = $state('1');
-	let paper: HTMLDivElement;
+	let heading = $state<HTMLHeadingElement>();
+	const headingId = $props.id();
 	const annual = $derived(definition.period === 'year');
 	const propertyReturn = $derived(definition.code === '1606');
+	const installmentSale = $derived(propertyReturn && values['frm1606:transactionType'] === 'Installment sale');
+	const conflictingSellingPrices = $derived(propertyReturn && hasConflictingInstallmentPrices(values));
 	const sectionFields = $derived(definition.sections.flatMap(section => section.fields));
 	const byName = $derived(Object.fromEntries(sectionFields.map(field => [shortName(field), field])));
 	const periodGroups = $derived(Object.entries(layout.period).reduce<{ item: string; fields: WithholdingField[] }[]>((groups, [name, item]) => {
@@ -71,6 +75,12 @@
 		else groups.push({ item, fields: [field] });
 		return groups;
 	}, []));
+	const propertyDetailItems = ['15', '16', '16A', '17', '18'];
+	const propertyDetails = $derived(propertyGroups.filter(group => propertyDetailItems.includes(group.item)));
+	const propertyLabel = $derived(values[byName.txtLocation?.id]?.trim() ||
+		values[byName.txtTCT?.id]?.trim() ||
+		(values[byName.propertyType?.id] && display(byName.propertyType, values[byName.propertyType.id])));
+	let propertyRecord = $state<ReturnType<typeof ReturnRecord>>();
 	const valuation = $derived(propertyReturn ? [
 		...sectionFields.filter(field => /^(27|28)[A-E]/.test(field.label)).sort(byItem),
 		byName.Habitual
@@ -100,7 +110,6 @@
 	async function showPage(id: string) {
 		current = id;
 		await tick();
-		const heading = paper?.querySelector<HTMLElement>(`[data-return-page="${id}"] > h2`);
 		heading?.focus({ preventScroll: true });
 		heading?.scrollIntoView({ block: 'start', behavior: 'instant' });
 	}
@@ -111,6 +120,9 @@
 		const page = schedule && supporting.find(page => 'schedules' in page && page.schedules.includes(schedule.id));
 		current = page ? page.id : '1';
 		await tick();
+		if (propertyDetails.some(group => group.fields.some(field => field.id === id))) {
+			await propertyRecord?.revealField(id);
+		}
 	}
 
 	function shortName(field: WithholdingField) {
@@ -150,6 +162,10 @@
 	function change(id: string, value: string) {
 		const prior = withholdingPriorRemittanceFields[definition.code];
 		const patch = { [id]: value };
+		if (installmentSale && id === 'frm1606:txtGross' &&
+			(!conflictingSellingPrices || value !== commitCurrencyInput(values[id] ?? ''))) {
+			patch['frm1606:txtSelling'] = value;
+		}
 		if (id === definition.prefix + 'optAmend' && value === 'N' && prior) patch[definition.prefix + prior] = '';
 		if (propertyReturn && id === definition.prefix + 'transactionType') {
 			if (!hasTransactionDescription(value)) patch[definition.prefix + 'txtOthers20'] = '';
@@ -177,40 +193,42 @@
 	}
 </script>
 
-{#snippet control(field: WithholdingField, labelOverride?: string)}
+{#snippet control(field: WithholdingField, labelOverride?: string, source = values, write = change)}
 	{@const label = labelOverride ?? displayLabel(field.label)}
 	{#if visible(field)}
 		{#if field.readonly}
-			<CalculatedValue id={field.id} label={label} value={invalidAmounts && field.type === 'money' ? '' : display(field, calculated[field.id] ?? values[field.id] ?? '')} error={displayLabel(errors[field.id] ?? '')} />
+			<CalculatedValue id={field.id} label={label} value={invalidAmounts && field.type === 'money' ? '' : display(field, calculated[field.id] ?? source[field.id] ?? '')} error={displayLabel(errors[field.id] ?? '')} />
 		{:else if label === 'ATC'}
-			<AtcPicker id={field.id} label={label} formCode={definition.code} fieldOptions={field.options ?? []} category={values[definition.prefix + 'optCategory'] ?? ''} year={Number(values[definition.yearField])} required={field.required ?? false} value={values[field.id] ?? ''} error={displayLabel(errors[field.id] ?? '')} onchange={(value) => change(field.id, value)} />
+			<AtcPicker id={field.id} label={label} formCode={definition.code} fieldOptions={field.options ?? []} category={source[definition.prefix + 'optCategory'] ?? ''} year={Number(source[definition.yearField])} required={field.required ?? false} value={source[field.id] ?? ''} error={displayLabel(errors[field.id] ?? '')} onchange={(value) => write(field.id, value)} />
 		{:else if propertyReturn && shortName(field) === 'sellerTin'}
 			<div class="seller-tin-control">
-				<TinInput id={field.id} label={label} required={field.required ?? false} value={values[field.id] ?? ''} error={errors[field.id] ?? ''} onchange={(value) => change(field.id, value)} />
+				<TinInput id={field.id} label={label} required={field.required ?? false} value={source[field.id] ?? ''} error={errors[field.id] ?? ''} onchange={(value) => write(field.id, value)} />
 			</div>
 		{:else if propertyReturn && ['sellerRdo', 'propertyRdo'].includes(shortName(field))}
 			<div class="property-rdo-control">
-				<Input id={field.id} label={label} maxlength={3} required={field.required ?? false} value={values[field.id] ?? ''} error={errors[field.id] ?? ''} oninput={(event) => change(field.id, event.currentTarget.value.toUpperCase())} />
+				<Input id={field.id} label={label} class="font-mono" maxlength={3} required={field.required ?? false} value={source[field.id] ?? ''} error={errors[field.id] ?? ''} oninput={(event) => write(field.id, event.currentTarget.value.toUpperCase())} />
 			</div>
 		{:else if field.type === 'money'}
-			<CurrencyInput allowNegative={field.allowNegative} id={field.id} label={label} required={field.required ?? false} value={values[field.id] ?? ''} error={displayLabel(errors[field.id] ?? '')} onchange={(value) => change(field.id, value)} />
+			<CurrencyInput allowNegative={field.allowNegative} id={field.id} label={label} required={field.required ?? false}
+				value={(installmentSale && field.id === 'frm1606:txtGross' ? calculated[field.id] : source[field.id]) ?? ''}
+				error={displayLabel(errors[field.id] ?? '')} onchange={(value) => write(field.id, value)} />
 		{:else if field.type === 'number'}
-			<NumberInput id={field.id} label={label} required={field.required ?? false} value={values[field.id] ?? ''} error={displayLabel(errors[field.id] ?? '')}
+			<NumberInput id={field.id} label={label} required={field.required ?? false} value={source[field.id] ?? ''} error={displayLabel(errors[field.id] ?? '')}
 				decimal={propertyReturn && shortName(field) === 'txtArea'} min={field.id === definition.yearField ? definition.minYear : 0}
 				max={field.id === definition.yearField ? definition.maxYear : undefined} maxlength={field.id === definition.yearField ? 4 : undefined}
-				onchange={(value) => change(field.id, value)} />
+				onchange={(value) => write(field.id, value)} />
 		{:else if field.type === 'select'}
 			{#if shortName(field) === 'overpaymentOption'}
-				<RadioGroup id={field.id} label={label} required options={field.options ?? []} value={values[field.id] ?? ''} error={errors[field.id] ?? ''} onchange={(value) => change(field.id, value)} />
+				<RadioGroup id={field.id} label={label} required options={field.options ?? []} value={source[field.id] ?? ''} error={errors[field.id] ?? ''} onchange={(value) => write(field.id, value)} />
 			{:else if field.options?.length === 2 && field.options.every(option => ['Y', 'N'].includes(option.value))}
-				<RadioGroup id={field.id} label={label} required={field.required ?? false} options={field.options} value={values[field.id] ?? ''} error={displayLabel(errors[field.id] ?? '')} onchange={(value) => change(field.id, value)} />
+				<RadioGroup id={field.id} label={label} required={field.required ?? false} options={field.options} value={source[field.id] ?? ''} error={displayLabel(errors[field.id] ?? '')} onchange={(value) => write(field.id, value)} />
 			{:else}
-				<Select id={field.id} label={label} required={field.required ?? false} options={field.options ?? []} value={values[field.id] ?? ''} error={displayLabel(errors[field.id] ?? '')} onchange={(value) => change(field.id, value)} />
+				<Select id={field.id} label={label} required={field.required ?? false} options={field.options ?? []} value={source[field.id] ?? ''} error={displayLabel(errors[field.id] ?? '')} onchange={(value) => write(field.id, value)} />
 			{/if}
 		{:else if field.type === 'date'}
-			<DateInput id={field.id} label={label} required={field.required ?? false} value={values[field.id] ?? ''} error={displayLabel(errors[field.id] ?? '')} onchange={(value) => change(field.id, value)} />
+			<DateInput id={field.id} label={label} required={field.required ?? false} value={source[field.id] ?? ''} error={displayLabel(errors[field.id] ?? '')} onchange={(value) => write(field.id, value)} />
 		{:else}
-			<Input id={field.id} label={label} required={field.required ?? false} value={values[field.id] ?? ''} error={displayLabel(errors[field.id] ?? '')} oninput={(event) => change(field.id, event.currentTarget.value)} />
+			<Input id={field.id} label={label} class={/\b(?:code|TIN|number)\b/i.test(label) ? "font-mono" : undefined} required={field.required ?? false} value={source[field.id] ?? ''} error={displayLabel(errors[field.id] ?? '')} oninput={(event) => write(field.id, event.currentTarget.value)} />
 		{/if}
 	{/if}
 {/snippet}
@@ -244,14 +262,16 @@
 	</div>
 {/snippet}
 
-<div class="paper-sheet wh-preparation" bind:this={paper}>
-	<PaperFormHeader number={layout.number} title={layout.title} subtitle={layout.subtitle}
+<div class="paper-sheet wh-preparation">
+	<PaperFormHeader centered={propertyReturn} number={layout.number} title={layout.title} subtitle={layout.subtitle}
 		revision={layout.revision} />
 
-	<div data-return-page="1" hidden={current !== '1'}>
 	{#if supporting.length}
-		<h2 class="return-page-heading" tabindex="-1">{pages[0].title}</h2>
+		<div class="return-page-context">
+			<h2 id={headingId} bind:this={heading} class="return-page-heading" tabindex="-1">{pages.find(page => page.id === current)?.title}</h2>
+		</div>
 	{/if}
+	<div data-return-page="1" hidden={current !== '1'}>
 	<section class="form-paper-grid form-period" aria-label="Return period">
 		{#each periodGroups as group (group.item)}
 			<div class="form-paper-field numbered">
@@ -264,7 +284,7 @@
 		{#if layout.fixedAtc?.inPeriod}
 			<div class="form-paper-field numbered">
 				<span class="paper-item-number" aria-hidden="true">{layout.fixedAtc.item}</span>
-				<dl class="fixed-atc"><dt>ATC</dt><dd>WW010</dd></dl>
+				<dl class="fixed-atc"><dt>ATC</dt><dd class="font-mono">WW010</dd></dl>
 			</div>
 		{/if}
 	</section>
@@ -273,7 +293,7 @@
 		itemNumbers={layout.taxpayer} extraItems={backgroundItems}>
 		{#snippet extraField(id)}
 			{#if id === 'fixed-atc'}
-				<dl class="fixed-atc"><dt>ATC</dt><dd>WW010</dd></dl>
+				<dl class="fixed-atc"><dt>ATC</dt><dd class="font-mono">WW010</dd></dl>
 			{:else}
 				{@render control(byName[id.slice(definition.prefix.length)])}
 			{/if}
@@ -283,8 +303,23 @@
 	{#if propertyReturn}
 		<section aria-labelledby="property-and-transaction">
 			<h2 class="form-paper-heading" id="property-and-transaction">Property and transaction</h2>
+			<ReturnRecord bind:this={propertyRecord} title="Property details" item="15–18" label={propertyLabel}
+				action={propertyLabel ? 'Edit property details' : 'Enter property details'} {values} onapply={applyChange}>
+				{#snippet fields(source, write)}
+					{#each propertyDetails as group (group.item)}
+						<div class="record-property-item" data-property-item={group.item}>
+							<span class="paper-item-number" aria-hidden="true">{group.item}</span>
+							<div class="record-property-fields">
+								{#each group.fields as field (field.id)}
+									{@render control(field, undefined, source, (id, value) => write({ [id]: value }))}
+								{/each}
+							</div>
+						</div>
+					{/each}
+				{/snippet}
+			</ReturnRecord>
 			<div class="form-paper-grid">
-				{#each propertyGroups as group (group.fields[0].id)}
+				{#each propertyGroups.filter(group => !propertyDetailItems.includes(group.item)) as group (group.fields[0].id)}
 					{#if group.fields.length > 1}
 						<div class="form-paper-field numbered property-item-group" data-property-item={group.item}>
 							<span class="paper-item-number" aria-hidden="true">{group.item}</span>
@@ -293,14 +328,23 @@
 							</div>
 						</div>
 					{:else}
-						{@render numberedField(group.fields[0])}
+					{@render numberedField(group.fields[0], group.fields[0].readonly)}
 					{/if}
 				{/each}
 			</div>
 		</section>
 		<section aria-labelledby="property-valuation">
 			<h2 class="form-paper-heading" id="property-valuation">Property valuation</h2>
-			{#each valuation as field (field.id)}{@render numberedField(field, true)}{/each}
+		{#each valuation as field (field.id)}
+			{@render numberedField(field, true)}
+			{#if field.id === 'frm1606:txtGross' && conflictingSellingPrices}
+				<div class="selling-price-conflict">
+					<p role="status">The saved selling price in Item 21 differs from Item 28A. Confirm the gross selling price or enter the correct amount.</p>
+					<Button variant="secondary" size="sm" disabled={normalizeCurrencyInput(values[field.id] ?? '') === null}
+						onclick={() => applyChange({ 'frm1606:txtSelling': values[field.id] })}>Use gross selling price for both items</Button>
+				</div>
+			{/if}
+		{/each}
 		</section>
 	{/if}
 
@@ -355,8 +399,7 @@
 	</div>
 
 	{#each supporting as page (page.id)}
-		<section data-return-page={page.id} hidden={current !== page.id} aria-labelledby={`return-page-${page.id}`}>
-			<h2 id={`return-page-${page.id}`} class="return-page-heading" tabindex="-1">{page.title}</h2>
+		<section data-return-page={page.id} hidden={current !== page.id} aria-labelledby={headingId}>
 			{#if 'reference' in page}
 				<div class="return-reference">
 					<p>These schedules are included in the return PDF.</p>
@@ -376,15 +419,26 @@
 		</section>
 	{/each}
 	{#if supporting.length}
-		<ReturnPagination {pages} {current} onchange={(id) => void showPage(id)} />
+		<ReturnPagination {pages} {current} onchange={showPage} />
 	{/if}
 </div>
 
 <style>
-	.return-page-heading {
-		margin: 0;
+	.selling-price-conflict { display: grid; justify-items: start; gap: .5rem; padding: .75rem .875rem; border-block-start: 1px solid var(--border); }
+	.selling-price-conflict p { margin: 0; font-size: var(--form-label-size); }
+	.record-property-item { display: grid; grid-template-columns: 2rem minmax(0, 1fr); gap: .5rem; }
+	.record-property-fields { display: grid; gap: .75rem; min-width: 0; }
+	.return-page-context {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		justify-content: space-between;
+		gap: .25rem 1rem;
 		padding: .625rem .875rem;
 		border-block-end: 1px solid var(--border);
+	}
+	.return-page-heading {
+		margin: 0;
 		font: 650 .875rem/1.4 var(--font-sans);
 		scroll-margin-block-start: 4rem;
 	}
@@ -427,7 +481,7 @@
 	.form-paper-field > .paper-item-number { padding-top: .15rem; }
 	.paired-period { grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); }
 	.form-paper-field :global([data-slot="form-item"]) { grid-template-columns: minmax(0, 1fr); min-width: 0; }
-	.form-paper-field :global([data-slot="input"]) { min-width: 0; width: 100%; }
+	.form-paper-field :global([data-slot="input"]:not([role="spinbutton"])) { min-width: 0; width: 100%; }
 	.form-paper-total {
 		grid-template-columns: minmax(0, 1fr) fit-content(48%);
 		align-items: baseline;
@@ -435,14 +489,14 @@
 		font-weight: 600;
 	}
 	.form-paper-total.numbered { grid-template-columns: 1.75rem minmax(0, 1fr) fit-content(48%); }
-	.form-paper-total output { min-width: 0; margin-inline-end: var(--paper-amount-inset); text-align: end; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+	.form-paper-total output { font-family: var(--font-mono); min-width: 0; margin-inline-end: var(--paper-amount-inset); text-align: end; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 	.final-total { background: var(--bg-hover); }
 	.final-total output { font-size: 1.125rem; }
 	.fixed-atc { margin: 0; font-size: .875rem; }
 	.fixed-atc dt { color: var(--fg-muted); font-size: .8rem; }
 	.fixed-atc dd { margin: .375rem 0 0; font-weight: 600; }
 	.form-paper-feedback { margin: 0; padding: .75rem .875rem; border-block-start: 1px solid var(--border); }
-	.return-page-heading + :global(.wh-schedule), .return-page-heading + .form-paper-feedback { border-block-start: 0; }
+	section[data-return-page] > :global(.wh-schedule):first-child, section[data-return-page] > .form-paper-feedback:first-child { border-block-start: 0; }
 	.property-item-controls { display: grid; grid-template-columns: minmax(0, 1fr); gap: .75rem; min-width: 0; }
 	.seller-tin-control { max-inline-size: 19rem; }
 	.property-rdo-control :global([data-slot="form-item"] > div:has(> input)) { max-inline-size: 8rem; }

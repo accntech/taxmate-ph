@@ -39,9 +39,14 @@ describe('withholding return lifecycle', () => {
   expect(workspace.formValues['frm0619E:txtTax18']).toBe('8300.00');
  });
  it('allows an unfinished draft without finalizing invalid values', async () => {
-  expect(workspace.createReturn(initialProfile.id, '0619F')).toBeTruthy();
-  workspace.updateFormValues({ 'frm0619F:txtYear': '', 'frm0619F:txtTax14': '12.' });
+  const id = workspace.createReturn(initialProfile.id, '0619F')!;
+  expect(id).toBeTruthy();
+  workspace.updateFormValues({
+   'frm0619F:txtYear': '', 'frm0619F:optWithheld': 'Y', 'frm0619F:txtTaxTypeCode': 'WF', 'frm0619F:txtTax14': '12.'
+  });
   expect(await workspace.saveActiveReturn()).toBe(true);
+  expect(await workspace.loadCreatedReturns()).toBe(true);
+  expect(workspace.openReturn(id)).toBe(true);
   expect(workspace.formValues['frm0619F:txtTax14']).toBe('12.');
   expect(workspace.validateReturn()).toBe(false);
   await workspace.submitCurrentReturn();

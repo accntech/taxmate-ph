@@ -71,7 +71,7 @@
 		</div>
 		<div class="paper-period-field">
 			<span class="paper-item-number" aria-hidden="true">2</span>
-			<Select id={prefix + 'optQuarter'} label="Quarter" required value={values[prefix + 'optQuarter'] || ''} error={errors[prefix + 'optQuarter'] || ''}
+			<Select id={prefix + 'optQuarter'} label="Quarter" placeholder="Choose quarter" required value={values[prefix + 'optQuarter'] || ''} error={errors[prefix + 'optQuarter'] || ''}
 				options={['First Quarter', 'Second Quarter', 'Third Quarter', 'Fourth Quarter'].map((label, index) => ({ value: `Q${index + 1}`, label }))} onchange={setQuarter} />
 		</div>
 		<div class="paper-period-field">
@@ -147,7 +147,7 @@
 	.paper-total-row { margin: 0; font-size: .875rem; }
 	.paper-total-row > div { display: grid; grid-template-columns: minmax(0, 1fr) fit-content(48%); gap: .75rem; align-items: baseline; padding: .75rem .875rem; border-bottom: 1px solid var(--border); }
 	.paper-total-row dt { display: grid; grid-template-columns: 1.5rem minmax(0, 1fr); gap: .375rem; }
-	.paper-total-row dd { margin: 0; margin-inline-end: var(--paper-amount-inset); text-align: end; font-weight: 600; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+	.paper-total-row dd { margin: 0; margin-inline-end: var(--paper-amount-inset); text-align: end; font-weight: 600; font-family: var(--font-mono); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 	.paper-amount-row { display: grid; grid-template-columns: 1.5rem minmax(0, 1fr); gap: .375rem; min-width: 0; padding: .75rem .875rem; border-top: 1px solid var(--border-soft); }
 	.paper-amount-row > .paper-item-number { padding-top: .125rem; }
 	.paper-disclosure { border-bottom: 1px solid var(--border); }
@@ -169,7 +169,7 @@
 		.paper-period-field:nth-child(n + 3) { grid-column: 1 / -1; }
 	}
 	@container paper-form (min-width: 52rem) {
-		.paper-period { grid-template-columns: .8fr 1.15fr 1.45fr 1.6fr .9fr; }
+		.paper-period { grid-template-columns: .8fr 1.35fr 1.4fr 1.5fr .85fr; }
 		.paper-period-field { border-right: 1px solid var(--border); }
 		.paper-period-field:last-child { grid-column: auto; border-right: 0; }
 	}

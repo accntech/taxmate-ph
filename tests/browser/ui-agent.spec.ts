@@ -1,6 +1,10 @@
 import { expect, test, type Page } from '@playwright/test';
 import { formPath, seedWorkspace, taxpayerId } from './fixtures';
 
+test.beforeEach(async ({ page }) => {
+	await page.routeWebSocket('**/*', socket => socket.close());
+});
+
 function request(page: Page, request: Record<string, unknown>) {
 	return page.evaluate(request => (window as unknown as {
 		sendUiAgentRequest: (request: unknown) => Promise<unknown>;
@@ -164,7 +168,8 @@ test('the UI agent reorders line items and leaves removal to the user', async ({
 	await expect(request(page, { method: 'act', target, action: 'key', args: { key: 'ArrowDown' } })).resolves.toMatchObject({ ok: true });
 	await expect(rows.last()).toContainText('WI120');
 
-	const remove = 'Remove line item 1';
+	await page.getByRole('button', { name: 'Edit line item 1', exact: true }).click();
+	const remove = 'Delete item';
 	await expect(request(page, { method: 'query', text: remove })).resolves.toMatchObject({
 		result: { controls: [{ target: remove, actions: [], requiresUserConsent: true }] }
 	});

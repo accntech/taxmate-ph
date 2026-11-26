@@ -9,10 +9,9 @@
 	import { Sheet } from '$lib/components/ui/sheet';
 	import AltArrowRight from '@solar-icons/svelte/category/arrows/Linear/AltArrowRight.svelte';
 	import TrashBinTrash from '@solar-icons/svelte/category/ui/Linear/TrashBinTrash.svelte';
-	import BillList from '@solar-icons/svelte/category/money/Linear/BillList.svelte';
 	import { Button, CalculatedValue, CurrencyInput, DateInput, Input, NumberInput, RadioGroup, Select, TinInput } from '$lib/components/ui';
 	import AtcPicker from './atc-picker.svelte';
-	import { calculateWithholding } from './withholding-rules';
+	import { calculateWithholding, isRequiredRemittanceField } from './withholding-rules';
 	import { withholdingSchedules, type WithholdingDefinition, type WithholdingField, type WithholdingRow, type WithholdingSchedule } from './withholding-definitions';
 	import { activeScheduleRows, isReorderableSchedule, nextScheduleDraft, scheduleItemValues, validateScheduleDraft, writeScheduleItems } from './schedule-items';
 
@@ -87,9 +86,13 @@
 		return field.options?.find(option => option.value === value)?.label ?? value;
 	}
 
+	function primaryField(row: WithholdingRow) {
+		return row.fields.find(field => /payee name|^ATC$|treaty code/i.test(displayLabel(field.label)));
+	}
+
 	function rowTitle(row: WithholdingRow) {
 		if (!reorderable) return row.label;
-		const primary = row.fields.find(field => /payee name|^ATC$|treaty code/i.test(displayLabel(field.label)));
+		const primary = primaryField(row);
 		return (primary && values[primary.id]) || 'Line item';
 	}
 
@@ -185,6 +188,13 @@
 		onchange(Object.fromEntries(row.fields.map(field => [field.id, ''])));
 		announcement = 'Line item removed.';
 		void focus(addId);
+	}
+
+	function deleteItem() {
+		if (isNew || !editorRow) return;
+		remove(editorRow);
+		returnFocus = document.getElementById(addId);
+		close();
 	}
 
 	function undo() {
@@ -305,18 +315,19 @@
 	{@const title = rowTitle(row)}
 	{@const ordinal = item !== undefined ? `Item ${item}` : String(index + 1)}
 	<span class="identity">
-		{#if ordinal !== title}<span class="ordinal">{ordinal}</span>{/if}
-		<strong>{title}</strong>
+		{#if ordinal !== title}<span class="ordinal">{#if item !== undefined}Item {/if}<span class="font-mono">{item ?? index + 1}</span></span>{/if}
+		<strong class:font-mono={reorderable && title !== 'Line item' && /ATC|code/i.test(primaryField(row)?.label ?? '')}>{title}</strong>
 	</span>
 	<span class="amounts">
-		{#each row.fields.filter(field => visible(field)) as field (field.id)}
-			<span><span>{displayLabel(field.label)}</span><b>{display(field, calculated[field.id] ?? values[field.id] ?? '')}</b></span>
+		{#each row.fields.filter(field => visible(field) && (field.type === 'money' || display(field, values[field.id] ?? '') !== title)) as field (field.id)}
+			<span><span>{displayLabel(field.label)}</span><b class:font-mono={field.type === 'money' || field.type === 'number' || field.type === 'date' || /\b(?:ATC|code|TIN|number)\b/i.test(field.label)}>{display(field, calculated[field.id] ?? values[field.id] ?? '')}</b></span>
 		{/each}
 	</span>
 	{#if row.fields.some(field => errors[field.id])}<span class="error">Review this line item.</span>{/if}
 {/snippet}
 
 {#snippet control(field: WithholdingField)}
+	{@const required = !!field.required || isRequiredRemittanceField(definition.code, schedule.id, field)}
 	{#if visible(field, editorValues)}
 		{#if field.readonly}
 			<CalculatedValue id={field.id} label={displayLabel(field.label)} value={draftInvalidAmounts && field.type === 'money' ? '' : display(field, draftCalculated[field.id] ?? draft[field.id] ?? '')} error={draftErrors[field.id] ?? ''} amountColumn={field.type === 'money'} />
@@ -327,7 +338,7 @@
 				<TinInput id={field.id} label={displayLabel(field.label)} value={draft[field.id] ?? ''} error={draftErrors[field.id] ?? ''} onchange={(value) => changeDraft(field, value)} />
 			</div>
 		{:else if field.type === 'money'}
-			<CurrencyInput allowNegative={field.allowNegative} id={field.id} label={displayLabel(field.label)} required={field.required ?? false} value={draft[field.id] ?? ''} error={draftErrors[field.id] ?? ''} onchange={(value) => changeDraft(field, value)} />
+			<CurrencyInput allowNegative={field.allowNegative} id={field.id} label={displayLabel(field.label)} {required} value={draft[field.id] ?? ''} error={draftErrors[field.id] ?? ''} onchange={(value) => changeDraft(field, value)} />
 		{:else if field.type === 'number'}
 			<NumberInput id={field.id} label={displayLabel(field.label)} required={field.required ?? false} value={draft[field.id] ?? ''} error={draftErrors[field.id] ?? ''} decimal={!/year|sheet|count|number|month|day/i.test(field.id)} onchange={(value) => changeDraft(field, value)} />
 		{:else if field.type === 'select'}
@@ -337,9 +348,9 @@
 				<Select id={field.id} label={displayLabel(field.label)} required={field.required ?? false} options={field.options ?? []} value={draft[field.id] ?? ''} error={draftErrors[field.id] ?? ''} onchange={(value) => changeDraft(field, value)} />
 			{/if}
 		{:else if field.type === 'date'}
-			<DateInput id={field.id} label={displayLabel(field.label)} required={field.required ?? false} value={draft[field.id] ?? ''} error={draftErrors[field.id] ?? ''} onchange={(value) => changeDraft(field, value)} />
+			<DateInput id={field.id} label={displayLabel(field.label)} {required} value={draft[field.id] ?? ''} error={draftErrors[field.id] ?? ''} onchange={(value) => changeDraft(field, value)} />
 		{:else}
-			<Input id={field.id} label={displayLabel(field.label)} required={field.required ?? false} value={draft[field.id] ?? ''} error={draftErrors[field.id] ?? ''} oninput={(event) => changeDraft(field, event.currentTarget.value)} />
+			<Input id={field.id} label={displayLabel(field.label)} class={/\b(?:code|TIN|number)\b/i.test(field.label) ? "font-mono" : undefined} {required} value={draft[field.id] ?? ''} error={draftErrors[field.id] ?? ''} oninput={(event) => changeDraft(field, event.currentTarget.value)} />
 		{/if}
 	{/if}
 {/snippet}
@@ -355,14 +366,12 @@
 <details bind:this={detailsElement} class="eq-section eq-disclosure wh-schedule" open={schedule.id === 'atc' || rows.length > 0 || open}>
 	<summary><span class="eq-disclosure-icon" aria-hidden="true"><AltArrowRight size={16} color="currentColor" /></span>{schedule.title}</summary>
 	<section aria-label={schedule.title}>
-		<div class="count">{rows.length} {rows.length === 1 ? 'line item' : 'line items'}</div>
+		<div class="schedule-actions">
+			<span class="count">{rows.length}{schedule.repeatable ? '' : ` / ${schedule.rows.length}`} {rows.length === 1 ? 'item' : 'items'}</span>
+			<Button id={addId} aria-label={`Add line item to ${schedule.title}`} variant="secondary" size="sm" disabled={!nextDraft} onclick={(event) => edit(undefined, undefined, event.currentTarget)}>Add item</Button>
+		</div>
 		{#if rows.length === 0}
-			<div class="empty">
-				<span class="empty-icon" aria-hidden="true"><BillList size={28} color="currentColor" /></span>
-				<p class="empty-title">No line items yet</p>
-				<p>Add a line item to complete this schedule.</p>
-				<Button id={addId} aria-label={`Add line item to ${schedule.title}`} variant="secondary" size="sm" disabled={!nextDraft} onclick={(event) => edit(undefined, undefined, event.currentTarget)}>Add first line item</Button>
-			</div>
+			<p class="schedule-empty-message">No items added</p>
 		{:else}
 			{#if reorderable}<p id={dragHelpId} class="help">Drag the grip to reorder. With the grip focused, use ↑ or ↓.</p>{/if}
 			<ol bind:this={listElement} aria-label={`${schedule.title} line items`} class="items" onpointermove={movePointer} onpointerup={finishPointer} onpointercancel={cancelPointer} onlostpointercapture={cancelPointer}>
@@ -370,11 +379,9 @@
 					<li animate:flip={{ duration: prefersReducedMotion.current ? 0 : 180, easing: cubicOut }} class={['item', !reorderable && 'fixed-item', dragging === row.id && 'dragging', row.fields.some(field => errors[field.id]) && 'invalid']}>
 						{#if reorderable}<button id={gripId(row)} type="button" class="grip" disabled={rows.length < 2} aria-label={`Drag line item ${index + 1}`} data-taxmate-agent-keys="ArrowUp ArrowDown Home End" aria-describedby={dragHelpId} onpointerdown={(event) => startPointer(event, row)} onkeydown={(event) => reorderKey(event, index)}>{@render gripIcon()}</button>{/if}
 						<button type="button" class="item-details" aria-label={`Edit line item ${index + 1}`} onclick={(event) => edit(row, undefined, event.currentTarget)}>{@render rowSummary(row, index)}</button>
-						<Button variant="ghost" size="icon" aria-label={`Remove line item ${index + 1}`} title="Remove line item" data-agent-confirm="delete" onclick={() => remove(row)}><TrashBinTrash size={18} color="currentColor" aria-hidden="true" /></Button>
 					</li>
 				{/each}
 			</ol>
-			<div class="add-row"><Button id={addId} aria-label={`Add line item to ${schedule.title}`} variant="secondary" size="sm" disabled={!nextDraft} onclick={(event) => edit(undefined, undefined, event.currentTarget)}>Add line item</Button>{#if !nextDraft}<span class="help">All available lines are in use.</span>{/if}</div>
 		{/if}
 		{#if removed}<div class="eq-undo"><span>Line item removed.</span><Button variant="ghost" size="sm" onclick={undo}>Undo</Button></div>{/if}
 		<p class={stylex.attrs(scheduleItems.announcement).class} role="status">{announcement}</p>
@@ -382,7 +389,7 @@
 	{@render totals?.()}
 </details>
 
-<Sheet {open} onOpenChange={(next) => { if (!next) close(); }} {title} description={schedule.title} size="md">
+<Sheet {open} onOpenChange={(next) => { if (!next) close(); }} {title} context={schedule.title} size="md">
 	{#if open && editorRow}
 		<div class="editor-fields">
 			{#if isNew && !reorderable}<Select id={`${uid}-assigned-row`} label="Schedule row" required options={availableRows.map(row => ({ value: row.id, label: row.label }))} value={editingRowId} onchange={selectAssignedRow} />{/if}
@@ -393,44 +400,44 @@
 			</fieldset>
 		</div>
 	{/if}
-	{#snippet footer()}<div class="editor-actions"><Button variant="secondary" onclick={close}>Cancel</Button><Button onclick={commit}>{isNew ? 'Add' : 'Update'}</Button></div>{/snippet}
+	{#snippet footer()}<div class="editor-actions">{#if !isNew}<Button variant="danger" data-agent-confirm="delete" onclick={deleteItem}>Delete item</Button>{/if}<Button variant="secondary" onclick={close}>Cancel</Button><Button onclick={commit}>{isNew ? 'Add' : 'Update'}</Button></div>{/snippet}
 </Sheet>
 
 <style>
-	.count, .help, .empty > p, .amounts { color: var(--fg-muted); font-size: .8rem; }
-	.count { margin-bottom: .75rem; text-align: right; font-variant-numeric: tabular-nums; }
-	.empty { display: grid; justify-items: center; gap: .75rem; padding: 2.5rem 1rem; border: 1px dashed var(--border); border-radius: 10px; background: var(--bg); text-align: center; }
-	.empty-icon { display: grid; width: 2.5rem; height: 2.5rem; place-items: center; border: 1px solid var(--border); border-radius: .5rem; color: var(--fg-muted); }
-	.empty .empty-title { color: var(--fg); font-size: .95rem; font-weight: 600; }
+	.count, .help, .amounts { color: var(--fg-muted); font-size: .8rem; }
+	.count { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+	.schedule-actions { display: flex; align-items: center; justify-content: space-between; gap: .75rem; padding-block: .5rem; }
+	.wh-schedule { --schedule-empty-inset: 0px; }
 	.help { margin-bottom: .75rem; }
-	.items { display: grid; gap: .5rem; margin: 0; padding: 0; list-style: none; }
-	.item { display: grid; grid-template-columns: 2rem minmax(0, 1fr) auto; gap: .375rem; align-items: start; padding: .625rem; border: 1px solid var(--border-soft); border-radius: 8px; background: var(--bg-elev); }
-	.fixed-item { grid-template-columns: minmax(0, 1fr) auto; }
+	.items { display: grid; gap: 0; margin: 0; padding: 0; list-style: none; }
+	.item { display: grid; grid-template-columns: 2rem minmax(0, 1fr); gap: .375rem; align-items: center; padding: .25rem 0; border-block-start: 1px solid var(--border-soft); background: var(--bg-elev); }
+	.fixed-item { grid-template-columns: minmax(0, 1fr); }
 	.item.dragging { opacity: .3; border-color: var(--accent); }
 	.drag-preview { position: fixed; top: 0; left: 0; z-index: 100; pointer-events: none; box-shadow: 0 12px 32px rgb(0 0 0 / .25); border-color: var(--accent); }
 	.item.invalid { border-color: var(--danger); }
 	.grip { display: grid; width: 2rem; height: 2.5rem; place-items: center; border: 1px solid transparent; border-radius: 4px; color: var(--fg-muted); background: transparent; cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none; }
 	.grip:active { cursor: grabbing; }
 	.grip:disabled { opacity: .35; cursor: default; }
-	.item-details { display: grid; min-width: 0; gap: .5rem; padding: .5rem; border: 1px solid transparent; border-radius: 4px; background: transparent; color: var(--fg); text-align: left; cursor: pointer; }
+	.item-details { display: grid; grid-template-columns: minmax(9rem, 1fr) minmax(0, 3fr); align-items: center; min-width: 0; gap: .5rem 1rem; padding: .5rem; border: 1px solid transparent; border-radius: 4px; background: transparent; color: var(--fg); text-align: left; cursor: pointer; }
+	.item-details > .error { grid-column: 1 / -1; }
 	.item-details:hover:not(:focus-visible), .grip:hover:not(:disabled):not(:focus-visible) { background: var(--bg-hover); }
 	.item-details:focus-visible, .grip:focus-visible { outline: none; border-color: var(--field-focus-border); box-shadow: 0 0 0 3px var(--field-focus-halo); }
 	.identity { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; font-size: .875rem; }
-	.identity strong { overflow-wrap: anywhere; }
+	.identity strong { overflow-wrap: anywhere; color: var(--accent); text-decoration: underline; text-underline-offset: .15em; font-weight: 500; }
 	.ordinal { color: var(--fg-subtle); font-size: .75rem; }
-	.amounts { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 8rem), 1fr)); gap: .5rem 1.25rem; }
+	.amounts { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 7rem), 1fr)); gap: .25rem .75rem; }
 	.amounts > span { display: grid; gap: .125rem; min-width: 0; }
 	.amounts b { color: var(--fg); font-weight: 500; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
-	.add-row { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem; margin-top: .875rem; }
-	.add-row .help { margin: 0; }
 	.error { color: var(--danger); font-size: .8rem; }
 	.editor-fields { display: grid; gap: var(--form-field-row-gap); padding: 1.25rem; }
 	.editor-row { display: grid; gap: var(--form-field-row-gap); min-width: 0; margin: 0; padding: 0; border: 0; }
 	.schedule-tin { min-inline-size: 0; max-inline-size: 16rem; }
 	.editor-row :global(input[inputmode="decimal"]) { text-align: end; font-variant-numeric: tabular-nums; }
-	.editor-actions { display: flex; justify-content: end; gap: .5rem; }
+	.editor-actions { display: flex; justify-content: end; flex-wrap: wrap; gap: .5rem; }
+	.editor-actions :global(button[data-agent-confirm]) { margin-inline-end: auto; }
 	@media (forced-colors: active) { .item-details:focus-visible, .grip:focus-visible { outline: 2px solid Highlight; box-shadow: none; } }
 	@container paper-form (max-width: 27rem) {
+		.item-details { grid-template-columns: minmax(0, 1fr); }
 		.amounts { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .5rem .625rem; }
 		.amounts > span { overflow-wrap: anywhere; }
 	}

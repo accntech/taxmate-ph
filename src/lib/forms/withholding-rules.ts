@@ -1,5 +1,6 @@
 import { taxpayerEmailError, type TaxpayerProfile } from "$lib/profiles/profile";
 import { isPackagedRdoCode } from "$lib/profiles/rdo-codes";
+import { normalizeCurrencyInput } from "$lib/components/ui/currency-input/currency";
 import {
   getWithholdingDefinition,
   getWithholdingAtcs,
@@ -38,9 +39,43 @@ function activeField(field: WithholdingField, values: Values): boolean {
   );
 }
 
+export function isRequiredRemittanceField(code: string, scheduleId: string, field: WithholdingField): boolean {
+  return scheduleId.startsWith("remittances-") && !field.readonly &&
+    (field.type === "text" || field.type === "date" ||
+      (code === "1604Ev2018" && /TaxWheld|TaxWithheld/.test(field.id)));
+}
+
 export function monthlyRemittanceDueDate(year: string, month: string): string {
   if (!/^\d{4}$/.test(year) || !/^(?:0[1-9]|1[0-2])$/.test(month)) return "";
   return month === "12" ? `${Number(year) + 1}-01-10` : `${year}-${twoDigits(Number(month) + 1)}-10`;
+}
+
+export function inactiveMonthlyRemittanceAmounts(code: string, values: Values): string[] {
+  if (code !== "0619E" && code !== "0619F") return [];
+  const prefix = `frm${code}:`;
+  const none = values[prefix + "optWithheld"] === "N";
+  const taxType = values[prefix + "txtTaxTypeCode"];
+  return [
+    ...(code === "0619F" && (none || taxType === "WF") ? ["txtTax13"] : []),
+    ...(none || (code === "0619F" && taxType === "WB") ? ["txtTax14"] : []),
+  ];
+}
+
+function hasInstallmentPrice(value: string | undefined): boolean {
+  const raw = value?.trim() ?? "";
+  const normalized = normalizeCurrencyInput(raw);
+  // Legacy drafts use zero for a selling-price box that was never filled.
+  return !!raw && (normalized === null || Number(normalized) !== 0);
+}
+
+export function hasConflictingInstallmentPrices(values: Values): boolean {
+  if (values["frm1606:transactionType"] !== "Installment sale") return false;
+  const selling = values["frm1606:txtSelling"];
+  const gross = values["frm1606:txtGross"];
+  if (!hasInstallmentPrice(selling) || !hasInstallmentPrice(gross)) return false;
+  const normalizedSelling = normalizeCurrencyInput(selling);
+  const normalizedGross = normalizeCurrencyInput(gross);
+  return normalizedSelling === null || normalizedGross === null || Number(normalizedSelling) !== Number(normalizedGross);
 }
 
 export function createWithholdingValues(
@@ -75,10 +110,21 @@ export function createWithholdingValues(
   }
   return calculateWithholding(code, values);
 }
+
+function paymentYearValues(prefix: string, values: Values): Values {
+  const basis = prefix + "itemFiscalStartMonth";
+  const month = prefix + "itemYearEndMonth";
+  const individual = values[prefix + "txtClassification"] === "I";
+  if (individual || values[basis] === "Calendar") {
+    return { ...values, [basis]: "Calendar", [month]: "12" };
+  }
+  return values;
+}
+
 export function calculateWithholding(code: string, values: Values): Values {
   const d = definition(code),
     p = d.prefix,
-    r = { ...values };
+    r = { ...(code === "0605" ? paymentYearValues(p, values) : values) };
   const schedules = withholdingSchedules(d, values);
   const schedulesEnabled = withholdingSchedulesEnabled(d, values);
   const inactiveInputs = new Set(schedulesEnabled ? [] : schedules.flatMap(schedule =>
@@ -90,10 +136,6 @@ export function calculateWithholding(code: string, values: Values): Values {
   for (const field of withholdingFields(d, values))
     if (field.readonly && field.defaultValue !== undefined)
       r[field.id] = field.defaultValue;
-  if (code === "0605" && r[p + "txtClassification"] === "I") {
-    r[p + "itemYearEndMonth"] = "12";
-    r[p + "itemFiscalStartMonth"] = "Calendar";
-  }
   const readNumber = (id: string) => inactiveInputs.has(id) ? 0 : number(r[id]);
   const n = (k: string) => readNumber(p + k);
   const set = (k: string, v: number) => {
@@ -199,11 +241,13 @@ export function calculateWithholding(code: string, values: Values): Values {
       add("txtTax21", "txtTax19", "txtTax20D");
       break;
     case "0619E":
+      for (const item of inactiveMonthlyRemittanceAmounts(code, values)) set(item, 0);
       set("txtTax16", n("txtTax14") - n("txtTax15"));
       penalty("txtTax17A", "txtTax17B", "txtTax17C", "txtTax17D");
       add("txtTax18", "txtTax16", "txtTax17D");
       break;
     case "0619F":
+      for (const item of inactiveMonthlyRemittanceAmounts(code, values)) set(item, 0);
       add("txtTax15", "txtTax13", "txtTax14");
       set("txtTax17", n("txtTax15") - n("txtTax16"));
       penalty("txtTax18A", "txtTax18B", "txtTax18C", "txtTax18D");
@@ -418,6 +462,12 @@ export function calculateWithholding(code: string, values: Values): Values {
         ),
       );
       const type = values[p + "transactionType"];
+      if (type === "Installment sale") {
+        const selling = r[p + "txtSelling"];
+        const gross = r[p + "txtGross"];
+        if (hasInstallmentPrice(gross) && !hasInstallmentPrice(selling)) r[p + "txtSelling"] = gross;
+        if (hasInstallmentPrice(selling) && !hasInstallmentPrice(gross)) r[p + "txtGross"] = selling;
+      }
       let base = Math.max(n("txtGross"), fmv);
       if (type === "Foreclosure sale") base = Math.max(n("txtBid"), fmv);
       else if (type === "Installment sale") base = n("txtInstallment");
@@ -474,12 +524,22 @@ export function validateWithholding(
   const d = definition(code),
     p = d.prefix,
     errors: Values = {};
-  const values = withoutInactiveWithholdingScheduleValues(d, draftValues);
+  const values = withoutInactiveWithholdingScheduleValues(
+    d,
+    code === "0605" ? paymentYearValues(p, draftValues) : draftValues,
+  );
   const fields = withholdingFields(d, values);
   const text = (k: string) => (values[p + k] ?? "").trim();
+  const inactiveMonthlyAmounts = inactiveMonthlyRemittanceAmounts(code, values);
+  const inactiveMonthlyIds = new Set(inactiveMonthlyAmounts.map(item => p + item));
+  const installmentPrice = code === "1606" && text("transactionType") === "Installment sale"
+    ? (hasInstallmentPrice(text("txtGross")) ? text("txtGross") : text("txtSelling") || text("txtGross"))
+    : undefined;
   for (const f of fields) {
-    if (f.readonly || !activeField(f, values)) continue;
-    const v = (values[f.id] ?? "").trim();
+    if (f.readonly || inactiveMonthlyIds.has(f.id) || !activeField(f, values)) continue;
+    const v = f.id === "frm1606:txtGross" && installmentPrice !== undefined
+      ? installmentPrice
+      : (values[f.id] ?? "").trim();
     if (f.required && !v) {
       errors[f.id] = `${f.label} is required.`;
       continue;
@@ -625,13 +685,15 @@ export function validateWithholding(
         }
       }
       if (schedule.id.startsWith("remittances-")) {
-        for (const f of editable)
-          if (f.type === "text" || f.type === "date")
-            if (!(values[f.id] ?? "").trim())
-              errors[f.id] = `${f.label} is required for this remittance.`;
-        const tax = editable.find((f) => /TaxWheld|TaxWithheld/.test(f.id))!;
-        if (code === "1604Ev2018" && number(values[tax.id]) <= 0)
-          errors[tax.id] = "Enter tax withheld greater than zero.";
+        for (const f of editable) {
+          if (!isRequiredRemittanceField(code, schedule.id, f)) continue;
+          if (f.type === "money") {
+            if (number(values[f.id]) <= 0)
+              errors[f.id] = "Enter tax withheld greater than zero.";
+          } else if (!(values[f.id] ?? "").trim()) {
+            errors[f.id] = `${f.label} is required for this remittance.`;
+          }
+        }
       }
       if (
         [
@@ -679,13 +741,13 @@ export function validateWithholding(
       code === "0619E"
         ? "txtTax14"
         : code === "0619F"
-          ? "txtTax13"
+          ? text("txtTaxTypeCode") === "WF" ? "txtTax14" : "txtTax13"
           : code === "1601C"
             ? "txtTax18"
             : "txtTax25";
     const amount =
       number(values[p + key]) +
-      (code === "0619F" ? number(values[p + "txtTax14"]) : 0);
+      (code === "0619F" && inactiveMonthlyAmounts.length === 0 ? number(values[p + "txtTax14"]) : 0);
     if (amount <= 0) errors[p + key] = "Enter withholding greater than zero.";
   }
   if (code === "0605") {
@@ -728,6 +790,8 @@ export function validateWithholding(
   )
     errors[p + "refundDate"] = "Enter a refund date no later than today.";
   if (code === "1606") {
+    if (hasConflictingInstallmentPrices(values))
+      errors[p + "txtGross"] ??= "Reconcile the saved selling price in Item 21 with the gross selling price in Item 28A.";
     const sellerTin = text("sellerTin");
     const seller = parseTin(sellerTin);
     const buyerTin = text("txtTIN1") + text("txtTIN2") + text("txtTIN3");
@@ -743,12 +807,6 @@ export function validateWithholding(
     for (const rdo of ["sellerRdo", "propertyRdo"])
       if (text(rdo) && !isPackagedRdoCode(text(rdo)))
         errors[p + rdo] = "Enter a supported RDO code.";
-  }
-  if (code === "0619F") {
-    if (text("txtTaxTypeCode") === "WB" && number(values[p + "txtTax14"]) !== 0)
-      errors[p + "txtTax14"] = "Tax type WB uses Item 13 only.";
-    if (text("txtTaxTypeCode") === "WF" && number(values[p + "txtTax13"]) !== 0)
-      errors[p + "txtTax13"] = "Tax type WF uses Item 14 only.";
   }
   if (code === "1602Qv2018") {
     const atcCodes = [
@@ -807,8 +865,6 @@ export function validateWithholding(
       errors[p + baseField] = "Enter an applicable taxable base greater than zero.";
   }
   const enteredWithholding: Record<string, string[]> = {
-    "0619E": ["txtTax14"],
-    "0619F": ["txtTax13", "txtTax14"],
     "1601C": ["txtTax18"],
     "1601Cv2018": ["txtTax25"],
     "1606": ["txtTaxR"],

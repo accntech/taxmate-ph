@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
-	import { CurrencyInput, DateInput, FieldErrors, Input, Label, NumberInput, RadioGroup, Select } from '$lib/components/ui';
+	import { CalculatedValue, CurrencyInput, DateInput, FieldErrors, Input, Label, NumberInput, RadioGroup, Select } from '$lib/components/ui';
 	import { Combobox } from '$lib/components/ui/combobox';
 	import { normalizeCurrencyInput } from '$lib/components/ui/currency-input/currency';
 	import AtcPicker from '../atc-picker.svelte';
@@ -23,6 +23,7 @@
 	const currency = new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' });
 	const calculated = $derived(calculateWithholding(code, values));
 	const individual = $derived(calculated[prefix + 'txtClassification'] === 'I');
+	const calendarYear = $derived(calculated[prefix + 'itemFiscalStartMonth'] === 'Calendar');
 	const taxType = $derived(values[prefix + 'txtTaxTypeCode'] ?? '');
 	const availableTaxTypes = $derived(taxType && !taxTypeOptions.some(option => option.value === taxType)
 		? [{ value: taxType, label: taxType, secondary: '' }, ...taxTypeOptions]
@@ -36,6 +37,9 @@
 
 	function change(name: string, value: string) {
 		const patch = { [prefix + name]: value };
+		if (name === 'itemFiscalStartMonth' && value === 'Fiscal' && values[prefix + 'itemYearEndMonth'] === '12') {
+			patch[prefix + 'itemYearEndMonth'] = '';
+		}
 		if (name === 'itemModeOfPayment' && value !== 'Installment') patch[prefix + 'txtNumOfInstallment'] = '';
 		if (name === 'itemMannerOfPayment') {
 			if (value !== 'Others') patch[prefix + 'txtOthersName'] = '';
@@ -59,7 +63,7 @@
 	{:else if name === 'txtTaxTypeCode'}
 		<div class="tax-type-field" data-slot="form-item">
 			<Label for={id}>{label}<span class="required-mark" aria-hidden="true">*</span></Label>
-			<Combobox {id} options={availableTaxTypes} value={taxType || null} aria-required={required}
+			<Combobox {id} monospace="label" options={availableTaxTypes} value={taxType || null} aria-required={required}
 				aria-describedby={error ? `${id}-error` : undefined} invalid={!!error} clearable
 				placeholder="Choose tax type" searchPlaceholder="Search tax type code or name" emptyMessage="No matching tax types."
 				wrapOptions itemHeight={44} maxVisibleItems={5}
@@ -81,10 +85,10 @@
 		</div>
 	{:else if name === 'itemApprovedYN' || name === 'itemModeOfPayment'}
 		<RadioGroup {id} {label} options={options ?? []} required={required || name === 'itemApprovedYN'} {value} {error} onchange={(next) => change(name, next)} />
+	{:else if (name === 'itemFiscalStartMonth' && individual) || (name === 'itemYearEndMonth' && calendarYear)}
+		<CalculatedValue {id} {label} value={options?.find(option => option.value === value)?.label ?? value} {error} />
 	{:else if type === 'select'}
-		<Select {id} {label} options={options ?? []} {required} {value} {error}
-			disabled={individual && (name === 'itemFiscalStartMonth' || name === 'itemYearEndMonth')}
-			onchange={(next) => change(name, next)} />
+		<Select {id} {label} options={options ?? []} {required} {value} {error} onchange={(next) => change(name, next)} />
 	{:else if type === 'number'}
 		<NumberInput {id} {label} {required} {value} {error}
 			min={name === 'txtYearEnded' ? definition.minYear : name === 'txtNumOfInstallment' ? 1 : 0}
@@ -217,7 +221,7 @@
 		font-size: .875rem;
 		font-weight: 600;
 	}
-	.payment-total output { margin-inline-end: var(--paper-amount-inset); text-align: end; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+	.payment-total output { margin-inline-end: var(--paper-amount-inset); text-align: end; font-family: var(--font-mono); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 	.payment-total.final { background: var(--bg-hover); }
 	.payment-total.final output { font-size: 1.125rem; }
 	.payment-feedback { margin: 0; padding: .75rem .875rem; border-top: 1px solid var(--border); }

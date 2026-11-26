@@ -196,8 +196,9 @@ export async function listenForUiAgentRequests() {
 				if (!option) return { ok: false, error: 'Choose an available option by its value.' };
 				element.value = value;
 			} else if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) {
-				if (element.hasAttribute('data-taxmate-agent-currency') && normalizeCurrencyInput(value) === null) {
-					return { ok: false, error: 'Provide a valid nonnegative currency amount in args.value.' };
+				const currency = element.getAttribute('data-taxmate-agent-currency');
+				if (currency !== null && normalizeCurrencyInput(value, currency === 'signed') === null) {
+					return { ok: false, error: currency === 'signed' ? 'Provide a valid currency amount in args.value.' : 'Provide a valid nonnegative currency amount in args.value.' };
 				}
 				const previous = element.value;
 				element.value = value;

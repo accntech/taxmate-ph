@@ -1,5 +1,21 @@
 import { expect, test } from '@playwright/test';
-import { formPath, seedWorkspace } from './fixtures';
+import { formPath, seedWorkspace, taxpayerId } from './fixtures';
+
+test('1601EQ draws a single rule at each edge of the empty withholding section', async ({ page }) => {
+	await seedWorkspace(page, 'dark', 'loaded', {}, []);
+	await page.goto(`/ebirforms/taxpayers/${taxpayerId}/forms/1601EQ?new=true`);
+	await page.getByRole('radiogroup', { name: 'Any taxes withheld?' }).getByRole('radio', { name: 'Yes' }).check();
+	const lines = page.getByRole('region', { name: 'Taxes withheld', exact: true });
+	const empty = lines.locator('.empty');
+	const summary = page.getByRole('complementary', { name: 'Summary' });
+	for (const width of [390, 1280]) {
+		await page.setViewportSize({ width, height: 900 });
+		await expect(lines.locator('header')).toHaveCSS('border-block-end-width', '1px');
+		await expect(empty).toHaveCSS('border-block-start-width', '0px');
+		await expect(empty).toHaveCSS('border-block-end-width', '0px');
+		await expect(summary).toHaveCSS('border-block-start-width', '1px');
+	}
+});
 
 test('dark 1601EQ section headings use the raised surface color', async ({ page }) => {
 	await seedWorkspace(page, 'dark');

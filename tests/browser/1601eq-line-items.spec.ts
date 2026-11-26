@@ -5,50 +5,58 @@ const summary = (page: Page) => page.getByRole('complementary', { name: 'Summary
 const items = (page: Page) => page.getByRole('list', { name: 'ATC line items', exact: true });
 const editor = (page: Page) => page.getByRole('dialog', { name: /line item/i });
 
+test.beforeEach(async ({ page }) => {
+	await page.routeWebSocket('**/*', socket => socket.close());
+});
+
+async function deleteLine(page: Page, index: number) {
+	await page.getByRole('button', { name: `Edit line item ${index}`, exact: true }).click();
+	await editor(page).getByRole('button', { name: 'Delete item', exact: true }).click();
+	await expect(editor(page)).toBeHidden();
+}
+
 async function selectAtc(page: Page, code: string) {
 	await editor(page).getByRole('combobox', { name: 'ATC', exact: true }).click();
 	await page.getByPlaceholder('Search code or income', { exact: true }).fill(code);
 	await page.getByRole('option', { name: new RegExp(`^${code} `) }).click();
 }
 
-test('numbered tax rows reflow and update the return directly', async ({ page }, testInfo) => {
+test('numbered tax rows reopen their drawer and preserve committed values at narrow widths', async ({ page }, testInfo) => {
 	await page.setViewportSize({ width: 1440, height: 960 });
 	await seedWorkspace(page);
 	await page.goto(formPath);
-	const period = page.getByRole('region', { name: 'Return period' });
-	const taxpayer = page.getByRole('region', { name: 'Taxpayer information' });
-	await expect(taxpayer.getByText('8', { exact: true })).toBeVisible();
-	expect((await taxpayer.boundingBox())!.y).toBeGreaterThanOrEqual((await period.boundingBox())!.y + (await period.boundingBox())!.height);
 	const row = items(page).getByRole('listitem').first();
-	const atc = row.getByRole('combobox', { name: 'Item 13 ATC', exact: true });
-	const base = row.getByRole('textbox', { name: 'Item 13 Tax base', exact: true });
-	const rate = row.getByLabel('Item 13 Tax rate', { exact: true });
-	await expect(atc).toHaveText('WI120');
-	await expect(base).toBeVisible();
-	expect((await base.boundingBox())!.x).toBeGreaterThan((await atc.boundingBox())!.x);
+	const link = row.getByRole('button', { name: 'Edit line item 1', exact: true });
+	await expect(link).toHaveText('WI120', { timeout: 15000 });
+	await expect(link.getByText('WI120')).toHaveCSS('font-family', /\bmonospace$/);
+	await expect(row.getByLabel('Item 13 Tax rate', { exact: true })).toHaveCSS('font-family', /\bmonospace$/);
+	await expect(row.getByLabel('Item 13 Tax withheld', { exact: true })).toHaveCSS('font-family', /\bmonospace$/);
+	await expect(row.getByRole('textbox')).toHaveCount(0);
+	await link.click();
+	await expect(editor(page).getByText('Taxes withheld', { exact: true })).toBeVisible();
+	const base = editor(page).getByRole('textbox', { name: 'Tax Base', exact: true });
+	await expect(base).toHaveCSS('font-family', /\bmonospace$/);
 	await base.fill('200000');
-	await expect(summary(page)).toContainText('₱2,765.44');
+	await expect(summary(page)).toContainText('₱765.44');
+	await editor(page).getByRole('button', { name: 'Update', exact: true }).click();
 	await expect(editor(page)).toBeHidden();
-	await page.screenshot({ path: testInfo.outputPath('1601eq-form-desktop.png'), fullPage: true });
-
-	await page.setViewportSize({ width: 390, height: 844 });
-	expect((await rate.boundingBox())!.y).toBeGreaterThan((await base.boundingBox())!.y);
-	await expect.poll(async () => {
-		const height = (await base.locator('..').boundingBox())?.height ?? 0;
-		return height >= 36 && height <= 40;
-	}).toBe(true);
-	expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
 	await expect(summary(page)).toContainText('₱2,765.44');
-	await page.screenshot({ path: testInfo.outputPath('1601eq-form-phone.png'), fullPage: true });
-	await atc.click();
-	await page.getByPlaceholder('Search code or income', { exact: true }).fill('WI010');
-	await page.getByRole('option', { name: /^WI010 / }).click();
-	await expect(summary(page)).toContainText('₱8,765.44');
+	await expect(link).toBeFocused();
+	await page.screenshot({ path: testInfo.outputPath('1601eq-form-desktop.png'), fullPage: true });
+	await page.setViewportSize({ width: 390, height: 844 });
+	await expect(row.getByLabel('Item 13 Tax rate', { exact: true })).toBeVisible();
+	expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+	await link.click();
+	await selectAtc(page, 'WI010');
 	await page.setViewportSize({ width: 320, height: 700 });
+	await expect(editor(page).getByText('Taxes withheld', { exact: true })).toBeVisible();
 	await base.fill('999999999.99');
 	await base.blur();
 	await expect(base).toHaveValue('999,999,999.99');
-	expect(await base.evaluate(input => input.scrollWidth)).toBeLessThanOrEqual(await base.evaluate(input => input.clientWidth) + 1);
+	await expect(page.getByPlaceholder('Search code or income', { exact: true })).toBeHidden();
+	await page.screenshot({ path: testInfo.outputPath('1601eq-form-phone.png'), fullPage: true });
+	await editor(page).getByRole('button', { name: 'Update', exact: true }).click();
+	await expect(editor(page)).toBeHidden();
 	await page.getByRole('button', { name: 'Save draft', exact: true }).click();
 	await expect(page).toHaveURL(/\/forms$/);
 	const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('ebirforms-created-returns-v1')!).returns[0].values);
@@ -61,6 +69,7 @@ test('new and edited line drafts leave totals unchanged until committed', async 
 	await page.goto(formPath);
 	await expect(summary(page)).toContainText('₱765.44');
 	await page.getByRole('button', { name: 'Add line item', exact: true }).click();
+	await expect(editor(page).getByText('Taxes withheld', { exact: true })).toBeVisible();
 	await expect(editor(page)).toBeVisible();
 	await expect(editor(page).getByRole('combobox', { name: 'ATC', exact: true })).toBeFocused();
 	await selectAtc(page, 'WI010');
@@ -69,10 +78,12 @@ test('new and edited line drafts leave totals unchanged until committed', async 
 	await page.keyboard.press('Control+i');
 	await expect(editor(page).getByRole('textbox', { name: 'Tax Base', exact: true })).toHaveValue('20000');
 	await editor(page).getByRole('button', { name: 'Cancel', exact: true }).click();
+	await expect(editor(page)).toBeHidden();
 	await expect(items(page).getByRole('listitem')).toHaveCount(1);
 	await page.getByRole('button', { name: 'Edit line item 1', exact: true }).click();
 	await editor(page).getByRole('textbox', { name: 'Tax Base', exact: true }).fill('200000');
 	await editor(page).getByRole('button', { name: 'Cancel', exact: true }).click();
+	await expect(editor(page)).toBeHidden();
 	await expect(summary(page)).toContainText('₱765.44');
 	await page.getByRole('button', { name: 'Add line item', exact: true }).click();
 	await selectAtc(page, 'WI010');
@@ -84,7 +95,24 @@ test('new and edited line drafts leave totals unchanged until committed', async 
 	await page.getByRole('button', { name: 'Edit line item 1', exact: true }).click();
 	await editor(page).getByRole('textbox', { name: 'Tax Base', exact: true }).fill('200000');
 	await editor(page).getByRole('button', { name: 'Update', exact: true }).click();
+	await expect(editor(page)).toBeHidden();
 	await expect(summary(page)).toContainText('₱3,765.44');
+});
+
+test('1601EQ reopens a line item after closing its drawer', async ({ page }) => {
+	await seedWorkspace(page);
+	await page.goto(formPath);
+
+	const edit = items(page).getByRole('button', { name: 'Edit line item 1', exact: true });
+	const drawer = editor(page);
+	const atc = drawer.getByRole('combobox', { name: 'ATC', exact: true });
+	await edit.click();
+	await expect(atc).toBeFocused();
+	await drawer.getByRole('button', { name: 'Close', exact: true }).click();
+	await expect(drawer).toBeHidden();
+
+	await edit.click();
+	await expect(atc).toBeFocused();
 });
 
 test('invalid drafts cannot add a row and Escape discards a new draft', async ({ page }) => {
@@ -118,7 +146,7 @@ test('drag and keyboard reordering persist whole rows through save and reopen', 
 	await items(page).scrollIntoViewIfNeeded();
 	await page.getByRole('button', { name: 'Drag line item 2', exact: true }).dragTo(page.getByRole('button', { name: 'Drag line item 1', exact: true }));
 	await expect(items(page).getByRole('listitem').first()).toContainText('WI010');
-	await expect(items(page).getByRole('listitem').first().getByRole('textbox', { name: 'Item 13 Tax base' })).toHaveValue('20,000.00');
+	await expect(items(page).getByRole('listitem').first().getByLabel('Item 13 Tax base')).toHaveText('₱20,000.00');
 	await expect(summary(page)).toContainText('₱1,765.44');
 	await page.getByRole('button', { name: 'Drag line item 1', exact: true }).press('ArrowDown');
 	await expect(items(page).getByRole('listitem').first()).toContainText('WI120');
@@ -134,7 +162,7 @@ test('drag and keyboard reordering persist whole rows through save and reopen', 
 	expect(saved['frm1601EQ:txtTaxBase14']).toBe('100000');
 	await page.getByRole('link', { name: 'Edit', exact: true }).click();
 	await expect(items(page).getByRole('listitem').first()).toContainText('WI010');
-	await page.getByRole('button', { name: 'Remove line item 1', exact: true }).click();
+	await deleteLine(page, 1);
 	await expect(items(page).getByRole('listitem')).toHaveCount(1);
 	await page.getByRole('button', { name: 'Undo', exact: true }).click();
 	await expect(items(page).getByRole('listitem').first()).toContainText('WI010');
@@ -146,13 +174,14 @@ for (const theme of ['light', 'dark']) {
 		await page.setViewportSize({ width: 390, height: 844 });
 		await seedWorkspace(page, theme);
 		await page.goto(formPath);
-		await page.getByRole('button', { name: 'Remove line item 1', exact: true }).click();
-		await expect(page.getByText('No line items yet', { exact: true })).toBeVisible();
-		await page.getByRole('button', { name: 'Add first line item', exact: true }).click();
+		await deleteLine(page, 1);
+		await expect(page.getByText('No items added', { exact: true })).toBeVisible();
+		await page.getByRole('button', { name: 'Add line item', exact: true }).click();
 		await expect(editor(page).getByRole('combobox', { name: 'ATC', exact: true })).toBeFocused();
 		await page.keyboard.press('Tab');
 		const base = editor(page).getByRole('textbox', { name: 'Tax Base', exact: true });
 		await expect(base).toBeFocused();
+		await expect(editor(page)).toHaveCSS('opacity', '1');
 		await editor(page).evaluate(async element => { await Promise.all(element.getAnimations({ subtree: true }).map(animation => animation.finished.catch(() => {}))); });
 		expect(await base.evaluate(element => getComputedStyle(element.parentElement!).boxShadow)).not.toBe('none');
 		expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
@@ -161,7 +190,7 @@ for (const theme of ['light', 'dark']) {
 		expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(391);
 		await page.screenshot({ path: testInfo.outputPath(`line-editor-${theme}.png`) });
 		await page.keyboard.press('Escape');
-		await expect(page.getByRole('button', { name: 'Add first line item', exact: true })).toBeFocused();
+		await expect(page.getByRole('button', { name: 'Add line item', exact: true })).toBeFocused();
 	});
 }
 
@@ -216,6 +245,7 @@ test('validation links open the corresponding line editor and keep invalid impor
 	await expect(editor(page).getByRole('textbox', { name: 'Tax Base', exact: true })).toBeFocused();
 	await editor(page).getByRole('textbox', { name: 'Tax Base', exact: true }).fill('100000');
 	await editor(page).getByRole('button', { name: 'Update', exact: true }).click();
+	await expect(editor(page)).toBeHidden();
 	await expect(summary(page)).toContainText('₱765.44');
 });
 
@@ -234,8 +264,21 @@ test('six committed items block another draft until an item is removed', async (
 	await expect(page.getByRole('button', { name: 'Add line item', exact: true })).toBeDisabled();
 	await page.keyboard.press('Control+i');
 	await expect(editor(page)).toBeHidden();
-	await page.getByRole('button', { name: 'Remove line item 3', exact: true }).click();
+	await deleteLine(page, 3);
 	await expect(page.getByRole('button', { name: 'Add line item', exact: true })).toBeEnabled();
 	await page.getByRole('button', { name: 'Undo', exact: true }).click();
 	await expect(items(page).getByRole('listitem')).toHaveCount(6);
+});
+
+test('1601EQ opens saved ATC links and deletes in the drawer', async ({ page }) => {
+	await seedWorkspace(page);
+	await page.goto(formPath);
+	await expect(page.locator('.eq-section-header').getByRole('button', { name: 'Add line item', exact: true })).toBeVisible();
+	await items(page).getByRole('button', { name: 'Edit line item 1', exact: true }).click();
+	await editor(page).getByRole('button', { name: 'Delete item', exact: true }).click();
+	await expect(editor(page)).toBeHidden();
+	await expect(items(page).getByRole('listitem')).toHaveCount(0);
+	await expect(page.getByRole('button', { name: 'Add line item', exact: true })).toBeFocused();
+	await page.getByRole('button', { name: 'Undo', exact: true }).click();
+	await expect(items(page)).toContainText('WI120');
 });

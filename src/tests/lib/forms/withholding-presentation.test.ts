@@ -63,8 +63,8 @@ describe('withholding form presentation', () => {
 	});
 	it('starts a repeatable schedule with an empty state and a draft editor action', () => {
 		const source = getWithholdingDefinition('1601E')!;
-		const html = renderEditor(source, {});
-		expect(html).toContain('No line items yet');
+		const html = renderEditor(source, { 'frm1601E:optWithheld': 'Y' });
+		expect(html).toContain('No items added');
 		expect(html).toContain('aria-label="Add line item to Computation by ATC"');
 		expect(html).not.toContain('id="frm1601E:txtAtcCode1"');
 		expect(html).not.toContain('id="frm1601E:txtAtcCode2"');

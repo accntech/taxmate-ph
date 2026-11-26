@@ -94,12 +94,15 @@ test('1606 groups property identifiers and uses a segmented seller TIN control',
 	await page.setViewportSize({ width: 1440, height: 960 });
 	await seedWorkspace(page);
 	await page.goto(`/ebirforms/taxpayers/${taxpayerId}/forms/1606?new=true`);
+	await page.getByRole('button', { name: 'Enter property details', exact: true }).click({ timeout: 5000 });
+	const drawer = page.getByRole('dialog', { name: 'Property details', exact: true });
 	const identifiers = page.locator('[data-property-item="17"]');
 	await expect(identifiers.locator('.paper-item-number')).toHaveCount(1, { timeout: 20000 });
 	const fields = identifiers.locator('input');
 	await expect(fields).toHaveCount(3);
-	const positions = await fields.evaluateAll(inputs => inputs.map(input => input.getBoundingClientRect().top));
-	expect(new Set(positions).size).toBe(1);
+	await drawer.getByRole('textbox', { name: 'Location of property', exact: true }).fill('42 Narra Street');
+	await drawer.getByRole('button', { name: 'Update', exact: true }).click();
+	await expect(page.getByRole('button', { name: '42 Narra Street', exact: true })).toBeVisible();
 	const sellerTin = page.getByRole('textbox', { name: 'Seller TIN', exact: true });
 	await sellerTin.fill('12345678900000');
 	await sellerTin.blur();

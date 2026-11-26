@@ -20,6 +20,7 @@ describe('source-native withholding print controls', () => {
   const prefix = `frm${code}:`;
   const values = {
    ...createWithholdingValues(code, initialProfile),
+   ...(code === '0619F' ? { [prefix + 'txtTaxTypeCode']: 'WF' } : {}),
    [prefix + 'optAmend']: 'N', [prefix + 'optWithheld']: 'Y',
    [prefix + prior]: '100.00', [prefix + 'txtTax14']: '1000.00'
   };
@@ -120,15 +121,26 @@ describe('source-native withholding print controls', () => {
  it.each([
   ['0619E', expandedRemittanceBindings, ['txtTax14'], 'txtTax16'],
   ['0619F', finalRemittanceBindings, ['txtTax13', 'txtTax14'], 'txtTax17']
- ] as const)('%s excludes retained withholding amounts when No is selected', (code, bindings, amounts, total) => {
+ ] as const)('%s prints computed zero amounts when No is selected', (code, bindings, amounts, total) => {
   const prefix = `frm${code}:`;
   const values = { ...createWithholdingValues(code, initialProfile), [prefix + 'optWithheld']: 'N' };
   for (const amount of amounts) values[prefix + amount] = '345.67';
   const inactive = createWithholdingPrintModel(code, values, bindings).text;
-  expect(amounts.map(amount => [inactive[amount], inactive[amount + '_2']])).toEqual(amounts.map(() => ['', '']));
+  expect(amounts.map(amount => [inactive[amount], inactive[amount + '_2']])).toEqual(amounts.map(() => ['0', '00']));
   expect([inactive[total], inactive[total + '_2']]).toEqual(['0', '00']);
   const active = createWithholdingPrintModel(code, { ...values, [prefix + 'optWithheld']: 'Y' }, bindings).text;
-  expect(amounts.map(amount => [active[amount], active[amount + '_2']])).toEqual(amounts.map(() => ['345', '67']));
+  const expected = code === '0619F' ? [['345', '67'], ['0', '00']] : [['345', '67']];
+  expect(amounts.map(amount => [active[amount], active[amount + '_2']])).toEqual(expected);
+ });
+
+ it('1606 prints the installment selling price in both items from a sparse older draft', () => {
+  const values = {
+   ...createWithholdingValues('1606', initialProfile),
+   'frm1606:transactionType': 'Installment sale',
+   'frm1606:txtSelling': '2345.00'
+  };
+  const { text } = createWithholdingPrintModel('1606', values, propertyBindings);
+  expect([text['frm1606:txtSelling'], text['frm1606:txtGross']]).toEqual(['2,345.00', '2,345.00']);
  });
 
  it('1606 prints transaction descriptions and details only for the matching transaction type', () => {

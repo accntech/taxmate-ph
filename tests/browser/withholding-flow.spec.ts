@@ -1,5 +1,7 @@
+import { execFileSync } from 'node:child_process';
 import { expect, test, type Page } from '@playwright/test';
 import { seedWorkspace, taxpayerId } from './fixtures';
+import { printSavedReturn } from './helpers/return-pdf';
 
 const listPath = `/ebirforms/taxpayers/${taxpayerId}/forms`;
 const field = (page: Page, id: string) => page.locator(`[id="${id}"]`);
@@ -102,6 +104,53 @@ test('0619E follows the PDF field order in a centered paper form', async ({ page
 	await expect(field(page, 'frm0619E:txtTax18')).toHaveText('₱8,300.00');
 });
 
+for (const width of [1440, 390, 320]) {
+	test(`0619F shows the full Item 5 tax type at ${width}px`, async ({ page }, testInfo) => {
+		const wb = 'WB — Withholding tax — banks and other financial institutions';
+		await page.setViewportSize({ width, height: 960 });
+		await seedWorkspace(page);
+		await page.goto(`${listPath}/0619F?new=true`);
+		const taxType = page.getByRole('combobox', { name: 'Tax type', exact: true });
+		const label = taxType.getByText(wb, { exact: true });
+		await expect(label).toBeVisible({ timeout: 20_000 });
+		await page.evaluate(() => document.fonts.ready);
+		const textFits = (element: HTMLElement) => {
+			const range = document.createRange();
+			range.selectNodeContents(element);
+			const bounds = element.getBoundingClientRect();
+			return [...range.getClientRects()].every(line =>
+				line.left >= bounds.left - 1 && line.right <= bounds.right + 1 &&
+				line.top >= bounds.top - 1 && line.bottom <= bounds.bottom + 1
+			);
+		};
+		expect(await label.evaluate(textFits), 'selected tax type fits without clipping').toBe(true);
+		const formHeader = page.locator('.paper-form-header');
+		const period = page.getByRole('region', { name: 'Return period', exact: true });
+		if (width !== 320) {
+			const header = (await formHeader.boundingBox())!;
+			const box = (await period.boundingBox())!;
+			await page.screenshot({
+				path: testInfo.outputPath(`0619-f-item-5-${width}.png`),
+				animations: 'disabled',
+				clip: { x: header.x, y: header.y, width: header.width, height: box.y + box.height - header.y }
+			});
+			await page.screenshot({
+				path: testInfo.outputPath(`0619-f-full-${width}.png`),
+				fullPage: true,
+				animations: 'disabled',
+				style: '.eq-action-bar { position: static !important; }'
+			});
+		}
+		await taxType.press('Enter');
+		const option = page.getByRole('option', { name: wb, exact: true });
+		await expect(option).toBeVisible();
+		expect(await option.getByText(wb, { exact: true }).evaluate(textFits), 'dropdown tax type fits without clipping').toBe(true);
+		await expect(page.getByRole('option', { name: 'WF — Final withholding tax', exact: true })).toBeVisible();
+		await taxType.press('Escape');
+		await expect(option).toBeHidden();
+	});
+}
+
 test('0619F follows the final withholding PDF and reopens the saved tax type and amounts', async ({ page }, testInfo) => {
 	await seedWorkspace(page);
 	await page.goto(`${listPath}/0619F?new=true`);
@@ -203,6 +252,85 @@ for (const width of [1440, 390]) {
 		await page.screenshot({ path: testInfo.outputPath(`1604c-${width}.png`), fullPage: true });
 	});
 }
+
+test('0619F shows inactive withholding as labeled zeroes through save and reopen', async ({ page }, testInfo) => {
+	await seedWorkspace(page, 'light', 'loaded', {}, []);
+	await create(page, '0619F');
+	const withheld = page.getByRole('radiogroup', { name: 'Any tax withheld?', exact: true });
+	await withheld.getByRole('radio', { name: 'Yes', exact: true }).check();
+	const interest = field(page, 'frm0619F:txtTax13');
+	const other = field(page, 'frm0619F:txtTax14');
+	const total = field(page, 'frm0619F:txtTax15');
+	await expect(other.locator('xpath=self::output')).toHaveText('₱0.00');
+	await interest.fill('100');
+	await expect(total).toHaveText('₱100.00');
+	await page.getByRole('combobox', { name: 'Tax type', exact: true }).click();
+	await page.getByRole('option', { name: /^WF —/ }).click();
+	await expect(interest.locator('xpath=self::output')).toHaveText('₱0.00');
+	await other.fill('250');
+	await expect(total).toHaveText('₱250.00');
+	await withheld.getByRole('radio', { name: 'No', exact: true }).check();
+	await expect(other.locator('xpath=self::output')).toHaveText('₱0.00');
+	await expect(total).toHaveText('₱0.00');
+	await page.getByRole('button', { name: 'Save draft', exact: true }).click();
+	const printed = await printSavedReturn(page, '0619F', testInfo.outputPath('0619f-inactive-amounts.pdf'));
+	for (const item of ['txtTax13', 'txtTax14', 'txtTax15']) {
+		await expect(field(printed, item)).toHaveText('0');
+		await expect(field(printed, item + '_2')).toHaveText('00');
+	}
+	await printed.close();
+	await page.getByRole('button', { name: 'Not now', exact: true }).click();
+	await page.getByRole('row').filter({ hasText: '0619F' }).getByRole('link', { name: 'Edit', exact: true }).click();
+	await expect(total).toHaveText('₱0.00');
+	for (const width of [1280, 390]) {
+		await page.setViewportSize({ width, height: 900 });
+		await page.getByRole('region', { name: 'Part II · Tax Remittance' }).scrollIntoViewIfNeeded();
+		await page.screenshot({
+			path: testInfo.outputPath(`0619f-inactive-amounts-${width}.png`), fullPage: true,
+			animations: 'disabled', style: '.eq-action-bar { position: static !important; }'
+		});
+	}
+});
+
+test('1606 reconciles two saved selling prices into one labeled amount', async ({ page }, testInfo) => {
+	await seedWorkspace(page, 'light', 'loaded', {}, [{
+		id: '1606-conflict', taxpayerId, formCode: '1606', returnPeriod: '20251001', status: 'Draft',
+		updatedAt: 1794441600000, finalFlag: '0', values: {
+			'frm1606:transactionType': 'Installment sale', 'frm1606:date': '2025-10-01',
+			'frm1606:txtSelling': '3000', 'frm1606:txtGross': '4000'
+		}
+	}]);
+	await page.goto(`${listPath}/1606?return=1606-conflict`);
+	const selling = field(page, 'frm1606:txtSelling');
+	const gross = field(page, 'frm1606:txtGross');
+	const reconcile = page.getByRole('button', { name: 'Use gross selling price for both items' });
+	await expect(selling.locator('xpath=self::output')).toHaveText('₱3,000.00');
+	await expect(gross).toHaveValue('4,000.00');
+	await expect(reconcile).toBeVisible();
+	await reconcile.click();
+	await expect(selling).toHaveText('₱4,000.00');
+	await expect(reconcile).toHaveCount(0);
+	await gross.fill('4100');
+	await gross.blur();
+	await expect(selling).toHaveText('₱4,100.00');
+	await page.getByRole('button', { name: 'Save draft', exact: true }).click();
+	const printed = await printSavedReturn(page, '1606', testInfo.outputPath('1606-mirrored-selling-price.pdf'));
+	await expect(field(printed, 'frm1606:txtSelling')).toHaveValue('4,100.00');
+	await expect(field(printed, 'frm1606:txtGross')).toHaveValue('4,100.00');
+	await printed.close();
+	await page.getByRole('button', { name: 'Not now', exact: true }).click();
+	await page.getByRole('row').filter({ hasText: '1606' }).getByRole('link', { name: 'Edit', exact: true }).click();
+	await expect(gross).toHaveValue('4,100.00');
+	await expect(selling).toHaveText('₱4,100.00');
+	for (const width of [1280, 390]) {
+		await page.setViewportSize({ width, height: 900 });
+		await selling.scrollIntoViewIfNeeded();
+		await page.screenshot({
+			path: testInfo.outputPath(`1606-mirrored-selling-price-${width}.png`), fullPage: true,
+			animations: 'disabled', style: '.eq-action-bar { position: static !important; }'
+		});
+	}
+});
 
 test('proper date input preserves an ISO leap day and opens its project calendar', async ({ page }) => {
 	await seedWorkspace(page);
@@ -334,7 +462,7 @@ for (const width of [1440, 390]) {
    expect(year.x + year.width).toBeLessThanOrEqual(picker.x);
   }
   await expect(field(page, 'frm0605:txtYearEnded')).toHaveValue(String(new Date().getFullYear()));
-  await expect(field(page, 'frm0605:itemYearEndMonth')).toBeEnabled();
+  await expect(period.locator('output[id="frm0605:itemYearEndMonth"]')).toHaveText('December');
   const atc = field(page, 'frm0605:txtATCCode');
   await expect(atc).toHaveAttribute('role', 'combobox');
   await atc.click();
@@ -352,9 +480,22 @@ for (const width of [1440, 390]) {
  });
 }
 
-test('0605 keeps payment choices and calculated amounts when a draft is reopened', async ({ page }) => {
+test('0605 keeps the calculated month and amounts when saved, reopened and printed', async ({ page }, testInfo) => {
  await seedWorkspace(page);
  await create(page, '0605');
+ const basis = page.getByRole('combobox', { name: 'Year basis', exact: true });
+ const month = page.locator('output[id="frm0605:itemYearEndMonth"]');
+ await expect(month).toHaveAccessibleName('Year-end month');
+ await expect(month).toHaveText('December');
+ await basis.click();
+ await page.getByRole('option', { name: 'Fiscal', exact: true }).click();
+ const fiscalMonth = page.getByRole('combobox', { name: 'Year-end month', exact: true });
+ await fiscalMonth.click();
+ await page.getByRole('option', { name: 'June', exact: true }).click();
+ await expect(fiscalMonth).toHaveText('June');
+ await basis.click();
+ await page.getByRole('option', { name: 'Calendar', exact: true }).click();
+ await expect(month).toHaveText('December');
  const quarter = page.getByRole('combobox', { name: 'Quarter', exact: true });
  await quarter.click();
  await page.getByRole('option', { name: '2nd', exact: true }).click();
@@ -378,11 +519,31 @@ test('0605 keeps payment choices and calculated amounts when a draft is reopened
  await expect(page).toHaveURL(/\/forms$/);
  const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('ebirforms-created-returns-v1')!).returns.find((record: { formCode: string }) => record.formCode === '0605'));
  expect(saved.values['frm0605:txtNumOfInstallment']).toBe('2');
+ expect(saved.values['frm0605:itemYearEndMonth']).toBe('12');
+ expect(saved.values['frm0605:txtTax21']).toBe('15070.00');
  await page.getByRole('row').filter({ hasText: '0605' }).getByRole('link', { name: 'Edit', exact: true }).click();
  await expect(quarter).toHaveText('2nd');
  await expect(sheets).toHaveValue('3');
  await expect(installment).toHaveValue('2');
+ await expect(month).toHaveText('December');
  await expect(field(page, 'frm0605:txtTax21')).toHaveText('₱15,070.00');
+ for (const width of [1280, 430]) {
+  await page.setViewportSize({ width, height: 900 });
+  const closeSidebar = page.getByRole('button', { name: 'Close sidebar', exact: true });
+  if (await closeSidebar.isVisible()) await closeSidebar.click();
+  await page.getByRole('region', { name: 'Return period' }).screenshot({
+   path: testInfo.outputPath(`0605-period-${width}.png`), animations: 'disabled'
+  });
+ }
+ await page.setViewportSize({ width: 1280, height: 900 });
+ await page.getByRole('link', { name: /back to forms/i }).click();
+ await expect(page).toHaveURL(/\/forms$/);
+ const pdf = testInfo.outputPath('0605-calculated-values.pdf');
+ const printed = await printSavedReturn(page, '0605', pdf);
+ await expect(field(printed, 'frm0605:itemYearEndMonth')).toHaveText(/December/i);
+ const text = execFileSync('pdftotext', ['-layout', pdf, '-'], { encoding: 'utf8' });
+ expect(text).toMatch(/12\s*-\s*DECEMBER/i);
+ expect(text).toMatch(/15,?070\.00/);
 });
 
 test('0605 searches named tax types and uses the selected code in its PDF', async ({ page }) => {
@@ -424,8 +585,10 @@ test('individual 0605 locks December and calendar basis', async ({ page }) => {
  });
  await create(page, '0605');
  await expect(field(page, 'frm0605:itemYearEndMonth')).toHaveText('December');
- await expect(field(page, 'frm0605:itemYearEndMonth')).toBeDisabled();
- await expect(field(page, 'frm0605:itemFiscalStartMonth')).toBeDisabled();
+ await expect(page.locator('output[id="frm0605:itemYearEndMonth"]')).toHaveAccessibleName('Year-end month');
+ const basis = page.locator('output[id="frm0605:itemFiscalStartMonth"]');
+ await expect(basis).toHaveAccessibleName('Year basis');
+ await expect(basis).toHaveText('Calendar');
 });
 
 test('0619F updates its suggested due date with the reporting period and keeps an edited date on reopen', async ({ page }, testInfo) => {

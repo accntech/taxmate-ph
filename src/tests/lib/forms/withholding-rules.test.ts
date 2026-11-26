@@ -26,6 +26,36 @@ const calculate = (code: string, v: Record<string, string>) => {
 const total = (code: string, v: Record<string, string>) =>
   calculate(code, v)[getWithholdingDefinition(code)!.totalField];
 describe("packaged withholding arithmetic", () => {
+  it.each([
+    ["WB", "Y", "100", "0.00", "100.00"],
+    ["WF", "Y", "0.00", "250", "250.00"],
+    ["WB", "N", "0.00", "0.00", "0.00"],
+  ])("0619F calculates using the amounts applicable to %s with withholding %s", (taxType, withheld, interest, other, total) => {
+    const values = calculate("0619F", {
+      optWithheld: withheld, txtTaxTypeCode: taxType, txtTax13: "100", txtTax14: "250",
+    });
+    expect([values["frm0619F:txtTax13"], values["frm0619F:txtTax14"], values["frm0619F:txtTax15"]]).toEqual([interest, other, total]);
+  });
+  it("0619E zeroes withholding when Item 4 is No without zeroing penalties", () => {
+    const values = calculate("0619E", { optWithheld: "N", txtTax14: "100", txtTax17A: "25" });
+    expect([values["frm0619E:txtTax14"], values["frm0619E:txtTax16"], values["frm0619E:txtTax18"]]).toEqual(["0.00", "0.00", "25.00"]);
+  });
+  it.each([
+    ["", "4000"],
+    ["4000", ""],
+    ["4000", "0.00"],
+  ])("1606 backfills an absent installment selling price from entries %s and %s", (txtSelling, txtGross) => {
+    const values = calculate("1606", { transactionType: "Installment sale", txtSelling, txtGross });
+    expect([values["frm1606:txtSelling"], values["frm1606:txtGross"]]).toEqual(["4000", "4000"]);
+  });
+  it("1606 preserves conflicting installment selling prices until reconciled", () => {
+    const values = {
+      "frm1606:transactionType": "Installment sale", "frm1606:txtSelling": "3000", "frm1606:txtGross": "4000",
+    };
+    expect(calculateWithholding("1606", values)).toMatchObject(values);
+    expect(validateWithholding("1606", values)["frm1606:txtGross"]).toMatch(/selling price/i);
+    expect(validateWithholding("1606", { ...values, "frm1606:txtSelling": "4,000.00" })["frm1606:txtGross"]).toBeUndefined();
+  });
   it("adds manually entered basic tax and penalties on 0605", () =>
     expect(
       total("0605", {
@@ -325,7 +355,7 @@ describe("source rate selection and conditional validation", () => {
         }),
       ).toBe("12000.00");
   });
-  it("rejects impossible treaty percentages and simultaneous 0619F tax types", () => {
+  it("rejects impossible treaty percentages and validates only the applicable 0619F amount", () => {
     expect(
       validateWithholding("1601FQ", { "frm1601FQ:treaty:1:rate": "101" })[
         "frm1601FQ:treaty:1:rate"
@@ -333,10 +363,14 @@ describe("source rate selection and conditional validation", () => {
     ).toBeTruthy();
     expect(
       validateWithholding("0619F", {
+        "frm0619F:optWithheld": "Y",
         "frm0619F:txtTaxTypeCode": "WB",
         "frm0619F:txtTax14": "100",
-      })["frm0619F:txtTax14"],
-    ).toBeTruthy();
+      }),
+    ).toMatchObject({ "frm0619F:txtTax13": "Enter withholding greater than zero." });
+    expect(validateWithholding("0619F", {
+      "frm0619F:optWithheld": "Y", "frm0619F:txtTaxTypeCode": "WF", "frm0619F:txtTax13": "100",
+    })["frm0619F:txtTax14"]).toBe("Enter withholding greater than zero.");
   });
   it("rejects malformed grouping in final-copy money values", () =>
     expect(
@@ -485,12 +519,12 @@ describe("taxpayer-owned information", () => {
   });
 });
 
-it("rejects entered withholding when the return says no tax was withheld", () => {
+it("rejects entered compensation withholding when the return says no tax was withheld", () => {
   expect(
-    validateWithholding("0619E", {
-      "frm0619E:optWithheld": "N",
-      "frm0619E:txtTax14": "100",
-    })["frm0619E:optWithheld"],
+    validateWithholding("1601Cv2018", {
+      "frm1601c:optWithheld": "N",
+      "frm1601c:txtTax25": "100",
+    })["frm1601c:optWithheld"],
   ).toBeTruthy();
 });
 

@@ -460,10 +460,6 @@ export function createWithholdingPrintModel(
   ].includes(rawValues[prefix + "itemMannerOfPayment"])) {
     inactiveFields.add(prefix + "itemApprovedYN");
   }
-  if (rawValues[prefix + "optWithheld"] === "N") {
-    if (code === "0619E" || code === "0619F") inactiveFields.add(prefix + "txtTax14");
-    if (code === "0619F") inactiveFields.add(prefix + "txtTax13");
-  }
   if (code === "1606") {
     const transaction = rawValues[prefix + "transactionType"];
     if (transaction !== "Exempt" && transaction !== "Others")

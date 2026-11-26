@@ -20,10 +20,10 @@ describe('1601EQ preparation', () => {
 		expect(body.includes('Example taxpayer')).toBe(false);
 		expect(body.includes('Return period')).toBe(true);
 	});
-	it('uses currency controls for money and a separate whole-number attachment count', () => {
+	it('summarizes saved amounts and uses a separate whole-number attachment count', () => {
 		const body = markup({ 'frm1601EQ:optTaxesWithheld': 'Y', 'frm1601EQ:txtATC13': 'WI120', 'frm1601EQ:txtTaxBase13': '100000' });
 		expect(body).toContain('data-slot="currency-input"');
-		expect(body).toMatch(/<input(?=[^>]*aria-label="Item 13 Tax base")(?=[^>]*value="100,000.00")/);
+		expect(body).toMatch(/<output[^>]*aria-label="Item 13 Tax base"[^>]*>₱100,000.00<\/output>/);
 		expect(body).toContain('aria-label="Edit line item 1"');
 		expect(body).toContain('inputmode="numeric"');
 	});
@@ -46,13 +46,13 @@ describe('1601EQ preparation', () => {
 	});
 	it('starts empty and preserves imported later rows', () => {
 		const initial = markup({ 'frm1601EQ:optTaxesWithheld': 'Y' });
-		expect(initial).toContain('No line items yet');
-		expect(initial).toContain('Add first line item');
+		expect(initial).toContain('No items added');
+		expect(initial).toContain('Add item');
 		expect(initial).not.toContain('aria-label="Edit line item');
 		const imported = markup({ 'frm1601EQ:optTaxesWithheld': 'Y', 'frm1601EQ:txtATC18': 'WI010', 'frm1601EQ:txtTaxBase18': '1000', 'frm1601EQ:txtTaxRate18': '5' });
 		expect(imported).toContain('WI010');
 		expect(imported).toContain('aria-label="Edit line item 1"');
-		expect(imported).toMatch(/<input(?=[^>]*aria-label="Item 18 Tax base")(?=[^>]*value="1,000.00")/);
+		expect(imported).toMatch(/<output[^>]*aria-label="Item 18 Tax base"[^>]*>₱1,000.00<\/output>/);
 	});
 	it('only exposes previous quarter credits after Q1', () => {
 		expect(markup().includes('Over-remittance from previous quarter')).toBe(false);
@@ -69,7 +69,7 @@ describe('1601EQ preparation', () => {
 		const radios = body.match(/<input[^>]*type="radio"[^>]*>/g) || [];
 		expect(radios).toHaveLength(4);
 		expect(radios.some(radio => /\schecked(?:\s|>|=)/.test(radio))).toBe(false);
-		expect(body).toContain('Select an option');
+  expect(body).toContain('Choose quarter');
 	});
 	it('associates radio validation with the group and keeps the legacy focus target', () => {
 		const body = render(RadioGroup, { props: {
