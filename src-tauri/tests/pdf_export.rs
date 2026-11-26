@@ -412,3 +412,36 @@ fn progress_never_reports_saved_when_destination_copy_fails() {
         .starts_with("Could not save PDF:"));
     assert_eq!(*progress.lock().unwrap(), vec![5, 6]);
 }
+
+#[test]
+fn accepts_selectable_corporate_income_pdf_versions() {
+    for form_code in [
+        "1702EX",
+        "1702EXv2018",
+        "1702EXv2018C",
+        "1702MX",
+        "1702MXv2018",
+        "1702MXv2018C",
+        "1702Q",
+        "1702Qv2008C",
+        "1702Qv2018C",
+        "1702RT",
+        "1702RTv2018",
+        "1702RTv2018C",
+        "1702MXv2018Cxx",
+    ] {
+        let request = PdfExportRequest {
+            form_code: form_code.into(),
+            paper_size: "legal".into(),
+            html: "<!doctype html><html><body>Corporate return</body></html>".into(),
+            suggested_filename: format!("{form_code}.pdf"),
+            output_path: None,
+            job_id: None,
+        };
+        assert_eq!(
+            validate_export_request(&request).is_ok(),
+            form_code != "1702MXv2018Cxx",
+            "{form_code}"
+        );
+    }
+}

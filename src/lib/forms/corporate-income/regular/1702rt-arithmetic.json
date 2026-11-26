@@ -1,0 +1,273 @@
+[
+  {
+    "operation": "getSum",
+    "args": [
+      "txtPg3Sc1I1GoodsProp,txtPg3Sc1I2SaleServices,txtPg3Sc1I3LeaseProp",
+      "txtPg3Sc1I4Total"
+    ]
+  },
+  {
+    "operation": "getDifference",
+    "args": [
+      "txtPg3Sc1I4Total",
+      "txtPg3Sc1I5LessSales",
+      "txtPg3Sc1I6NetSales"
+    ]
+  },
+  {
+    "operation": "getSum",
+    "args": [
+      "txtPg3Sc2I1MerchInventory,txtPg3Sc2I2AddPurchases",
+      "txtPg3Sc2I3TotalGoods"
+    ]
+  },
+  {
+    "operation": "getDifference",
+    "args": [
+      "txtPg3Sc2I3TotalGoods",
+      "txtPg3Sc2I4LessMerch",
+      "txtPg3Sc2I5CostofSales"
+    ]
+  },
+  {
+    "operation": "getSum",
+    "args": [
+      "txtPg3Sc2I6DirectMaterials,txtPg3Sc2I7AddPurchases",
+      "txtPg3Sc2I8MaterialsAvaliable"
+    ]
+  },
+  {
+    "operation": "getDifference",
+    "args": [
+      "txtPg3Sc2I8MaterialsAvaliable",
+      "txtPg3Sc2I9LessDirectMat",
+      "txtPg3Sc2I10RawMatUsed"
+    ]
+  },
+  {
+    "operation": "getSum",
+    "args": [
+      "txtPg3Sc2I10RawMatUsed,txtPg3Sc2I11DirectLabor,txtPg3Sc2I12ManOverhead",
+      "txtPg3Sc2I13TotalManCost"
+    ]
+  },
+  {
+    "operation": "sumThenDifference",
+    "args": [
+      "txtPg3Sc2I13TotalManCost",
+      "txtPg3Sc2I14WorkProcess",
+      "txtPg3Sc2I15LessWorkProcess",
+      "txtPg3Sc2I16CostOfGoods"
+    ]
+  },
+  {
+    "operation": "sumThenDifference",
+    "args": [
+      "txtPg3Sc2I16CostOfGoods",
+      "txtPg3Sc2I17FinishedGoods",
+      "txtPg3Sc2I18LessFinishGoods",
+      "txtPg3Sc2I19CostOfGoods"
+    ]
+  },
+  {
+    "operation": "getSum",
+    "args": [
+      "txtPg3Sc2I20DirectSalaries,txtPg3Sc2I21DirectMaterials,txtPg3Sc2I22DirectDepreciation,txtPg3Sc2I23DirectRental,txtPg3Sc2I24DirectOutside,txtPg3Sc2I25DirectOthers",
+      "txtPg3Sc2I26TotalService"
+    ]
+  },
+  {
+    "operation": "getSum",
+    "args": [
+      "txtPg3Sc2I5CostofSales,txtPg3Sc2I19CostOfGoods,txtPg3Sc2I26TotalService",
+      "txtPg3Sc2I27TotalSales"
+    ]
+  },
+  {
+    "operation": "getSum",
+    "args": [
+      "txtPg4Sc3I1OtherTaxAmount,txtPg4Sc3I2OtherTaxAmount,txtPg4Sc3I3C2",
+      "txtPg4Sc3I4OtherTaxTotalAmount"
+    ]
+  },
+  {
+    "operation": "getSum",
+    "args": [
+      "txtPg4Sc4I1Advertising,txtPg4Sc4I2AmortizationAmount,txtPg4Sc4I3AmortizationAmount,txtPg4Sc4I4C2,txtPg4Sc4I5BadDebts,txtPg4Sc4I6CharitableContributions,txtPg4Sc4I7Commissions,txtPg4Sc4I8Communication,txtPg4Sc4I9Depletion,txtPg4Sc4I10Depreciation,txtPg4Sc4I11DirectorsFee,txtPg4Sc4I12FringeBenefits,txtPg4Sc4I13Fuel,txtPg4Sc4I14Insurance,txtPg4Sc4I15Interest,txtPg4Sc4I16Janitorial,txtPg4Sc4I17Losses,txtPg4Sc4I18Management,txtPg4Sc4I19Miscellaneous,txtPg4Sc4I20OfficeSupplies,txtPg4Sc4I21OtherServices,txtPg4Sc4I22ProfessionalFees,txtPg4Sc4I23Rental,txtPg4Sc4I24Repairs,txtPg4Sc4I25Repairs,txtPg4Sc4I26Representation,txtPg4Sc4I27Research,txtPg4Sc4I28Royalties,txtPg4Sc4I29Salaries,txtPg5Sc4I30SecurityServices,txtPg5Sc4I31Contributions,txtPg5Sc4I32TaxesandLicenses,txtPg5Sc4I33TollingFees,txtPg5Sc4I34TrainingandSeminars,txtPg5Sc4I35TransportationandTravel,txtPg5Sc4I36C2,txtPg5Sc4I37C2,txtPg5Sc4I38C2,txtPg5Sc4I39C2",
+      "txtPg5Sc4I40TotalOrdinaryAllowable"
+    ]
+  },
+  {
+    "operation": "getSum",
+    "args": [
+      "txtPg5Sc5I1C3,txtPg5Sc5I2C3,txtPg5Sc5I3C3,txtPg5Sc5I4C3",
+      "txtPg5Sc5I5TotalSpecialAllowable"
+    ]
+  },
+  {
+    "operation": "getDifference",
+    "args": [
+      "txtPg5Sc6AI5C2",
+      "txtPg5Sc6AI5C3,txtPg5Sc6AI5C4,txtPg5Sc6AI5C5",
+      "txtPg5Sc6AI5C6"
+    ]
+  },
+  {
+    "operation": "getDifference",
+    "args": [
+      "txtPg5Sc6AI6C2",
+      "txtPg5Sc6AI6C3,txtPg5Sc6AI6C4,txtPg5Sc6AI6C5",
+      "txtPg5Sc6AI6C6"
+    ]
+  },
+  {
+    "operation": "getDifference",
+    "args": [
+      "txtPg5Sc6AI7C2",
+      "txtPg5Sc6AI7C3,txtPg5Sc6AI7C4,txtPg5Sc6AI7C5",
+      "txtPg5Sc6AI7C6"
+    ]
+  },
+  {
+    "operation": "getSum",
+    "args": [
+      "txtPg5Sc6AI4C5,txtPg5Sc6AI5C5,txtPg5Sc6AI6C5,txtPg5Sc6AI7C5",
+      "txtPg5Sc6AI8TotalNOLCO"
+    ]
+  },
+  {
+    "operation": "getDifference",
+    "args": [
+      "txtPg5Sc6I1GrossIncome",
+      "txtPg5Sc6I2TotalDeductions",
+      "txtPg5Sc6I3NetOperatingLoss"
+    ]
+  },
+  {
+    "operation": "getDifference",
+    "args": [
+      "txtPg5Sc6AI4C2",
+      "txtPg5Sc6AI4C3,txtPg5Sc6AI4C4,txtPg5Sc6AI4C5",
+      "txtPg5Sc6AI4C6"
+    ]
+  },
+  {
+    "operation": "getSum",
+    "args": [
+      "txtPg6Sc7I1ExcessCredits,txtPg6Sc7I2IncomeTaxPaymentUnderMCIT,txtPg6Sc7I3IncomeTaxUnderRegular,txtPg6Sc7I4ExcessMCIT,txtPg6Sc7I5CreditableTaxWithheldFromPrevious,txtPg6Sc7I6CreditableTaxWithheldFor4thQuarter,txtPg6Sc7I7ForeignTaxCredits,txtPg6Sc7I8TaxPaidInReturn,txtPg6Sc7I9SpecialTaxCredits,txtPg5Sc7I10C2,txtPg6Sc7I11C2",
+      "txtPg6Sc7I12TotalTaxCredits"
+    ]
+  },
+  {
+    "operation": "getDifference",
+    "args": [
+      "txtPg6Sc8I1C3",
+      "txtPg6Sc8I1C2",
+      "txtPg6Sc8I1C4"
+    ]
+  },
+  {
+    "operation": "getDifference",
+    "args": [
+      "txtPg6Sc8I2C3",
+      "txtPg6Sc8I2C2",
+      "txtPg6Sc8I2C4"
+    ]
+  },
+  {
+    "operation": "getDifference",
+    "args": [
+      "txtPg6Sc8I3C3",
+      "txtPg6Sc8I3C2",
+      "txtPg6Sc8I3C4"
+    ]
+  },
+  {
+    "operation": "getDifference",
+    "args": [
+      "txtPg6Sc8I1C4",
+      "txtPg6Sc8I1C5,txtPg6Sc8I1C6,txtPg6Sc8I1C7",
+      "txtPg6Sc8I1C8"
+    ]
+  },
+  {
+    "operation": "getDifference",
+    "args": [
+      "txtPg6Sc8I2C4",
+      "txtPg6Sc8I2C5,txtPg6Sc8I2C6,txtPg6Sc8I2C7",
+      "txtPg6Sc8I2C8"
+    ]
+  },
+  {
+    "operation": "getDifference",
+    "args": [
+      "txtPg6Sc8I3C4",
+      "txtPg6Sc8I3C5,txtPg6Sc8I3C6,txtPg6Sc8I3C7",
+      "txtPg6Sc8I3C8"
+    ]
+  },
+  {
+    "operation": "getSum",
+    "args": [
+      "txtPg6Sc8I1C7,txtPg6Sc8I2C7,txtPg6Sc8I3C7",
+      "txtPg6Sc8I4TotalExcessMCIT"
+    ]
+  },
+  {
+    "operation": "getSum",
+    "args": [
+      "txtPg6Sc9I1NetIncome,txtPg6Sc9I2C2,txtPg6Sc9I3C2",
+      "txtPg6Sc9I4Total"
+    ]
+  },
+  {
+    "operation": "getSum",
+    "args": [
+      "txtPg6Sc9I5C2,txtPg6Sc9I6C2,txtPg6Sc9I7C2,txtPg6Sc9I8C2",
+      "txtPg6Sc9I9Total"
+    ]
+  },
+  {
+    "operation": "getDifference",
+    "args": [
+      "txtPg6Sc9I4Total",
+      "txtPg6Sc9I9Total",
+      "txtPg6Sc9I10NetTaxableIncome"
+    ]
+  },
+  {
+    "operation": "getSum2",
+    "args": [
+      "txtPg7Sc10I1CurrentAssets,txtPg7Sc10I2LongTermInvestment,txtPg7Sc10I3PropertyPlantEquipment,txtPg7Sc10I4LongTermReceivables,txtPg7Sc10I5IntangibleAssets,txtPg7Sc10I6OtherAssets",
+      "txtPg7Sc10I7TotalAssets"
+    ]
+  },
+  {
+    "operation": "getSum2",
+    "args": [
+      "txtPg7Sc10I8CurrentLiabilities,txtPg7Sc10I9LongTermLiabilities,txtPg7Sc10I10DeferredCredits,txtPg7Sc10I11OtherLiabilities",
+      "txtPg7Sc10I12TotalLiabilities"
+    ]
+  },
+  {
+    "operation": "getSum2",
+    "args": [
+      "txtPg7Sc10I12TotalLiabilities,txtPg7Sc10I16TotalEquity",
+      "txtPg7Sc10I17TotalLiabilitiesEquity"
+    ]
+  },
+  {
+    "operation": "getSum2",
+    "args": [
+      "txtPg7Sc10I13CapitalStock,txtPg7Sc10I14AdditionalCapital,txtPg7Sc10I15RetainedEarnings",
+      "txtPg7Sc10I16TotalEquity"
+    ]
+  },
+  {
+    "operation": "getSum",
+    "args": [
+      "txtPg8Sc13I1ReturnOfPremium,txtPg8Sc13I5C1,txtPg8Sc13I5C2,txtPg8Sc13I7C1,txtPg8Sc13I7C2",
+      "txtPg8Sc13I8TotalIncome"
+    ]
+  }
+]

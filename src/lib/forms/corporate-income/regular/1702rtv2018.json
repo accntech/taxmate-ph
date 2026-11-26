@@ -1,0 +1,2514 @@
+[
+  {
+    "title": "Page 1",
+    "sections": [
+      {
+        "title": "Filing details",
+        "rows": [
+          {
+            "label": "Accounting period",
+            "fields": [
+              {
+                "id": "frm1702RT:rdoPg1I1",
+                "label": "1 Accounting period",
+                "kind": "radio",
+                "defaultValue": "C",
+                "options": [
+                  {
+                    "value": "C",
+                    "label": "Calendar"
+                  },
+                  {
+                    "value": "F",
+                    "label": "Fiscal"
+                  }
+                ]
+              }
+            ],
+            "item": "1"
+          },
+          {
+            "label": "Year ended",
+            "fields": [
+              {
+                "id": "frm1702RT:ddlPg1I2Month",
+                "label": "2 Year-end month",
+                "kind": "select",
+                "options": [
+                  {
+                    "value": "",
+                    "label": ""
+                  },
+                  {
+                    "value": "01",
+                    "label": "01 - January"
+                  },
+                  {
+                    "value": "02",
+                    "label": "02 - February"
+                  },
+                  {
+                    "value": "03",
+                    "label": "03 - March"
+                  },
+                  {
+                    "value": "04",
+                    "label": "04 - April"
+                  },
+                  {
+                    "value": "05",
+                    "label": "05 - May"
+                  },
+                  {
+                    "value": "06",
+                    "label": "06 - June"
+                  },
+                  {
+                    "value": "07",
+                    "label": "07 - July"
+                  },
+                  {
+                    "value": "08",
+                    "label": "08 - August"
+                  },
+                  {
+                    "value": "09",
+                    "label": "09 - September"
+                  },
+                  {
+                    "value": "10",
+                    "label": "10 - October"
+                  },
+                  {
+                    "value": "11",
+                    "label": "11 - November"
+                  },
+                  {
+                    "value": "12",
+                    "label": "12 - December"
+                  }
+                ],
+                "defaultValue": "12"
+              },
+              {
+                "id": "frm1702RT:txtPg1I2Year",
+                "label": "2 Year ended",
+                "kind": "text",
+                "maxLength": 4
+              }
+            ],
+            "item": "2"
+          },
+          {
+            "label": "Amended return?",
+            "fields": [
+              {
+                "id": "frm1702RT:rdoPg1I3Ammend",
+                "label": "3 Amended return?",
+                "kind": "radio",
+                "defaultValue": "N",
+                "options": [
+                  {
+                    "value": "Y",
+                    "label": "Yes"
+                  },
+                  {
+                    "value": "N",
+                    "label": "No"
+                  }
+                ]
+              }
+            ],
+            "item": "3"
+          },
+          {
+            "label": "Short-period return?",
+            "fields": [
+              {
+                "id": "frm1702RT:rdoPg1I4ShortPeriod",
+                "label": "4 Short-period return?",
+                "kind": "radio",
+                "defaultValue": "N",
+                "options": [
+                  {
+                    "value": "Y",
+                    "label": "Yes"
+                  },
+                  {
+                    "value": "N",
+                    "label": "No"
+                  }
+                ]
+              }
+            ],
+            "item": "4"
+          },
+          {
+            "label": "Alphanumeric tax code (ATC)",
+            "fields": [
+              {
+                "id": "frm1702RT:rdoPg1I5Atc",
+                "label": "IC055 \u2014 Minimum corporate income tax",
+                "kind": "checkbox",
+                "defaultValue": "N"
+              },
+              {
+                "id": "frm1702RT:rdoPg1I5AtcOther",
+                "label": "Regular income tax",
+                "kind": "checkbox",
+                "defaultValue": "Y"
+              }
+            ],
+            "item": "5"
+          },
+          {
+            "label": "Applicable ATC",
+            "fields": [
+              {
+                "id": "frm1702RT:drpPg1I5AtcOther",
+                "label": "Applicable ATC",
+                "kind": "select",
+                "options": [
+                  {
+                    "value": "IC010",
+                    "label": "IC010 - CORPORATION IN GENERAL - JAN 1, 2009"
+                  },
+                  {
+                    "value": "IC020",
+                    "label": "IC020 - TAXABLE PARTNERSHIP - JAN 1, 2009"
+                  },
+                  {
+                    "value": "IC040",
+                    "label": "IC040 - GOVERNMENT ENTITY - JAN 1, 2009"
+                  },
+                  {
+                    "value": "IC041",
+                    "label": "IC041 - NATIONAL GOV'T.& LGU's - JAN 1, 2009"
+                  },
+                  {
+                    "value": "IC070",
+                    "label": "IC070 - RESIDENT FOREIGN CORPORATION IN GENERAL - JAN 1, 2009"
+                  }
+                ],
+                "defaultValue": "IC010"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "title": "Part I - Background Information",
+        "rows": [
+          {
+            "label": "Taxpayer identification number (TIN)",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg1Pt1I6TIN1",
+                "label": "TIN, first three digits",
+                "kind": "text",
+                "maxLength": 3,
+                "readonly": true,
+                "profileKey": "tin1"
+              },
+              {
+                "id": "frm1702RT:txtPg1Pt1I6TIN2",
+                "label": "TIN, middle three digits",
+                "kind": "text",
+                "maxLength": 3,
+                "readonly": true,
+                "profileKey": "tin2"
+              },
+              {
+                "id": "frm1702RT:txtPg1Pt1I6TIN3",
+                "label": "TIN, last three digits",
+                "kind": "text",
+                "maxLength": 3,
+                "readonly": true,
+                "profileKey": "tin3"
+              },
+              {
+                "id": "frm1702RT:txtPg1Pt1I6TIN4",
+                "label": "Branch code",
+                "kind": "text",
+                "maxLength": 5,
+                "readonly": true,
+                "profileKey": "branchCode"
+              }
+            ]
+          },
+          {
+            "label": "RDO Code",
+            "fields": [
+              {
+                "id": "frm1702RT:txtRDO",
+                "label": "7 RDO Code",
+                "kind": "text",
+                "readonly": true,
+                "profileKey": "rdoCode"
+              }
+            ],
+            "item": "7"
+          },
+          {
+            "label": "Registered Name (Enter only 1 letter per box using CAPITAL LETTERS)",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg1Pt1I8Name1",
+                "label": "8 Registered Name (Enter only 1 letter per box using CAPITAL LETTERS)",
+                "kind": "text",
+                "maxLength": 65,
+                "readonly": true,
+                "profileKey": "taxpayerName"
+              },
+              {
+                "id": "frm1702RT:txtPg1Pt1I8Name2",
+                "label": "8 Registered Name (Enter only 1 letter per box using CAPITAL LETTERS)",
+                "kind": "text",
+                "maxLength": 65
+              },
+              {
+                "id": "frm1702RT:txtPg1Pt1I8Name3",
+                "label": "8 Registered Name (Enter only 1 letter per box using CAPITAL LETTERS)",
+                "kind": "text",
+                "maxLength": 65
+              }
+            ],
+            "item": "8"
+          },
+          {
+            "label": "Registered Address (Indicate complete address. If the registered address is different from the current address, go to the RDO to update registered address by using BIR Form No. 1",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg1Pt1I9Address1",
+                "label": "9 Registered Address (Indicate complete address. If the registered address is different from the current address, go to the RDO to update registered address by using BIR Form No. 1905) 9A ZIP Code",
+                "kind": "text",
+                "maxLength": 62,
+                "readonly": true,
+                "profileKey": "address"
+              },
+              {
+                "id": "frm1702RT:txtPg1Pt1I9Address2",
+                "label": "9 Registered Address (Indicate complete address. If the registered address is different from the current address, go to the RDO to update registered address by using BIR Form No. 1905) 9A ZIP Code",
+                "kind": "text",
+                "maxLength": 62,
+                "readonly": true,
+                "profileKey": "address2"
+              },
+              {
+                "id": "frm1702RT:txtPg1Pt1I9Address3",
+                "label": "9A ZIP Code",
+                "kind": "text",
+                "maxLength": 62
+              }
+            ],
+            "item": "9"
+          },
+          {
+            "label": "ZIP code",
+            "fields": [
+              {
+                "id": "frm1702RT:txtZIP",
+                "label": "ZIP code",
+                "kind": "text",
+                "maxLength": 4,
+                "readonly": true,
+                "profileKey": "zipCode"
+              }
+            ]
+          },
+          {
+            "label": "Date of incorporation/organization",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg1Pt1I10",
+                "label": "10 Date of incorporation/organization",
+                "kind": "date",
+                "maxLength": 10
+              }
+            ],
+            "item": "10"
+          },
+          {
+            "label": "Contact Number",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg1Pt1I11Contact",
+                "label": "11 Contact Number",
+                "kind": "text",
+                "maxLength": 20,
+                "readonly": true,
+                "profileKey": "contactNumber"
+              }
+            ],
+            "item": "11"
+          },
+          {
+            "label": "Email Address",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg1Pt1I12Email",
+                "label": "12 Email Address",
+                "kind": "text",
+                "maxLength": 100,
+                "readonly": true,
+                "profileKey": "email"
+              }
+            ],
+            "item": "12"
+          },
+          {
+            "label": "Method of deductions",
+            "fields": [
+              {
+                "id": "frm1702RT:rdoPg1Pt1I13ItemizedDeduction",
+                "label": "13 Method of deductions",
+                "kind": "radio",
+                "options": [
+                  {
+                    "value": "frm1702RT:rdoPg1Pt1I13ItemizedDeduction",
+                    "label": "Itemized deductions"
+                  },
+                  {
+                    "value": "frm1702RT:rdoPg1Pt1I13OptionalStandard",
+                    "label": "Optional standard deduction (40%)"
+                  }
+                ]
+              }
+            ],
+            "item": "13"
+          }
+        ]
+      },
+      {
+        "title": "Part II - Total Tax Payable",
+        "rows": [
+          {
+            "label": "Tax Due",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg1Pt2I14IncomeTax",
+                "label": "14 Tax Due",
+                "kind": "money",
+                "maxLength": 12,
+                "readonly": true,
+                "defaultValue": "0"
+              }
+            ],
+            "item": "14"
+          },
+          {
+            "label": "Less: Total Tax Credits/Payments",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg1Pt2I15TotalTaxCredits",
+                "label": "15 Less: Total Tax Credits/Payments",
+                "kind": "money",
+                "maxLength": 12,
+                "readonly": true,
+                "defaultValue": "0"
+              }
+            ],
+            "item": "15"
+          },
+          {
+            "label": "Net Tax Payable (Overpayment) (Item 14 Less Item 15)",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg1Pt2I16NetTax",
+                "label": "16 Net Tax Payable (Overpayment) (Item 14 Less Item 15)",
+                "kind": "money",
+                "maxLength": 12,
+                "readonly": true,
+                "defaultValue": "0"
+              }
+            ],
+            "item": "16"
+          },
+          {
+            "label": "Surcharge",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg1Pt2I17Surcharge",
+                "label": "17 Surcharge",
+                "kind": "money",
+                "maxLength": 12,
+                "defaultValue": "0"
+              }
+            ],
+            "item": "17"
+          },
+          {
+            "label": "Interest",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg1Pt2I18Interest",
+                "label": "18 Interest",
+                "kind": "money",
+                "maxLength": 12,
+                "defaultValue": "0"
+              }
+            ],
+            "item": "18"
+          },
+          {
+            "label": "Compromise",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg1Pt2I19Compromise",
+                "label": "19 Compromise",
+                "kind": "money",
+                "maxLength": 12,
+                "defaultValue": "0"
+              }
+            ],
+            "item": "19"
+          },
+          {
+            "label": "Total Penalties (Sum of Items 17 to 19)",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg1Pt2I20TotalPenalties",
+                "label": "20 Total Penalties (Sum of Items 17 to 19)",
+                "kind": "money",
+                "maxLength": 12,
+                "readonly": true,
+                "defaultValue": "0"
+              }
+            ],
+            "item": "20"
+          },
+          {
+            "label": "TOTAL AMOUNT PAYABLE (Overpayment) (Sum of Items 16 and 20)",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg1Pt2I21TotalAmount",
+                "label": "21 TOTAL AMOUNT PAYABLE (Overpayment) (Sum of Items 16 and 20)",
+                "kind": "money",
+                "maxLength": 12,
+                "readonly": true,
+                "defaultValue": "0"
+              }
+            ],
+            "item": "21"
+          },
+          {
+            "label": "Overpayment treatment",
+            "fields": [
+              {
+                "id": "frm1702RT:Pg1Pt2I21",
+                "label": "Overpayment treatment",
+                "kind": "radio",
+                "options": [
+                  {
+                    "value": "frm1702RT:rdoPg1Pt2I21OverpaymentRefunded",
+                    "label": "To be refunded"
+                  },
+                  {
+                    "value": "frm1702RT:rdoPg1Pt2I21OverpaymentIssued",
+                    "label": "To be issued a tax credit certificate"
+                  },
+                  {
+                    "value": "frm1702RT:rdoPg1Pt2I21OverpaymentCarried",
+                    "label": "To be carried over as tax credit"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "label": "President/principal officer/authorized representative",
+            "fields": [
+              {
+                "id": "frm1702RT:txtSignaturePresident",
+                "label": "President/principal officer/authorized representative",
+                "kind": "text",
+                "maxLength": 75
+              }
+            ]
+          },
+          {
+            "label": "Treasurer/assistant treasurer",
+            "fields": [
+              {
+                "id": "frm1702RT:txtSignatureTreasurer",
+                "label": "Treasurer/assistant treasurer",
+                "kind": "text",
+                "maxLength": 75
+              }
+            ]
+          },
+          {
+            "label": "Number of attachments",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg1Pt2PagesFilled",
+                "label": "22 Number of attachments",
+                "kind": "text",
+                "maxLength": 3,
+                "defaultValue": "000"
+              }
+            ],
+            "item": "22"
+          },
+          {
+            "label": "Title of Signatory TIN",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg1Pt2Signatory1",
+                "label": "Title of Signatory TIN",
+                "kind": "text",
+                "maxLength": 26
+              }
+            ]
+          },
+          {
+            "label": "Title of Signatory TIN",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg1Pt2SignatoryTin1",
+                "label": "Title of Signatory TIN",
+                "kind": "text",
+                "maxLength": 14
+              }
+            ]
+          },
+          {
+            "label": "Title of Signatory TIN",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg1Pt2Signatory2",
+                "label": "Title of Signatory TIN",
+                "kind": "text",
+                "maxLength": 26
+              }
+            ]
+          },
+          {
+            "label": "Title of Signatory TIN",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg1Pt2SignatoryTin2",
+                "label": "Title of Signatory TIN",
+                "kind": "text",
+                "maxLength": 14
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "title": "Part III - Details of Payment",
+        "rows": [
+          {
+            "label": "Cash/bank debit memo",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg1Pt3I23DebitMemoC1",
+                "label": "Drawee bank/agency",
+                "kind": "text",
+                "maxLength": 11
+              },
+              {
+                "id": "frm1702RT:txtPg1Pt3I23DebitMemoC2",
+                "label": "Number",
+                "kind": "text",
+                "maxLength": 20
+              },
+              {
+                "id": "frm1702RT:txtPg1Pt3I23DebitMemoC3Date",
+                "label": "Date",
+                "kind": "date",
+                "maxLength": 10
+              },
+              {
+                "id": "frm1702RT:txtPg1Pt3I23DebitMemoC4Amount",
+                "label": "Amount",
+                "kind": "money",
+                "maxLength": 12,
+                "defaultValue": "0"
+              }
+            ]
+          },
+          {
+            "label": "Check",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg1Pt3I24CheckC1",
+                "label": "Drawee bank/agency",
+                "kind": "text",
+                "maxLength": 11
+              },
+              {
+                "id": "frm1702RT:txtPg1Pt3I24CheckC2",
+                "label": "Number",
+                "kind": "text",
+                "maxLength": 20
+              },
+              {
+                "id": "frm1702RT:txtPg1Pt3I24CheckC3Date",
+                "label": "Date",
+                "kind": "date",
+                "maxLength": 10
+              },
+              {
+                "id": "frm1702RT:txtPg1Pt3I24CheckC4Amount",
+                "label": "Amount",
+                "kind": "money",
+                "maxLength": 12,
+                "defaultValue": "0"
+              }
+            ]
+          },
+          {
+            "label": "Tax debit memo",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg1Pt3I25TaxDebitC2",
+                "label": "Number",
+                "kind": "text",
+                "maxLength": 20
+              },
+              {
+                "id": "frm1702RT:txtPg1Pt3I25TaxDebitDate",
+                "label": "Date",
+                "kind": "date",
+                "maxLength": 10
+              },
+              {
+                "id": "frm1702RT:txtPg1Pt3I25TaxDebitC4Amount",
+                "label": "Amount",
+                "kind": "money",
+                "maxLength": 12,
+                "defaultValue": "0"
+              }
+            ]
+          },
+          {
+            "label": "Other payment",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg1Pt3I26Others",
+                "label": "Other payment description",
+                "kind": "text",
+                "maxLength": 17
+              },
+              {
+                "id": "frm1702RT:txtPg1Pt3I26OthersC1",
+                "label": "Drawee bank/agency",
+                "kind": "text",
+                "maxLength": 11
+              },
+              {
+                "id": "frm1702RT:txtPg1Pt3I26OthersC2",
+                "label": "Number",
+                "kind": "text",
+                "maxLength": 20
+              },
+              {
+                "id": "frm1702RT:txtPg1Pt3I26OthersC3Date",
+                "label": "Date",
+                "kind": "date",
+                "maxLength": 10
+              },
+              {
+                "id": "frm1702RT:txtPg1Pt3I26OthersC4Amount",
+                "label": "Amount",
+                "kind": "money",
+                "maxLength": 12,
+                "defaultValue": "0"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "title": "Page 2",
+    "sections": [
+      {
+        "title": "Taxpayer information",
+        "rows": [
+          {
+            "label": "Taxpayer identification number (TIN)",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg2TIN1",
+                "label": "TIN, first three digits",
+                "kind": "text",
+                "maxLength": 3,
+                "readonly": true,
+                "profileKey": "tin1"
+              },
+              {
+                "id": "frm1702RT:txtPg2TIN2",
+                "label": "TIN, middle three digits",
+                "kind": "text",
+                "maxLength": 3,
+                "readonly": true,
+                "profileKey": "tin2"
+              },
+              {
+                "id": "frm1702RT:txtPg2TIN3",
+                "label": "TIN, last three digits",
+                "kind": "text",
+                "maxLength": 3,
+                "readonly": true,
+                "profileKey": "tin3"
+              },
+              {
+                "id": "frm1702RT:txtPg2TIN4",
+                "label": "Branch code",
+                "kind": "text",
+                "maxLength": 3,
+                "readonly": true,
+                "profileKey": "branchCode"
+              }
+            ]
+          },
+          {
+            "label": "Registered name",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg2RegisteredName",
+                "label": "Registered name",
+                "kind": "text",
+                "maxLength": 24,
+                "readonly": true,
+                "profileKey": "taxpayerName"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "title": "Part IV - Computation of Tax",
+        "rows": [
+          {
+            "label": "Sales/Revenues/Receipts/Fees",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg2Pt4I27Sales",
+                "label": "27 Sales/Revenues/Receipts/Fees",
+                "kind": "money",
+                "maxLength": 12,
+                "defaultValue": "0"
+              }
+            ],
+            "item": "27"
+          },
+          {
+            "label": "Less:Sales Returns, Allowances and Discounts",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg2Pt4I28LessSales",
+                "label": "28 Less:Sales Returns, Allowances and Discounts",
+                "kind": "money",
+                "maxLength": 12,
+                "defaultValue": "0"
+              }
+            ],
+            "item": "28"
+          },
+          {
+            "label": "Net Sales/Revenues/Receipts/Fees (Item 27 Less Item 28)",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg2Pt4I29NetSales",
+                "label": "29 Net Sales/Revenues/Receipts/Fees (Item 27 Less Item 28)",
+                "kind": "money",
+                "maxLength": 12,
+                "readonly": true,
+                "defaultValue": "0"
+              }
+            ],
+            "item": "29"
+          },
+          {
+            "label": "Less: Cost of Sales/Services",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg2Pt4I30LessCost",
+                "label": "30 Less: Cost of Sales/Services",
+                "kind": "money",
+                "maxLength": 12,
+                "defaultValue": "0"
+              }
+            ],
+            "item": "30"
+          },
+          {
+            "label": "Gross Income from Operation (Item 29 less Item 30)",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg2Pt4I31GrossIncome",
+                "label": "31 Gross Income from Operation (Item 29 less Item 30)",
+                "kind": "money",
+                "maxLength": 12,
+                "readonly": true,
+                "defaultValue": "0"
+              }
+            ],
+            "item": "31"
+          },
+          {
+            "label": "Add: Other Taxable Income Not Subjected to Final tax",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg2Pt4I32AddOtherTaxable",
+                "label": "32 Add: Other Taxable Income Not Subjected to Final tax",
+                "kind": "money",
+                "maxLength": 12,
+                "defaultValue": "0"
+              }
+            ],
+            "item": "32"
+          },
+          {
+            "label": "Total Taxable Income (Sum of Items 31 and 32)",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg2Pt4I33TotalGross",
+                "label": "33 Total Taxable Income (Sum of Items 31 and 32)",
+                "kind": "money",
+                "maxLength": 12,
+                "readonly": true,
+                "defaultValue": "0"
+              }
+            ],
+            "item": "33"
+          },
+          {
+            "label": "Ordinary Allowable Itemized Deductions",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg2Pt4I34OrdinaryAllowable",
+                "label": "34 Ordinary Allowable Itemized Deductions",
+                "kind": "money",
+                "maxLength": 12,
+                "readonly": true,
+                "defaultValue": "0"
+              }
+            ],
+            "item": "34"
+          },
+          {
+            "label": "Special Allowable Itemized Deductions",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg2Pt4I35SpecialAllowable",
+                "label": "35 Special Allowable Itemized Deductions",
+                "kind": "money",
+                "maxLength": 12,
+                "readonly": true,
+                "defaultValue": "0"
+              }
+            ],
+            "item": "35"
+          },
+          {
+            "label": "NOLCO (Only for those taxable under Sec. 27(A to C); Sec. 28(A)(1)(A)(6)(b) of Tax code, as amended)",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg2Pt4I36Nolco",
+                "label": "36 NOLCO (Only for those taxable under Sec. 27(A to C); Sec. 28(A)(1)(A)(6)(b) of Tax code, as amended)",
+                "kind": "money",
+                "maxLength": 12,
+                "readonly": true,
+                "defaultValue": "0"
+              }
+            ],
+            "item": "36"
+          },
+          {
+            "label": "Total Deductions (Sums of Items 34 to 36)",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg2Pt4I37TotalItemized",
+                "label": "37 Total Deductions (Sums of Items 34 to 36)",
+                "kind": "money",
+                "maxLength": 12,
+                "readonly": true,
+                "defaultValue": "0"
+              }
+            ],
+            "item": "37"
+          },
+          {
+            "label": "Optional Standard Deduction (OSD) (40% of Item 33)",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg2Pt4I38OptionalStandard",
+                "label": "38 Optional Standard Deduction (OSD) (40% of Item 33)",
+                "kind": "money",
+                "maxLength": 12,
+                "readonly": true,
+                "defaultValue": "0"
+              }
+            ],
+            "item": "38"
+          },
+          {
+            "label": "Net Taxable Income/(Loss) If itemized: Item 33 Less Item 37; If OSD: Item 33 Less Item 38)",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg2Pt4I39NetTaxable",
+                "label": "39 Net Taxable Income/(Loss) If itemized: Item 33 Less Item 37; If OSD: Item 33 Less Item 38)",
+                "kind": "money",
+                "maxLength": 12,
+                "readonly": true,
+                "defaultValue": "0"
+              }
+            ],
+            "item": "39"
+          },
+          {
+            "label": "Applicable Income Tax Rate",
+            "fields": [
+              {
+                "id": "frm1702RT:Pg2Pt4I40IncomeTaxRate",
+                "label": "40 Applicable Income Tax Rate",
+                "kind": "percent",
+                "maxLength": 12,
+                "defaultValue": "30%"
+              }
+            ],
+            "item": "40"
+          },
+          {
+            "label": "Income Tax Due other than Mininum Corporate Income Tax(MCIT) (Item 39 x Item 40)",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg2Pt4I41IncomeTaxDue",
+                "label": "41 Income Tax Due other than Mininum Corporate Income Tax(MCIT) (Item 39 x Item 40)",
+                "kind": "money",
+                "maxLength": 12,
+                "readonly": true,
+                "defaultValue": "0"
+              }
+            ],
+            "item": "41"
+          },
+          {
+            "label": "MCIT Due (2% of Item 33)",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg2Pt4I42MinimumCorporate",
+                "label": "42 MCIT Due (2% of Item 33)",
+                "kind": "money",
+                "maxLength": 12,
+                "readonly": true,
+                "defaultValue": "0"
+              }
+            ],
+            "item": "42"
+          },
+          {
+            "label": "Tax Due (Normal Income Tax Due in Item 41 OR the MCIT Due in Item 42, whichever is higher)",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg2Pt4I43TotalIncomeTax",
+                "label": "43 Tax Due (Normal Income Tax Due in Item 41 OR the MCIT Due in Item 42, whichever is higher)",
+                "kind": "money",
+                "maxLength": 12,
+                "readonly": true,
+                "defaultValue": "0"
+              }
+            ],
+            "item": "43"
+          },
+          {
+            "label": "Prior Year's Excess Credits Other Than MCIT",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg2Pt4I44ExcessCredits",
+                "label": "44 Prior Year's Excess Credits Other Than MCIT",
+                "kind": "money",
+                "maxLength": 12,
+                "defaultValue": "0"
+              }
+            ],
+            "item": "44"
+          },
+          {
+            "label": "Income Tax Payment under MCIT from Previous Quarter/s",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg2Pt4I45IncomeTaxPaymentUnderMCIT",
+                "label": "45 Income Tax Payment under MCIT from Previous Quarter/s",
+                "kind": "money",
+                "maxLength": 12,
+                "defaultValue": "0"
+              }
+            ],
+            "item": "45"
+          },
+          {
+            "label": "Income Tax Payment under Regular/Normal Rate from Previous Quarter/s",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg2Pt4I46IncomeTaxUnderRegular",
+                "label": "46 Income Tax Payment under Regular/Normal Rate from Previous Quarter/s",
+                "kind": "money",
+                "maxLength": 12,
+                "defaultValue": "0"
+              }
+            ],
+            "item": "46"
+          },
+          {
+            "label": "Excess MCIT Applied this Current Taxable Year",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg2Pt4I47ExcessMCIT",
+                "label": "47 Excess MCIT Applied this Current Taxable Year",
+                "kind": "money",
+                "maxLength": 12,
+                "readonly": true,
+                "defaultValue": "0"
+              }
+            ],
+            "item": "47"
+          },
+          {
+            "label": "Creditable Tax Withheld from Previous Quarter/s per BIR Form No. 2307",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg2Pt4I48CreditableTaxWithheldFromPrevious",
+                "label": "48 Creditable Tax Withheld from Previous Quarter/s per BIR Form No. 2307",
+                "kind": "money",
+                "maxLength": 12,
+                "defaultValue": "0"
+              }
+            ],
+            "item": "48"
+          },
+          {
+            "label": "Creditable Tax Withheld per BIR Form No. 2307 for the 4th Quarter",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg2Pt4I49CreditableTaxWithheldFor4thQuarter",
+                "label": "49 Creditable Tax Withheld per BIR Form No. 2307 for the 4th Quarter",
+                "kind": "money",
+                "maxLength": 12,
+                "defaultValue": "0"
+              }
+            ],
+            "item": "49"
+          },
+          {
+            "label": "Foreign Tax Credits, if applicable",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg2Pt4I50ForeignTaxCredits",
+                "label": "50 Foreign Tax Credits, if applicable",
+                "kind": "money",
+                "maxLength": 12,
+                "defaultValue": "0"
+              }
+            ],
+            "item": "50"
+          },
+          {
+            "label": "Tax Paid in Return Previously Filed, if this is an Amended Return",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg2Pt4I51TaxPaidInReturn",
+                "label": "51 Tax Paid in Return Previously Filed, if this is an Amended Return",
+                "kind": "money",
+                "maxLength": 12,
+                "defaultValue": "0"
+              }
+            ],
+            "item": "51"
+          },
+          {
+            "label": "Special Tax Credits",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg2Pt452SpecialTaxCredits",
+                "label": "52 Special Tax Credits",
+                "kind": "money",
+                "maxLength": 12,
+                "defaultValue": "0"
+              }
+            ],
+            "item": "52"
+          },
+          {
+            "label": "53",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg2Pt4I53C1",
+                "label": "Description",
+                "kind": "text",
+                "maxLength": 50
+              },
+              {
+                "id": "frm1702RT:txtPg2Pt4I53C2",
+                "label": "Amount",
+                "kind": "money",
+                "maxLength": 15,
+                "defaultValue": "0"
+              }
+            ]
+          },
+          {
+            "label": "54",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg2Pt4I54C1",
+                "label": "Description",
+                "kind": "text",
+                "maxLength": 50
+              },
+              {
+                "id": "frm1702RT:txtPg2Pt4I54C2",
+                "label": "Amount",
+                "kind": "money",
+                "maxLength": 15,
+                "defaultValue": "0"
+              }
+            ]
+          },
+          {
+            "label": "Total Tax Credits/Payments (Sum of Items 44 to 54)",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg2Pt4I55TotalTaxCredits",
+                "label": "55 Total Tax Credits/Payments (Sum of Items 44 to 54)",
+                "kind": "money",
+                "maxLength": 12,
+                "readonly": true,
+                "defaultValue": "0"
+              }
+            ],
+            "item": "55"
+          },
+          {
+            "label": "Net Tax Payable (Overpayment) (Item 43 Less Item 55)",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg2Pt4I56NetTax",
+                "label": "56 Net Tax Payable (Overpayment) (Item 43 Less Item 55)",
+                "kind": "money",
+                "maxLength": 12,
+                "readonly": true,
+                "defaultValue": "0"
+              }
+            ],
+            "item": "56"
+          }
+        ]
+      },
+      {
+        "title": "Part V - Tax Relief Availment",
+        "rows": [
+          {
+            "label": "Special Allowable Itemized Deductions (Item 35 of Part IV x Applicable Income Tax Rate)",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg2Pt5I57SpecialAllowable",
+                "label": "57 Special Allowable Itemized Deductions (Item 35 of Part IV x Applicable Income Tax Rate)",
+                "kind": "money",
+                "maxLength": 12,
+                "readonly": true,
+                "defaultValue": "0"
+              }
+            ],
+            "item": "57"
+          },
+          {
+            "label": "Add:Special Tax Credits",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg2Pt5I58AddSpecialTax",
+                "label": "58 Add:Special Tax Credits",
+                "kind": "money",
+                "maxLength": 12,
+                "readonly": true,
+                "defaultValue": "0"
+              }
+            ],
+            "item": "58"
+          },
+          {
+            "label": "Total Tax Relief Availment (Sum of Items 57 & 58)",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg2Pt5I59TotalTax",
+                "label": "59 Total Tax Relief Availment (Sum of Items 57 & 58)",
+                "kind": "money",
+                "maxLength": 12,
+                "readonly": true,
+                "defaultValue": "0"
+              }
+            ],
+            "item": "59"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "title": "Page 3",
+    "sections": [
+      {
+        "title": "Taxpayer information",
+        "rows": [
+          {
+            "label": "Taxpayer identification number (TIN)",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg3TIN1",
+                "label": "TIN, first three digits",
+                "kind": "text",
+                "maxLength": 3,
+                "readonly": true,
+                "profileKey": "tin1"
+              },
+              {
+                "id": "frm1702RT:txtPg3TIN2",
+                "label": "TIN, middle three digits",
+                "kind": "text",
+                "maxLength": 3,
+                "readonly": true,
+                "profileKey": "tin2"
+              },
+              {
+                "id": "frm1702RT:txtPg3TIN3",
+                "label": "TIN, last three digits",
+                "kind": "text",
+                "maxLength": 3,
+                "readonly": true,
+                "profileKey": "tin3"
+              },
+              {
+                "id": "frm1702RT:txtPg3TIN4",
+                "label": "Branch code",
+                "kind": "text",
+                "maxLength": 3,
+                "readonly": true,
+                "profileKey": "branchCode"
+              }
+            ]
+          },
+          {
+            "label": "Registered name",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg3RegisteredName",
+                "label": "Registered name",
+                "kind": "text",
+                "maxLength": 24,
+                "readonly": true,
+                "profileKey": "taxpayerName"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "title": "Schedule I - Ordinary Allowable Itemized Deductions (Attach additional sheet/s if necessary)",
+        "rows": [
+          {
+            "label": "Amortization",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg3Sc1I1Amortization",
+                "label": "1 Amortization",
+                "kind": "money",
+                "maxLength": 12,
+                "defaultValue": "0"
+              }
+            ],
+            "item": "1"
+          },
+          {
+            "label": "Bad Debts",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg3Sc1I2BadDebts",
+                "label": "2 Bad Debts",
+                "kind": "money",
+                "maxLength": 12,
+                "defaultValue": "0"
+              }
+            ],
+            "item": "2"
+          },
+          {
+            "label": "Charitable and Other Contributions",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg3Sc1I3CharitableContributions",
+                "label": "3 Charitable and Other Contributions",
+                "kind": "money",
+                "maxLength": 12,
+                "defaultValue": "0"
+              }
+            ],
+            "item": "3"
+          },
+          {
+            "label": "Depletion",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg3Sc1I4Depletion",
+                "label": "4 Depletion",
+                "kind": "money",
+                "maxLength": 12,
+                "defaultValue": "0"
+              }
+            ],
+            "item": "4"
+          },
+          {
+            "label": "Depreciation",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg3Sc1I5Depreciation",
+                "label": "5 Depreciation",
+                "kind": "money",
+                "maxLength": 12,
+                "defaultValue": "0"
+              }
+            ],
+            "item": "5"
+          },
+          {
+            "label": "Entertainment, Amusement and Recreation",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg3Sc1I6Entertainment",
+                "label": "6 Entertainment, Amusement and Recreation",
+                "kind": "money",
+                "maxLength": 12,
+                "defaultValue": "0"
+              }
+            ],
+            "item": "6"
+          },
+          {
+            "label": "Fringe Benefits",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg3Sc1I7FringeBenefits",
+                "label": "7 Fringe Benefits",
+                "kind": "money",
+                "maxLength": 12,
+                "defaultValue": "0"
+              }
+            ],
+            "item": "7"
+          },
+          {
+            "label": "Interest",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg3Sc1I8Interest",
+                "label": "8 Interest",
+                "kind": "money",
+                "maxLength": 12,
+                "defaultValue": "0"
+              }
+            ],
+            "item": "8"
+          },
+          {
+            "label": "Losses",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg3Sc1I9Losses",
+                "label": "9 Losses",
+                "kind": "money",
+                "maxLength": 12,
+                "defaultValue": "0"
+              }
+            ],
+            "item": "9"
+          },
+          {
+            "label": "Pension Trusts",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg3Sc1I10PensionTrust",
+                "label": "10 Pension Trusts",
+                "kind": "money",
+                "maxLength": 12,
+                "defaultValue": "0"
+              }
+            ],
+            "item": "10"
+          },
+          {
+            "label": "Rental",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg3Sc1I11Rental",
+                "label": "11 Rental",
+                "kind": "money",
+                "maxLength": 12,
+                "defaultValue": "0"
+              }
+            ],
+            "item": "11"
+          },
+          {
+            "label": "Research and Development",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg3Sc1I12Research",
+                "label": "12 Research and Development",
+                "kind": "money",
+                "maxLength": 12,
+                "defaultValue": "0"
+              }
+            ],
+            "item": "12"
+          },
+          {
+            "label": "Salaries, Wages and Allowances",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg3Sc1I13Salaries",
+                "label": "13 Salaries, Wages and Allowances",
+                "kind": "money",
+                "maxLength": 12,
+                "defaultValue": "0"
+              }
+            ],
+            "item": "13"
+          },
+          {
+            "label": "SSS, GSIS, Philhealth, HDMF and Other Contributions",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg3Sc1I14Contributions",
+                "label": "14 SSS, GSIS, Philhealth, HDMF and Other Contributions",
+                "kind": "money",
+                "maxLength": 12,
+                "defaultValue": "0"
+              }
+            ],
+            "item": "14"
+          },
+          {
+            "label": "Taxes and Licenses",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg3Sc1I15TaxesandLicenses",
+                "label": "15 Taxes and Licenses",
+                "kind": "money",
+                "maxLength": 12,
+                "defaultValue": "0"
+              }
+            ],
+            "item": "15"
+          },
+          {
+            "label": "Transportation and Travel",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg3Sc1I16TransportationandTravel",
+                "label": "16 Transportation and Travel",
+                "kind": "money",
+                "maxLength": 12,
+                "defaultValue": "0"
+              }
+            ],
+            "item": "16"
+          },
+          {
+            "label": "a Janitorial and Messengerial Services",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg3Sc1I17aJanitorial",
+                "label": "a Janitorial and Messengerial Services",
+                "kind": "money",
+                "maxLength": 12,
+                "defaultValue": "0"
+              }
+            ],
+            "item": "17a"
+          },
+          {
+            "label": "b Professional Fees",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg3Sc1I17bProfessionalFees",
+                "label": "b Professional Fees",
+                "kind": "money",
+                "maxLength": 12,
+                "defaultValue": "0"
+              }
+            ],
+            "item": "17b"
+          },
+          {
+            "label": "c Security Services",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg3Sc1I17cSecurityServices",
+                "label": "c Security Services",
+                "kind": "money",
+                "maxLength": 12,
+                "defaultValue": "0"
+              }
+            ],
+            "item": "17c"
+          },
+          {
+            "label": "d",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg3Sc1I17dC1",
+                "label": "Description",
+                "kind": "text",
+                "maxLength": 50
+              },
+              {
+                "id": "frm1702RT:txtPg3Sc1I17dC2",
+                "label": "Amount",
+                "kind": "money",
+                "maxLength": 12,
+                "defaultValue": "0"
+              }
+            ],
+            "item": "17d"
+          },
+          {
+            "label": "e",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg3Sc1I17eC1",
+                "label": "Description",
+                "kind": "text",
+                "maxLength": 50
+              },
+              {
+                "id": "frm1702RT:txtPg3Sc1I17eC2",
+                "label": "Amount",
+                "kind": "money",
+                "maxLength": 12,
+                "defaultValue": "0"
+              }
+            ],
+            "item": "17e"
+          },
+          {
+            "label": "f",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg3Sc1I17fC1",
+                "label": "Description",
+                "kind": "text",
+                "maxLength": 50
+              },
+              {
+                "id": "frm1702RT:txtPg3Sc1I17fC2",
+                "label": "Amount",
+                "kind": "money",
+                "maxLength": 12,
+                "defaultValue": "0"
+              }
+            ],
+            "item": "17f"
+          },
+          {
+            "label": "g",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg3Sc1I17gC1",
+                "label": "Description",
+                "kind": "text",
+                "maxLength": 50
+              },
+              {
+                "id": "frm1702RT:txtPg3Sc1I17gC2",
+                "label": "Amount",
+                "kind": "money",
+                "maxLength": 12,
+                "defaultValue": "0"
+              }
+            ],
+            "item": "17g"
+          },
+          {
+            "label": "h",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg3Sc1I17hC1",
+                "label": "Description",
+                "kind": "text",
+                "maxLength": 50
+              },
+              {
+                "id": "frm1702RT:txtPg3Sc1I17hC2",
+                "label": "Amount",
+                "kind": "money",
+                "maxLength": 12,
+                "defaultValue": "0"
+              }
+            ],
+            "item": "17h"
+          },
+          {
+            "label": "i",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg3Sc1I17iC1",
+                "label": "Description",
+                "kind": "text",
+                "maxLength": 50
+              },
+              {
+                "id": "frm1702RT:txtPg3Sc1I17iC2",
+                "label": "Amount",
+                "kind": "money",
+                "maxLength": 12,
+                "defaultValue": "0"
+              }
+            ],
+            "item": "17i"
+          },
+          {
+            "label": "Total Ordinary Allowable Itemized Deductions (Sum of Items 1 to 17i)",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg3Sc1I18TotalOrdinaryAllowable",
+                "label": "18 Total Ordinary Allowable Itemized Deductions (Sum of Items 1 to 17i)",
+                "kind": "money",
+                "maxLength": 12,
+                "readonly": true,
+                "defaultValue": "0"
+              }
+            ],
+            "item": "18"
+          }
+        ]
+      },
+      {
+        "title": "Schedule II - Special Allowable Itemized Deductions (Attach additional sheet/s, if necessary)",
+        "rows": [
+          {
+            "label": "1",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg3Sc2I1C1",
+                "label": "Description",
+                "kind": "text",
+                "maxLength": 37
+              },
+              {
+                "id": "frm1702RT:txtPg3Sc2I1C2",
+                "label": "Legal basis",
+                "kind": "text",
+                "maxLength": 14
+              },
+              {
+                "id": "frm1702RT:txtPg3Sc2I1C3",
+                "label": "Amount",
+                "kind": "money",
+                "maxLength": 12,
+                "defaultValue": "0"
+              }
+            ],
+            "item": "1"
+          },
+          {
+            "label": "2",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg3Sc2I2C1",
+                "label": "Description",
+                "kind": "text",
+                "maxLength": 37
+              },
+              {
+                "id": "frm1702RT:txtPg3Sc2I2C2",
+                "label": "Legal basis",
+                "kind": "text",
+                "maxLength": 14
+              },
+              {
+                "id": "frm1702RT:txtPg3Sc2I2C3",
+                "label": "Amount",
+                "kind": "money",
+                "maxLength": 12,
+                "defaultValue": "0"
+              }
+            ],
+            "item": "2"
+          },
+          {
+            "label": "3",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg3Sc2I3C1",
+                "label": "Description",
+                "kind": "text",
+                "maxLength": 37
+              },
+              {
+                "id": "frm1702RT:txtPg3Sc2I3C2",
+                "label": "Legal basis",
+                "kind": "text",
+                "maxLength": 14
+              },
+              {
+                "id": "frm1702RT:txtPg3Sc2I3C3",
+                "label": "Amount",
+                "kind": "money",
+                "maxLength": 12,
+                "defaultValue": "0"
+              }
+            ],
+            "item": "3"
+          },
+          {
+            "label": "4",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg3Sc2I4C1",
+                "label": "Description",
+                "kind": "text",
+                "maxLength": 26
+              },
+              {
+                "id": "frm1702RT:txtPg3Sc2I4C2",
+                "label": "Legal basis",
+                "kind": "text",
+                "maxLength": 14
+              },
+              {
+                "id": "frm1702RT:txtPg3Sc2I4C3",
+                "label": "Amount",
+                "kind": "money",
+                "maxLength": 12,
+                "defaultValue": "0"
+              }
+            ],
+            "item": "4"
+          },
+          {
+            "label": "Total Special Allowable Itemized Deductions (Sum of Items 1 to 4)",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg3Sc2I5TotalSpecialAllowable",
+                "label": "5 Total Special Allowable Itemized Deductions (Sum of Items 1 to 4)",
+                "kind": "money",
+                "maxLength": 12,
+                "readonly": true,
+                "defaultValue": "0"
+              }
+            ],
+            "item": "5"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "title": "Page 4",
+    "sections": [
+      {
+        "title": "Taxpayer information",
+        "rows": [
+          {
+            "label": "Taxpayer identification number (TIN)",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg4TIN1",
+                "label": "TIN, first three digits",
+                "kind": "text",
+                "maxLength": 3,
+                "readonly": true,
+                "profileKey": "tin1"
+              },
+              {
+                "id": "frm1702RT:txtPg4TIN2",
+                "label": "TIN, middle three digits",
+                "kind": "text",
+                "maxLength": 3,
+                "readonly": true,
+                "profileKey": "tin2"
+              },
+              {
+                "id": "frm1702RT:txtPg4TIN3",
+                "label": "TIN, last three digits",
+                "kind": "text",
+                "maxLength": 3,
+                "readonly": true,
+                "profileKey": "tin3"
+              },
+              {
+                "id": "frm1702RT:txtPg4TIN4",
+                "label": "Branch code",
+                "kind": "text",
+                "maxLength": 3,
+                "readonly": true,
+                "profileKey": "branchCode"
+              }
+            ]
+          },
+          {
+            "label": "Registered name",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg4RegisteredName",
+                "label": "Registered name",
+                "kind": "text",
+                "maxLength": 24,
+                "readonly": true,
+                "profileKey": "taxpayerName"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "title": "Schedule III - Computation of Net Operating Loss Carry Over (NOLCO)",
+        "rows": [
+          {
+            "label": "Gross Income",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg4Sc3I1GrossIncome",
+                "label": "1 Gross Income",
+                "kind": "money",
+                "maxLength": 12,
+                "readonly": true,
+                "defaultValue": "0"
+              }
+            ],
+            "item": "1"
+          },
+          {
+            "label": "Less: Ordinary Allowable Itemized Deductions",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg4Sc3I2TotalDeductions",
+                "label": "2 Less: Ordinary Allowable Itemized Deductions",
+                "kind": "money",
+                "maxLength": 12,
+                "readonly": true,
+                "defaultValue": "0"
+              }
+            ],
+            "item": "2"
+          },
+          {
+            "label": "Net Operating Loss (Item 1 Less Item 2) (To Schedule IIIA,Item 7A)",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg4Sc3I3NetOperatingLoss",
+                "label": "3 Net Operating Loss (Item 1 Less Item 2) (To Schedule IIIA,Item 7A)",
+                "kind": "money",
+                "maxLength": 12,
+                "readonly": true,
+                "defaultValue": "0"
+              }
+            ],
+            "item": "3"
+          }
+        ]
+      },
+      {
+        "title": "Schedule IIIA - Computation of Available Net Operating Loss Carry Over (NOLCO)",
+        "rows": [
+          {
+            "label": "4",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg4Sc3AI4C1",
+                "label": "Year incurred",
+                "kind": "integer",
+                "maxLength": 4,
+                "readonly": true
+              },
+              {
+                "id": "frm1702RT:txtPg4Sc3AI4C2",
+                "label": "Net operating loss",
+                "kind": "money",
+                "maxLength": 12,
+                "readonly": true,
+                "defaultValue": "0"
+              },
+              {
+                "id": "frm1702RT:txtPg4Sc3AI4C3",
+                "label": "NOLCO applied in previous years",
+                "kind": "money",
+                "maxLength": 12,
+                "defaultValue": "0"
+              },
+              {
+                "id": "frm1702RT:txtPg4Sc3AI4C4",
+                "label": "NOLCO expired",
+                "kind": "money",
+                "maxLength": 12,
+                "defaultValue": "0"
+              },
+              {
+                "id": "frm1702RT:txtPg4Sc3AI4C5",
+                "label": "NOLCO applied current year",
+                "kind": "money",
+                "maxLength": 12,
+                "defaultValue": "0"
+              },
+              {
+                "id": "frm1702RT:txtPg4Sc3AI4C6",
+                "label": "NOLCO balance",
+                "kind": "money",
+                "maxLength": 12,
+                "readonly": true,
+                "defaultValue": "0"
+              }
+            ],
+            "item": "4"
+          },
+          {
+            "label": "5",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg4Sc3AI5C1",
+                "label": "Year incurred",
+                "kind": "integer",
+                "maxLength": 4
+              },
+              {
+                "id": "frm1702RT:txtPg4Sc3AI5C2",
+                "label": "Net operating loss",
+                "kind": "money",
+                "maxLength": 12,
+                "defaultValue": "0"
+              },
+              {
+                "id": "frm1702RT:txtPg4Sc3AI5C3",
+                "label": "NOLCO applied in previous years",
+                "kind": "money",
+                "maxLength": 12,
+                "defaultValue": "0"
+              },
+              {
+                "id": "frm1702RT:txtPg4Sc3AI5C4",
+                "label": "NOLCO expired",
+                "kind": "money",
+                "maxLength": 12,
+                "defaultValue": "0"
+              },
+              {
+                "id": "frm1702RT:txtPg4Sc3AI5C5",
+                "label": "NOLCO applied current year",
+                "kind": "money",
+                "maxLength": 12,
+                "defaultValue": "0"
+              },
+              {
+                "id": "frm1702RT:txtPg4Sc3AI5C6",
+                "label": "NOLCO balance",
+                "kind": "money",
+                "maxLength": 12,
+                "readonly": true,
+                "defaultValue": "0"
+              }
+            ],
+            "item": "5"
+          },
+          {
+            "label": "6",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg4Sc3AI6C1",
+                "label": "Year incurred",
+                "kind": "integer",
+                "maxLength": 4
+              },
+              {
+                "id": "frm1702RT:txtPg4Sc3AI6C2",
+                "label": "Net operating loss",
+                "kind": "money",
+                "maxLength": 12,
+                "defaultValue": "0"
+              },
+              {
+                "id": "frm1702RT:txtPg4Sc3AI6C3",
+                "label": "NOLCO applied in previous years",
+                "kind": "money",
+                "maxLength": 12,
+                "defaultValue": "0"
+              },
+              {
+                "id": "frm1702RT:txtPg4Sc3AI6C4",
+                "label": "NOLCO expired",
+                "kind": "money",
+                "maxLength": 12,
+                "defaultValue": "0"
+              },
+              {
+                "id": "frm1702RT:txtPg4Sc3AI6C5",
+                "label": "NOLCO applied current year",
+                "kind": "money",
+                "maxLength": 12,
+                "defaultValue": "0"
+              },
+              {
+                "id": "frm1702RT:txtPg4Sc3AI6C6",
+                "label": "NOLCO balance",
+                "kind": "money",
+                "maxLength": 12,
+                "readonly": true,
+                "defaultValue": "0"
+              }
+            ],
+            "item": "6"
+          },
+          {
+            "label": "7",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg4Sc3AI7C1",
+                "label": "Year incurred",
+                "kind": "integer",
+                "maxLength": 4
+              },
+              {
+                "id": "frm1702RT:txtPg4Sc3AI7C2",
+                "label": "Net operating loss",
+                "kind": "money",
+                "maxLength": 12,
+                "defaultValue": "0"
+              },
+              {
+                "id": "frm1702RT:txtPg4Sc3AI7C3",
+                "label": "NOLCO applied in previous years",
+                "kind": "money",
+                "maxLength": 12,
+                "defaultValue": "0"
+              },
+              {
+                "id": "frm1702RT:txtPg4Sc3AI7C4",
+                "label": "NOLCO expired",
+                "kind": "money",
+                "maxLength": 12,
+                "defaultValue": "0"
+              },
+              {
+                "id": "frm1702RT:txtPg4Sc3AI7C5",
+                "label": "NOLCO applied current year",
+                "kind": "money",
+                "maxLength": 12,
+                "defaultValue": "0"
+              },
+              {
+                "id": "frm1702RT:txtPg4Sc3AI7C6",
+                "label": "NOLCO balance",
+                "kind": "money",
+                "maxLength": 12,
+                "readonly": true,
+                "defaultValue": "0"
+              }
+            ],
+            "item": "7"
+          },
+          {
+            "label": "Total NOLCO (Sum of Items 4D to 7D)",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg4Sc4I8TotalNOLCO",
+                "label": "8 Total NOLCO (Sum of Items 4D to 7D)",
+                "kind": "money",
+                "maxLength": 12,
+                "readonly": true,
+                "defaultValue": "0"
+              }
+            ],
+            "item": "8"
+          }
+        ]
+      },
+      {
+        "title": "Schedule IV -Computation of Minimum corporate Income Tax(MCIT)",
+        "rows": [
+          {
+            "label": "1",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg4Sc4I1C1",
+                "label": "Year",
+                "kind": "integer",
+                "maxLength": 4
+              },
+              {
+                "id": "frm1702RT:txtPg4Sc4I1C2",
+                "label": "Normal income tax",
+                "kind": "money",
+                "maxLength": 12,
+                "defaultValue": "0"
+              },
+              {
+                "id": "frm1702RT:txtPg4Sc4I1C3",
+                "label": "MCIT",
+                "kind": "money",
+                "maxLength": 12,
+                "defaultValue": "0"
+              },
+              {
+                "id": "frm1702RT:txtPg4Sc4I1C4",
+                "label": "Excess MCIT",
+                "kind": "money",
+                "maxLength": 12,
+                "readonly": true,
+                "defaultValue": "0"
+              },
+              {
+                "id": "frm1702RT:txtPg4Sc4I1C5",
+                "label": "Applied in previous years",
+                "kind": "money",
+                "maxLength": 12,
+                "defaultValue": "0"
+              },
+              {
+                "id": "frm1702RT:txtPg4Sc4I1C6",
+                "label": "Expired",
+                "kind": "money",
+                "maxLength": 12,
+                "defaultValue": "0"
+              },
+              {
+                "id": "frm1702RT:txtPg4Sc4I1C7",
+                "label": "Applied current year",
+                "kind": "money",
+                "maxLength": 12,
+                "defaultValue": "0"
+              },
+              {
+                "id": "frm1702RT:txtPg4Sc4I1C8",
+                "label": "Balance",
+                "kind": "money",
+                "maxLength": 12,
+                "readonly": true,
+                "defaultValue": "0"
+              }
+            ],
+            "item": "1"
+          },
+          {
+            "label": "2",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg4Sc4I2C1",
+                "label": "Year",
+                "kind": "integer",
+                "maxLength": 4
+              },
+              {
+                "id": "frm1702RT:txtPg4Sc4I2C2",
+                "label": "Normal income tax",
+                "kind": "money",
+                "maxLength": 12,
+                "defaultValue": "0"
+              },
+              {
+                "id": "frm1702RT:txtPg4Sc4I2C3",
+                "label": "MCIT",
+                "kind": "money",
+                "maxLength": 12,
+                "defaultValue": "0"
+              },
+              {
+                "id": "frm1702RT:txtPg4Sc4I2C4",
+                "label": "Excess MCIT",
+                "kind": "money",
+                "maxLength": 12,
+                "readonly": true,
+                "defaultValue": "0"
+              },
+              {
+                "id": "frm1702RT:txtPg4Sc4I2C5",
+                "label": "Applied in previous years",
+                "kind": "money",
+                "maxLength": 12,
+                "defaultValue": "0"
+              },
+              {
+                "id": "frm1702RT:txtPg4Sc4I2C6",
+                "label": "Expired",
+                "kind": "money",
+                "maxLength": 12,
+                "defaultValue": "0"
+              },
+              {
+                "id": "frm1702RT:txtPg4Sc4I2C7",
+                "label": "Applied current year",
+                "kind": "money",
+                "maxLength": 12,
+                "defaultValue": "0"
+              },
+              {
+                "id": "frm1702RT:txtPg4Sc4I2C8",
+                "label": "Balance",
+                "kind": "money",
+                "maxLength": 12,
+                "readonly": true,
+                "defaultValue": "0"
+              }
+            ],
+            "item": "2"
+          },
+          {
+            "label": "3",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg4Sc4I3C1",
+                "label": "Year",
+                "kind": "integer",
+                "maxLength": 4
+              },
+              {
+                "id": "frm1702RT:txtPg4Sc4I3C2",
+                "label": "Normal income tax",
+                "kind": "money",
+                "maxLength": 12,
+                "defaultValue": "0"
+              },
+              {
+                "id": "frm1702RT:txtPg4Sc4I3C3",
+                "label": "MCIT",
+                "kind": "money",
+                "maxLength": 12,
+                "defaultValue": "0"
+              },
+              {
+                "id": "frm1702RT:txtPg4Sc4I3C4",
+                "label": "Excess MCIT",
+                "kind": "money",
+                "maxLength": 12,
+                "readonly": true,
+                "defaultValue": "0"
+              },
+              {
+                "id": "frm1702RT:txtPg4Sc4I3C5",
+                "label": "Applied in previous years",
+                "kind": "money",
+                "maxLength": 12,
+                "defaultValue": "0"
+              },
+              {
+                "id": "frm1702RT:txtPg4Sc4I3C6",
+                "label": "Expired",
+                "kind": "money",
+                "maxLength": 12,
+                "defaultValue": "0"
+              },
+              {
+                "id": "frm1702RT:txtPg4Sc4I3C7",
+                "label": "Applied current year",
+                "kind": "money",
+                "maxLength": 12,
+                "defaultValue": "0"
+              },
+              {
+                "id": "frm1702RT:txtPg4Sc4I3C8",
+                "label": "Balance",
+                "kind": "money",
+                "maxLength": 12,
+                "readonly": true,
+                "defaultValue": "0"
+              }
+            ],
+            "item": "3"
+          },
+          {
+            "label": "Total Excess MCIT Applied (Sum of Items 1F to 3F)",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg4Sc4I4TotalExcessMCIT",
+                "label": "4 Total Excess MCIT Applied (Sum of Items 1F to 3F)",
+                "kind": "money",
+                "maxLength": 12,
+                "readonly": true,
+                "defaultValue": "0"
+              }
+            ],
+            "item": "4"
+          }
+        ]
+      },
+      {
+        "title": "Schedule V - Reconciliation of Net Income per Books Against Taxable Income (Attach additional sheet/s, if necessary)",
+        "rows": [
+          {
+            "label": "Net Income/(Loss) per Books",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg4Sc5I1NetIncome",
+                "label": "1 Net Income/(Loss) per Books",
+                "kind": "money",
+                "maxLength": 12,
+                "defaultValue": "0"
+              }
+            ],
+            "item": "1"
+          },
+          {
+            "label": "2",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg4Sc5I2C1",
+                "label": "Description",
+                "kind": "text",
+                "maxLength": 50
+              },
+              {
+                "id": "frm1702RT:txtPg4Sc5I2C2",
+                "label": "Amount",
+                "kind": "money",
+                "maxLength": 12,
+                "defaultValue": "0"
+              }
+            ],
+            "item": "2"
+          },
+          {
+            "label": "3",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg4Sc5I3C1",
+                "label": "Description",
+                "kind": "text",
+                "maxLength": 45
+              },
+              {
+                "id": "frm1702RT:txtPg4Sc5I3C2",
+                "label": "Amount",
+                "kind": "money",
+                "maxLength": 12,
+                "defaultValue": "0"
+              }
+            ],
+            "item": "3"
+          },
+          {
+            "label": "Total (Sum of Items 1 to 3)",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg4Sc5I4Total",
+                "label": "4 Total (Sum of Items 1 to 3)",
+                "kind": "money",
+                "maxLength": 12,
+                "readonly": true,
+                "defaultValue": "0"
+              }
+            ],
+            "item": "4"
+          },
+          {
+            "label": "5",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg4Sc5I5C1",
+                "label": "Description",
+                "kind": "text",
+                "maxLength": 50
+              },
+              {
+                "id": "frm1702RT:txtPg4Sc5I5C2",
+                "label": "Amount",
+                "kind": "money",
+                "maxLength": 12,
+                "defaultValue": "0"
+              }
+            ],
+            "item": "5"
+          },
+          {
+            "label": "6",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg4Sc5I6C1",
+                "label": "Description",
+                "kind": "text",
+                "maxLength": 45
+              },
+              {
+                "id": "frm1702RT:txtPg4Sc5I6C2",
+                "label": "Amount",
+                "kind": "money",
+                "maxLength": 12,
+                "defaultValue": "0"
+              }
+            ],
+            "item": "6"
+          },
+          {
+            "label": "7",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg4Sc5I7C1",
+                "label": "Description",
+                "kind": "text",
+                "maxLength": 50
+              },
+              {
+                "id": "frm1702RT:txtPg4Sc5I7C2",
+                "label": "Amount",
+                "kind": "money",
+                "maxLength": 12,
+                "defaultValue": "0"
+              }
+            ],
+            "item": "7"
+          },
+          {
+            "label": "8",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg4Sc5I8C1",
+                "label": "Description",
+                "kind": "text",
+                "maxLength": 45
+              },
+              {
+                "id": "frm1702RT:txtPg4Sc5I8C2",
+                "label": "Amount",
+                "kind": "money",
+                "maxLength": 12,
+                "defaultValue": "0"
+              }
+            ],
+            "item": "8"
+          },
+          {
+            "label": "Total (Sum of Items 5 to 8)",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg4Sc5I9Total",
+                "label": "9 Total (Sum of Items 5 to 8)",
+                "kind": "money",
+                "maxLength": 12,
+                "readonly": true,
+                "defaultValue": "0"
+              }
+            ],
+            "item": "9"
+          },
+          {
+            "label": "Net taxable Income (Loss) (Item 4 Less Item 9)",
+            "fields": [
+              {
+                "id": "frm1702RT:txtPg4Sc5I10NetTaxableIncome",
+                "label": "10 Net taxable Income (Loss) (Item 4 Less Item 9)",
+                "kind": "money",
+                "maxLength": 12,
+                "readonly": true,
+                "defaultValue": "0"
+              }
+            ],
+            "item": "10"
+          }
+        ]
+      }
+    ]
+  }
+]

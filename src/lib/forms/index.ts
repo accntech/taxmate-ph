@@ -1,3 +1,4 @@
+import { corporateIncomeForms } from './corporate-income';
 import { individualIncomeForms } from './individual-income';
 import { withholdingDefinitions } from './withholding-definitions';
 export type FormStatus = 'ready' | 'planned';
@@ -132,7 +133,7 @@ for (const definition of withholdingDefinitions) {
    required: field.required, profileKey: field.profileKey, options: field.options?.map(option => option.value) })) });
 }
 
-forms.push(...individualIncomeForms);
+forms.push(...individualIncomeForms, ...corporateIncomeForms);
 
 export function listForms(): FormSummary[] {
 	return forms.map(({ fields, ...summary }) => summary);

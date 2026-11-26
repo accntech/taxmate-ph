@@ -1,0 +1,57 @@
+.corporate-source-sheet {
+	box-sizing: border-box;
+	color: #000;
+	background: #fff;
+	font: 12px Arial, Helvetica, sans-serif;
+	line-height: normal;
+	color-scheme: light;
+}
+.corporate-source-frame {
+	border: 3px solid #000;
+	box-sizing: border-box;
+}
+.corporate-source-sheet table { border-spacing: 0; }
+.corporate-source-sheet :is(input, textarea, select) {
+	box-sizing: border-box;
+	color: #000;
+	background: #fff;
+	border: 1px solid #777;
+	font: 12px Arial, Helvetica, sans-serif;
+}
+.corporate-source-sheet :is(input[type="radio"], input[type="checkbox"]) {
+	width: 13px;
+	height: 13px;
+	vertical-align: middle;
+	accent-color: #000;
+}
+.corporate-source-sheet input[data-corporate-field$="RDO"],
+.corporate-source-sheet input[data-corporate-field$="RDOCode"] { min-width: 34px; }
+.corporate-source-sheet img { max-width: 100%; }
+.corporate-print-choice {
+	display: inline-block;
+	min-width: 24px;
+	white-space: nowrap;
+	vertical-align: middle;
+}
+.corporate-ocr [data-corporate-field] { white-space: nowrap; }
+.corporate-ocr .divPrint { z-index: 1; }
+
+/* The source's relative positioning is needed for measurement and OCR. The
+   export frame then supplies the fitted position within its header bands. */
+.withholding-print-page > .corporate-source-sheet {
+	position: absolute !important;
+	margin: 0 !important;
+}
+
+.corporate-source-sheet input[data-corporate-field] {
+	padding-inline: 2px;
+}
+.corporate-source-sheet input:is([data-corporate-field$="TIN1" i], [data-corporate-field$="TIN2" i], [data-corporate-field$="TIN3" i], [data-corporate-field$="TINC1" i], [data-corporate-field$="TINC2" i], [data-corporate-field$="TINC3" i]) {
+	min-width: 32px;
+}
+.corporate-source-sheet input:is([data-corporate-field$="TIN4" i], [data-corporate-field$="TINC4" i], [data-corporate-field$="BranchCode" i]) {
+	min-width: 46px;
+}
+.corporate-source-sheet input:is([data-corporate-field$="YearEnd" i], [data-corporate-field$="YearEnded" i]) {
+	min-width: 44px;
+}

@@ -5,6 +5,8 @@
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import { afterNavigate, beforeNavigate, goto } from '$app/navigation';
+	import { corporateFieldLabel, getCorporateIncomeForm } from '$lib/forms/corporate-income';
+	import type CorporateEditor from '$lib/forms/corporate-income/corporate-editor.svelte';
 	import { getIndividualIncomeForm } from '$lib/forms/individual-income';
 	import type WithholdingEditor from '$lib/forms/withholding-editor.svelte';
 	import { getWithholdingDefinition } from '$lib/forms/withholding-definitions';
@@ -20,10 +22,16 @@
 	let { params } = $props();
 	let ready = $state(false);
 	let recordError = $state('');
+	let corporateEditor = $state<ReturnType<typeof CorporateEditor>>();
 	let withholdingEditor = $state<ReturnType<typeof WithholdingEditor>>();
+	const corporateForm = $derived(getCorporateIncomeForm(params.formCode));
 	const incomeForm = $derived(getIndividualIncomeForm(params.formCode));
 	const withholdingDefinition = $derived(getWithholdingDefinition(params.formCode));
 	const editorModule = $derived.by(() => {
+		if (corporateForm) {
+			return import('$lib/forms/corporate-income/corporate-editor.svelte')
+				.then(({ default: Component }) => ({ kind: 'corporate' as const, Component }));
+		}
 		if (incomeForm) {
 			return import('$lib/forms/individual-income/income-editor.svelte')
 				.then(({ default: Component }) => ({ kind: 'income' as const, Component }));
@@ -114,7 +122,8 @@
 					{#if !incomeForm && Object.keys(workspace.validationErrors).length}
 						<div class="eq-errors">
 							<ReturnErrors definition={workspace.selectedForm} errors={workspace.validationErrors}
-								taxpayerHref={`/ebirforms/taxpayers/${params.id}/edit`} onreveal={withholdingEditor?.revealField} />
+								taxpayerHref={`/ebirforms/taxpayers/${params.id}/edit`} fieldLabel={corporateForm ? (id) => corporateFieldLabel(corporateForm, workspace.formValues, id) : undefined}
+								onreveal={corporateEditor?.revealField ?? withholdingEditor?.revealField} />
 						</div>
 					{/if}
 					<fieldset disabled={busy} class="eq-form-controls">
@@ -122,6 +131,12 @@
 						{#if incomeForm && editor?.kind === 'income'}
 							{#key incomeForm.code}
 								<editor.Component form={incomeForm} profile={workspace.profile} values={workspace.formValues} errors={workspace.validationErrors} taxpayerHref={`/ebirforms/taxpayers/${params.id}/edit`} onvaluechange={(patch) => workspace.updateFormValues(patch)} />
+							{/key}
+						{:else if corporateForm && editor?.kind === 'corporate'}
+							{#key `${params.formCode}:${recordId ?? ''}`}
+								<editor.Component bind:this={corporateEditor} form={corporateForm} values={workspace.formValues}
+									errors={workspace.validationErrors} taxpayerHref={`/ebirforms/taxpayers/${params.id}/edit`}
+									onvaluechange={(patch) => workspace.updateFormValues(patch)} />
 							{/key}
 						{:else if workspace.selectedForm.code === '1601EQ'}
 							<Form1601EQ definition={workspace.selectedForm} bind:values={workspace.formValues} errors={workspace.validationErrors} onvaluechange={(patch) => workspace.updateFormValues(patch)} {taxpayerInformation} />

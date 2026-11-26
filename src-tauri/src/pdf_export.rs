@@ -77,6 +77,18 @@ pub fn validate_export_request(request: &PdfExportRequest) -> Result<(), PdfExpo
             | "1701MS"
             | "1701Q"
             | "1701Qv2018"
+            | "1702EX"
+            | "1702EXv2018"
+            | "1702EXv2018C"
+            | "1702MX"
+            | "1702MXv2018"
+            | "1702MXv2018C"
+            | "1702Q"
+            | "1702Qv2008C"
+            | "1702Qv2018C"
+            | "1702RT"
+            | "1702RTv2018"
+            | "1702RTv2018C"
     ) {
         return Err(PdfExportError::new(format!(
             "Unsupported form code: {}",

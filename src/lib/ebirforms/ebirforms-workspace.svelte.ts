@@ -1,3 +1,4 @@
+import { createCorporateIncomeValues, getCorporateIncomeForm } from '$lib/forms/corporate-income';
 import { createIndividualIncomeValues, getIndividualIncomeForm } from '$lib/forms/individual-income';
 import { deleteStoredDrafts, loadCreatedReturnsData, saveCreatedReturnsData, type CreatedReturn, type CreatedReturnStatus } from './created-returns';
 import { getFormDefinition, listForms } from '$lib/forms';
@@ -47,6 +48,8 @@ export const initialProfile: TaxpayerProfile = {
 export function createInitialFormValues(profile: TaxpayerProfile, code = '1601EQ'): Record<string, string> {
 	const income = getIndividualIncomeForm(code);
 	if (income) return createIndividualIncomeValues(income, profile);
+	const corporate = getCorporateIncomeForm(code);
+	if (corporate) return createCorporateIncomeValues(corporate, profile);
 	if (code !== '1601EQ') return createWithholdingValues(code, profile);
 	return {
 		...buildTaxpayerProfileFormValues(profile),
@@ -268,7 +271,7 @@ class EbirformsWorkspace {
 		}
 		const nextStatus = status ?? (this.hasUnsavedChanges ? 'Draft' : active.status);
 		const calculated = calculateReturn(active.formCode, this.formValues);
-		const values = { ...this.formValues };
+		const values = getCorporateIncomeForm(active.formCode) ? calculated : { ...this.formValues };
 		if (active.formCode === '1601EQ') {
 			if ('txtEmail' in calculated) values.txtEmail = calculated.txtEmail;
 			for (const name of ['txtTotalTaxesWithheld', 'txtTotalRemittances', 'txtTaxStillDue', 'txtTotalPenalties', 'txtTotalAmountDue',

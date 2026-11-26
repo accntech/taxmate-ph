@@ -1,0 +1,166 @@
+[
+  {
+    "value": "IC010_30%",
+    "label": "IC 010\n                                                                                            Domestic Corporation in\n                                                                                            General - 30%"
+  },
+  {
+    "value": "IC010_25%",
+    "label": "IC 010\n                                                                                            Domestic Corporation in\n                                                                                            General - 25%"
+  },
+  {
+    "value": "IC010_20%",
+    "label": "IC 010\n                                                                                            Domestic Corporation in\n                                                                                            General - 20%"
+  },
+  {
+    "value": "IC011_0%",
+    "label": "IC 011\n                                                                                            Exempt Corporation on Exempt\n                                                                                            Activities - 0%"
+  },
+  {
+    "value": "IC020_30%",
+    "label": "IC 020\n                                                                                            Taxable Partnership - 30%"
+  },
+  {
+    "value": "IC020_25%",
+    "label": "IC 020\n                                                                                            Taxable Partnership - 25%"
+  },
+  {
+    "value": "IC020_20%",
+    "label": "IC 020\n                                                                                            Taxable Partnership - 20%"
+  },
+  {
+    "value": "IC021_Exempt",
+    "label": "IC\n                                                                                            021 General Professional\n                                                                                            Partnership - Exempt"
+  },
+  {
+    "value": "IC030_10%",
+    "label": "IC 030\n                                                                                            Proprietary Educational\n                                                                                            Institutions - 10%"
+  },
+  {
+    "value": "IC030_1%",
+    "label": "IC 030\n                                                                                            Proprietary Educational\n                                                                                            Institutions - 1%"
+  },
+  {
+    "value": "IC030_30%",
+    "label": "IC 030\n                                                                                            Proprietary Educational\n                                                                                            Institutions - 30%"
+  },
+  {
+    "value": "IC030_25%",
+    "label": "IC 030\n                                                                                            Proprietary Educational\n                                                                                            Institutions - 25%"
+  },
+  {
+    "value": "IC030_20%",
+    "label": "IC 030\n                                                                                            Proprietary Educational\n                                                                                            Institutions - 20%"
+  },
+  {
+    "value": "IC031_10%",
+    "label": "IC 031\n                                                                                            Non-Stock, Non-Profit\n                                                                                            Hospitals - 10%"
+  },
+  {
+    "value": "IC031_1%",
+    "label": "IC 031\n                                                                                            Non-Stock, Non-Profit\n                                                                                            Hospitals - 1%"
+  },
+  {
+    "value": "IC031_30%",
+    "label": "IC 031\n                                                                                            Non-Stock, Non-Profit\n                                                                                            Hospitals - 30%"
+  },
+  {
+    "value": "IC031_25%",
+    "label": "IC 031\n                                                                                            Non-Stock, Non-Profit\n                                                                                            Hospitals - 25%"
+  },
+  {
+    "value": "IC031_20%",
+    "label": "IC 031\n                                                                                            Non-Stock, Non-Profit\n                                                                                            Hospitals - 20%"
+  },
+  {
+    "value": "IC040_30%",
+    "label": "IC 040\n                                                                                            GOCC, Agencies and\n                                                                                            Instrumentalities - 30%"
+  },
+  {
+    "value": "IC040_25%",
+    "label": "IC 040\n                                                                                            GOCC, Agencies and\n                                                                                            Instrumentalities - 25%"
+  },
+  {
+    "value": "IC040_20%",
+    "label": "IC 040\n                                                                                            GOCC, Agencies and\n                                                                                            Instrumentalities - 20%"
+  },
+  {
+    "value": "IC041_30%",
+    "label": "IC 041\n                                                                                            National Gov't. & LGUs - 30%"
+  },
+  {
+    "value": "IC041_25%",
+    "label": "IC 041\n                                                                                            National Gov't. & LGUs - 25%"
+  },
+  {
+    "value": "IC041_20%",
+    "label": "IC 041\n                                                                                            National Gov't. & LGUs - 20%"
+  },
+  {
+    "value": "IC200_0%",
+    "label": "IC 200\n                                                                                            PEZA Free Port Zones - 0%"
+  },
+  {
+    "value": "IC200_5%",
+    "label": "IC 200\n                                                                                            PEZA Free Port Zones - 5%"
+  },
+  {
+    "value": "IC210_2%",
+    "label": "IC 210\n                                                                                            Microfinance Non-Government\n                                                                                            Organizations (NGOs) - 2%"
+  },
+  {
+    "value": "IC070_30%",
+    "label": "IC 070\n                                                                                            Resident Foreign Corporation\n                                                                                            in General - 30%"
+  },
+  {
+    "value": "IC070_25%",
+    "label": "IC 070\n                                                                                            Resident Foreign Corporation\n                                                                                            in General - 25%"
+  },
+  {
+    "value": "IC080_2.5%",
+    "label": "IC\n                                                                                            080 International Carriers -\n                                                                                            2.5%"
+  },
+  {
+    "value": "IC101_10%",
+    "label": "IC 101\n                                                                                            Regional Operating\n                                                                                            Headquarters - 10%"
+  },
+  {
+    "value": "IC101_25%",
+    "label": "IC 101\n                                                                                            Regional Operating\n                                                                                            Headquarters - 25%"
+  },
+  {
+    "value": "IC190_10%_NotSubjectToFinalTax",
+    "label": "IC 190 Offshore Banking\n                                                                                            Units (OBUs) - Foreign\n                                                                                            Currency Transaction Not\n                                                                                            Subjected to Final Tax - 10%"
+  },
+  {
+    "value": "IC190_25%_NotSubjectToFinalTax_New",
+    "label": "IC 190 Offshore Banking\n                                                                                            Units (OBUs) - Foreign\n                                                                                            Currency Transaction Not\n                                                                                            Subjected to Final Tax (NEW)\n                                                                                            - 25%"
+  },
+  {
+    "value": "IC190_30%_OtherThanForeignCurrencyTransaction",
+    "label": "IC 190 Offshore Banking\n                                                                                            Units (OBUs) - Other than\n                                                                                            Foreign Currecy Transaction\n                                                                                            - 30%"
+  },
+  {
+    "value": "IC190_25%_OtherThanForeignCurrencyTransaction_New",
+    "label": "IC 190 Offshore Banking\n                                                                                            Units (OBUs) - Other than\n                                                                                            Foreign Currecy Transaction\n                                                                                            (NEW) - 25%"
+  },
+  {
+    "value": "OBU_25%",
+    "label": "Offshore\n                                                                                            Banking Units - 25%"
+  },
+  {
+    "value": "IC191_10%",
+    "label": "IC 191\n                                                                                            Foreign Currency Transaction\n                                                                                            Not Subjected to Final Tax -\n                                                                                            10%"
+  },
+  {
+    "value": "IC191_25%_NotSubjectToFinalTax_New",
+    "label": "IC 191 Foreign Currency\n                                                                                            Transaction Not Subjected to\n                                                                                            Final Tax (NEW) - 25%"
+  },
+  {
+    "value": "IC191_30%",
+    "label": "IC 191\n                                                                                            Foreign Currency Deposit\n                                                                                            Units (FCDUs) - Other Than\n                                                                                            Foreign Currency - 30%"
+  },
+  {
+    "value": "IC191_25%_OtherThanForeignCurrencyTransaction_New",
+    "label": "IC 191 Foreign Currency\n                                                                                            Deposit Units (FCDUs) -\n                                                                                            Other Than Foreign Currency\n                                                                                            (NEW) - 25%"
+  }
+]

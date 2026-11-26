@@ -12,7 +12,8 @@
 	const formTypeColors = new Map([
 		['Payment', 'var(--success)'],
 		['Withholding Tax', 'var(--info)'],
-		['Individual Income Tax', 'var(--warn)']
+		['Individual Income Tax', 'var(--warn)'],
+		['Corporate Income Tax', 'var(--warn)']
 	]);
 
 	let { forms, disabled = false, taxpayerName = '', status = '', oncancel, onselect }: {

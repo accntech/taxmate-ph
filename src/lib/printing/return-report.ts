@@ -1,5 +1,7 @@
 import { mount, tick, unmount } from 'svelte';
 import type { FormDefinition } from '$lib/forms';
+import { getCorporateIncomeForm } from '$lib/forms/corporate-income';
+import { corporatePaperStyles, renderCorporatePaper } from '$lib/forms/corporate-income/paper';
 import { getIndividualIncomeForm } from '$lib/forms/individual-income';
 import { fitLegacyIncomePrintValues, individualIncomePaperStyles, legacy1700PrintStyles, loadIndividualIncomePaper, renderIndividualIncomeValues, renderIncomePrintChoices, visiblePaperPages } from '$lib/forms/individual-income/paper';
 import { renderLegacy1700Print } from '$lib/forms/individual-income/legacy-1700-print';
@@ -243,7 +245,8 @@ function alignSourceSections(surface: HTMLElement): void {
 function printContentBoxes(page: HTMLElement): DOMRect[] {
 	// Relative positioning groups in the 2013 artwork can extend past the
 	// image even though the actual printed fields fit on the artwork.
-	const contents = page.classList.contains('legacy-1701-ocr') ? 'img, [data-legacy-print-id]' : '*';
+	const contents = page.classList.contains('legacy-1701-ocr') ? 'img, [data-legacy-print-id]'
+		: page.classList.contains('corporate-ocr') ? 'img, [data-corporate-field]' : '*';
 	return [...page.querySelectorAll(contents)].map(child => child.getBoundingClientRect()).filter(child => child.width > 0);
 }
 
@@ -361,11 +364,11 @@ function alignNativeIncomePages(surface: HTMLElement): void {
 }
 
 /** Keep a populated return value inside its source box, including split TINs and ZIP codes. */
-function fitIncomePrintedValues(surface: HTMLElement): void {
+function fitIncomePrintedValues(surface: HTMLElement, fieldSelector = "[data-income-field]"): void {
 	const context = document.createElement('canvas').getContext('2d');
 	if (!context) return;
 	for (const control of surface.querySelectorAll<HTMLElement>(
-		'[data-income-field]:not([type="radio"]):not([type="checkbox"])'
+		`${fieldSelector}:not([type="radio"]):not([type="checkbox"])`
 	)) {
 		const value = control instanceof HTMLSelectElement ? control.selectedOptions[0]?.text ?? '' :
 			control instanceof HTMLInputElement || control instanceof HTMLTextAreaElement ? control.value : control.textContent ?? '';
@@ -384,6 +387,7 @@ function fitIncomePrintedValues(surface: HTMLElement): void {
 /** Export a return through its source-specific printable layout. */
 export async function buildReturnReport(definition: FormDefinition, values: Record<string, string>, status: string, paperSize: PrintPaperSize, onProgress?: (completedSteps: number, stage: string) => void): Promise<string> {
 	const income = getIndividualIncomeForm(definition.code);
+	const corporate = getCorporateIncomeForm(definition.code);
 	const legacy1700 = income?.code === '1700';
 	const legacy1701 = income?.code === '1701';
 	const paperProfile = getPrintProfile(paperSize);
@@ -392,7 +396,7 @@ export async function buildReturnReport(definition: FormDefinition, values: Reco
 		@page bir-1701-landscape { size: ${profile.height} ${profile.width}; margin: ${profile.margin}; }
 		.withholding-print-page[data-print-orientation='landscape'] { page: bir-1701-landscape; }
 	` : '';
-	const [PrintComponent, styles] = income
+	const [PrintComponent, styles] = corporate ? [undefined, corporatePaperStyles] as const : income
 		? [undefined, legacy1700 ? legacy1700PrintStyles : individualIncomePaperStyles] as const
 		: await Promise.all([getWithholdingPrintComponent(definition.code), getWithholdingPrintStyles(definition.code)]);
 	onProgress?.(1, 'Embedding print assets');
@@ -414,7 +418,9 @@ export async function buildReturnReport(definition: FormDefinition, values: Reco
 	let component: ReturnType<typeof mount> | undefined;
 	try {
 		const calculated = calculateReturn(definition.code, values);
-		if (income) {
+		if (corporate) {
+			await renderCorporatePaper(surface, corporate, calculated);
+		} else if (income) {
 			const template = document.createElement('template');
 			template.innerHTML = await loadIndividualIncomePaper(definition.code);
 			if (legacy1700) {
@@ -461,7 +467,7 @@ export async function buildReturnReport(definition: FormDefinition, values: Reco
 			normalizeRadioControls(surface);
 		}
 		if (legacy1700 || legacy1701) fitLegacyIncomePrintValues(surface);
-		if (!income) {
+		if (!income && !corporate) {
 			for (let pass = 0; pass < 3; pass++) {
 				fitSourceFrames(surface);
 				alignSourceSections(surface);
@@ -473,10 +479,11 @@ export async function buildReturnReport(definition: FormDefinition, values: Reco
 		if (income) alignNativeIncomePages(surface);
 		setPrintedValueSize(surface, paperSize);
 		if (income && !legacy1700) fitIncomePrintedValues(surface);
+		if (corporate) fitIncomePrintedValues(surface, '.corporate-source-sheet:not(.corporate-ocr) [data-corporate-field]');
 		return buildPrintHtml({
 			title,
 			profile: definition.code === '1601EQ' ? profile : { ...profile, scale: '1' },
-			bodyHtml: `<div class="print-export-root${income ? ' withholding-print' : ''}">${surface.innerHTML}</div>`,
+			bodyHtml: `<div class="print-export-root${income || corporate ? ' withholding-print' : ''}">${surface.innerHTML}</div>`,
 			styleHtml: `<style>${embedded.styles}${namedPage}</style>`,
 			assets: embedded.assets
 		});

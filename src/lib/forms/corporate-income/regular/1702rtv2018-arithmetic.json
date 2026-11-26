@@ -1,0 +1,140 @@
+[
+  {
+    "operation": "getDifference",
+    "args": [
+      "txtPg4Sc3I1GrossIncome",
+      "txtPg4Sc3I2TotalDeductions",
+      "txtPg4Sc3I3NetOperatingLoss"
+    ]
+  },
+  {
+    "operation": "getSum",
+    "args": [
+      "txtPg3Sc1I1Amortization,txtPg3Sc1I2BadDebts,txtPg3Sc1I3CharitableContributions,txtPg3Sc1I4Depletion,txtPg3Sc1I5Depreciation,txtPg3Sc1I6Entertainment,txtPg3Sc1I7FringeBenefits,txtPg3Sc1I8Interest,txtPg3Sc1I9Losses,txtPg3Sc1I10PensionTrust,txtPg3Sc1I11Rental,txtPg3Sc1I12Research,txtPg3Sc1I13Salaries,txtPg3Sc1I14Contributions,txtPg3Sc1I15TaxesandLicenses,txtPg3Sc1I16TransportationandTravel,txtPg3Sc1I17aJanitorial,txtPg3Sc1I17bProfessionalFees,txtPg3Sc1I17cSecurityServices,txtPg3Sc1I17dC2,txtPg3Sc1I17eC2,txtPg3Sc1I17fC2,txtPg3Sc1I17gC2,txtPg3Sc1I17hC2,txtPg3Sc1I17iC2",
+      "txtPg3Sc1I18TotalOrdinaryAllowable"
+    ]
+  },
+  {
+    "operation": "getSum",
+    "args": [
+      "txtPg3Sc2I1C3,txtPg3Sc2I2C3,txtPg3Sc2I3C3,txtPg3Sc2I4C3",
+      "txtPg3Sc2I5TotalSpecialAllowable"
+    ]
+  },
+  {
+    "operation": "getDifference",
+    "args": [
+      "txtPg4Sc3AI5C2",
+      "txtPg4Sc3AI5C3,txtPg4Sc3AI5C4,txtPg4Sc3AI5C5",
+      "txtPg4Sc3AI5C6"
+    ]
+  },
+  {
+    "operation": "getDifference",
+    "args": [
+      "txtPg4Sc3AI6C2",
+      "txtPg4Sc3AI6C3,txtPg4Sc3AI6C4,txtPg4Sc3AI6C5",
+      "txtPg4Sc3AI6C6"
+    ]
+  },
+  {
+    "operation": "getDifference",
+    "args": [
+      "txtPg4Sc3AI7C2",
+      "txtPg4Sc3AI7C3,txtPg4Sc3AI7C4,txtPg4Sc3AI7C5",
+      "txtPg4Sc3AI7C6"
+    ]
+  },
+  {
+    "operation": "getSum",
+    "args": [
+      "txtPg4Sc3AI4C5,txtPg4Sc3AI5C5,txtPg4Sc3AI6C5,txtPg4Sc3AI7C5",
+      "txtPg4Sc4I8TotalNOLCO"
+    ]
+  },
+  {
+    "operation": "getDifference",
+    "args": [
+      "txtPg4Sc3AI4C2",
+      "txtPg4Sc3AI4C3,txtPg4Sc3AI4C4,txtPg4Sc3AI4C5",
+      "txtPg4Sc3AI4C6"
+    ]
+  },
+  {
+    "operation": "getDifference",
+    "args": [
+      "txtPg4Sc4I1C3",
+      "txtPg4Sc4I1C2",
+      "txtPg4Sc4I1C4"
+    ]
+  },
+  {
+    "operation": "getDifference",
+    "args": [
+      "txtPg4Sc4I2C3",
+      "txtPg4Sc4I2C2",
+      "txtPg4Sc4I2C4"
+    ]
+  },
+  {
+    "operation": "getDifference",
+    "args": [
+      "txtPg4Sc4I3C3",
+      "txtPg4Sc4I3C2",
+      "txtPg4Sc4I3C4"
+    ]
+  },
+  {
+    "operation": "getDifference",
+    "args": [
+      "txtPg4Sc4I1C4",
+      "txtPg4Sc4I1C5,txtPg4Sc4I1C6,txtPg4Sc4I1C7",
+      "txtPg4Sc4I1C8"
+    ]
+  },
+  {
+    "operation": "getDifference",
+    "args": [
+      "txtPg4Sc4I2C4",
+      "txtPg4Sc4I2C5,txtPg4Sc4I2C6,txtPg4Sc4I2C7",
+      "txtPg4Sc4I2C8"
+    ]
+  },
+  {
+    "operation": "getDifference",
+    "args": [
+      "txtPg4Sc4I3C4",
+      "txtPg4Sc4I3C5,txtPg4Sc4I3C6,txtPg4Sc4I3C7",
+      "txtPg4Sc4I3C8"
+    ]
+  },
+  {
+    "operation": "getSum",
+    "args": [
+      "txtPg4Sc4I1C7,txtPg4Sc4I2C7,txtPg4Sc4I3C7",
+      "txtPg4Sc4I4TotalExcessMCIT"
+    ]
+  },
+  {
+    "operation": "getSum",
+    "args": [
+      "txtPg4Sc5I1NetIncome,txtPg4Sc5I2C2,txtPg4Sc5I3C2",
+      "txtPg4Sc5I4Total"
+    ]
+  },
+  {
+    "operation": "getSum",
+    "args": [
+      "txtPg4Sc5I5C2,txtPg4Sc5I6C2,txtPg4Sc5I7C2,txtPg4Sc5I8C2",
+      "txtPg4Sc5I9Total"
+    ]
+  },
+  {
+    "operation": "getDifference",
+    "args": [
+      "txtPg4Sc5I4Total",
+      "txtPg4Sc5I9Total",
+      "txtPg4Sc5I10NetTaxableIncome"
+    ]
+  }
+]

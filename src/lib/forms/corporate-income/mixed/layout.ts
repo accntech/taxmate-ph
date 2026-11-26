@@ -1,0 +1,221 @@
+import type {
+  CorporateField,
+  CorporatePage,
+  CorporateRow,
+  CorporateSection,
+} from "../types";
+
+const p = "frm1702MX:";
+const lossLabels: Record<string, string> = {
+  Year: "Year incurred",
+  A: "Net operating loss",
+  B: "Applied in previous years",
+  C: "Expired",
+  D: "Applied this year",
+  E: "Remaining balance",
+};
+const mcitLabels: Record<string, string> = {
+  "": "Year incurred",
+  CA: "Normal income tax as adjusted",
+  CB: "MCIT",
+  CC: "Excess MCIT over normal income tax",
+  CD: "Applied in previous years",
+  CE: "Expired",
+  CF: "Applied this year",
+  CG: "Remaining balance",
+};
+function lossField(field: CorporateField) {
+  return field.id
+    .slice(p.length)
+    .match(/^txtPg[34]IShed([78])_([4-7])(Year|[A-E])$/);
+}
+
+export function refineMixedPages(
+  code: string,
+  pages: CorporatePage[],
+): CorporatePage[] {
+  for (const page of pages) {
+    const allFields = page.sections.flatMap((section) =>
+      section.rows.flatMap((row) => row.fields),
+    );
+    const sections: CorporateSection[] = [];
+    for (const section of page.sections) {
+      let current = { ...section, rows: [] as CorporateRow[] };
+      const emittedLosses = new Set<string>();
+      const emittedMcit = new Set<string>();
+      for (const sourceRow of section.rows) {
+        const first = sourceRow.fields[0].id.slice(p.length);
+        if (first === "chkPg1I5ATCR1") {
+          const otherAtc = section.rows.find(
+            (row) => row.fields[0].id === p + "drpPg1I5ATCR2",
+          );
+          current.rows.push({
+            ...sourceRow,
+            label: "Alphanumeric tax code (ATC)",
+            fields: [...sourceRow.fields, ...(otherAtc?.fields ?? [])],
+          });
+          continue;
+        }
+        if (first === "drpPg1I5ATCR2") continue;
+        if (/^radPg8Sc12/.test(first)) {
+          if (current.rows.length) sections.push(current);
+          current = {
+            title: "Schedule 12 – Stockholders, Partners and Members",
+            rows: [],
+          };
+        }
+        const stakeholder = first.match(/^txtPg8Sc12I(\d+)C1$/);
+        if (stakeholder) {
+          sourceRow.item = stakeholder[1];
+          sourceRow.label = `Stockholder, partner or member ${stakeholder[1]}`;
+          for (const field of sourceRow.fields) {
+            const name = field.id.slice(p.length);
+            field.readonly = false;
+            const tin = name.match(/C2tin([1-4])$/);
+            field.label = tin
+              ? {
+                  "1": "TIN, first three digits",
+                  "2": "TIN, second three digits",
+                  "3": "TIN, third three digits",
+                  "4": "Branch code",
+                }[tin[1]]
+              : name.endsWith("C1")
+                ? "Registered name"
+                : name.endsWith("C3")
+                  ? "Capital contribution"
+                  : "Percentage of ownership";
+            if (name.endsWith("C4")) field.kind = "percent";
+          }
+        }
+        for (const field of sourceRow.fields) {
+          if (/^radPg8Sc12/.test(field.id.slice(p.length))) {
+            field.kind = "checkbox";
+            field.options = undefined;
+            field.label = field.id.endsWith("stockholder")
+              ? "Stockholders"
+              : field.id.endsWith("partner")
+                ? "Partners"
+                : "Members";
+          }
+        }
+        const loss = lossField(sourceRow.fields[0]);
+        if (loss) {
+          const key = loss[1] + "_" + loss[2];
+          if (emittedLosses.has(key)) continue;
+          emittedLosses.add(key);
+          const fields = allFields.filter((field) => {
+            const match = lossField(field);
+            return match && match[1] === loss[1] && match[2] === loss[2];
+          });
+          fields.sort(
+            (a, b) =>
+              ["Year", "A", "B", "C", "D", "E"].indexOf(lossField(a)![3]) -
+              ["Year", "A", "B", "C", "D", "E"].indexOf(lossField(b)![3]),
+          );
+          for (const field of fields) {
+            const column = lossField(field)![3];
+            field.kind = column === "Year" ? "integer" : "money";
+            field.label = lossLabels[column];
+            field.readonly = column === "E" || loss[2] === "7";
+          }
+          current.rows.push({
+            item: loss[2],
+            label:
+              loss[1] === "7"
+                ? "Regular-rate loss carryover"
+                : "Special-rate loss carryover",
+            fields,
+          });
+          continue;
+        }
+        const mcit = first.match(/^txtPg7Sc9I([1-3])(C[A-G])?$/);
+        if (mcit) {
+          if (emittedMcit.has(mcit[1])) continue;
+          emittedMcit.add(mcit[1]);
+          const fields = allFields.filter((field) =>
+            new RegExp(`^${p}txtPg7Sc9I${mcit[1]}(?:C[A-G])?$`).test(field.id),
+          );
+          fields.sort(
+            (a, b) =>
+              ["", "CA", "CB", "CC", "CD", "CE", "CF", "CG"].indexOf(
+                a.id.slice((p + `txtPg7Sc9I${mcit[1]}`).length),
+              ) -
+              ["", "CA", "CB", "CC", "CD", "CE", "CF", "CG"].indexOf(
+                b.id.slice((p + `txtPg7Sc9I${mcit[1]}`).length),
+              ),
+          );
+          for (const field of fields) {
+            const column = field.id.slice((p + `txtPg7Sc9I${mcit[1]}`).length);
+            field.label = mcitLabels[column];
+            field.column = undefined;
+            current.columns = undefined;
+            field.kind = column ? "money" : "integer";
+            field.readonly = ["CC", "CG"].includes(column);
+          }
+          current.rows.push({
+            item: mcit[1],
+            label: "Excess MCIT carryover",
+            fields,
+          });
+          continue;
+        }
+        current.rows.push(sourceRow);
+      }
+      if (current.rows.length) sections.push(current);
+    }
+    if (code !== "1702MX") {
+      for (const section of sections) {
+        for (const item of [2, 5, 7]) {
+          const base = p + `txtPg4Sc10Itm${item}`;
+          const matches = section.rows
+            .flatMap((row) => row.fields)
+            .filter((field) =>
+              new RegExp("^" + base + "[ABCD]?$").test(field.id),
+            );
+          if (!matches.length) continue;
+          const first = section.rows.findIndex((row) =>
+            row.fields.some((field) => matches.includes(field)),
+          );
+          const merged: CorporateRow = {
+            item: String(item),
+            label:
+              item === 2
+                ? "Reconciliation addition"
+                : item === 5
+                  ? "Income exclusion"
+                  : "Reconciliation deduction",
+            fields: matches
+              .sort(
+                (a, b) => a.id.length - b.id.length || a.id.localeCompare(b.id),
+              )
+              .map((field) => ({
+                ...field,
+                column: undefined,
+                readonly: field.id.endsWith("D"),
+                label:
+                  field.id === base
+                    ? "Description"
+                    : {
+                        A: "Exempt",
+                        B: "Special rate",
+                        C: "Regular rate",
+                        D: "Total",
+                      }[field.id.slice(-1) as "A" | "B" | "C" | "D"],
+              })),
+          };
+          section.rows = section.rows.flatMap((row, index) => {
+            const remaining = row.fields.filter(
+              (field) => !matches.includes(field),
+            );
+            return [
+              ...(index === first ? [merged] : []),
+              ...(remaining.length ? [{ ...row, fields: remaining }] : []),
+            ];
+          });
+        }
+      }
+    }
+    page.sections = sections;
+  }
+  return pages;
+}

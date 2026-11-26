@@ -1,0 +1,72 @@
+[
+  {
+    "value": "IC010",
+    "label": "IC010 \u00b7 CORPORATION IN GENERAL - JAN 1, 2009 (2009)",
+    "rate": 30.0
+  },
+  {
+    "value": "IC020",
+    "label": "IC020 \u00b7 TAXABLE PARTNERSHIP - JAN 1, 2009 (2009)",
+    "rate": 30.0
+  },
+  {
+    "value": "IC030",
+    "label": "IC030 \u00b7 PROPRIETARY EDUCATIONAL INSTITUTIONS - JAN 1, 2009 (2009)",
+    "rate": 30.0
+  },
+  {
+    "value": "IC031",
+    "label": "IC031 \u00b7 NON-STOCK,NON-PROFITS HOSPITALS - JAN 1, 2009 (2009)",
+    "rate": 30.0
+  },
+  {
+    "value": "IC040",
+    "label": "IC040 \u00b7 GOCC, AGENCIES AND INSTRUMENTALITIES - JAN 1, 2009 (2009)",
+    "rate": 30.0
+  },
+  {
+    "value": "IC041",
+    "label": "IC041 \u00b7 NATIONAL GOV'T.& LGU's - JAN 1, 2009 (2009)",
+    "rate": 0.0
+  },
+  {
+    "value": "IC070",
+    "label": "IC070 \u00b7 RESIDENT FOREIGN CORPORATION IN GENERAL - JAN 1, 2009 (2009)",
+    "rate": 30.0
+  },
+  {
+    "value": "IC190",
+    "label": "IC190 \u00b7 OFFSHORE BANKING UNITS(OBU's) - JAN 1, 2009 (2009)",
+    "rate": 30.0
+  },
+  {
+    "value": "IC191",
+    "label": "IC191 \u00b7 FOREIGN CURRENCY DEPOSITUNIT(FCDU's)- JAN 1, 2009 (2009)",
+    "rate": 30.0
+  },
+  {
+    "value": "IC011",
+    "label": "IC011 \u00b7 EXEMPT CORPORATION ON EXEMPT ACTIVITIES",
+    "rate": 0.0
+  },
+  {
+    "value": "IC055",
+    "label": "IC055 \u00b7 MINIMUM CORPORATE INCOME TAX (2005)",
+    "rate": 2.0
+  },
+  {
+    "value": "IC080",
+    "label": "IC080 \u00b7 RESIDENT FOREIGN CORPORATION-INT'LCARRIERS (2005)",
+    "rate": 2.5
+  },
+  {
+    "value": "IC101",
+    "label": "IC101 \u00b7 REGIONAL OPERATING HEADQUARTERS (2005)",
+    "rate": 10.0
+  },
+  {
+    "value": "IC021",
+    "label": "IC021 \u00b7 GENERAL PROFESSIONAL PARTNERSHIP (1986)",
+    "rate": 0.0
+  }
+]
