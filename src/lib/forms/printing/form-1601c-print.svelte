@@ -1979,13 +1979,13 @@ export const printBindings: readonly PrintBinding[] = [
                                     >
                                     <td class="wh-inline-d4e264dc31d0"
                                       ><span id="frm1601c:sectionCont:j_id691"
-                                        >From Current Year (7a)</span
+                                        >From Current Year (7A)</span
                                       ></td
                                     >
                                     <td class="wh-inline-84addb55691b"
                                       ><span id="frm1601c:sectionCont:j_id694"
                                         >From Year-End Adjustment of the
-                                        Immediately Preceding Year (7b)</span
+                                        Immediately Preceding Year (7B)</span
                                       ></td
                                     >
                                   </tr>
@@ -2085,7 +2085,7 @@ export const printBindings: readonly PrintBinding[] = [
                               <span
                                 class="iceOutLbl fieldLabel1 wh-inline-32760dcebc79"
                                 id="frm1601c:j_id702"
-                                >26 Total (7a plus 7B) (To Item 19)</span
+                                >26 Total (7A plus 7B) (To Item 19)</span
                               >
                             </td>
                             <td class="wh-inline-04ef5b6900c9">
