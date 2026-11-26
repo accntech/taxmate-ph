@@ -44,7 +44,7 @@
       <Checkbox {checked} {indeterminate} size="md" />
     </span>
   </span>
-  {#if label}<span>{label}</span>{/if}
+  {#if label}<span class="checkbox-label">{label}</span>{/if}
 </label>
 
 <style>
@@ -59,6 +59,9 @@
   label.disabled {
     cursor: default;
     opacity: 0.6;
+  }
+  .checkbox-label {
+    font-size: var(--form-control-size);
   }
   .checkbox-control {
     position: relative;
