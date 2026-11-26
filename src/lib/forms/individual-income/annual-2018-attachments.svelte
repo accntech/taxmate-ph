@@ -175,7 +175,8 @@
 						</div>
 					{/if}
 					<!-- svelte-ignore a11y_no_redundant_roles (Preserve table semantics in the stacked layout) -->
-					<table role="table" aria-label={group.title} class={{ 'four-regimes': columns.length === 4 }}>
+					<table role="table" aria-label={group.title} class={{ 'four-regimes': columns.length === 4 }}
+						style:--activity-amount-width={columns.length > 2 ? '8rem' : 'var(--paper-inline-amount-width)'}>
 						<thead>
 							<tr>
 								<th scope="col">Item and description</th>
@@ -189,7 +190,8 @@
 						<tbody>
 							{#each shown as row (row.key)}
 								{@const detailFields = row.fields.filter(field => ['Description', 'Legal basis'].includes(field.column ?? ''))}
-								<tr data-income-item={row.item} class={{ 'total-row': deductions && isDeductionTotal(number, row) }}>
+								<tr data-income-item={row.item} class={{ 'total-row': deductions && isDeductionTotal(number, row),
+									'inline-description-amount': detailFields.some(field => field.column === 'Description') && row.fields.some(field => field.kind === 'money') }}>
 									<th scope="row">
 										<span class="item-label">
 											<span class="item-number">{row.item}</span>
@@ -291,6 +293,9 @@
 		th, td { padding-inline: .375rem; }
 		thead th:first-child { width: 34%; }
 		.four-regimes thead th:first-child { width: 27%; }
+		table:has(.inline-description-amount) thead th:first-child { width: auto; }
+		table:has(.inline-description-amount) thead th:not(:first-child) { width: var(--activity-amount-width); }
+		.inline-description-amount > td { vertical-align: bottom; }
 	}
 	@container activity-content (width < 50rem) {
 		table, tbody { display: block; }

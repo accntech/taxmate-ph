@@ -137,6 +137,13 @@ test('1701Q January edits Items 43 and 61 inline and updates their totals', asyn
 		await page.setViewportSize({ width, height: 920 });
 		expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
 		for (const [item, row] of [[43, income], [61, credits]] as const) {
+			if (width === 1440) {
+				const description = (await row.locator(`[id="frm1701q:txt${item}Desc"]`).locator('..').boundingBox())!;
+				const amount = (await row.locator(`[id="frm1701q:txt${item}A"]`).locator('..').boundingBox())!;
+				expect(description.width).toBeGreaterThan(amount.width * 2);
+				expect(amount.x - (description.x + description.width)).toBeLessThanOrEqual(26);
+				expect(Math.abs(description.y + description.height - (amount.y + amount.height))).toBeLessThanOrEqual(1);
+			}
 			await row.screenshot({
 				path: info.outputPath(`1701qv2018-inline-item-${item}-${width}.png`), animations: 'disabled',
 				style: '.eq-action-bar { position: static !important; }'

@@ -521,6 +521,7 @@
 	}
 
 	@container paper-form (min-width: 58rem) {
+		.computation-item-inputs { grid-template-columns: minmax(0, 1fr) minmax(0, var(--paper-inline-amount-width)); }
 		.form-period > .form-paper-field { flex-basis: 0; }
 		.form-period > .form-paper-field:has(.paired-period) { flex-grow: 2; }
 	}

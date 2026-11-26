@@ -103,6 +103,7 @@
 
 .paper-sheet {
 	--paper-amount-inset: calc(.75rem + 1px);
+	--paper-inline-amount-width: 12rem;
 	min-width: 0;
 	margin: 1rem;
 	border: 1px solid var(--border);

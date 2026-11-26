@@ -936,7 +936,8 @@
 							</td></tr>
 						{/if}
 					{:else}
-					<tr data-income-item={row.item}>
+					<tr data-income-item={row.item} class:inline-description-amount={detailFields.some(field => field.kind === 'text' && field.column === 'Description')
+						&& row.fields.some(field => field.kind === 'money' && !computed.has(field.id))}>
 						<th scope="row">
 							{#if row.item}<span class="column-item">{row.item}</span>{/if}
 							{description}
@@ -1086,7 +1087,9 @@
 					{:else}
 						{@const combined = legacy1700 && joint && title === 'Part IV · Amount payable' && !amountField?.person ? amountField : undefined}
 						{@const aggregate = legacyQuarterly && item === '41C' ? row.fields[0] : combined}
-						<tr class:schedule-total={!!aggregate || Number(item) === lastItem} class:schedule-with-detail={!!detail} data-income-item={item}>
+						<tr class:schedule-total={!!aggregate || Number(item) === lastItem} class:schedule-with-detail={!!detail}
+							class:inline-description-amount={!!detail && detail.id !== 'frm1701MS:addForeignTaxCredits'
+								&& row.fields.some(field => field.kind === 'money' && !computed.has(field.id))} data-income-item={item}>
 							<td>{item}</td>
 							<th scope="row" title={fullAnnual && sourceLabel !== label ? sourceLabel : undefined}>
 								{label}
@@ -2279,6 +2282,11 @@
 	.full-annual-editor :global(.annual-schedule tbody tr[data-income-item] > td:first-child) { white-space: nowrap; }
 	.schedule-with-detail > .summary-input { vertical-align: bottom; padding-block-end: .45rem; }
 	.annual-schedule th :global([data-slot="form-item"]) { max-inline-size: 26rem; margin-block-start: .3rem; }
+	@container paper-form (width >= 42rem) {
+		.annual-schedule .inline-description-amount th :global([data-slot="form-item"]) { max-inline-size: none; }
+		.column-schedule:has(.inline-description-amount) .column-description { width: auto; }
+		.column-schedule .inline-description-amount > .column-cell { vertical-align: bottom; }
+	}
 	.annual-schedule :global([data-slot="form-item"]) { grid-template-columns: minmax(0, 1fr); }
 	.annual-schedule :global(input:not([role="spinbutton"])) { min-width: 0; width: 100%; }
 	.annual-schedule .summary-value { padding-inline-end: .75rem; }
