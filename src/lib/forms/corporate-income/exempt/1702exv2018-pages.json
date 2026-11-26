@@ -1506,12 +1506,12 @@
             ]
           },
           {
-            "label": "Total Ordinary Allowable Itemized Deductions (Sum of Items 1 to 17i) (To Part IV Item 35)",
+            "label": "Total Ordinary Allowable Itemized Deductions (Sum of Items 1 to 17I) (To Part IV Item 35)",
             "item": "18",
             "fields": [
               {
                 "id": "frm1702EX:txtPg3Pt6S1I18TotOrdinaryAllowableItemDeduc",
-                "label": "Total Ordinary Allowable Itemized Deductions (Sum of Items 1 to 17i) (To Part IV Item 35)",
+                "label": "Total Ordinary Allowable Itemized Deductions (Sum of Items 1 to 17I) (To Part IV Item 35)",
                 "kind": "money",
                 "readonly": true,
                 "defaultValue": "0.00",

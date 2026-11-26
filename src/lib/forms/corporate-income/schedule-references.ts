@@ -103,7 +103,7 @@ export function corporateScheduleReferences(
 			const heading = section.title.match(/^(?:Part [IVX]+|Schedule (?:\d+(?:\.\d+)?[A-Z]?|[IVXLCDM]+A?|[A-Z](?:\.\d+)?))\b/i)?.[0];
 			const item = row.item || field.id.match(/(?:Itm|It|I)(\d+)/)?.[1];
 			const column = field.column && section.columns?.[field.column - 1];
-			const label = [heading || section.title || `Page ${index + 1}`, item && `Item ${item}`].filter(Boolean).join(', ');
+			const label = [heading || section.title || `Page ${index + 1}`, item && `Item ${item.toUpperCase()}`].filter(Boolean).join(', ');
 			locations.set(field.id, {
 				page: index + 1,
 				label: [attachment, label, column].filter(Boolean).join(' · ')

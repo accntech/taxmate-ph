@@ -3074,32 +3074,32 @@
               ]
             },
             {
-              "label": "18 Total Ordinary Allowable Itemized Deductions (Sum of Items 1 to 17i) (To Part IV-Schedule 2 Item 8)",
+              "label": "18 Total Ordinary Allowable Itemized Deductions (Sum of Items 1 to 17I) (To Part IV-Schedule 2 Item 8)",
               "fields": [
                 {
                   "id": "frm1702MX:txtPg3Sc5Itm18A",
-                  "label": "18 Total Ordinary Allowable Itemized Deductions (Sum of Items 1 to 17i) (To Part IV-Schedule 2 Item 8)",
+                  "label": "18 Total Ordinary Allowable Itemized Deductions (Sum of Items 1 to 17I) (To Part IV-Schedule 2 Item 8)",
                   "kind": "money",
                   "defaultValue": "0",
                   "readonly": true
                 },
                 {
                   "id": "frm1702MX:txtPg3Sc5Itm18B",
-                  "label": "18 Total Ordinary Allowable Itemized Deductions (Sum of Items 1 to 17i) (To Part IV-Schedule 2 Item 8)",
+                  "label": "18 Total Ordinary Allowable Itemized Deductions (Sum of Items 1 to 17I) (To Part IV-Schedule 2 Item 8)",
                   "kind": "money",
                   "defaultValue": "0",
                   "readonly": true
                 },
                 {
                   "id": "frm1702MX:txtPg3Sc5Itm18C",
-                  "label": "18 Total Ordinary Allowable Itemized Deductions (Sum of Items 1 to 17i) (To Part IV-Schedule 2 Item 8)",
+                  "label": "18 Total Ordinary Allowable Itemized Deductions (Sum of Items 1 to 17I) (To Part IV-Schedule 2 Item 8)",
                   "kind": "money",
                   "defaultValue": "0",
                   "readonly": true
                 },
                 {
                   "id": "frm1702MX:txtPg3Sc5Itm18D",
-                  "label": "18 Total Ordinary Allowable Itemized Deductions (Sum of Items 1 to 17i) (To Part IV-Schedule 2 Item 8)",
+                  "label": "18 Total Ordinary Allowable Itemized Deductions (Sum of Items 1 to 17I) (To Part IV-Schedule 2 Item 8)",
                   "kind": "money",
                   "defaultValue": "0",
                   "readonly": true
@@ -5417,11 +5417,11 @@
               ]
             },
             {
-              "label": "18 Total Ordinary Allowable Itemized Deductions (Sum of Items 1 to 17i) (To Schedule B Item 8)",
+              "label": "18 Total Ordinary Allowable Itemized Deductions (Sum of Items 1 to 17I) (To Schedule B Item 8)",
               "fields": [
                 {
                   "id": "frm1702MX:txtPg4AttMScGI40",
-                  "label": "18 Total Ordinary Allowable Itemized Deductions (Sum of Items 1 to 17i) (To Schedule B Item 8)",
+                  "label": "18 Total Ordinary Allowable Itemized Deductions (Sum of Items 1 to 17I) (To Schedule B Item 8)",
                   "kind": "money",
                   "defaultValue": "0",
                   "readonly": true

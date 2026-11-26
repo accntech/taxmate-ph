@@ -558,6 +558,157 @@ test("June 2013 numeric headings align to their amount columns", async ({ page }
   }
 });
 
+test("June 2013 page 6 uses the section headings for Items 39O and 4D", async ({ page }, info) => {
+  await seedWorkspace(page, "light", "loaded", { taxpayerClassification: "N" }, []);
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto(`/ebirforms/taxpayers/${taxpayerId}/forms/1702MX?new=true`);
+  const editor = page.locator(".corporate-editor");
+  await expect(editor).toBeVisible({ timeout: 15000 });
+  await goToReturnPage(page, 6);
+  for (const width of [1440, 1200, 390]) {
+    await page.setViewportSize({ width, height: 1000 });
+    await page.keyboard.press("Escape");
+    for (const item of ["39o", "4d"]) {
+      const row = editor.locator(`[data-corporate-item="${item}"]`);
+      await expect(row.locator(".paper-item-number")).toHaveText(item.toUpperCase());
+      await expect(row.getByRole("textbox", { name: "Exempt", exact: true })).toBeVisible();
+      const geometry = await row.evaluate(element => {
+        const header = element.closest(".corporate-section")!.querySelector(".corporate-columns")!;
+        const amounts = element.querySelector(".inline-entry-amounts")!;
+        const labels = [...amounts.querySelectorAll("label, .value-label")];
+        const offsets = [...header.children].map((heading, index) => {
+          const range = document.createRange();
+          range.selectNodeContents(heading);
+          const value = amounts.children[index].querySelector("input, output")!;
+          return Math.abs(range.getBoundingClientRect().right - value.getBoundingClientRect().right);
+        });
+        return {
+          hasHeader: header.getBoundingClientRect().width > 0,
+          widths: labels.map(label => label.getBoundingClientRect().width),
+          offsets,
+        };
+      });
+      expect(geometry.hasHeader).toBe(width !== 390);
+      expect(geometry.widths).toHaveLength(4);
+      if (width === 390) {
+        expect(Math.min(...geometry.widths)).toBeGreaterThan(1);
+      } else {
+        expect(Math.max(...geometry.widths)).toBeLessThanOrEqual(1);
+        expect(Math.max(...geometry.offsets)).toBeLessThanOrEqual(1);
+      }
+    }
+    if (width !== 1200) {
+      await editor.screenshot({
+        path: info.outputPath(`page-6-deductions-${width}.png`),
+        animations: "disabled",
+        style: '.eq-action-bar, .window-titlebar, a[href="#main-content"] { display: none !important; }',
+      });
+    }
+  }
+});
+
+test("January 2018 keeps its schedule columns and activity actions in context", async ({ page }, info) => {
+  await seedWorkspace(page, "light", "loaded", { taxpayerClassification: "N" }, []);
+  await page.setViewportSize({ width: 444, height: 1000 });
+  await page.goto(`/ebirforms/taxpayers/${taxpayerId}/forms/1702MXv2018?new=true`);
+  const editor = page.locator(".corporate-editor");
+  await expect(editor).toBeVisible({ timeout: 15000 });
+  await page.keyboard.press("Escape");
+  for (const index of [2, 3, 4]) {
+    await goToReturnPage(page, index);
+    await expect(editor.locator(".corporate-columns:visible")).toHaveCount(0);
+    await expect.poll(() => editor.evaluate(element => element.scrollWidth - element.clientWidth)).toBeLessThanOrEqual(1);
+  }
+  await goToReturnPage(page, 2);
+  const election = page.getByRole("region", { name: "Part IV - Schedules" });
+  await election.getByRole("radio", { name: "Two or more activities or projects" }).check();
+  await expect(election.getByRole("button", { name: "Add special-rate activity" })).toBeVisible();
+  await election.getByRole("radio", { name: "One activity or project", exact: true }).check();
+  await expect(election.getByRole("button", { name: "Add special-rate activity" })).toHaveCount(0);
+  await goToReturnPage(page, 3);
+  for (const item of ["17D", "17E", "17F", "17G", "17H"]) {
+    const deduction = editor.locator(`[data-corporate-item="${item}"]`);
+    await expect(deduction.locator(".paper-item-number")).toHaveText(item);
+    await expect(deduction.getByRole("textbox", { name: "Description", exact: true })).toBeVisible();
+    await expect(deduction.getByRole("status", { name: "Exempt", exact: true })).toBeVisible();
+  }
+  const row = editor.locator('[data-corporate-item="17D"]');
+  await row.getByRole("textbox", { name: "Description", exact: true }).fill("Other services");
+  for (const [regime, amount] of [["Exempt", "100"], ["Special rate", "200"], ["Regular rate", "300"]]) {
+    const amountControl = row.getByRole("textbox", { name: regime, exact: true });
+    await amountControl.fill(amount);
+    await amountControl.blur();
+  }
+  await expect(row.getByRole("status", { name: "Total", exact: true })).toHaveText("600");
+  await expect(page.locator(id("txtPg3Sc5Itm18D"))).toHaveText("600");
+  await goToReturnPage(page, 2);
+  await expect(page.locator(id("txtPg2Sc2Itm8D"))).toHaveText("600");
+  await goToReturnPage(page, 3);
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  const section = row.locator("xpath=ancestor::section[1]");
+  await expect(section.locator(".corporate-columns")).toBeVisible();
+  await expect.poll(() => row.locator(".inline-entry-amounts label").first().evaluate(label => label.getBoundingClientRect().width)).toBeLessThanOrEqual(1);
+  await section.screenshot({ path: info.outputPath("2018-schedule-5-desktop.png"), animations: "disabled",
+    style: '.eq-action-bar, .window-titlebar, a[href="#main-content"] { display: none !important; }' });
+  for (const width of [1440, 390]) {
+    await page.setViewportSize({ width, height: 1000 });
+    await page.keyboard.press("Escape");
+    for (const index of [2, 3, 4]) {
+      await goToReturnPage(page, index);
+      await editor.screenshot({ path: info.outputPath(`2018-page-${index}-${width}.png`), animations: "disabled",
+        style: '.eq-action-bar, .window-titlebar, a[href="#main-content"] { display: none !important; }' });
+    }
+  }
+});
+
+test("January 2018 aligns added Item 17I deductions with the Schedule 5 headings", async ({ page }, info) => {
+  await seedWorkspace(page, "light", "loaded", { taxpayerClassification: "N" }, []);
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto(`/ebirforms/taxpayers/${taxpayerId}/forms/1702MXv2018?new=true`);
+  await expect(page.locator(".corporate-editor")).toBeVisible({ timeout: 15000 });
+  await goToReturnPage(page, 3);
+  const schedule = page.getByRole("region", { name: /^Schedule 5 .*Ordinary Allowable Itemized Deductions/ });
+  const list = schedule.locator(".line-list").filter({ has: page.getByRole("heading", { name: /^Other ordinary allowable deductions/ }) });
+  await list.getByRole("button", { name: "Add item", exact: true }).click();
+  const drawer = page.getByRole("dialog");
+  await drawer.getByRole("textbox", { name: "Description", exact: true }).fill("Other services");
+  await drawer.getByRole("textbox", { name: "Special rate", exact: true }).fill("16000");
+  await drawer.getByRole("button", { name: "Add item", exact: true }).click();
+  const entry = list.getByRole("listitem");
+  await expect(entry).toContainText("17I");
+  await expect(entry.getByRole("button", { name: "Other services", exact: true })).toBeVisible();
+  await expect(entry.locator(".entry-amount").last()).toContainText("16,000");
+  for (const width of [1440, 1200, 390]) {
+    await page.setViewportSize({ width, height: 1000 });
+    await page.keyboard.press("Escape");
+    const geometry = await entry.evaluate(element => {
+      const headings = [...element.closest(".corporate-section")!.querySelectorAll(".corporate-columns > span")];
+      const labels = [...element.querySelectorAll(".entry-amount-label")];
+      const values = [...element.querySelectorAll(".entry-amount > .font-mono")];
+      return {
+        desktop: headings[0].getBoundingClientRect().width > 0,
+        labelWidths: labels.map(label => label.getBoundingClientRect().width),
+        offsets: headings.map((heading, index) => {
+          const text = document.createRange();
+          text.selectNodeContents(heading);
+          return Math.abs(text.getBoundingClientRect().right - values[index].getBoundingClientRect().right);
+        }),
+      };
+    });
+    expect(geometry.desktop).toBe(width !== 390);
+    if (geometry.desktop) {
+      expect(Math.max(...geometry.labelWidths)).toBeLessThanOrEqual(1);
+      expect(Math.max(...geometry.offsets)).toBeLessThanOrEqual(1);
+    } else {
+      expect(Math.min(...geometry.labelWidths)).toBeGreaterThan(1);
+    }
+    if (width !== 1200) {
+      await schedule.screenshot({ path: info.outputPath(`item-17i-${width}.png`), animations: "disabled",
+        style: '.eq-action-bar, .window-titlebar, a[href="#main-content"] { display: none !important; }' });
+    }
+  }
+});
+
 test("June 2013 amount columns show all digits of a twelve-digit sale", async ({ page }) => {
   await seedWorkspace(page, "light", "loaded", { taxpayerClassification: "N" }, []);
   await page.setViewportSize({ width: 1440, height: 1000 });

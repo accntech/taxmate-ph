@@ -72,7 +72,10 @@
 	})));
 	const current = $derived(pages.find(item => item.id === selectedPage)?.id ?? '1');
 	const legacyMixedSchedules = $derived(legacyMixed && Number(current) >= 2 && Number(current) <= 9);
-	const inlineActivities = $derived(legacyMixed && current === '2');
+	const mixed2018 = $derived(form.code === '1702MXv2018');
+	const mixed2018Schedules = $derived(mixed2018 && Number(current) >= 2 && Number(current) <= 4);
+	const mixedScheduleLayout = $derived(legacyMixedSchedules || mixed2018Schedules);
+	const inlineActivities = $derived((legacyMixed || mixed2018) && current === '2');
 	const activityGroups = $derived(form.attachmentGroups?.filter(group => group.applies(calculated)) ?? []);
 	const legacyExemptCover = $derived(legacyExempt && current === '1');
 	const active = $derived(allPages[Number(current) - 1] ?? allPages[0]);
@@ -537,7 +540,7 @@
 {#snippet activityAttachments(inline: boolean)}
 		<section class={['attachments', inline ? 'inline-attachments' : 'corporate-section']} aria-label="Activity attachments">
 			{#if inline}
-				<p id={`${headingId}-section-activities`} tabindex="-1">Use a Part VIII attachment for each exempt or special-rate activity.</p>
+				<p id={`${headingId}-section-activities`} tabindex="-1">Use a Part {legacyMixed ? 'VIII' : 'V'} attachment for each exempt or special-rate activity.</p>
 			{:else}
 				<header class="eq-section-header">
 					<h3 id={`${headingId}-section-activities`} tabindex="-1">Activity attachments</h3>
@@ -584,7 +587,7 @@
 		</section>
 	{/snippet}
 
-<div class={['paper-sheet corporate-editor', legacyExemptCover && 'legacy-exempt-cover', legacyMixedSchedules && 'legacy-mixed-schedules']} style:--exempt-amount-width={legacyIdentification ? '14rem' : undefined} style:--exempt-item-gutter={legacyIdentification ? '2.5rem' : undefined} role="region" aria-label={form.title}>
+<div class={['paper-sheet corporate-editor', legacyExemptCover && 'legacy-exempt-cover', mixedScheduleLayout && 'mixed-schedules']} style:--exempt-amount-width={legacyIdentification ? '14rem' : undefined} style:--exempt-item-gutter={legacyIdentification ? '2.5rem' : undefined} role="region" aria-label={form.title}>
 	<PaperFormHeader {number} revision={form.revision} {title} {subtitle} />
 	<div class="page-context">
 		<h2 id={headingId} tabindex="-1">{pages[Number(current) - 1].title}</h2>
@@ -602,7 +605,7 @@
 		{#if hasVisibleFields(section)}
 			{@const lists = corporateLists(section)}
 			{@const scheduleContinuation = continuation(section)}
-			{@const reliefBasis = inlineActivities && section.title.startsWith('Part IV - Basis of Tax Relief')}
+			{@const reliefBasis = inlineActivities && /^(?:Part IV|Schedule 1) - Basis of Tax Relief/.test(section.title)}
 			{@const regimePayable = inlineActivities && section.title.startsWith('Part V - Computation of Amount Payable')}
 			{@const balanceSheet = legacyMixed && current === '8' && section.title.startsWith('Schedule 11 - Balance Sheet')}
 			{@const serviceCosts = legacyMixed && current === '4' && section.title.startsWith('Schedule 3C ')}
@@ -655,20 +658,24 @@
 						{@const wide = visible.some(field => field.id === form.quarter)}
 						{@const atcChoice = filing && /\bATC\b|alphanumeric tax code/i.test(row.label)}
 						{@const columnRow = !!section.columns?.length && visible.some(field => field.column !== undefined)}
-						{@const amountColumns = columnRow || !legacyMixedSchedules ? section.columns : undefined}
-						{@const groupedAmounts = legacyMixedSchedules && columnRow && labelColumns && !!row.label && !!row.item}
+						{@const amountColumns = columnRow || !mixedScheduleLayout ? section.columns : undefined}
+						{@const groupedAmounts = mixedScheduleLayout && columnRow && labelColumns && !!row.label && !!row.item}
 						{@const totalOnly = groupedAmounts && regimePayable && Number(row.item) >= 40 && Number(row.item) <= 44}
 						{@const rowReferences = visible.flatMap(field => references.get(field.id) ?? [])}
 						{@const caption = regimePayable && rowReferences.length ? row.label.replace(/\s*\((?:From|To) [^)]*\)/gi, '') : row.label}
 						{@const groupLabel = `${headingId}-section-${index}-row-${rowIndex}`}
-						{@const activityElection = inlineActivities && visible.some(field => field.id === 'frm1702MX:chkPg2Pt4I30MoreThanOne')}
+						{@const activityElection = inlineActivities && visible.some(field => field.id === (legacyMixed
+							? 'frm1702MX:chkPg2Pt4I30MoreThanOne' : 'frm1702MX:rdoPg2I1'))}
 						{@const inlineAmounts = visible.filter(field => field.kind === 'money')}
-						{@const inlineDescription = !columnRow && inlineAmounts.some(field => !field.readonly)
+						{@const sectionLabeledAmounts = (mixed2018Schedules || legacyMixedSchedules && current === '6')
+							&& section.columns?.length === inlineAmounts.length
+							&& inlineAmounts.every((field, index) => field.label === section.columns?.[index])}
+						{@const inlineDescription = !columnRow && (inlineAmounts.some(field => !field.readonly) || sectionLabeledAmounts)
 							&& visible.every(field => field.kind === 'text' || field.kind === 'money')
 							&& visible.some(field => field.kind === 'text' && !field.readonly && field.label === 'Description')}
 						{@const deductionCategory = revisedRegular && /^17[abc]$/.test(row.item ?? '')}
 						{@const supplementalAmounts = legacyRegular && /^frm1702RT:txtPg8Sc12I[1-3]C1$/.test(row.fields[0]?.id ?? '')}
-						{#if reliefBasis && row.item === '31' && section.columns?.length}
+						{#if reliefBasis && row.item === (legacyMixed ? '31' : '1') && section.columns?.length}
 							<div class="relief-regime-header">
 								<div class="amount-row">
 									{@render columnHeadings(section.columns)}
@@ -711,7 +718,7 @@
 									&& (visible.length === 1 || tin.length === visible.length)
 							}]}
 								data-corporate-item={row.item}>
-								{#if row.item}<span class="paper-item-number" aria-hidden="true">{deductionCategory ? row.item.toUpperCase() : row.item}</span>{/if}
+								{#if row.item}<span class="paper-item-number" aria-hidden="true">{row.item.toUpperCase()}</span>{/if}
 								{#if registered}
 									<div class="managed-value">
 										<RegisteredInformation fields={visible} values={calculated} {errors} {onvaluechange} />
@@ -743,7 +750,7 @@
 										{/each}
 									</div>
 								{:else if inlineDescription}
-									<div class={['inline-entry', inlineAmounts.length > 1 && 'multiple-amounts']}>
+									<div class={['inline-entry', inlineAmounts.length > 1 && 'multiple-amounts', sectionLabeledAmounts && 'section-labeled-amounts']}>
 										<div class="inline-entry-details">
 											{#each visible.filter(field => field.kind === 'text') as field (field.id)}
 												<div class="field-control">
@@ -804,9 +811,10 @@
 						{#if list}
 							{@const counter = list.counter}
 							{@const listItem = legacyMixedSchedules ? legacyListItems[list.label] : undefined}
-							{@const alignIncomeAmounts = legacyMixed && current === '5' && list.label === 'Other taxable income'}
+							{@const alignEntryAmounts = (legacyMixed && current === '5' && list.label === 'Other taxable income')
+								|| (mixed2018Schedules && current === '3' && counter?.id === 'frm1702MX:txtCtrmodalPg3Sc5I17i')}
 							{@const separateItem = legacyMixedSchedules ? {
-								'Other ordinary allowable deductions': '39o', 'Special allowable deductions': '4d', 'Other tax credits': '12'
+								'Other ordinary allowable deductions': '39O', 'Special allowable deductions': '4D', 'Other tax credits': '12'
 								}[list.label] : undefined}
 							{@const income = counter?.id === incomeCounterId}
 							{@const deductions = counter?.id === deductionCounterId}
@@ -856,18 +864,18 @@
 											{@const fields = entryFields(entry)}
 											{@const description = nolco ? nolcoYear(entry) : fields.find(field => (field.kind === 'text' || field.kind === 'integer') && !/tin|legal|basis/i.test(field.label ?? field.id))}
 											{@const amounts = fields.filter(field => nolco ? /net operating loss|balance/i.test(field.label ?? '') : field.kind === 'money' || field.kind === 'percent')}
-											{@const item = deductions ? entry.item.toUpperCase() : entry.item}
+											{@const item = entry.item.toUpperCase()}
 											{@const summary = (description && calculated[description.id]?.trim()) ||
 												(nolco && isCurrentNolco(entry) ? 'Current year' : `Item ${item || entries.indexOf(entry) + 1}`)}
-											<li class={['income-item', alignIncomeAmounts && 'aligned-income-item']}>
+											<li class={['income-item', alignEntryAmounts && 'aligned-income-item']}>
 												<span class="entry-number">{item}</span>
-												<div class={['entry-summary', alignIncomeAmounts && 'amount-row']}>
+												<div class={['entry-summary', alignEntryAmounts && 'amount-row']}>
 													{#if editable.includes(entry)}
 														<button type="button" class="income-description" onclick={(event) => openListEntry(list, entry, event.currentTarget)}>{summary}</button>
 													{:else}
 														<span>{summary}</span>
 													{/if}
-													<div class={['entry-values', 'entry-amounts', alignIncomeAmounts && 'amount-controls']} style:--column-count={alignIncomeAmounts ? amounts.length : undefined}>
+													<div class={['entry-values', 'entry-amounts', alignEntryAmounts && 'amount-controls']} style:--column-count={alignEntryAmounts ? amounts.length : undefined}>
 														{#each amounts as field (field.id)}
 															<span class="entry-amount" title={field.label}>
 																{#if amounts.length > 1}<span class="entry-amount-label">{field.label}</span>{/if}
@@ -911,7 +919,7 @@
 <Sheet bind:open={() => !!editing, (open) => { if (!open) closeEntry(); }}
 	title={editingItemName ? `${adding ? 'Add' : 'Edit'} ${editingItemName}` : editingDeduction ? (adding ? 'Add deduction' : 'Edit deduction')
 		: editingList ? (editingList.counter?.id === incomeCounterId ? (adding ? 'Add income item' : 'Edit income item') : adding ? 'Add item' : 'Edit item')
-		: editing ? (adding ? 'Add entry' : `Edit item ${editing.item}`) : ''}
+		: editing ? (adding ? 'Add entry' : `Edit item ${editing.item.toUpperCase()}`) : ''}
 	context={editingNolco ? editingContext : editingList?.label ?? editing?.rows[0]?.label}>
 	{#if editing}
 		{@const editable = editableFields(editing)}
@@ -956,7 +964,7 @@
 		--corporate-item-width: 2rem;
 	}
 	.entry-number { font-family: var(--font-mono); color: var(--fg-muted); font-size: var(--form-label-size); font-weight: 500; font-variant-numeric: tabular-nums; }
-	.legacy-mixed-schedules {
+	.mixed-schedules {
 		--schedule-amount-share: .72;
 		--schedule-amount-width: 48rem;
 	}
@@ -1107,6 +1115,7 @@
 	.activity-list a { color: var(--accent); }
 	.attachment-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem .75rem; margin-block: .5rem; }
 	.inline-attachments { grid-column: 2; min-inline-size: 0; }
+	.corporate-row:not(:has(.paper-item-number)) .inline-attachments { grid-column: 1; }
 	.inline-attachments p { margin: 0; font-size: var(--form-label-size); color: var(--fg-muted); }
 	.inline-attachments .attachment-groups { display: flex; flex-wrap: wrap; gap: .375rem .75rem; margin-block-start: .5rem; }
 	.inline-attachments .attachment-actions { margin: 0; padding: 0; }
@@ -1118,6 +1127,19 @@
 		padding-inline-start: calc(var(--corporate-row-inset) + var(--corporate-item-width) + .5rem);
 	}
 	@container paper-form (min-width: 52rem) {
+		.section-labeled-amounts .inline-entry-amounts { align-items: center; }
+		.section-labeled-amounts .inline-entry-amounts :global(label),
+		.section-labeled-amounts .inline-entry-amounts :global(.value-label) {
+			position: absolute;
+			width: 1px;
+			height: 1px;
+			overflow: hidden;
+			clip-path: inset(50%);
+			white-space: nowrap;
+		}
+		.section-labeled-amounts .inline-entry-amounts :global([data-slot='calculated-value']) {
+			grid-template-columns: minmax(0, 1fr);
+		}
 		.relief-regime-header { display: block; }
 		.relief-regime-header .corporate-columns { grid-column: -2 / -1; width: auto; margin: 0; padding: 0; align-items: end; }
 		.relief-regime-header .corporate-columns span { text-align: start; }
@@ -1164,8 +1186,8 @@
 	.amount-controls { grid-template-columns: repeat(var(--column-count), minmax(0, 1fr)); }
 	.corporate-columns { display: grid; grid-template-columns: repeat(var(--column-count), minmax(0, 1fr)); gap: var(--form-field-column-gap); color: var(--fg-muted); font-size: .75rem; font-weight: 550; }
 	.corporate-columns span { text-align: end; }
-	.legacy-mixed-schedules .corporate-section > .corporate-columns { align-items: end; }
-	.legacy-mixed-schedules .corporate-section > .corporate-columns span {
+	.mixed-schedules .corporate-section > .corporate-columns { align-items: end; }
+	.mixed-schedules .corporate-section > .corporate-columns span {
 		padding-inline-end: var(--paper-amount-inset, calc(.75rem + 1px));
 	}
 	.managed-value :global([data-slot='calculated-value']) { grid-template-columns: minmax(0, 1fr); gap: .25rem; }
@@ -1295,25 +1317,25 @@
 		}
 	}
 	@container paper-form (width < 52rem) {
-		.legacy-mixed-schedules .corporate-columns { display: none; }
+		.mixed-schedules .corporate-columns { display: none; }
 		.relief-regime-header + .corporate-row { border-block-start: 1px solid var(--border-soft); }
-		.legacy-mixed-schedules :is(.grouped-amounts, .inline-entry.multiple-amounts, .aligned-income-item .amount-row) {
+		.mixed-schedules :is(.grouped-amounts, .inline-entry.multiple-amounts, .aligned-income-item .amount-row) {
 			grid-template-columns: minmax(0, 1fr);
 			align-items: start;
 		}
-		.legacy-mixed-schedules :is(.amount-controls, .inline-entry-amounts, .aligned-income-item .entry-amounts) {
+		.mixed-schedules :is(.amount-controls, .inline-entry-amounts, .aligned-income-item .entry-amounts) {
 			grid-template-columns: minmax(0, 1fr);
 			row-gap: .5rem;
 		}
-		.legacy-mixed-schedules .amount-control { grid-column: 1; }
-		.legacy-mixed-schedules .amount-control:empty { display: none; }
-		.legacy-mixed-schedules .grouped-amounts .amount-caption > span { font-weight: 650; }
-		.legacy-mixed-schedules .grouped-amounts .amount-controls.label-columns :global([data-slot='calculated-value']) {
+		.mixed-schedules .amount-control { grid-column: 1; }
+		.mixed-schedules .amount-control:empty { display: none; }
+		.mixed-schedules .grouped-amounts .amount-caption > span { font-weight: 650; }
+		.mixed-schedules .grouped-amounts .amount-controls.label-columns :global([data-slot='calculated-value']) {
 			grid-template-columns: minmax(0, 1fr) fit-content(60%);
 		}
-		.legacy-mixed-schedules .grouped-amounts .amount-controls.label-columns:not(.required) .amount-control:not(.standalone) :global(label),
-		.legacy-mixed-schedules .grouped-amounts .amount-controls.label-columns .amount-control:not(.standalone) :global(.value-label),
-		.legacy-mixed-schedules .aligned-income-item .entry-amount-label {
+		.mixed-schedules .grouped-amounts .amount-controls.label-columns:not(.required) .amount-control:not(.standalone) :global(label),
+		.mixed-schedules .grouped-amounts .amount-controls.label-columns .amount-control:not(.standalone) :global(.value-label),
+		.mixed-schedules .aligned-income-item .entry-amount-label {
 			position: static;
 			width: auto;
 			height: auto;
@@ -1323,18 +1345,21 @@
 			clip-path: none;
 			white-space: normal;
 		}
-		.legacy-mixed-schedules .aligned-income-item .entry-amount { display: flex; justify-content: space-between; gap: .5rem; }
+		.mixed-schedules .aligned-income-item .entry-amount { display: flex; justify-content: space-between; gap: .5rem; }
 	}
 	@container paper-form (52rem <= width < 68rem) {
-		.legacy-mixed-schedules .amount-row:not(:has(.amount-controls.single)),
-		.legacy-mixed-schedules .inline-entry.multiple-amounts { grid-template-columns: minmax(0, 1fr); }
-		.legacy-mixed-schedules .corporate-section > .corporate-columns {
+		.mixed-schedules .amount-row:not(:has(.amount-controls.single)),
+		.mixed-schedules .inline-entry.multiple-amounts { grid-template-columns: minmax(0, 1fr); }
+		.mixed-schedules .corporate-section > .corporate-columns {
 			width: auto;
 			margin-inline-start: calc(var(--corporate-row-inset) + var(--corporate-item-width) + .5rem);
 		}
 	}
 	@container paper-form (width >= 68rem) {
-		.legacy-mixed-schedules .corporate-section > .corporate-columns {
+		.section-labeled-amounts .inline-entry-amounts {
+			padding-block-start: calc(var(--form-label-line-height) + var(--form-label-gap));
+		}
+		.mixed-schedules .corporate-section > .corporate-columns {
 			width: min(
 				calc((100% - 2 * var(--corporate-row-inset) - var(--corporate-item-width) - .5rem) * var(--schedule-amount-share)),
 				var(--schedule-amount-width)

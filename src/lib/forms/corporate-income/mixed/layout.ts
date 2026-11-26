@@ -70,6 +70,50 @@ function lossField(field: CorporateField) {
     .match(/^txtPg[34]IShed([78])_([4-7])(Year|[A-E])$/);
 }
 
+function refineRevisedOrdinaryDeductions(code: string, section: CorporateSection) {
+  if (!section.title.startsWith("Schedule 5")) return;
+
+  for (const row of section.rows) {
+    const id = row.fields[0].id.slice(p.length);
+    const named = id.match(/^txtPg3Sc5Itm17([a-c])A$/);
+    if (named) {
+      row.item = `17${named[1].toUpperCase()}`;
+      row.label = row.label.replace(/^[a-c]\.\s*/, "");
+    }
+  }
+
+  for (const suffix of "defgh") {
+    const descriptionId = p + `txtPg3Sc5It17${suffix}`;
+    const descriptionIndex = section.rows.findIndex(row => row.fields[0].id === descriptionId);
+    if (descriptionIndex < 0) continue;
+    const description = section.rows[descriptionIndex];
+    const letter = suffix.toUpperCase();
+
+    if (code === "1702MXv2018C") {
+      description.label = `${letter}.`;
+      description.fields[0].label = description.label;
+      continue;
+    }
+
+    const amountId = p + `txtPg3Sc5Itm17${suffix}A`;
+    const amountIndex = section.rows.findIndex(row => row.fields[0].id === amountId);
+    if (amountIndex < 0) continue;
+    const amounts = section.rows[amountIndex];
+    section.rows[amountIndex] = {
+      ...amounts,
+      item: `17${letter}`,
+      label: "Other ordinary allowable deduction",
+      fields: [
+        { ...description.fields[0], label: "Description" },
+        ...amounts.fields.map(field => ({
+          ...field, column: undefined, readonly: field.id.endsWith("D"),
+        })),
+      ],
+    };
+    section.rows.splice(descriptionIndex, 1);
+  }
+}
+
 export function refineMixedPages(
   code: string,
   pages: CorporatePage[],
@@ -215,6 +259,7 @@ export function refineMixedPages(
     }
     if (code !== "1702MX") {
       for (const section of sections) {
+        refineRevisedOrdinaryDeductions(code, section);
         for (const item of [2, 5, 7]) {
           const base = p + `txtPg4Sc10Itm${item}`;
           const matches = section.rows

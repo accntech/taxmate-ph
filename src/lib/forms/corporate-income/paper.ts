@@ -31,7 +31,7 @@ function appendContinuation(surface: HTMLElement, section: CorporateSection, val
 		const body = table.createTBody();
 		for (const row of section.rows.slice(offset, offset + rowsPerPage)) {
 			const line = body.insertRow();
-			line.insertCell().textContent = row.item ?? '';
+			line.insertCell().textContent = row.item?.toUpperCase() ?? '';
 			line.insertCell().textContent = row.label;
 			for (const field of row.fields) {
 				const cell = line.insertCell();

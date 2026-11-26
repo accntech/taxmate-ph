@@ -551,6 +551,14 @@ export const mixedForms: CorporateForm[] = (
   fieldReadonly: (id, values) => {
     if (code === "1702MX" && id === legacyMixedSpecialRate)
       return legacyMixedForcedRate(values) !== undefined;
+    const customDeduction = code === "1702MXv2018" &&
+      id.slice(p.length).match(/^txtPg3Sc5Itm17([d-h])[ABC]$/);
+    if (customDeduction) {
+      const hasAttachments = mixedHasActivities(code, values) &&
+        mixedActivityCount(values, "EX") + mixedActivityCount(values, "SP") > 0;
+      const description = values[p + `txtPg3Sc5It17${customDeduction[1]}`];
+      return hasAttachments || (!description?.trim() && mixedNumber(values[id]) === 0);
+    }
     if (mixedHasActivities(code, values)) return mixedActivityRollupField(code, id);
     return code === "1702MX" && id === p + "txtPg2Pt4I34SpecialTaxRate" &&
       ["RA10693", "10693"].includes(mixedLegalBasis(values)) && mixedNumber(values[id]) === 2;

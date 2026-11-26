@@ -210,8 +210,8 @@ export function corporateFieldLabel(form: CorporateForm, values: CorporateValues
 				const field = row.fields.find(field => field.id === id);
 				if (!field) continue;
 				const label = field.label || row.label || section.title;
-				if (row.list && row.item) return `${row.list} · Item ${row.item} · ${label}`;
-				if (row.entry && row.item) return `Entry ${row.item} · ${label}`;
+				if (row.list && row.item) return `${row.list} · Item ${row.item.toUpperCase()} · ${label}`;
+				if (row.entry && row.item) return `Entry ${row.item.toUpperCase()} · ${label}`;
 				return label;
 			}
 		}

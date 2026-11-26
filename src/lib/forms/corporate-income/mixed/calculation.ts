@@ -403,6 +403,7 @@ function calculateMixedPass(
     }
     put("txtPg2Sc2It12D", n("txtPg2Sc2It12C"));
     if (code === "1702MXv2018") {
+      put("txtPg3Sc5Itm18D", sum("txtPg3Sc5Itm18A", "txtPg3Sc5Itm18B", "txtPg3Sc5Itm18C"));
       for (const column of ["A", "B", "C"]) {
         if (column !== "C")
           put(
