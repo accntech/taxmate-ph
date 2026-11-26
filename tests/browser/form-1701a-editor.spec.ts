@@ -36,12 +36,13 @@ test('requires a compatible ATC before showing an income schedule', async ({ pag
 	await expect(page.locator(id('txt47A'))).toHaveCount(0);
 });
 
-test('exposes installment guidance and lets the filer jump to tax credits', async ({ page }) => {
+test('exposes installment guidance and shows tax credits on the page selected in the picker', async ({ page }) => {
 	await expect(page.getByText('Up to 50% of Item 20. Due by October 15.', { exact: true })).toBeVisible();
-	await goToReturnPage(page, 2);
-	await page.getByRole('combobox', { name: 'Go to section' }).click();
-	await page.getByRole('option', { name: /tax credits and payments/i }).click();
-	await expect(page.getByRole('region', { name: /tax credits and payments/i })).toBeFocused();
+	await expect(page.getByRole('combobox', { name: 'Go to section', exact: true })).toHaveCount(0);
+	await page.getByRole('button', { name: 'Find a page, page 1 of 2', exact: true }).click();
+	const picker = page.getByRole('dialog', { name: 'Go to page', exact: true });
+	await picker.getByRole('option', { name: /^Page 2 ·/ }).click();
+	await expect(page.getByRole('region', { name: /tax credits and payments/i })).toBeVisible();
 });
 
 test('keeps seven-digit amounts readable at 390px', async ({ page }) => {

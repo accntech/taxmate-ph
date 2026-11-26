@@ -1,17 +1,12 @@
 <script lang="ts">
-	import { Button, CurrencyInput, Input } from '$lib/components/ui';
-	import { tick } from 'svelte';
+	import IncomeRecords from './income-records.svelte';
+	import { getIndividualIncomeForm } from '.';
+	import type { IncomeEditorField } from './editor-layout';
 	import { shortAnnualFieldApplies } from './annual-short';
 	import {
-		annual1701AAddDetail,
-		annual1701ABaseDetailFields,
-		annual1701ADetailFields,
-		annual1701ADetailHasDormantAmount,
-		annual1701ADetailRows,
-		annual1701ARemoveDetail,
-		annual1701AVisibleDetailRows,
-		type Annual1701ADetailItem,
-		type Annual1701ADetailPerson
+		annual1701AAddDetail, annual1701ABaseDetailFields, annual1701ADetailFields,
+		annual1701ADetailHasDormantAmount, annual1701ADetailRows, annual1701ARemoveDetail,
+		annual1701AVisibleDetailRows, type Annual1701ADetailItem, type Annual1701ADetailPerson
 	} from './annual-1701a-income-detail';
 
 	let { item, label, values, calculated, people, errors = {}, onvaluechange }: {
@@ -24,148 +19,62 @@
 		onvaluechange: (patch: Record<string, string>) => void;
 	} = $props();
 
+	const form = getIndividualIncomeForm('1701A')!;
+	let editingFields = $state<string[]>([]);
 	const base = $derived(annual1701ABaseDetailFields(item));
 	const rows = $derived(annual1701ADetailRows(item, values));
 	const active = $derived(people.filter(person => shortAnnualFieldApplies('1701A', base[person], values)));
 	const visibleRows = $derived(annual1701AVisibleDetailRows(item, values, active));
-	const baseDormant = $derived(annual1701ADetailHasDormantAmount({
-		taxpayer: values[base.taxpayer] ?? '', spouse: values[base.spouse] ?? ''
-	}, active));
-	let editingSharedDescription = $state('');
-	const baseDescriptionShared = $derived(baseDormant && !!values[base.description]?.trim() && editingSharedDescription !== base.description);
-	const addButtonId = $derived(`1701a-item-${item}-add-entry`);
+	const newDetail = $derived(annual1701AAddDetail(item, values));
+	const baseEntered = $derived(Object.values(base).some(id => values[id]?.trim() && (id === base.description || Number(values[id].replaceAll(',', '')) !== 0)));
+	const baseDormant = $derived(annual1701ADetailHasDormantAmount({ taxpayer: values[base.taxpayer] ?? '', spouse: values[base.spouse] ?? '' }, active));
+	const nextId = $derived(Number(/Desc_(\d+)C1$/.exec(newDetail.descriptionId)?.[1]));
+	const records = $derived([
+		...(rows.length ? visibleRows.map(row => ({ key: String(row.id), item: `${item}.${row.id}`, fields: entryFields(annual1701ADetailFields(item, row.id)) })) :
+			!baseDormant || active.some(person => Number((values[base[person]] ?? '').replaceAll(',', '')) !== 0) ? [{ key: 'base', item, fields: entryFields(base) }] : []),
+		...(baseEntered || rows.length ? [{ key: `new-${nextId}`, item: `${item}.${nextId}`, fields: entryFields(annual1701ADetailFields(item, nextId)) }] : [])
+	]);
+	const readonlyFields = $derived(new Set([
+		...(baseDormant && values[base.description]?.trim() ? [base.description] : []),
+		...rows.flatMap(row => annual1701ADetailHasDormantAmount(row, active) && row.description.trim() ? [annual1701ADetailFields(item, row.id).description] : [])
+	]));
 	const currency = new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP', minimumFractionDigits: 0, maximumFractionDigits: 0 });
 
-	function startDescriptionEdit(id: string, dormant: boolean) {
-		if (dormant && !values[id]?.trim()) editingSharedDescription = id;
+	function entryFields(ids: ReturnType<typeof annual1701ABaseDetailFields>): IncomeEditorField[] {
+		return [
+			{ id: ids.description, label: 'Description', kind: 'text', column: 'Description' },
+			...active.map(person => ({ id: ids[person], label: `${person === 'spouse' ? 'Spouse' : 'Taxpayer'} amount`, kind: 'money', person, column: person === 'spouse' ? 'Spouse' : 'Taxpayer' }))
+		].map(field => ({ ...field, item, section: label, page: '2', options: [], maxLength: field.kind === 'money' ? 25 : ids.description === base.description ? 50 : 30, choiceLabels: {} }));
 	}
 
-	function endDescriptionEdit() {
-		editingSharedDescription = '';
+	function commit(patch: Record<string, string>) {
+		const added = Object.hasOwn(patch, newDetail.descriptionId);
+		onvaluechange({ ...(added ? newDetail.patch : {}), ...patch });
 	}
 
-	async function addEntry() {
-		const { patch, descriptionId } = annual1701AAddDetail(item, values);
-		onvaluechange(patch);
-		await tick();
-		document.getElementById(descriptionId)?.focus();
-	}
-
-	async function removeEntry(id: number, index: number) {
-		const adjacent = visibleRows[index + 1] ?? visibleRows[index - 1];
-		onvaluechange(annual1701ARemoveDetail(item, id, values, active));
-		await tick();
-		document.getElementById(adjacent ? annual1701ADetailFields(item, adjacent.id).description : addButtonId)?.focus();
+	function remove(record: { key: string }) {
+		if (record.key === 'base') return Object.fromEntries([
+			...active.map(person => [base[person], '']), ...(!baseDormant ? [[base.description, '']] : [])
+		]);
+		return annual1701ARemoveDetail(item, Number(record.key), values, active);
 	}
 </script>
 
-<tr data-income-item={item}>
-	<td class="item-number">{item}</td>
-	<th scope="row" class="description">
-		<div class="item-heading">
-			{label}{rows.length ? ' total' : ''}
-			<Button id={addButtonId} size="sm" variant="ghost" aria-label={`Add Item ${item} entry`} onclick={addEntry}>
-				Add entry
-			</Button>
-		</div>
-		{#if !rows.length}
-			<Input
-				id={base.description}
-				aria-label={`Item ${item} ${label.toLowerCase()} description`}
-				placeholder="Description"
-				value={values[base.description] ?? ''}
-				readonly={baseDescriptionShared}
-				help={baseDescriptionShared ? 'Description is shared with the other filer.' : undefined}
-				maxlength={50}
-				onfocus={() => startDescriptionEdit(base.description, baseDormant)}
-				onblur={endDescriptionEdit}
-				oninput={(event) => onvaluechange({ [base.description]: event.currentTarget.value })}
-			/>
-		{/if}
-	</th>
+<tr data-income-item={item} class="income-detail-total">
+	<td>{item}</td>
+	<th scope="row">{label}</th>
 	{#each people as person (person)}
-		<td class={['amount', { editable: active.includes(person) && !rows.length }]}>
-			{#if !active.includes(person)}
-				<span aria-label="Not applicable">—</span>
-			{:else if rows.length}
-				<output id={base[person]}>{currency.format(Number((calculated[base[person]] ?? '').replaceAll(',', '')))}</output>
-			{:else}
-				<CurrencyInput decimals={0}
-					id={base[person]}
-					aria-label={`Item ${item} ${label.toLowerCase()} amount${people.length > 1 ? ` · ${person === 'spouse' ? 'Spouse' : 'Taxpayer'}` : ''}`}
-					value={values[base[person]] ?? ''}
-					onchange={(value) => onvaluechange({ [base[person]]: value })}
-				/>
-			{/if}
-		</td>
+		<td class="amount">{#if active.includes(person)}<output id={editingFields.includes(base[person]) ? undefined : base[person]}>{currency.format(Number((calculated[base[person]] ?? '').replaceAll(',', '')))}</output>{:else}<span aria-label="Not applicable">—</span>{/if}</td>
 	{/each}
 </tr>
-{#each visibleRows as row, index (row.id)}
-	{@const fields = annual1701ADetailFields(item, row.id)}
-	{@const entry = `Item ${item} entry ${index + 1}`}
-	{@const dormant = annual1701ADetailHasDormantAmount(row, active)}
-	{@const sharedDescription = dormant && !!row.description.trim() && editingSharedDescription !== fields.description}
-	<tr data-income-detail={item}>
-		<td class="item-number">{item}.{index + 1}</td>
-		<th scope="row" class="description">
-			<div class="entry-description">
-				<Input
-					id={fields.description}
-					aria-label={`${entry} description`}
-					placeholder="Description"
-					value={row.description}
-					readonly={sharedDescription}
-					help={sharedDescription ? 'Description is shared with the other filer.' : undefined}
-					error={errors[fields.description]}
-					maxlength={30}
-					onfocus={() => startDescriptionEdit(fields.description, dormant)}
-					onblur={endDescriptionEdit}
-					oninput={(event) => onvaluechange({ [fields.description]: event.currentTarget.value })}
-				/>
-				<Button size="sm" variant="ghost" aria-label={`Remove ${entry}${dormant ? ' active amount' : ''}`} data-agent-confirm="delete" onclick={() => void removeEntry(row.id, index)}>
-					{dormant ? 'Remove amount' : 'Remove'}
-				</Button>
-			</div>
-		</th>
-		{#each people as person (person)}
-			<td class={['amount', { editable: active.includes(person) }]}>
-				{#if active.includes(person)}
-					<CurrencyInput decimals={0}
-						id={fields[person]}
-						aria-label={`${entry} ${person} amount`}
-						value={row[person]}
-						error={errors[fields[person]]}
-						onchange={(value) => onvaluechange({ [fields[person]]: value })}
-					/>
-				{:else}
-					<span aria-label="Not applicable">—</span>
-				{/if}
-			</td>
-		{/each}
-	</tr>
-{/each}
+<tr class="income-detail-items" data-income-detail-items={item}><td colspan={2 + people.length}>
+	<IncomeRecords title={label} {records} {form} {values} {calculated} computed={new Set()} {errors}
+		onvaluechange={commit} ondelete={remove} onediting={(ids) => { editingFields = ids; }} {readonlyFields} includesSpouse={people.length > 1} unlimited />
+</td></tr>
 
 <style>
-	td, th {
-		padding: .45rem .625rem;
-		border-block-end: 1px solid var(--border);
-		text-align: start;
-		vertical-align: middle;
-	}
-
-	.item-number { padding-inline: .5rem; font-variant-numeric: tabular-nums; }
-	.description { font-weight: 500; }
-	.item-heading, .entry-description { display: flex; flex-wrap: wrap; align-items: center; gap: .25rem .5rem; }
-	.description :global([data-slot="form-item"]) { min-inline-size: 0; max-inline-size: 26rem; }
-	.entry-description :global([data-slot="form-item"]) { flex: 1 1 9rem; }
-	.amount { padding-inline-end: .75rem; text-align: end; font-variant-numeric: tabular-nums; }
-	.amount:nth-child(4) { border-inline-start: 1px solid var(--border); }
-	.amount.editable { padding-block: .3rem; vertical-align: bottom; }
-	.amount output { padding-inline-end: calc(.75rem + 1px); font-weight: 650; white-space: nowrap; }
-	.amount :global(input) { min-inline-size: 0; }
-
-	@container paper-form (width < 36rem) {
-		td, th { padding-inline: .375rem; }
-		.item-number { padding-inline: .25rem; }
-	}
+	td, th { padding: .45rem .625rem; border-block-end: 1px solid var(--border); text-align: start; font-weight: 500; }
+	.amount { text-align: end; font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+	.amount output { padding-inline-end: var(--paper-amount-inset); font-weight: 650; }
+	.income-detail-items > td { padding: 0; }
 </style>

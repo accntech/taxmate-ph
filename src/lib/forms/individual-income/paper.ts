@@ -1,8 +1,7 @@
 import { formatCurrencyInput } from '$lib/components/ui/currency-input/currency';
 import type { IncomeForm } from '.';
 import { legacy1700IncomeSourceChecked } from './compensation';
-import { calculateIndividualIncome, incomeAmountDecimals, incomeOutputValues, isIncomeAmount } from '.';
-import { incomeIncludesSpouse } from './profile-fields';
+import { calculateIndividualIncome, hasActivityAttachment, incomeAmountDecimals, incomeCalculatedFields, incomeOutputValues, isIncomeAmount } from '.';
 import { is1701MSOverpaymentSelected, overpaymentOptions1701MS } from './form-1701ms-overpayment';
 import sourceStyles from './templates/source-layout.css?raw';
 import paginationStyles from '../printing/withholding-print.css?raw';
@@ -60,22 +59,6 @@ export function renderIncomePrintChoices(root: ParentNode, form: IncomeForm): vo
 	}
 }
 
-export function hasActivityAttachment(form: IncomeForm, values: Record<string, string>): boolean {
-	if (form.code !== '1701' && form.code !== '1701v2018') return false;
-
-	const june = form.code === '1701';
-	const taxpayerElections = june
-		? ['rdoPg1Pt1I22IncomeExempt', 'rdoPg1Pt1I23IncomeSpecial']
-		: ['rdoPg1I19IncomeExempt', 'rdoPg1I20IncomeSpecial'];
-	const spouseElections = june
-		? ['rdoPg4Pt7I107YesNo', 'rdoPg4Pt7I108YesNo']
-		: ['rdoPg2I10IncomeExempt', 'rdoPg2I11IncomeSpecial'];
-	const selected = (election: string) => values['frm1701:' + election] === 'Yes';
-
-	return taxpayerElections.some(selected) ||
-		(incomeIncludesSpouse(form.code, values) && spouseElections.some(selected));
-}
-
 export function visiblePaperPages(root: ParentNode, form: IncomeForm, values: Record<string, string>): HTMLElement[] {
 	const attachment = hasActivityAttachment(form, values);
 	return [...root.querySelectorAll<HTMLElement>('[data-income-page]')].filter(page => /^\d+$/.test(page.dataset.incomePage!) || attachment);
@@ -83,9 +66,7 @@ export function visiblePaperPages(root: ParentNode, form: IncomeForm, values: Re
 
 export function renderIndividualIncomeValues(root: ParentNode, form: IncomeForm, values: Record<string, string>, errors: Record<string, string> = {}): void {
 	const calculated = incomeOutputValues(form, calculateIndividualIncome(form, values));
-	const computed = new Set(Object.keys(calculateIndividualIncome(form,
-		Object.fromEntries(form.fields.filter(field => field.type === 'select').map(field => [field.id, values[field.id] ?? '']))
-	)).filter(key => !form.fields.find(field => field.id === key && field.type === 'select')));
+	const computed = incomeCalculatedFields(form, values);
 	const profileFields = new Set(Object.values(form.identity));
 	// Legacy profile names occupy separate boxes and the taxpayer may complete those boxes.
 	if (form.code === '1700' || form.code === '1701') profileFields.delete(form.identity.taxpayerName!);

@@ -793,6 +793,15 @@ export function incomeEditorPageTitle(form: IncomeForm, page: string): string {
 	if (form.code === '1701Q' && page === '1') return 'Taxpayer details and tax computation';
 	if (page === '1') return 'Taxpayer details and return summary';
 	if (form.code === '1700') return ({ '2': 'Employers and tax computation', '3': 'Supplemental income', '4': 'Address and dependents' } as Record<string, string>)[page];
+	if (form.code === '1701v2018') {
+		const attachment = ({
+			'1m': 'Tax relief and income',
+			'2m': 'Consolidated deductions',
+			'1mTYPE': 'Activity profile and income',
+			'2mTYPE': 'Activity deductions'
+		} as Record<string, string>)[page];
+		if (attachment) return attachment;
+	}
 	if (page.endsWith('TYPE')) return `Activity schedule ${parseInt(page)}`;
 	if (page.endsWith('m')) return `Consolidation ${parseInt(page)}`;
 	if (form.code === '1700v2018') return 'Employer details and tax computation';

@@ -91,6 +91,60 @@ test('1701Q July uses one computation row per item with the source descriptions 
 	await expect(aggregate.locator('[id="frm1701q:txt41C"]')).toBeVisible();
 });
 
+test('1701Q July enters Item 31 inline and recalculates total gross income', async ({ page }, info) => {
+	const editor = await openQuarterlyReturn(page, '1701Q');
+	const table = editor.getByRole('table', { name: /Computation of Tax/i });
+	const row = table.locator('[data-income-item="31"]');
+	const taxpayer = row.locator('[id="frm1701q:txt31A"]');
+	const spouse = row.locator('[id="frm1701q:txt31B"]');
+	await expect(taxpayer).toBeEditable();
+	await expect(spouse).toHaveCount(0);
+	await editor.getByRole('button', { name: 'Use saved spouse details' }).click();
+	await expect(row.getByRole('rowheader')).toHaveText('Add: Other income');
+	await expect(spouse).toBeEditable();
+	await taxpayer.fill('1500.25');
+	await spouse.fill('2800.50');
+	await spouse.blur();
+	await expect(table.locator('[id="frm1701q:txt32A"]')).toHaveText('₱1,500.25');
+	await expect(table.locator('[id="frm1701q:txt32B"]')).toHaveText('₱2,800.50');
+	await expect(page.getByRole('dialog')).toHaveCount(0);
+	for (const width of [1440, 390]) {
+		await page.setViewportSize({ width, height: 920 });
+		expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+		await row.screenshot({
+			path: info.outputPath(`1701q-inline-other-income-${width}.png`), animations: 'disabled',
+			style: '.eq-action-bar { position: static !important; }'
+		});
+	}
+});
+
+test('1701Q January edits Items 43 and 61 inline and updates their totals', async ({ page }, info) => {
+	const editor = await openQuarterlyReturn(page, '1701Qv2018');
+	await setAtc(page, 'optATC', 'II012');
+	await editor.getByRole('radio', { name: /itemized/i }).first().check();
+	await goToReturnPage(page, 2);
+	const income = editor.locator('tr[data-income-item="43"]');
+	const credits = editor.locator('tr[data-income-item="61"]');
+	await income.locator('[id="frm1701q:txt43Desc"]').fill('Rental income');
+	await credits.locator('[id="frm1701q:txt61Desc"]').fill('Payment certificate');
+	await income.locator('[id="frm1701q:txt43A"]').fill('1500');
+	await credits.locator('[id="frm1701q:txt61A"]').fill('300');
+	await credits.locator('[id="frm1701q:txt61A"]').blur();
+	await expect(editor.locator('[id="frm1701q:txt45A"]')).toHaveText('₱1,500.00');
+	await expect(editor.locator('[id="frm1701q:txt62A"]')).toHaveText('₱300.00');
+	await expect(page.getByRole('dialog')).toHaveCount(0);
+	for (const width of [1440, 390]) {
+		await page.setViewportSize({ width, height: 920 });
+		expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+		for (const [item, row] of [[43, income], [61, credits]] as const) {
+			await row.screenshot({
+				path: info.outputPath(`1701qv2018-inline-item-${item}-${width}.png`), animations: 'disabled',
+				style: '.eq-action-bar { position: static !important; }'
+			});
+		}
+	}
+});
+
 test('1701Q January preserves joint columns and readable amounts at 390 px', async ({ page }) => {
 	const editor = await openQuarterlyReturn(page, '1701Qv2018', 390);
 	await editor.getByRole('button', { name: 'Use saved spouse details' }).click();
@@ -127,16 +181,11 @@ test('1701Q January preserves joint columns and readable amounts at 390 px', asy
 	expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
 });
 
-test('1701Q July jumps to its computation without adding a page', async ({ page }) => {
+test('1701Q July keeps its computation and tax credits on one page', async ({ page }) => {
 	const editor = await openQuarterlyReturn(page, '1701Q');
-	const sectionJump = editor.getByRole('combobox', { name: 'Go to section' });
-	await expect(sectionJump).toBeVisible({ timeout: 5000 });
-	await sectionJump.click();
-	await page.getByRole('option', { name: /computation of tax/i }).press('Enter');
-	await expect(editor.getByRole('region', { name: /computation of tax/i })).toBeFocused();
-	await sectionJump.click();
-	await page.getByRole('option', { name: 'Tax credits and payments' }).press('Enter');
-	await expect(editor.locator('[id="frm1701q:txt38A"]')).toBeFocused();
+	await expect(editor.getByRole('combobox', { name: 'Go to section', exact: true })).toHaveCount(0);
+	await expect(editor.getByRole('region', { name: /computation of tax/i })).toBeVisible();
+	await expect(editor.locator('[id="frm1701q:txt38A"]')).toBeVisible();
 	await expect(editor.getByText('Page 1 of 1', { exact: true })).toBeVisible();
 });
 

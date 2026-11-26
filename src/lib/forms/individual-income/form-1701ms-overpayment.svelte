@@ -73,7 +73,7 @@
 	.choice :global([data-slot='currency-input'] > [data-slot='form-item']) { grid-template-columns: minmax(0, 1fr); }
 	.allocation { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: .25rem .625rem; align-items: baseline; margin: .625rem 0 0; margin-inline-end: var(--paper-amount-inset); font-size: .8125rem; }
 	.allocation span { color: var(--fg-muted); }
-	.allocation strong { text-align: end; font-variant-numeric: tabular-nums; }
+	.allocation strong { text-align: end; font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
 	@container paper-form (width >= 32rem) {
 		.choice { grid-template-columns: minmax(0, 1fr) 12rem; align-items: center; }
 	}

@@ -340,9 +340,6 @@ export function validateCompensation(code: string, values: Values): Values {
         if (![1, 2, 3].some(part => get(`txtPg1Pt1I9Address${part}`)))
             error('txtPg1Pt1I9Address1', 'Enter Item 9 registered address.');
         date('txtPg1Pt1I10DOB', 'Item 10 birth');
-        const pagesFiled = get('txtPg1Pt2NumberofPagesFiled');
-        if (pagesFiled && !/^\d{1,2}$/.test(pagesFiled))
-            error('txtPg1Pt2NumberofPagesFiled', 'Enter a whole number from 0 to 99 for pages filed.');
         const identification = values.GovorCTC;
         if (identification === 'Gov' || identification === 'CTC') {
             const certificate = identification === 'CTC';

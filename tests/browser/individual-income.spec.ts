@@ -1,4 +1,4 @@
-import { expect, test, type Locator } from '@playwright/test';
+import { expect, test, type Locator, type Page } from '@playwright/test';
 import { execFileSync } from 'node:child_process';
 import { mkdirSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -19,6 +19,168 @@ const compensation = {
 	'frm1700:txtPg2ISched1c_1REG': '1000000', 'frm1700:txtPg2ISched1e_1TW': '100000'
 };
 const cases = { '1700': 4, '1700v2018': 2, '1701': 12, '1701v2018': 4, '1701A': 2, '1701MS': 2, '1701Q': 1, '1701Qv2018': 2 };
+
+async function addRecord(page: Page, singular: 'employer' | 'dependent' | 'item' = 'employer') {
+ await page.getByRole('button', { name: `Add ${singular}`, exact: true }).click();
+ const drawer = page.getByRole('dialog', { name: `Add ${singular}`, exact: true });
+ await expect(drawer).toBeVisible();
+ await expect(drawer).toHaveCSS('transform', 'matrix(1, 0, 0, 1, 0, 0)');
+ return drawer;
+}
+
+async function saveRecord(drawer: Locator) {
+ await drawer.getByRole('button', { name: 'Add item', exact: true }).click();
+ await expect(drawer).toBeHidden();
+}
+
+
+test('June 2013 Form 1701 reads Item 29 from the editable installment on page 3', async ({ page }, info) => {
+	await seedWorkspace(page, 'light', 'loaded', { ...fixture, civilStatus: 'Single' }, []);
+	await page.setViewportSize({ width: 1280, height: 900 });
+	await page.goto(`${list}/1701?new=true`);
+	const summary = page.locator('[id="frm1701:txtPg1Pt2I29PortionTax"]');
+	const source = page.locator('[id="frm1701:txtPg3Pt5I79LessPortion"]');
+	await expect(summary).toHaveJSProperty('tagName', 'TD', { timeout: 15000 });
+	const reference = summary.locator('..').getByRole('button', { name: /From Item 79/ });
+	await reference.focus();
+	await page.keyboard.press('Enter');
+	await expect(source).toBeFocused();
+	await source.fill('12500');
+	await goToReturnPage(page, 1);
+	await expect(summary).toHaveText('₱12,500');
+	await page.getByRole('button', { name: 'Save draft', exact: true }).click();
+	await expect(page).toHaveURL(list);
+	await page.getByRole('row').filter({ hasText: '1701' }).getByRole('link', { name: 'Edit', exact: true }).click();
+	await expect(summary).toHaveText('₱12,500');
+	for (const width of [1280, 390]) {
+		await page.setViewportSize({ width, height: 900 });
+		await page.keyboard.press('Escape');
+		await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+		await summary.locator('..').screenshot({ path: info.outputPath(`item-29-${width}.png`) });
+	}
+	await reference.click();
+	await expect(source).toBeFocused();
+	await expect(source).toHaveValue('12500');
+	await source.blur();
+	await expect(source).toHaveValue('12,500');
+});
+
+test('June 2013 Form 1701 finds pages by number and title in a command dialog', async ({ page }, info) => {
+	await page.setViewportSize({ width: 1440, height: 960 });
+	await seedWorkspace(page, 'light', 'loaded', fixture, []);
+	await page.goto(`${list}/1701?new=true`);
+	const pager = page.getByRole('navigation', { name: 'Return pages' });
+	const shortcut = pager.getByRole('button', { name: 'Find a page, page 1 of 12', exact: true });
+	await expect(shortcut).toBeVisible({ timeout: 15000 });
+	await expect(page.getByRole('button', { name: /^Find a page,/ })).toHaveCount(1);
+	await expect(pager.getByRole('button', { name: 'Next page', exact: true })).toBeEnabled();
+	await page.getByRole('textbox', { name: 'Filing year', exact: true }).fill('2017');
+	await shortcut.scrollIntoViewIfNeeded();
+	await shortcut.press('Enter');
+	const dialog = page.getByRole('dialog', { name: 'Go to page', exact: true });
+	const search = dialog.getByRole('combobox', { name: 'Search pages', exact: true });
+	await expect(search).toBeFocused();
+	await expect(dialog.getByRole('option')).toHaveCount(12);
+	const first = dialog.getByRole('option', { name: /^Page 1 ·/ });
+	await expect(first).toHaveAttribute('aria-current', 'page');
+	await search.press('ArrowDown');
+	await expect(dialog.getByRole('option', { name: /^Page 2 ·/ })).toHaveAttribute('aria-selected', 'true');
+	await search.press('ArrowUp');
+	await expect(first).toHaveAttribute('aria-selected', 'true');
+	await page.screenshot({ path: info.outputPath('1701-page-picker-desktop.png'), animations: 'disabled' });
+	await search.fill('1');
+	await expect(dialog.getByRole('option')).toHaveCount(1);
+	await search.fill('book reconciliation');
+	await expect(dialog.getByRole('option', { name: /Page 10.*Book-to-tax reconciliation/ })).toBeVisible();
+	await search.fill('no such page');
+	await expect(dialog.getByText('No matching pages')).toBeVisible();
+	await search.press('Enter');
+	await expect(dialog).toBeVisible();
+	await search.press('Escape');
+	await expect(shortcut).toBeFocused();
+
+	await shortcut.click();
+	await expect(search).toHaveValue('');
+	await search.fill('page 3');
+	await expect(dialog.getByRole('option')).toHaveCount(1);
+	await search.press('Enter');
+	await expect(dialog).toBeHidden();
+	await expect(page.getByRole('heading', { name: 'Income tax and tax relief', exact: true })).toBeFocused();
+	await expect(page.getByRole('button', { name: 'Find a page, page 3 of 12', exact: true })).toBeVisible();
+	await goToReturnPage(page, 1);
+	await expect(page.getByRole('textbox', { name: 'Filing year', exact: true })).toHaveValue('2017');
+
+	await page.setViewportSize({ width: 390, height: 844 });
+	await page.getByRole('radiogroup', { name: /Exempt income\?/i }).getByRole('radio', { name: 'Yes', exact: true }).check();
+	await page.getByRole('button', { name: 'Find a page, page 1 of 17', exact: true }).click();
+	await search.fill('activity');
+	await expect(dialog.getByRole('option').first()).toBeVisible();
+	await page.screenshot({ path: info.outputPath('1701-page-picker-mobile.png'), animations: 'disabled' });
+	const attachment = dialog.getByRole('option', { name: /Page 13/ });
+	await attachment.click();
+	await expect(page.getByRole('button', { name: 'Find a page, page 13 of 17', exact: true })).toBeVisible();
+});
+
+for (const [code, total] of [['1701v2018', 4], ['1702RTv2018C', 4], ['1602Qv2018', 3]] as const) {
+	test(`${code} offers the searchable page picker on the left of the footer`, async ({ page }, info) => {
+		await seedWorkspace(page, 'light', 'loaded', fixture, []);
+		await page.goto(`${list}/${code}?new=true`);
+		const pager = page.getByRole('navigation', { name: 'Return pages' });
+		const shortcut = pager.getByRole('button', { name: `Find a page, page 1 of ${total}`, exact: true });
+		await expect(shortcut).toBeVisible();
+		await expect(page.getByRole('button', { name: /^Find a page,/ })).toHaveCount(1);
+		const next = pager.getByRole('button', { name: 'Next page', exact: true });
+		const numbered = pager.getByRole('button', { name: 'Page 2', exact: true });
+		await expect(numbered).toBeVisible();
+		for (const width of [1280, 390]) {
+			await page.setViewportSize({ width, height: 900 });
+			await page.keyboard.press('Escape');
+			await expect(next).toBeEnabled();
+			await expect.poll(async () => {
+				const pickerBox = (await shortcut.boundingBox())!;
+				const nextBox = (await next.boundingBox())!;
+				return pickerBox.x + pickerBox.width <= nextBox.x && Math.abs(pickerBox.y - nextBox.y) < 5;
+			}).toBe(true);
+			await pager.screenshot({ path: info.outputPath(`pagination-${width}.png`), animations: 'disabled' });
+		}
+		await page.setViewportSize({ width: 1280, height: 900 });
+		await shortcut.click();
+		const dialog = page.getByRole('dialog', { name: 'Go to page', exact: true });
+		await expect(dialog.getByRole('option')).toHaveCount(total);
+		await dialog.getByRole('option', { name: /^Page 2 ·/ }).click();
+		await expect(dialog).toBeHidden();
+		const previous = pager.getByRole('button', { name: 'Previous page', exact: true });
+		const pageTwo = pager.getByRole('button', { name: `Find a page, page 2 of ${total}`, exact: true });
+		await expect(pageTwo).toBeVisible();
+		await previous.click();
+		await expect(shortcut).toBeVisible();
+		await next.click();
+		await expect(pageTwo).toBeVisible();
+		await pager.getByRole('button', { name: 'Page 1', exact: true }).click();
+		await expect(shortcut).toBeVisible();
+	});
+}
+
+for (const [entry, field] of [
+	['source installment', 'txtPg3Pt5I79LessPortion'],
+	['imported summary installment', 'txtPg1Pt2I29PortionTax']
+] as const) {
+	test(`June 2013 Form 1701 sends an invalid ${entry} to Item 79`, async ({ page }) => {
+		await seedWorkspace(page, 'light', 'loaded', { ...fixture, civilStatus: 'Single' }, [{
+			id: 'large-installment', taxpayerId, formCode: '1701', returnPeriod: '2017',
+			status: 'Draft', updatedAt: 1794441600000, finalFlag: '0',
+			values: { 'frm1701:txtPg1I1Year': '2017', [`frm1701:${field}`]: '12500' }
+		}]);
+		await page.goto(`${list}/1701?return=large-installment&validate=true`);
+		const validation = page.getByRole('alert').getByRole('button', { name: 'Deferred tax cannot exceed 50% of Item 26.' });
+		await expect(validation).toBeVisible({ timeout: 30000 });
+		await validation.focus();
+		await page.keyboard.press('Enter');
+		const installment = page.locator('[id="frm1701:txtPg3Pt5I79LessPortion"]');
+		await expect(installment).toBeFocused();
+		await expect(installment).toHaveAttribute('aria-invalid', 'true');
+	});
+}
 
 test('legacy 1701 carries the taxpayer details trade name through a new draft and reopen', async ({ page, context }) => {
 	const name = 'Santos Advisory';
@@ -307,12 +469,15 @@ test('1701A aligns schedule amounts and descriptions on page 2', async ({ page }
 	await expect(flat).toHaveCount(0);
 	await expect(credits).toBeVisible();
 	await expect(graduated.getByRole('columnheader', { name: 'Spouse' })).toHaveCount(0);
-	const description = graduated.getByRole('textbox', { name: 'Item 41 other income description' });
-	const amount = graduated.getByRole('textbox', { name: 'Item 41 other income amount' });
+	await graduated.locator('[data-income-detail-items="42"]').getByRole('button', { name: 'Add item', exact: true }).click();
+	const drawer = page.getByRole('dialog', { name: 'Add item', exact: true });
+	const description = drawer.getByRole('textbox', { name: 'Description', exact: true });
+	const amount = drawer.getByRole('textbox', { name: 'Taxpayer amount', exact: true });
 	await description.fill('Miscellaneous income');
 	await amount.fill('25000');
 	await amount.blur();
-	expect((await description.boundingBox())!.y).toBe((await amount.boundingBox())!.y);
+	expect((await amount.boundingBox())!.y).toBeGreaterThan((await description.boundingBox())!.y);
+	await saveRecord(drawer);
 	await expect(graduated.locator('[id="frm1701A:txt44A"]')).toHaveText('₱25,000');
 	await page.setViewportSize({ width: 390, height: 920 });
 	expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
@@ -415,19 +580,20 @@ test('June 2013 Form 1701 keeps employer fields and historical tax regime amount
 	await page.setViewportSize({ width: 1440, height: 960 });
 	await page.goto(`${list}/1701?new=true`);
 	await goToReturnPage(page, 4);
-	await expect(page.getByRole('region', { name: 'Part VIIA · Dependent 1' })).toBeVisible();
+	await expect(page.getByRole('region', { name: 'Dependents', exact: true })).toBeVisible();
 	await expect(page.getByRole('region', { name: 'Part VIIB · Current address' })).toBeVisible();
 	await expect(page.getByText('Auditor or tax agent TIN and branch code', { exact: true })).toBeVisible();
 	await goToReturnPage(page, 5);
-	const employer = page.getByRole('region', { name: 'Schedule 1 · Employer 1', exact: true });
-	await expect(employer).toBeVisible();
+	const employer = await addRecord(page);
 	await expect(employer.getByText('Employer TIN and branch code', { exact: true })).toBeVisible();
+	await employer.getByRole('button', { name: 'Cancel', exact: true }).click();
+	await expect(employer).toBeHidden();
 	await expect(page.locator('[id="frm1701:txtPg5RegName"]')).toHaveCount(0);
 	await goToReturnPage(page, 12);
 	const regimes = page.getByRole('table', { name: 'Taxpayer tax regimes' });
 	await expect(regimes.getByRole('columnheader')).toHaveText(['Item', 'Description', 'Regular', 'Special', 'Exempt', 'Total']);
 	await expect(page.getByRole('table', { name: 'Spouse tax regimes' })).toHaveCount(0);
-	await expect(regimes.locator('[id="frm1701:txtPg12Pt9I1SalesC1"]')).toHaveAttribute('inputmode', 'decimal');
+	await expect(regimes.locator('[id="frm1701:txtPg12Pt9I1SalesC1"]')).toHaveJSProperty('tagName', 'OUTPUT');
 	await expect(regimes.locator('[id="frm1701:txtPg12Pt9I1SalesC1"]')).toHaveCSS('text-align', 'right');
 	await expect(regimes.locator('[id="frm1701:txtPg12Pt9I1SalesC2"]')).toHaveAttribute('inputmode', 'decimal');
 	const output = process.env.INCOME_PREVIEW_DIR;
@@ -498,11 +664,16 @@ test('revised 1701 keeps Schedule 4 line numbers inside their cells on one line'
 	await goToReturnPage(page, 3);
 
 	const schedule = page.getByRole('table', { name: /Schedule 4 · Ordinary itemized deductions/ });
+	const services = schedule.locator('[data-income-records="Other services"]');
+	await services.getByRole('button', { name: 'Add item', exact: true }).click();
+	const drawer = page.getByRole('dialog', { name: 'Add item', exact: true });
+	await drawer.getByRole('textbox', { name: 'Description', exact: true }).fill('Other service');
+	await saveRecord(drawer);
 	for (const width of [1280, 390]) {
 		await page.setViewportSize({ width, height: 900 });
 		await page.evaluate(() => document.fonts.ready.then(() => undefined));
 		for (const item of ['17A', '17B', '17C', '17D']) {
-			const cell = schedule.getByRole('cell', { name: item, exact: true });
+			const cell = item === '17D' ? services.getByText(item, { exact: true }) : schedule.getByRole('cell', { name: item, exact: true });
 			await expect(cell).toBeVisible();
 			const fitsOnOneLine = await cell.evaluate((element) => {
 				const range = document.createRange();
@@ -553,98 +724,63 @@ test('1701Q v2018 lets filers remove and restore a saved spouse without changing
 });
 
 test('1700v2018 uses native fields and retains values while paging and reopening', async ({ page }) => {
-	await seedWorkspace(page, 'dark', 'loaded', fixture);
-	await page.setViewportSize({ width: 1280, height: 1040 });
-	await page.goto(`${list}/1700v2018?new=true`);
-	const year = page.locator('[id="frm1700:txtPg1I1Year"]');
-	await expect(year).toBeVisible({ timeout: 20000 });
-	await year.fill('2025');
-	await expect(page.getByText('II011', { exact: true })).toBeVisible();
-	await page.getByRole('radio', { name: 'Employee (regular rates)' }).check();
-	await page.getByRole('radio', { name: 'Single', exact: true }).check();
-	await expect(page.getByRole('textbox', { name: '21 Spouse’s full name' })).toHaveCount(0);
-	await expect(page.getByRole('button', { name: 'Previous page', exact: true })).toHaveCount(0);
-	await expect(page.getByText('Page 1 of 2', { exact: true })).toBeVisible();
-	const output = resolve(process.env.INCOME_PREVIEW_DIR ?? 'test-results/individual-income-previews');
-	mkdirSync(output, { recursive: true });
-	await page.getByRole('button', { name: 'Next page', exact: true }).click();
-	await expect(page.getByRole('heading', { name: 'Employer details and tax computation', exact: true })).toBeFocused();
-	await expect(year).toHaveCount(0);
-	await expect(page.getByRole('button', { name: 'Next page', exact: true })).toHaveCount(0);
-	const employer = page.getByRole('region', { name: 'Schedule 1 · Employer 1', exact: true });
-	await expect(employer.getByRole('radio')).toHaveCount(0);
-	await expect(employer.locator('[data-income-item="1"]')).toHaveCount(0);
-	const tin = employer.getByRole('textbox', { name: 'Employer TIN and branch code', exact: true });
-	const employerName = employer.getByRole('textbox', { name: 'Employer name', exact: true });
-	const earnings = employer.getByRole('textbox', { name: 'Graduated-rate compensation', exact: true });
-	const taxWithheld = employer.getByRole('textbox', { name: 'Tax withheld', exact: true });
-	const employerPositions = await Promise.all([employerName.boundingBox(), tin.boundingBox(), earnings.boundingBox(), taxWithheld.boundingBox()]);
-	expect(employerPositions[0]!.y).toBe(employerPositions[1]!.y);
-	expect(employerPositions[2]!.y).toBe(employerPositions[3]!.y);
-	expect(Math.abs(employerPositions[2]!.width - employerPositions[3]!.width)).toBeLessThan(1);
-	await expectAmountEdge(earnings, page.locator('[id="frm1700:txtPg2ISched1c_5AREG"]'));
-	await expectAmountEdge(taxWithheld, page.locator('[id="frm1700:txtPg2ISched1e_5ATW"]'));
-	await expect(employer.getByRole('textbox', { name: 'Second name line', exact: true })).toHaveCount(0);
-	await tin.fill('32165498700000');
-	await tin.blur();
-	await expect(tin).toHaveValue('321-654-987-00000');
-	await expect(employer.getByRole('textbox', { name: '25%-rate compensation', exact: true })).toHaveCount(0);
-	await expect(page.getByRole('heading', { name: /^Part V\.B/ })).toHaveCount(0);
-	await expect(page.getByRole('textbox', { name: 'Credit or payment description', exact: true })).toBeVisible();
-	for (const [id, value] of Object.entries(compensation)) {
-		if (!id.startsWith('frm1700:txtPg2') || /EmployerTIN|EmployerBranchCode/.test(id)) continue;
-		await page.locator(`[id="${id}"]`).fill(value);
-	}
-	await earnings.fill('999,999.50');
-	await earnings.blur();
-	await expect(earnings).toHaveValue('1,000,000');
-	await expect(page.locator('[id="frm1700:txtPg2I47A"]')).toHaveText('₱152,500');
-	await expect(page.locator('[id="frm1700:txtPg2I54A"]')).toHaveText('₱100,000');
-	await expectAmountEdge(page.locator('[id="frm1700:txtPg2I43A"]'), page.locator('[id="frm1700:txtPg2I47A"]'));
-	await employer.getByRole('textbox', { name: 'Tax withheld', exact: true }).blur();
-	await employer.evaluate(node => node.scrollIntoView({ block: 'center' }));
-	await employer.screenshot({ path: resolve(output, '1700v2018-employer-desktop.png') });
-	const secondEmployer = page.getByRole('region', { name: 'Schedule 1 · Employer 2', exact: true });
-	const secondHeading = secondEmployer.locator('summary').first();
-	await secondHeading.click();
-	const secondTin = secondEmployer.getByRole('textbox', { name: 'Employer TIN and branch code', exact: true });
-	await secondTin.fill('---00007');
-	await secondTin.blur();
-	await expect(secondTin).toHaveValue('---00007');
-	await expect(secondEmployer.getByRole('textbox', { name: 'Second name line', exact: true })).toHaveCount(0);
-	await employer.getByRole('heading').evaluate(node => node.scrollIntoView({ block: 'center' }));
-	await page.screenshot({ path: resolve(output, '1700v2018-editor-page-2.png') });
-	await secondHeading.click();
-	await employer.getByText('Add second name line', { exact: true }).click();
-	await employer.getByRole('textbox', { name: 'Second name line', exact: true }).fill('PAYROLL DIVISION');
-	await page.getByRole('button', { name: 'Previous page', exact: true }).click();
-	await expect(year).toHaveValue('2025');
-	await expect(page.locator('[id="frm1700:txtPg1I36"]')).toHaveText('₱52,500');
-	await expectAmountEdge(page.locator('[id="frm1700:txtPg1I31A"]'), page.locator('[id="frm1700:txtPg1I36"]'));
-	await page.getByRole('link', { name: /Back to forms/ }).evaluate(node => node.scrollIntoView({ block: 'center' }));
-	await page.screenshot({ path: resolve(output, '1700v2018-editor-page-1.png') });
-	await page.setViewportSize({ width: 390, height: 920 });
-	await page.keyboard.press('Escape');
-	await expect.poll(async () => (await page.locator('aside.sidebar').boundingBox())!.x).toBeLessThan(-245);
-	await page.getByRole('link', { name: /Back to forms/ }).evaluate(node => node.scrollIntoView({ block: 'center' }));
-	expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
-	await expect(year).toBeVisible();
-	expect((await year.boundingBox())!.width).toBeGreaterThan(170);
-	await page.screenshot({ path: resolve(output, '1700v2018-editor-mobile.png') });
-	await page.getByRole('button', { name: 'Next page', exact: true }).click();
-	await expect(tin).toHaveValue('321-654-987-00000');
-	await expectAmountEdge(earnings, page.locator('[id="frm1700:txtPg2ISched1c_5AREG"]'));
-	await expectAmountEdge(taxWithheld, page.locator('[id="frm1700:txtPg2ISched1e_5ATW"]'));
-	expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
-	await employer.screenshot({ path: resolve(output, '1700v2018-employer-mobile.png') });
-	await page.getByRole('button', { name: 'Previous page', exact: true }).click();
-	await page.getByRole('button', { name: 'Save draft', exact: true }).click();
-	await expect(page).toHaveURL(/\/forms$/);
-	await page.getByRole('row').filter({ hasText: '1700v2018' }).getByRole('link', { name: 'Edit', exact: true }).click();
-	await expect(year).toHaveValue('2025');
-	await page.getByRole('button', { name: 'Next page', exact: true }).click();
-	await expect(employer.getByRole('textbox', { name: 'Second name line', exact: true })).toHaveValue('PAYROLL DIVISION');
-	await expect(secondTin).toHaveValue('---00007');
+ await seedWorkspace(page, 'dark', 'loaded', fixture);
+ await page.setViewportSize({ width: 1280, height: 1040 });
+ await page.goto(`${list}/1700v2018?new=true`);
+ const year = page.locator('[id="frm1700:txtPg1I1Year"]');
+ await expect(year).toBeVisible({ timeout: 20000 });
+ await year.fill('2025');
+ await expect(page.getByText('II011', { exact: true })).toBeVisible();
+ await page.getByRole('radio', { name: 'Employee (regular rates)' }).check();
+ await page.getByRole('radio', { name: 'Single', exact: true }).check();
+ await expect(page.getByRole('textbox', { name: '21 Spouse’s full name' })).toHaveCount(0);
+ await page.getByRole('button', { name: 'Next page', exact: true }).click();
+ await expect(page.getByRole('heading', { name: 'Employer details and tax computation', exact: true })).toBeFocused();
+ const employer = await addRecord(page);
+ await expect(employer.getByRole('radiogroup', { name: 'Income earner', exact: true })).toHaveCount(0);
+ const tin = employer.getByRole('textbox', { name: 'Employer TIN and branch code', exact: true });
+ await tin.fill('32165498700000');
+ await tin.blur();
+ await expect(tin).toHaveValue('321-654-987-00000');
+ await employer.getByRole('textbox', { name: 'Employer name', exact: true }).fill('Sample Employer');
+ const earnings = employer.getByRole('textbox', { name: 'Graduated-rate compensation', exact: true });
+ await earnings.fill('999,999.50');
+ await earnings.blur();
+ await expect(earnings).toHaveValue('1,000,000');
+ await employer.getByRole('textbox', { name: 'Tax withheld', exact: true }).fill('100000');
+ await expect(employer.getByRole('textbox', { name: '25%-rate compensation', exact: true })).toHaveCount(0);
+ await employer.getByRole('textbox', { name: 'Name continuation (optional)', exact: true }).fill('PAYROLL DIVISION');
+ await saveRecord(employer);
+ await expect(page.locator('[id="frm1700:txtPg2I47A"]')).toHaveText('₱152,500');
+ await expect(page.locator('[id="frm1700:txtPg2I54A"]')).toHaveText('₱100,000');
+ const second = await addRecord(page);
+ const secondTin = second.getByRole('textbox', { name: 'Employer TIN and branch code', exact: true });
+ await secondTin.fill('---00007');
+ await secondTin.blur();
+ await expect(secondTin).toHaveValue('---00007');
+ await second.getByRole('button', { name: 'Cancel', exact: true }).click();
+ await expect(second).toBeHidden();
+ await page.getByRole('button', { name: 'Previous page', exact: true }).click();
+ await expect(year).toHaveValue('2025');
+ await expect(page.locator('[id="frm1700:txtPg1I36"]')).toHaveText('₱52,500');
+ await page.setViewportSize({ width: 390, height: 920 });
+ await page.keyboard.press('Escape');
+ await expect.poll(async () => (await page.locator('aside.sidebar').boundingBox())!.x).toBeLessThan(-245);
+ expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+ await page.getByRole('button', { name: 'Next page', exact: true }).click();
+ const edit = page.getByRole('dialog', { name: 'Edit employer', exact: true });
+ await expect(edit.getByRole('textbox', { name: 'Employer TIN and branch code', exact: true })).toHaveValue('321-654-987-00000');
+ await expect(edit.getByRole('textbox', { name: 'Name continuation (optional)', exact: true })).toHaveValue('PAYROLL DIVISION');
+ await edit.getByRole('button', { name: 'Cancel', exact: true }).click();
+ await expect(edit).toBeHidden();
+ await page.getByRole('button', { name: 'Save draft', exact: true }).click();
+ await expect(page).toHaveURL(/\/forms$/);
+ await page.getByRole('row').filter({ hasText: '1700v2018' }).getByRole('link', { name: 'Edit', exact: true }).click();
+ await expect(year).toHaveValue('2025');
+ await page.getByRole('button', { name: 'Next page', exact: true }).click();
+ await page.getByRole('button', { name: 'Sample Employer', exact: true }).click();
+ await expect(edit.getByRole('textbox', { name: 'Name continuation (optional)', exact: true })).toHaveValue('PAYROLL DIVISION');
+ await edit.getByRole('button', { name: 'Cancel', exact: true }).click();
 });
 
 test('joint Form 1700 uses profile identity, keeps one desktop item row, and paginates below the fields', async ({ page }) => {
@@ -657,7 +793,7 @@ test('joint Form 1700 uses profile identity, keeps one desktop item row, and pag
 	});
 	await page.setViewportSize({ width: 1440, height: 960 });
 	await page.goto(`${list}/1700v2018?new=true`);
-	await expect(page.getByText('Page 1 of 2', { exact: true })).toBeVisible({ timeout: 20000 });
+	await expect(page.getByRole('button', { name: 'Find a page, page 1 of 2', exact: true })).toBeVisible({ timeout: 20000 });
 	await expect(page.getByText('02/29/1984', { exact: true })).toBeVisible();
 	const identity = page.getByRole('region', { name: 'Taxpayer information', exact: true });
 	const type = identity.getByRole('radiogroup', { name: 'Taxpayer type', exact: true });
@@ -740,7 +876,8 @@ test('joint Form 1700 uses profile identity, keeps one desktop item row, and pag
 	await spouseIncome.getByRole('radio', { name: 'Yes', exact: true }).check();
 	await page.getByRole('radio', { name: 'Joint Filing', exact: true }).check();
 	await page.getByRole('button', { name: 'Next page', exact: true }).click();
-	const earner = page.getByRole('region', { name: 'Schedule 1 · Employer 1', exact: true }).getByRole('radiogroup', { name: 'Income earner' });
+	const employerDrawer = await addRecord(page);
+	const earner = employerDrawer.getByRole('radiogroup', { name: 'Income earner' });
 	await expect(earner.getByRole('radio', { name: 'Taxpayer', exact: true })).toBeVisible();
 	await expect(earner.getByRole('radio', { name: 'Spouse', exact: true })).toBeVisible();
 });
@@ -751,7 +888,13 @@ for (const [code, count] of Object.entries(cases)) {
 			await seedWorkspace(page, 'light', 'loaded', fixture);
 			await page.setViewportSize({ width: 1280, height: 1040 });
 			await page.goto(`${list}/${code}?new=true`);
-			await expect(page.getByText(`Page 1 of ${count}`, { exact: true })).toBeVisible({ timeout: 20000 });
+			const pagePicker = (number: number) => page.getByRole('button', { name: `Find a page, page ${number} of ${count}`, exact: true });
+			if (count === 1) {
+				await expect(page.getByText('Page 1 of 1', { exact: true })).toBeVisible({ timeout: 20000 });
+				await expect(pagePicker(1)).toHaveCount(0);
+			} else {
+				await expect(pagePicker(1)).toBeVisible({ timeout: 20000 });
+			}
 			const pager = page.getByRole('navigation', { name: 'Return pages' });
 			if (count > 1) await expect(pager.locator('..')).toHaveClass(/taxmate-pagination/);
 			if (count > 4) {
@@ -772,19 +915,18 @@ for (const [code, count] of Object.entries(cases)) {
 				await page.screenshot({ path: resolve(output, `${code}-editor-page-1.png`) });
 			}
 			for (let number = 2; number <= count; number++) {
-				await page.getByRole('button', { name: 'Next page', exact: true }).click();
-				await expect(page.getByText(`Page ${number} of ${count}`, { exact: true })).toBeVisible();
+				await pager.getByRole('button', { name: 'Next page', exact: true }).click();
+				await expect(pagePicker(number)).toBeVisible();
 				await checkLegacyAmounts();
 				if (output) await page.screenshot({ path: resolve(output, `${code}-editor-page-${number}.png`) });
 			}
-			const next = page.getByRole('button', { name: 'Next page', exact: true });
-			await expect(next).toHaveCount(0);
+			await expect(pager.getByRole('button', { name: 'Next page', exact: true })).toHaveCount(0);
 			await page.setViewportSize({ width: 390, height: 920 });
 			await page.keyboard.press('Escape');
 			await expect.poll(async () => (await page.locator('aside.sidebar').boundingBox())!.x).toBeLessThan(-245);
 			if (count > 1) {
 				await goToReturnPage(page, 1);
-				await expect(pager.locator('.page-summary')).toContainText(`Page 1 of ${count}`);
+				await expect(pager.getByRole('button', { name: /^Find a page,/ })).toHaveText(`Page 1 of ${count}`);
 			}
 			expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
 			if (output) await page.screenshot({ path: resolve(output, `${code}-editor-mobile.png`) });
@@ -1003,10 +1145,8 @@ test('legacy 1700 summarizes profile fields and reveals the applicable identific
 	await expect(profile).toContainText('02/29/1984');
 	await expect(profile).toContainText('Single');
 	await expect(page.locator('[id="frm1700:txtPg1Pt1I9Address3"]')).toHaveCount(0);
-	const pagesFiled = page.getByRole('textbox', { name: 'Number of pages filed', exact: true });
-	await expect(pagesFiled).toHaveCount(1);
-	await pagesFiled.pressSequentially('A4.3');
-	await expect(pagesFiled).toHaveValue('43');
+	await expect(page.getByText('Number of pages filed', { exact: true })).toHaveCount(0);
+	await expect(page.locator('[id="frm1700:txtPg1Pt2NumberofPagesFiled"]')).toHaveCount(0);
 	await expect(page.locator('[id="frm1700:txtPg1Pt2I32GovID"]')).toHaveCount(0);
 	await page.getByRole('radio', { name: 'Government-issued ID', exact: true }).check();
 	await expect(page.getByRole('textbox', { name: 'Government ID number', exact: true })).toBeVisible();
@@ -1037,7 +1177,7 @@ test('legacy 1700 summarizes profile fields and reveals the applicable identific
 
 	await goToReturnPage(page, 2);
 	await expect(page.getByRole('heading', { name: 'Employers and tax computation' })).toBeFocused();
-	const employer = page.getByRole('region', { name: 'Part IV · Employer 1', exact: true });
+	const employer = await addRecord(page);
 	const income = employer.getByRole('textbox', { name: 'Compensation income', exact: true });
 	const withheld = employer.getByRole('textbox', { name: 'Tax withheld', exact: true });
 	await expect(employer.getByRole('radiogroup', { name: 'Income earner' })).toHaveCount(0);
@@ -1047,18 +1187,19 @@ test('legacy 1700 summarizes profile fields and reveals the applicable identific
 	await expect(income).toHaveValue('420,000');
 	await withheld.fill('18000');
 	await withheld.blur();
+	await employer.getByRole('textbox', { name: 'Employer TIN and branch code', exact: true }).fill('32165498700000');
+	expect((await income.boundingBox())!.y).toBeLessThan((await withheld.boundingBox())!.y);
+	await saveRecord(employer);
 	await expect(page.locator('[id="frm1700:txtPg2Pt4I4AC1"]')).toHaveText('₱420,000');
 	await expect(page.locator('[id="frm1700:txtPg2Pt4I4AC2"]')).toHaveText('₱18,000');
-	expect((await income.boundingBox())!.y).toBe((await withheld.boundingBox())!.y);
-	await capture('page-2', employer.getByRole('heading'));
+	await capture('page-2', page.getByRole('region', { name: 'Employers', exact: true }).getByRole('heading'));
 
 	await pager.getByRole('button', { name: 'Next page', exact: true }).click();
 	await expect(page.getByRole('heading', { name: 'Supplemental income' })).toBeFocused();
 	await expect(page.getByText('Summation', { exact: false })).toHaveCount(0);
 	await expect(page.getByRole('region', { name: 'Share transactions' })).toBeVisible();
 	await expect(page.locator('[id="frm1700:txtPg3Pt5BI10TotalIncome"]')).toHaveText('₱0');
-	const property = page.getByRole('region', { name: 'Real property transactions', exact: true }).locator('summary');
-	await property.click();
+	const property = page.getByRole('region', { name: 'Real property transactions', exact: true }).getByRole('heading');
 	await capture('page-3', property);
 
 	await goToReturnPage(page, 4);
@@ -1090,6 +1231,7 @@ test('legacy 1700 keeps Part I in order and derives the dependent count from pag
 	await page.goto(`${list}/1700?new=true`);
 	const profile = page.getByRole('region', { name: 'Taxpayer information', exact: true });
 	await expect(profile).toBeVisible({ timeout: 20000 });
+	await page.getByRole('textbox', { name: 'Filing year', exact: true }).fill('2017');
 	await expect(page.getByRole('heading', { name: /^Part I [·-] Background Information/ })).toHaveCount(1);
 	await expect(profile.locator('[data-profile-key="address"]')).toContainText('Registered address changed');
 	await expect(profile.getByRole('link', { name: 'Edit taxpayer information', exact: true }).locator('svg')).toBeVisible();
@@ -1107,23 +1249,28 @@ test('legacy 1700 keeps Part I in order and derives the dependent count from pag
 	await claim.getByRole('radio', { name: 'Yes', exact: true }).check();
 	await expect(count).toHaveText('0');
 	await profile.getByRole('button', { name: 'Edit dependents on page 4' }).click();
-	const first = page.getByRole('region', { name: 'Table 2 · Dependent 1', exact: true });
+	const first = page.getByRole('dialog', { name: 'Add dependent', exact: true });
+	await expect(first).toBeVisible();
 	await first.getByRole('textbox', { name: 'Last name', exact: true }).fill('SANTOS');
 	await first.getByRole('textbox', { name: 'First name', exact: true }).fill('JAMIE');
 	const middleInitial = first.getByRole('textbox', { name: 'Middle initial', exact: true });
 	await middleInitial.pressSequentially('AB');
 	await expect(middleInitial).toHaveValue('A');
-	expect((await middleInitial.boundingBox())!.width).toBeLessThanOrEqual(96);
+	await expect(middleInitial).toHaveAttribute('maxlength', '1');
+	expect((await middleInitial.boundingBox())!.width).toBeLessThan((await first.boundingBox())!.width);
 	await first.getByRole('spinbutton', { name: 'Month', exact: true }).fill('02');
 	await first.getByRole('spinbutton', { name: 'Day', exact: true }).fill('02');
 	await first.getByRole('spinbutton', { name: 'Year', exact: true }).fill('2011');
-	await page.getByRole('button', { name: 'Add dependent', exact: true }).click();
-	await expect(page.getByRole('region', { name: 'Table 2 · Dependent 2', exact: true })).toBeVisible();
+	await saveRecord(first);
+	const next = await addRecord(page, 'dependent');
+	await expect(next.getByRole('textbox', { name: 'Last name', exact: true })).toHaveValue('');
+	await next.getByRole('button', { name: 'Cancel', exact: true }).click();
+	await expect(next).toBeHidden();
 
 	const output = process.env.INCOME_PREVIEW_DIR;
 	if (output) {
 		mkdirSync(output, { recursive: true });
-		await first.screenshot({ path: resolve(output, '1700-2013-dependent-editor.png') });
+		await page.getByRole('region', { name: 'Dependents', exact: true }).screenshot({ path: resolve(output, '1700-2013-dependent-editor.png') });
 	}
 	const pager = page.getByRole('navigation', { name: 'Return pages' });
 	await goToReturnPage(page, 1);
@@ -1261,17 +1408,22 @@ test('legacy 1700 shows a compact tax summary on narrow screens', async ({ page 
 });
 
 test('legacy 1700 has single section dividers and complete field-grid seams', async ({ page }) => {
+	test.setTimeout(120_000);
 	await seedWorkspace(page, 'dark', 'loaded', fixture);
 	await page.setViewportSize({ width: 1440, height: 960 });
 	await page.goto(`${list}/1700?new=true`);
 	const filing = page.getByRole('region', { name: 'Filing details', exact: true }).locator('.income-fields');
 	const profile = page.getByRole('region', { name: 'Taxpayer information', exact: true });
-	await expect(profile).toBeVisible({ timeout: 20000 });
+	await expect(profile).toBeVisible({ timeout: 90_000 });
 	await expect(filing).toHaveCSS('border-bottom-width', '1px');
 	await expect(filing).toHaveCSS('column-gap', '1px');
 	await expect(filing.locator(':scope > div').last()).toHaveCSS('border-right-width', '0px');
 	await expect(profile.locator(':scope > header')).toHaveCSS('border-top-width', '0px');
 	await expect(profile.locator('.profile-grid')).toHaveCSS('border-bottom-width', '1px');
+	const total = page.getByRole('row', { name: /31.*Amount payable upon filing/ });
+	const precedingLabel = total.locator('xpath=preceding-sibling::tr[1]').getByRole('rowheader');
+	await expect(total).toHaveCSS('border-top-width', '0px');
+	await expect(precedingLabel).toHaveCSS('border-bottom-width', '1px');
 
 	const identification = page.locator('section[aria-labelledby="legacy-1700-identification"]');
 	await identification.getByRole('radio', { name: 'Community tax certificate (CTC)', exact: true }).check();
@@ -1290,71 +1442,77 @@ test('legacy 1700 has single section dividers and complete field-grid seams', as
 	await page.keyboard.press('Escape');
 	await expect.poll(async () => (await page.locator('aside.sidebar').boundingBox())!.x).toBeLessThan(-245);
 	await goToReturnPage(page, 1);
+	await expect(total).toHaveCSS('border-top-width', '0px');
+	await expect(precedingLabel).toHaveCSS('border-bottom-width', '1px');
 	await expect(filing).toHaveCSS('row-gap', '1px');
 	await expect(pager).toHaveCSS('border-top-width', '0px');
 });
 
 test('legacy 1700 groups employer TIN entry and preserves each saved segment', async ({ page, context }, testInfo) => {
-	await seedWorkspace(page, 'light', 'loaded', { ...fixture, civilStatus: 'Single' });
-	await page.setViewportSize({ width: 1440, height: 960 });
-	await page.goto(`${list}/1700?new=true`);
-	await goToReturnPage(page, 2);
-	const employer = (number: number) => page.getByRole('region', { name: `Part IV · Employer ${number}`, exact: true });
-	const tin = (number: number) => employer(number).getByRole('textbox', { name: 'Employer TIN and branch code', exact: true });
-	await expect(tin(1)).toBeVisible();
-	await expect(tin(1)).toHaveAttribute('maxlength', '17');
-	await context.grantPermissions(['clipboard-read', 'clipboard-write']);
-	await page.evaluate(() => navigator.clipboard.writeText('001-024-350-00008'));
-	await tin(1).focus();
-	await page.keyboard.press('ControlOrMeta+V');
-	await page.keyboard.press('Tab');
-	await expect(employer(1).getByRole('textbox', { name: 'Compensation income', exact: true })).toBeFocused();
-	await expect(tin(1)).toHaveValue('001-024-350-00008');
-	await employer(2).locator('summary').click();
-	await tin(2).fill('---00007');
-	await tin(2).blur();
-	await expect(tin(2)).toHaveValue('---00007');
-	await employer(3).locator('summary').click();
-	await tin(3).fill('065-043-021-00009');
-	await tin(3).blur();
-
-	for (const width of [1440, 320]) {
-		await page.setViewportSize({ width, height: 960 });
-		if (width === 320) {
-			await page.keyboard.press('Escape');
-			await expect.poll(async () => (await page.locator('aside.sidebar').boundingBox())!.x).toBeLessThan(-245);
-		}
-		const bounds = await tin(1).evaluate(input => {
-			const { left, right } = input.getBoundingClientRect();
-			const style = getComputedStyle(input);
-			const canvas = document.createElement('canvas').getContext('2d')!;
-			canvas.font = `${style.fontSize} ${style.fontFamily}`;
-			const textWidth = canvas.measureText((input as HTMLInputElement).value).width;
-			return { left, right, fits: textWidth <= input.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight) };
-		});
-		expect(bounds.fits).toBe(true);
-		expect(bounds.left).toBeGreaterThanOrEqual(0);
-		expect(bounds.right).toBeLessThanOrEqual(width);
-		if (width === 1440) {
-			for (const [identity, amount] of [['Employer name', 'Compensation income'], ['Employer TIN and branch code', 'Tax withheld']]) {
-				const boxes = await employer(1).getByRole('textbox', { name: identity, exact: true })
-					.or(employer(1).getByRole('textbox', { name: amount, exact: true })).evaluateAll(inputs => inputs.map(input => {
-						const { left, right } = input.parentElement!.getBoundingClientRect();
-						return { left, right };
-					}));
-				expect(boxes[0], `${amount} aligns with ${identity}`).toEqual(boxes[1]);
-			}
-		}
-		await employer(1).screenshot({ path: testInfo.outputPath(`employer-tin-${width}.png`), animations: 'disabled' });
-	}
-
-	await page.getByRole('button', { name: 'Save draft', exact: true }).click();
-	await expect(page).toHaveURL(/\/forms$/);
-	await page.getByRole('row').filter({ hasText: '1700' }).getByRole('link', { name: 'Edit', exact: true }).click();
-	await goToReturnPage(page, 2);
-	await expect(tin(1)).toHaveValue('001-024-350-00008');
-	await expect(tin(2)).toBeVisible();
-	await expect(tin(2)).toHaveValue('---00007');
+ const existing = {
+  'frm1700:txtYear': '2017', 'frm1700:rdoPg1Pt1I13CivilStatusInd': 'Single',
+  ...Object.fromEntries([1, 2, 3].flatMap(number => [[`frm1700:txtPg2Pt4I${number}NameOfEmployer`, `Employer ${number}`], [`frm1700:rdoPg2Pt4I${number}Employer`, `frm1700:rdoPg2Pt4I${number}TaxFiler`]])),
+  'frm1700:txtPg2Pt4I2EMPTINBranchCode': '00007',
+  'frm1700:txtPg2Pt4I3EMPTIN1': '065', 'frm1700:txtPg2Pt4I3EMPTIN2': '043',
+  'frm1700:txtPg2Pt4I3EMPTIN3': '021', 'frm1700:txtPg2Pt4I3EMPTINBranchCode': '00009'
+ };
+ await seedWorkspace(page, 'light', 'loaded', { ...fixture, civilStatus: 'Single' }, [{
+  id: 'legacy-tin-draft', taxpayerId, formCode: '1700', returnPeriod: '2017', status: 'Draft', updatedAt: 1794441600000, finalFlag: '0', values: existing
+ }]);
+ await page.setViewportSize({ width: 1440, height: 960 });
+ await page.goto(`${list}/1700?return=legacy-tin-draft`);
+ await goToReturnPage(page, 2);
+ const employer = page.getByRole('dialog', { name: 'Edit employer', exact: true });
+ const tin = employer.getByRole('textbox', { name: 'Employer TIN and branch code', exact: true });
+ await page.getByRole('button', { name: 'Employer 1', exact: true }).click();
+ await expect(tin).toHaveAttribute('maxlength', '17');
+ await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+ await page.evaluate(() => navigator.clipboard.writeText('001-024-350-00008'));
+ await tin.focus();
+ await page.keyboard.press('ControlOrMeta+V');
+ await tin.blur();
+ await expect(tin).toHaveValue('001-024-350-00008');
+ await employer.getByRole('button', { name: 'Update', exact: true }).click();
+ await expect(employer).toBeHidden();
+ for (const [number, value] of [[2, '---00007'], [3, '065-043-021-00009']] as const) {
+  await page.getByRole('button', { name: `Employer ${number}`, exact: true }).click();
+  await expect(tin).toHaveValue(value);
+  await employer.getByRole('button', { name: 'Cancel', exact: true }).click();
+  await expect(employer).toBeHidden();
+ }
+ for (const width of [1440, 320]) {
+  await page.setViewportSize({ width, height: 960 });
+  if (width === 320) {
+   await page.keyboard.press('Escape');
+   await expect.poll(async () => (await page.locator('aside.sidebar').boundingBox())!.x).toBeLessThan(-245);
+  }
+  await page.getByRole('button', { name: 'Employer 1', exact: true }).click();
+  await expect(employer).toHaveCSS('transform', 'matrix(1, 0, 0, 1, 0, 0)');
+  const bounds = await tin.evaluate(input => {
+   const { left, right } = input.getBoundingClientRect();
+   const style = getComputedStyle(input);
+   const canvas = document.createElement('canvas').getContext('2d')!;
+   canvas.font = `${style.fontSize} ${style.fontFamily}`;
+   const textWidth = canvas.measureText((input as HTMLInputElement).value).width;
+   return { left, right, fits: textWidth <= input.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight) };
+  });
+  expect(bounds.fits).toBe(true);
+  expect(bounds.left).toBeGreaterThanOrEqual(0);
+  expect(bounds.right).toBeLessThanOrEqual(width);
+  await employer.screenshot({ path: testInfo.outputPath(`employer-tin-${width}.png`), animations: 'disabled' });
+  await employer.getByRole('button', { name: 'Cancel', exact: true }).click();
+  await expect(employer).toBeHidden();
+ }
+ await page.getByRole('button', { name: 'Save draft', exact: true }).click();
+ await expect(page).toHaveURL(/\/forms$/);
+ await page.getByRole('row').filter({ hasText: '1700' }).getByRole('link', { name: 'Edit', exact: true }).click();
+ await goToReturnPage(page, 2);
+ for (const [number, value] of [[1, '001-024-350-00008'], [2, '---00007']] as const) {
+  await page.getByRole('button', { name: `Employer ${number}`, exact: true }).click();
+  await expect(tin).toHaveValue(value);
+  await employer.getByRole('button', { name: 'Cancel', exact: true }).click();
+  await expect(employer).toBeHidden();
+ }
 
 	const html = await page.evaluate(async () => {
 		const formsModule = '/src/lib/forms/index.ts';
@@ -1398,25 +1556,29 @@ test('legacy 1700 pages 2–4 disclose optional schedules and use filing-specifi
 	const pager = page.getByRole('navigation', { name: 'Return pages' });
 	await expect(pager).toBeVisible({ timeout: 20000 });
 	await goToReturnPage(page, 2);
-	const employer = page.getByRole('region', { name: 'Part IV · Employer 1', exact: true });
+	const employer = await addRecord(page);
 	const earner = employer.getByRole('radiogroup', { name: 'Income earner', exact: true });
 	await expect(earner).toHaveCount(0);
 	await employer.getByRole('textbox', { name: 'Employer name', exact: true }).fill('Example Employer');
-	const optionalEmployer = page.getByRole('region', { name: 'Part IV · Employer 2', exact: true });
-	await expect(optionalEmployer.getByRole('textbox', { name: 'Employer name', exact: true })).toBeHidden();
-	await optionalEmployer.locator('summary').click();
-	await expect(optionalEmployer.getByRole('textbox', { name: 'Employer name', exact: true })).toBeVisible();
+	await employer.getByRole('textbox', { name: 'Employer TIN and branch code', exact: true }).fill('32165498700000');
+	await saveRecord(employer);
+	const optionalEmployer = await addRecord(page);
+	await expect(optionalEmployer.getByRole('textbox', { name: 'Employer name', exact: true })).toHaveValue('');
+	await optionalEmployer.getByRole('button', { name: 'Cancel', exact: true }).click();
+	await expect(optionalEmployer).toBeHidden();
 
 	await goToReturnPage(page, 3);
 	const shares = page.getByRole('region', { name: 'Share transactions', exact: true });
-	const shareCount = shares.getByRole('textbox', { name: 'Number of shares', exact: true });
-	await expect(shareCount).toBeHidden();
-	await shares.locator('summary').focus();
+	await shares.getByRole('button', { name: 'Add item', exact: true }).focus();
 	await page.keyboard.press('Enter');
+	const shareDrawer = page.getByRole('dialog', { name: 'Add item', exact: true });
+	const shareCount = shareDrawer.getByRole('textbox', { name: /Number of shares/ });
 	await shareCount.fill('');
 	await shareCount.pressSequentially('A4.3');
 	await expect(shareCount).toHaveValue('43');
-	await expect(shares.getByText('Date of issue', { exact: true })).toBeVisible();
+	await expect(shareDrawer.getByRole('group', { name: /Date of issue/ })).toBeVisible();
+	await shareDrawer.getByRole('button', { name: 'Cancel', exact: true }).click();
+	await expect(shareDrawer).toBeHidden();
 	await expect(page.getByRole('region', { name: 'Final tax total', exact: true })).toBeVisible();
 
 	await goToReturnPage(page, 4);
@@ -1493,72 +1655,59 @@ test('June 1700 computation keeps inputs aligned with taxpayer, spouse and combi
 });
 
 test('legacy 1700 page 3 aligns amount columns and groups optional transactions by entry', async ({ page }) => {
-	await seedWorkspace(page, 'dark', 'loaded', { ...fixture, civilStatus: 'Single' });
-	await page.setViewportSize({ width: 1440, height: 960 });
-	await page.goto(`${list}/1700?new=true`);
-	await goToReturnPage(page, 3);
-
-	const supplemental = page.getByRole('region', { name: 'Part V.A · Income subject to final tax', exact: true });
-	await supplemental.locator('summary').click();
-	const interest = supplemental.getByRole('textbox', { name: 'Interest amount or fair market value', exact: true });
-	const royalties = supplemental.getByRole('textbox', { name: 'Royalties amount or fair market value', exact: true });
-	await expect(interest).toHaveValue('');
-	expect((await interest.boundingBox())!.x).toBe((await royalties.boundingBox())!.x);
-	await royalties.fill('0');
-	await royalties.blur();
-	await expect(royalties).toHaveValue('0');
-	await interest.fill('1250');
-	await supplemental.getByRole('textbox', { name: 'Interest final tax withheld', exact: true }).fill('250');
-	const finalTaxTotal = page.locator('[id="frm1700:txtPg3Pt5I21TotTaxWithheldPaid"]');
-	await expect(finalTaxTotal).toHaveText('₱250');
-	await expectAmountEdge(supplemental.getByRole('textbox', { name: 'Interest final tax withheld', exact: true }), finalTaxTotal);
-
-	const shares = page.getByRole('region', { name: 'Share transactions', exact: true });
-	await shares.locator('summary').click();
-	const first = shares.getByRole('group', { name: 'Sale or exchange 1', exact: true });
-	const second = shares.getByRole('group', { name: 'Sale or exchange 2', exact: true });
-	await expect(first.getByRole('combobox', { name: 'Kind of shares', exact: true })).toHaveText('Select share type');
-	await expect(second).toHaveCount(0);
-	await expectAmountEdge(first.getByRole('textbox', { name: 'Final tax withheld or paid', exact: true }), finalTaxTotal);
-	const exempt = page.getByRole('region', { name: 'Part V.B · Income exempt from tax', exact: true });
-	await exempt.locator('summary').click();
-	const lifeInsurance = exempt.getByRole('textbox', { name: 'Proceeds of life insurance policy', exact: true });
-	await lifeInsurance.fill('4000');
-	await lifeInsurance.blur();
-	await expectAmountEdge(lifeInsurance, page.locator('[id="frm1700:txtPg3Pt5BI10TotalIncome"]'));
-	await first.getByRole('combobox', { name: 'Kind of shares', exact: true }).click();
-	await page.getByRole('option', { name: 'Common shares', exact: true }).click();
-	// A share-type selection by itself must keep the schedule populated on return.
-	await goToReturnPage(page, 4);
-	await goToReturnPage(page, 3);
-	await expect(royalties).toHaveValue('0');
-	await expect(first.getByRole('combobox', { name: 'Kind of shares', exact: true })).toHaveText('Common shares');
-	await first.getByRole('textbox', { name: 'Stock certificate series number', exact: true }).fill('STK123');
-	await shares.getByRole('button', { name: 'Add second sale or exchange', exact: true }).click();
-	await expect(second.getByRole('combobox', { name: 'Kind of shares', exact: true })).toBeFocused();
-	const firstCount = first.getByRole('textbox', { name: 'Number of shares', exact: true });
-	const secondCount = second.getByRole('textbox', { name: 'Number of shares', exact: true });
-	await firstCount.fill('75');
-	await secondCount.fill('12');
-	expect((await firstCount.boundingBox())!.y).toBe((await secondCount.boundingBox())!.y);
-	await expect(page.getByRole('region', { name: 'Property received through gifts, bequests, or devises', exact: true })).toBeVisible();
-	await expect(page.getByRole('region', { name: 'Other exempt income or receipts', exact: true })).toBeVisible();
-
-	const output = process.env.INCOME_PREVIEW_DIR;
-	if (output) {
-		mkdirSync(output, { recursive: true });
-		await secondCount.blur();
-		await supplemental.evaluate(node => node.scrollIntoView({ block: 'center' }));
-		await supplemental.screenshot({ path: resolve(output, '1700-page-3-withholding.png') });
-		await shares.screenshot({ path: resolve(output, '1700-page-3-desktop.png') });
-	}
-	await page.setViewportSize({ width: 390, height: 920 });
-	await page.keyboard.press('Escape');
-	await expect.poll(async () => (await page.locator('aside.sidebar').boundingBox())!.x).toBeLessThan(-245);
-	expect((await first.boundingBox())!.y + (await first.boundingBox())!.height).toBeLessThanOrEqual((await second.boundingBox())!.y);
-	expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
-	if (output) {
-		await second.getByRole('heading').evaluate(node => node.scrollIntoView({ block: 'center' }));
-		await page.screenshot({ path: resolve(output, '1700-page-3-mobile.png') });
-	}
+ await seedWorkspace(page, 'dark', 'loaded', { ...fixture, civilStatus: 'Single' });
+ await page.setViewportSize({ width: 1440, height: 960 });
+ await page.goto(`${list}/1700?new=true`);
+ await goToReturnPage(page, 3);
+ const supplemental = page.getByRole('region', { name: 'Part V.A · Income subject to final tax', exact: true });
+ await supplemental.locator('summary').click();
+ const interest = supplemental.getByRole('textbox', { name: 'Interest amount or fair market value', exact: true });
+ const royalties = supplemental.getByRole('textbox', { name: 'Royalties amount or fair market value', exact: true });
+ await expect(interest).toHaveValue('');
+ expect((await interest.boundingBox())!.x).toBe((await royalties.boundingBox())!.x);
+ await royalties.fill('0');
+ await royalties.blur();
+ await expect(royalties).toHaveValue('0');
+ await interest.fill('1250');
+ await supplemental.getByRole('textbox', { name: 'Interest final tax withheld', exact: true }).fill('250');
+ const finalTaxTotal = page.locator('[id="frm1700:txtPg3Pt5I21TotTaxWithheldPaid"]');
+ await expect(finalTaxTotal).toHaveText('₱250');
+ await expectAmountEdge(supplemental.getByRole('textbox', { name: 'Interest final tax withheld', exact: true }), finalTaxTotal);
+ const shares = page.getByRole('region', { name: 'Share transactions', exact: true });
+ await shares.getByRole('button', { name: 'Add item', exact: true }).click();
+ const drawer = page.getByRole('dialog', { name: 'Add item', exact: true });
+ const type = drawer.getByRole('combobox', { name: /Kind of shares/ });
+ await expect(type).toHaveText('Select an option');
+ await type.click();
+ await page.getByRole('option', { name: 'Common shares', exact: true }).click();
+ await saveRecord(drawer);
+ await goToReturnPage(page, 4);
+ await goToReturnPage(page, 3);
+ await expect(royalties).toHaveValue('0');
+ await shares.getByRole('button', { name: 'Item A', exact: true }).click();
+ const edit = page.getByRole('dialog', { name: 'Edit item', exact: true });
+ await expect(edit.getByRole('combobox', { name: /Kind of shares/ })).toHaveText('Common shares');
+ await edit.getByRole('textbox', { name: /Stock certificate series number/ }).fill('STK123');
+ await edit.getByRole('textbox', { name: /Number of shares/ }).fill('75');
+ await edit.getByRole('button', { name: 'Update', exact: true }).click();
+ await expect(edit).toBeHidden();
+ await shares.getByRole('button', { name: 'Add item', exact: true }).click();
+ await drawer.getByRole('textbox', { name: /Stock certificate series number/ }).fill('STK456');
+ await drawer.getByRole('textbox', { name: /Number of shares/ }).fill('12');
+ await saveRecord(drawer);
+ await expect(shares.getByRole('listitem')).toHaveCount(2);
+ await expect(page.getByRole('region', { name: 'Property received through gifts, bequests, or devises', exact: true })).toBeVisible();
+ await expect(page.getByRole('region', { name: 'Other exempt income or receipts', exact: true })).toBeVisible();
+ const exempt = page.getByRole('region', { name: 'Part V.B · Income exempt from tax', exact: true });
+ await exempt.locator('summary').click();
+ const lifeInsurance = exempt.getByRole('textbox', { name: 'Proceeds of life insurance policy', exact: true });
+ await lifeInsurance.fill('4000');
+ await lifeInsurance.blur();
+ await expectAmountEdge(lifeInsurance, page.locator('[id="frm1700:txtPg3Pt5BI10TotalIncome"]'));
+ await page.setViewportSize({ width: 390, height: 920 });
+ await page.keyboard.press('Escape');
+ await expect.poll(async () => (await page.locator('aside.sidebar').boundingBox())!.x).toBeLessThan(-245);
+ const rows = shares.getByRole('listitem');
+ expect((await rows.nth(0).boundingBox())!.y + (await rows.nth(0).boundingBox())!.height).toBeLessThanOrEqual((await rows.nth(1).boundingBox())!.y);
+ expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
 });

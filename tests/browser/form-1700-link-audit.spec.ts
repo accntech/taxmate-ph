@@ -223,7 +223,7 @@ for (const { code, revision, pages } of revisions) {
 							await expect(button).toHaveAccessibleName(reference.label);
 							expect(reference.label).toMatch(/ · (?:Taxpayer|Spouse|Both filers)$/);
 							await button.click();
-							await expect(pager.locator('.page-summary > .page-count')).toHaveText([reference.destination, String(pages)]);
+							await expect(pager.getByRole('button', { name: /^Find a page,/ })).toHaveText(`Page ${reference.destination} of ${pages}`);
 							const target = page.locator(`[id="${reference.target}"]`);
 							await expect(target).toBeFocused({ timeout: 1500 });
 							const visible = await target.evaluate(element => {

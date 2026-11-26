@@ -132,7 +132,7 @@ for (const revision of revisions) {
 								await button.click();
 								const destination = revision.pages.indexOf(reference.page) + 1;
 								expect(destination, `Unknown destination page ${reference.page}`).toBeGreaterThan(0);
-								await expect(pager.locator('.page-summary > .page-count')).toHaveText([String(destination), String(revision.pages.length)]);
+								await expect(pager.getByRole('button', { name: /^Find a page,/ })).toHaveText(`Page ${destination} of ${revision.pages.length}`);
 								const target = page.locator(`[id="${reference.target}"]`);
 								await expect(target).toBeFocused({ timeout: 1500 });
 								const visible = await target.evaluate(element => {

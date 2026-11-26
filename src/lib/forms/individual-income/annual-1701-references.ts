@@ -80,6 +80,7 @@ for (const [column, person] of [['C1', 'A'], ['C2', 'B']]) {
 	add(june, `txtPg12Pt9I19TotalTaxCredits${regularColumn}`, `From Schedule 9, Item 10${person}`, `txtPg9Sc9I10${person === 'A' ? 'TaxPayerC1' : 'SpouseC2'}`);
 	add(june, `txtPg12Pt9I21TaxRelief${regularColumn}`, `From Item 90${person}`, `txtPg3Pt5I90RegularTax${column}`);
 }
+add(june, 'txtPg1Pt2I29PortionTax', 'From Item 79', 'txtPg3Pt5I79LessPortion');
 add(june, 'txtPg1Pt2I31TotalPenalties', 'From Item 84', 'txtPg3Pt5I84TotalPenalties');
 for (const [source, target, number] of [
 	['txtPg3Pt5I79LessPortion', 'txtPg1Pt2I29PortionTax', '29'],

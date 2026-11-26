@@ -3,7 +3,7 @@ import { taxpayerEmailError, type TaxpayerProfile } from '../../profiles/profile
 import { isPackagedRdoCode } from '../../profiles/rdo-codes';
 import type { FormDefinition, FormField } from '..';
 import { philippineCalendarDate } from '../filing-calendar';
-import { annualAmountField, annualFieldApplies, calculateAnnual, validateAnnual } from './annual';
+import { annualAmountField, annualFieldApplies, calculateAnnual, legacy1701Filing, validateAnnual } from './annual';
 import { compensationAmountField, calculateCompensation, validateCompensation, isLegacy1700ContactValid, legacy1700DependentClaim, legacy1700FirstYear, legacy1700LastYear, revised1700EmployerAssignment, revised1700EmployerHasEntry, revised1700EmployerRows, revised1700FieldApplies } from './compensation';
 import { quarterlyAmountField, calculateQuarterly, quarterlyIncomeFieldApplies, validateQuarterly } from './quarterly';
 import { incomeEditorFields } from './editor-layout';
@@ -27,6 +27,10 @@ const codeDetails = {
 	'1701Qv2018': ['1701Q · January 2018', 'Quarterly return for individuals, estates and trusts', 'frm1701q', 'txtYear', 'txtTIN1 txtTIN2 txtTIN3 txtBranchCode txtRDOCode txtTaxpayerName txtAddress txtAddress2 txtZipCode - @txtEmail']
 } as const;
 type IncomeCode = keyof typeof codeDetails;
+const pagesFiledFields: Partial<Record<IncomeCode, string>> = {
+	'1700': 'frm1700:txtPg1Pt2NumberofPagesFiled',
+	'1701': legacy1701Filing.pages
+};
 const first1701MSYear = 2024;
 const firstRevisedIncomeYear = 2018;
 
@@ -48,6 +52,7 @@ export type IncomeForm = FormDefinition & {
 	identity: Partial<Record<ProfileKey, string>>;
 	defaults: Values;
 	amount: string;
+	pagesFiledField?: string;
 };
 
 const definitions = Object.fromEntries(Object.entries(codeDetails).map(([code, [revision, description, prefix, year, mapping]]) => {
@@ -79,7 +84,8 @@ const definitions = Object.fromEntries(Object.entries(codeDetails).map(([code, [
 				'frm1700:rdoPg1I24SpouseForeignTaxCredits': 'No'
 			} : {})
 		},
-		amount: rules[id].amount(code)
+		amount: rules[id].amount(code),
+		pagesFiledField: pagesFiledFields[id]
 	};
 	return [code, definition];
 })) as Record<IncomeCode, IncomeForm>;
@@ -205,7 +211,50 @@ function roundIncomeAmounts(form: IncomeForm, values: Values): Values {
 export function calculateIndividualIncome(form: IncomeForm, values: Values): Values {
 	const filing = annualFilingFields[form.code];
 	const inputs = filing && !isShortFilingPeriod(filing, values) ? { ...values, [filing.month]: '12' } : values;
-	return rules[form.code as IncomeCode].calculate(form.code, roundIncomeAmounts(form, inputs));
+	const code = form.code as IncomeCode;
+	const calculated = rules[code].calculate(code, roundIncomeAmounts(form, inputs));
+	if (!form.pagesFiledField) return calculated;
+
+	const sourcePages = new Set(importedFields[code].map(field => field.page));
+	const attachment = hasActivityAttachment(form, calculated);
+	const pages = [...sourcePages].filter(page => /^\d+$/.test(page) || attachment);
+	return { ...calculated, [form.pagesFiledField]: String(pages.length) };
+}
+
+/** Fields written by calculation keep their display role even if an older draft lacks their sources. */
+export function incomeCalculatedFields(form: IncomeForm, values: Values): Set<string> {
+	const selectors = Object.fromEntries(incomeEditorFields(form)
+		.filter(field => field.kind === 'select' || field.kind === 'radio')
+		.map(field => [field.id, values[field.id] ?? '']));
+	if (form.code === '1701' || form.code === '1701v2018') {
+		const fields = new Set<string>();
+		calculateAnnual(form.code, selectors, fields);
+		if (form.pagesFiledField) fields.add(form.pagesFiledField);
+		return fields;
+	}
+
+	const fields = new Set(Object.keys(calculateIndividualIncome(form, selectors)).filter(id => !(id in selectors)));
+	if (form.code === '1700') {
+		fields.add('frm1700:txtPg2Pt4I8C1');
+		fields.add('frm1700:txtPg2Pt4I8C2');
+	}
+	return fields;
+}
+
+export function hasActivityAttachment(form: IncomeForm, values: Values): boolean {
+	if (form.code !== '1701' && form.code !== '1701v2018') return false;
+
+	const june = form.code === '1701';
+	const taxpayerElections = june
+		? ['rdoPg1Pt1I22IncomeExempt', 'rdoPg1Pt1I23IncomeSpecial']
+		: ['rdoPg1I19IncomeExempt', 'rdoPg1I20IncomeSpecial'];
+	const spouseElections = june
+		? ['rdoPg4Pt7I107YesNo', 'rdoPg4Pt7I108YesNo']
+		: ['rdoPg2I10IncomeExempt', 'rdoPg2I11IncomeSpecial'];
+	const selected = (election: string) => values['frm1701:' + election] === 'Yes';
+
+	return taxpayerElections.some(selected) ||
+		(incomeIncludesSpouse(form.code, values) && spouseElections.some(selected));
 }
 
 export function incomePaymentFieldIds(code: string): Set<string> {
@@ -310,7 +359,7 @@ export function validateIndividualIncome(form: IncomeForm, values: Values): Valu
 	const emailError = taxpayerEmailError(values[email] ?? '', true);
 	if (emailError) errors[email] = emailError;
 	for (const field of form.fields) {
-		if (paymentFields.has(field.id)) continue;
+		if (field.id === form.pagesFiledField || paymentFields.has(field.id)) continue;
 		if (form.quarter && !quarterlyIncomeFieldApplies(form.code, field.id, values)) continue;
 		if (form.code === '1700v2018' && !revised1700FieldApplies(field.id, values)) continue;
 		const value = values[field.id]?.trim();

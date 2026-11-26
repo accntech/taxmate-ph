@@ -148,7 +148,7 @@ test('1701-MS links an incomplete schedule to its source and links summary credi
 	await expect(creditJump).toBeVisible();
 	await creditJump.click();
 	await expect(page.locator(id('txtTotalTaxCreditsPaymentsPartVNo10a'))).toBeFocused();
-	await expect(page.getByRole('combobox', { name: 'Go to section' })).toBeVisible();
+	await expect(page.getByRole('combobox', { name: 'Go to section', exact: true })).toHaveCount(0);
 	await expect(page.getByRole('table', { name: /Business income at/ })).toHaveCount(0);
 	await page.getByRole('button', { name: 'Choose taxpayer income source' }).click();
 	await expect(page.getByRole('radio', { name: 'Income from business' })).toBeFocused();
@@ -179,11 +179,11 @@ test('1701-MS keeps both filers in mixed-rate tables and seven-digit amounts rea
 	await expect(flat.locator('tr[data-income-item="19"]').getByRole('cell').nth(2)).toHaveText('—');
 	const spouseDeductions = page.getByRole('region', { name: 'Item 10B · Special deductions · Spouse', exact: true });
 	await expect(page.getByRole('region', { name: 'Item 10B · Special deductions · Taxpayer', exact: true })).toHaveCount(0);
-	await spouseDeductions.getByRole('button', { name: 'Add first line item', exact: true }).click();
+	await spouseDeductions.getByRole('button', { name: 'Add item', exact: true }).click();
 	const spouseDrawer = page.getByRole('dialog', { name: 'Item 10B · Special deductions · Spouse', exact: true });
 	await expect(spouseDrawer.getByRole('textbox', { name: 'Description' })).toHaveAttribute('id', 'frm1701MS:sched410A2:Description0');
 	await spouseDrawer.getByRole('button', { name: 'Cancel', exact: true }).click();
-	await expect(spouseDeductions.getByRole('button', { name: 'Add first line item', exact: true })).toBeFocused();
+	await expect(spouseDeductions.getByRole('button', { name: 'Add item', exact: true })).toBeFocused();
 	await page.setViewportSize({ width: 390, height: 920 });
 	await page.keyboard.press('Escape');
 	const scrollRegion = page.getByRole('region', { name: 'Part IV.B2 · Business income at 8% columns' });
@@ -201,6 +201,55 @@ test('1701-MS keeps both filers in mixed-rate tables and seven-digit amounts rea
 	});
 	expect(fits).toBe(true);
 	expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+});
+
+test('1701-MS edits Item 9 inline beside Item 7 and reopens both filers’ credits', async ({ page }, info) => {
+	await seedWorkspace(page, 'light', 'loaded', { ...single, civilStatus: 'Married',
+		spouse: { taxpayerName: 'SANTOS, JAMIE, CRUZ', tin1: '009', tin2: '876', tin3: '543', branchCode: '00000' }
+	}, [{
+		id: 'inline-credits', taxpayerId, formCode: '1701MS', returnPeriod: '2025', status: 'Draft', finalFlag: '0',
+		updatedAt: 1794441600000, values: {
+			'frm1701MS:txtYearNo1': '2025', 'frm1701MS:civilStatus': 'Married', 'frm1701MS:txtIfMarried': '1',
+			'frm1701MS:sourceOfIncomeTaxpayer': '1', 'frm1701MS:txtTaxpayerNo12a': '2', methodOfDeductionMain: 'itemized',
+			'frm1701MS:sourceOfIncomeSpouse': '3', 'frm1701MS:txtTaxpayerNo12b': '2', methodOfDeductionStandard: 'itemized2',
+			'frm1701MS:addOtherCreditsPayments': 'Existing credit',
+			'frm1701MS:txtOtherCreditsPaymentsNo9a': '125'
+		}
+	}]);
+	await page.goto(`${route}?return=inline-credits`);
+	await expect(page.getByRole('navigation', { name: 'Return pages' })).toBeVisible({ timeout: 45000 });
+	await goToReturnPage(page, 2);
+	const table = page.getByRole('table', { name: 'Part V · Tax credits and payments', exact: true });
+	const row = table.locator('[data-income-item="9"]');
+	const description = row.locator(id('addOtherCreditsPayments'));
+	const taxpayer = row.locator(id('txtOtherCreditsPaymentsNo9a'));
+	const spouse = row.locator(id('txtOtherCreditsPaymentsNo9b'));
+	await expect(table.locator('[data-income-item="7"]').locator(id('addForeignTaxCredits'))).toBeEditable();
+	await expect(description).toHaveValue('Existing credit');
+	await expect(taxpayer).toHaveValue('125');
+	await expect(spouse).toBeEditable();
+	await description.fill('Payment certificate');
+	await taxpayer.fill('150');
+	await spouse.fill('225');
+	await spouse.blur();
+	await expect(table.locator(id('txtTotalTaxCreditsPaymentsPartVNo10a'))).toHaveText('₱150');
+	await expect(table.locator(id('txtTotalTaxCreditsPaymentsPartVNo10b'))).toHaveText('₱225');
+	await expect(page.getByRole('dialog')).toHaveCount(0);
+	for (const width of [1440, 390]) {
+		await page.setViewportSize({ width, height: 920 });
+		expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+		await page.locator('section.income-section').filter({ has: table }).screenshot({
+			path: info.outputPath(`1701ms-inline-credit-${width}.png`), animations: 'disabled',
+			style: '.eq-action-bar { position: static !important; }'
+		});
+	}
+	await page.getByRole('button', { name: 'Save draft', exact: true }).click();
+	await expect(page).toHaveURL(/\/forms$/);
+	await page.getByRole('row').filter({ hasText: '1701MS' }).getByRole('link', { name: 'Edit', exact: true }).click();
+	await goToReturnPage(page, 2);
+	await expect(description).toHaveValue('Payment certificate');
+	await expect(taxpayer).toHaveValue('150');
+	await expect(spouse).toHaveValue('225');
 });
 
 test('1701-MS keeps the preferential rate in its numbered business schedule', async ({ page }) => {
@@ -251,10 +300,17 @@ for (const width of [1440, 390]) {
 		await expect(subtotal).toHaveJSProperty('tagName', 'OUTPUT');
 		await expect(subtotal).toHaveText('₱225');
 		await expect(page.locator(id('txtNetOperatingLossNo10a'))).toBeEditable();
-		await schedule.getByRole('button', { name: 'Add deduction details' }).click();
-
+		const openDrawer = schedule.getByRole('button', { name: 'Add item' });
 		const drawer = page.getByRole('dialog', { name: label, exact: true });
-		const add = drawer.getByRole('button', { name: 'Add', exact: true });
+		const description = drawer.getByRole('textbox', { name: 'Description' });
+		await openDrawer.click();
+		await expect(description).toBeFocused();
+		await drawer.getByRole('button', { name: 'Close', exact: true }).click();
+		await expect(drawer).toBeHidden();
+
+		await openDrawer.click();
+		await expect(description).toBeFocused();
+		const add = drawer.getByRole('button', { name: 'Add item', exact: true });
 		await add.click();
 		await expect(drawer.getByRole('textbox', { name: 'Description' })).toBeFocused();
 		await expect(drawer.getByText('Enter the legal basis for the special deduction.', { exact: true })).toBeVisible();
@@ -264,7 +320,7 @@ for (const width of [1440, 390]) {
 		await add.click();
 		await expect(subtotal).toHaveText('₱225');
 
-		await schedule.getByRole('button', { name: 'Add line item' }).click();
+		await schedule.getByRole('button', { name: 'Add item' }).click();
 		await drawer.getByRole('textbox', { name: 'Description' }).fill('Sample deductible expense');
 		await drawer.getByRole('textbox', { name: 'Legal basis' }).fill('Sample legal basis');
 		await drawer.getByRole('textbox', { name: 'Amount' }).fill('1200');

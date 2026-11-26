@@ -1,8 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { getIndividualIncomeForm } from '../../../lib/forms/individual-income';
+import { getIndividualIncomeForm, hasActivityAttachment } from '../../../lib/forms/individual-income';
 import { incomeEditorFields } from '../../../lib/forms/individual-income/editor-layout';
 import { annual1701ReferenceOwner, annual1701References } from '../../../lib/forms/individual-income/annual-1701-references';
-import { hasActivityAttachment } from '../../../lib/forms/individual-income/paper';
 
 const p = 'frm1701:';
 

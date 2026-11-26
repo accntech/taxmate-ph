@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { calculateAnnual, validateAnnual } from "../../../lib/forms/individual-income/annual";
-import { getReturnExportValues } from "../../../lib/forms/form-runtime";
+import { getReturnExportValues, validateReturnValues } from "../../../lib/forms/form-runtime";
 import { getIndividualIncomeForm } from "../../../lib/forms/individual-income";
 import { incomeEditorFields } from "../../../lib/forms/individual-income/editor-layout";
 import { validate1701ScheduleRow } from "../../../lib/forms/individual-income/annual-1701-schedule-validation";
@@ -9,7 +9,36 @@ const p = "frm1701:";
 const values = (fields: Record<string, string>) =>
   Object.fromEntries(Object.entries(fields).map(([name, value]) => [p + name, value]));
 
+describe("Legacy individual return page counts", () => {
+  const compensationCount = "frm1700:txtPg1Pt2NumberofPagesFiled";
+  const annualCount = p + "txtPg1Pt2I33PagesFilled";
+
+  it("calculates four pages for 1700 even with an invalid saved count", () => {
+    const draft = { [compensationCount]: "invalid" };
+    expect(getReturnExportValues("1700", draft)[compensationCount]).toBe("4");
+    expect(validateReturnValues("1700", draft)[compensationCount]).toBeUndefined();
+  });
+
+  it("counts the five activity pages only when applicable to 1701", () => {
+    const draft = values({ txtPg1Pt2I33PagesFilled: "99", rdoPg4Pt7I107YesNo: "Yes" });
+    expect(getReturnExportValues("1701", draft)[annualCount]).toBe("12");
+    expect(getReturnExportValues("1701", { ...draft, [p + "rdoPg1Pt1I16FilingStatus"]: "Joint" })[annualCount]).toBe("17");
+    expect(getReturnExportValues("1701", { ...draft, [p + "rdoPg1Pt1I22IncomeExempt"]: "Yes" })[annualCount]).toBe("17");
+  });
+});
+
 describe("Form 1701 filing transitions", () => {
+  it.each(["txtPg3Pt5I79LessPortion", "txtPg1Pt2I29PortionTax"])(
+    "reports an excess installment from %s at the editable Item 79",
+    (field) => {
+      const draft = values({ txtPg1I1Year: "2017", [field]: "12500" });
+      const errors = validateAnnual("1701", draft);
+      expect(errors[p + "txtPg3Pt5I79LessPortion"]).toBe("Deferred tax cannot exceed 50% of Item 26.");
+      expect(errors[p + "txtPg1Pt2I29PortionTax"]).toBeUndefined();
+      expect(Number(calculateAnnual("1701", draft)[p + "txtPg1Pt2I29PortionTax"])).toBe(12500);
+    },
+  );
+
   it("uses the calculated current-year loss when validating an application", () => {
     const code = "1701v2018";
     const scheduleFields = incomeEditorFields(getIndividualIncomeForm(code)!)

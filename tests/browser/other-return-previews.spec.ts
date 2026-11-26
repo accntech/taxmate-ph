@@ -12,6 +12,10 @@ const codes = [
 	'1700', '1700v2018', '1701', '1701v2018', '1701A', '1701MS', '1701Q', '1701Qv2018'
 ];
 const list = `/ebirforms/taxpayers/${taxpayerId}/forms`;
+const legacyPageCountIds: Record<string, string> = {
+	'1700': 'txtPg1Pt2NumberofPagesFiled',
+	'1701': 'txtPg1Pt2I33PagesFilled'
+};
 const withholdingPages: Record<string, number> = {
 	'1600PTv2018': 2, '1600VTv2018': 2, '1601Cv2018': 2, '1601F': 2, '1601FQ': 2,
 	'1602': 2, '1602Qv2018': 3, '1603Qv2018': 2, '1604Ev2018': 2, '1604F': 2
@@ -145,11 +149,12 @@ for (const { code, variant } of previewCases) {
 				values[incomeForm.year] = ['1700', '1701', '1701Q'].includes(code) ? '2017' : '2025';
 				const amounts: Record<string, Record<string, string>> = {
 					1700: { 'frm1700:txtPg2Pt4I1NameOfEmployer': 'EXAMPLE ENGINEERING SERVICES', 'frm1700:rdoPg2Pt4I1Employer': 'frm1700:rdoPg2Pt4I1TaxFiler',
-						'frm1700:txtPg2Pt4I1ComIncomeC1': '820000', 'frm1700:txtPg3Pt5I7C1': 'SAMPLE PARCEL', 'frm1700:txtPg3Pt5I10C1': '50000' },
+						'frm1700:txtPg2Pt4I1ComIncomeC1': '820000', 'frm1700:txtPg3Pt5I7C1': 'SAMPLE PARCEL', 'frm1700:txtPg3Pt5I10C1': '50000',
+						'frm1700:txtPg1Pt2NumberofPagesFiled': '99' },
 					'1700v2018': { 'frm1700:rdoPg1I6TaxpayerType': 'Employee', 'frm1700:txtPg2I1PartVIEmployerName1': 'EXAMPLE ENGINEERING SERVICES', 'frm1700:txtPg2ISched1c_1REG': '900000', 'frm1700:txtPg2ISched1e_1TW': '78900' },
 					1701: { 'frm1701:rdoPg1Pt1I4ATC': 'Business', 'frm1701:txtPg5Sc2I1TaxPayerC1': '920000', 'frm1701:txtPg5Sc2I4TaxPayerC1': '25000',
 						'frm1701:txtPg9Sc9I1TaxPayerC1': '500000', 'frm1701:rdoPg1Pt2Overpayment': 'frm1701:rdoPg1Pt2OverpaymentRefunded',
-						'frm1701:txtPg1Pt2I33PagesFilled': '12', 'frm1701:rdoPg1I34CTCGovID': 'frm1701:rdoPg1I34CTC',
+						'frm1701:txtPg1Pt2I33PagesFilled': '99', 'frm1701:rdoPg1I34CTCGovID': 'frm1701:rdoPg1I34CTC',
 						'frm1701:txtPg1Pt2I34CTC': '00123456', 'frm1701:txtPg1Pt2I35Month': '02/14/2018',
 						'frm1701:txtPg1Pt2I36PlaceOfIssue': 'MAKATI CITY', 'frm1701:txtPg1Pt2I37AmountIfCTC': '125.50' },
 					'1701v2018': { 'frm1701:rdoPg1I7ATC': 'II012', 'frm1701:rdoPg1I21AMethodDeduction': 'OSD', 'frm1701:txtPg2IShed3_8A': '1250000' },
@@ -230,10 +235,15 @@ for (const { code, variant } of previewCases) {
 		const directory = output && resolve(output, variant ? `${code}-${variant}` : code);
 		if (directory) await mkdir(directory, { recursive: true });
 		const form = page.getByRole('region', { name: `BIR Form ${code} workspace`, exact: true });
+		const pageCountId = legacyPageCountIds[code];
 		for (const width of [1440, 390]) {
 			await page.setViewportSize({ width, height: 1000 });
 			await page.goto(`${list}/${code}?return=preview-return`);
 			await expect(form).toBeVisible({ timeout: 20000 });
+			if (pageCountId) {
+				await expect(form.getByText('Number of pages filed', { exact: true })).toHaveCount(0);
+				await expect(form.locator(`[id="frm${code}:${pageCountId}"]`)).toHaveCount(0);
+			}
 			const header = form.locator('.paper-form-header');
 			const title = header.getByRole('heading', { level: 1 });
 			await expect(title).toBeVisible();
@@ -326,6 +336,10 @@ for (const { code, variant } of previewCases) {
 		const pagination = Number(/^Pages:\s+(\d+)/m.exec(info)?.[1]);
 		const frames = await print.locator('.withholding-print-page').count();
 		expect(pagination).toBe(frames || 1);
+		if (pageCountId) {
+			expect(pagination).toBe(code === '1700' ? 4 : variant === 'activity' ? 17 : 12);
+			await expect(print.locator(`[data-legacy-print-id="${pageCountId}"]`)).toHaveText(String(pagination));
+		}
 		const text = execFileSync('pdftotext', ['-layout', '-', '-'], { input: pdf, encoding: 'utf8' });
 		expect(text.replace(/\s+/g, ' ')).toContain(code === '1701' || code === '1700' ? 'SANTOS' : profile.taxpayerName);
 		expect(text.match(/FICTIONAL SAMPLE - FOR REVIEW ONLY/g)).toHaveLength(pagination);

@@ -33,6 +33,16 @@ async function enableAttachments(page: Page) {
 	await page.getByRole('radiogroup', { name: /Income subject to a special rate\?/i }).getByRole('radio', { name: 'Yes', exact: true }).check();
 }
 
+async function chooseDeduction(page: Page, query: string, label: string, pickerName = 'Add a deduction') {
+	const picker = page.getByRole('combobox', { name: pickerName, exact: true });
+	await picker.press('Enter');
+	const search = page.getByPlaceholder('Search deductions', { exact: true });
+	await expect(search).toBeFocused();
+	await search.fill(query);
+	await expect(page.getByRole('option', { name: label, exact: true })).toBeVisible();
+	await search.press('Enter');
+}
+
 async function expandSections(page: Page) {
 	const closed = page.locator('.income-editor details:not([open]) > summary');
 	while (await closed.count()) await closed.first().click();
@@ -53,6 +63,145 @@ async function captureEvidence(page: Page, name: string) {
 		style: '.eq-action-bar, .window-titlebar, .skip-link { visibility: hidden !important; }'
 	});
 }
+
+test('June 1701 filing details end in one full-width divider below the ATC field', async ({ page }, info) => {
+	test.setTimeout(120_000);
+	await seedWorkspace(page, 'dark', 'loaded', profile);
+	await page.setViewportSize({ width: 1680, height: 900 });
+	await page.goto(`${list}/1701?new=true`);
+	const filing = page.getByRole('region', { name: 'Filing details', exact: true }).locator('.return-filing');
+	const atc = filing.locator('[data-income-item="4"]');
+	await expect(atc).toBeVisible({ timeout: 90_000 });
+	const rightGutter = await atc.evaluate(row => row.parentElement!.getBoundingClientRect().right - row.getBoundingClientRect().right);
+	expect(rightGutter).toBeGreaterThan(0);
+	await expect(filing).toHaveCSS('border-block-end-width', '1px');
+	await expect(atc).toHaveCSS('border-block-end-width', '0px');
+	await expect(filing.locator('[data-income-item="3"]')).toHaveCSS('border-block-end-width', '1px');
+	await filing.screenshot({ path: info.outputPath('filing-divider-desktop.png'), animations: 'disabled' });
+
+	for (const width of [1100, 390]) {
+		await page.setViewportSize({ width, height: 900 });
+		await expect(filing).toHaveCSS('border-block-end-width', '0px');
+		await expect(atc).toHaveCSS('border-block-end-width', '1px');
+	}
+	await filing.screenshot({ path: info.outputPath('filing-divider-narrow.png'), animations: 'disabled' });
+});
+
+test('January 1701 edits non-operating income in separate Items 19 and 20', async ({ page }, info) => {
+	await openReturn(page, '1701v2018', 1440, true);
+	await goToReturnPage(page, 2);
+	const field = (suffix: string) => page.locator(`[id="frm1701:txtPg2IShed3_${suffix}"]`);
+	for (const [item, label, taxpayer, spouse] of [
+		[19, 'Rental income', '1200', '300'],
+		[20, 'Interest income', '450', '600']
+	] as const) {
+		const description = field(`${item}Desc`);
+		await expect(description).toBeEditable();
+		const row = page.locator(`tr[data-income-item="${item}"]`).filter({ has: description });
+		await expect(row.locator('td').first()).toHaveText(String(item));
+		await expect(description).toHaveAttribute('maxlength', '100');
+		await description.fill(label);
+		await field(`${item}A`).fill(taxpayer);
+		await field(`${item}B`).fill(spouse);
+		await field(`${item}B`).blur();
+	}
+	await expect(field('22A')).toHaveText('₱1,650');
+	await expect(field('22B')).toHaveText('₱900');
+	await expect(page.getByRole('dialog')).toHaveCount(0);
+	for (const width of [1440, 390]) {
+		await page.setViewportSize({ width, height: 920 });
+		expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+		await field('19Desc').scrollIntoViewIfNeeded();
+		await page.screenshot({ path: info.outputPath(`1701v2018-inline-19-20-${width}.png`), animations: 'disabled' });
+	}
+});
+
+test('January 1701 edits Item 17D inline in Schedule 4', async ({ page }, info) => {
+	await seedWorkspace(page, 'light', 'loaded', profile, [{
+		id: 'inline-services', taxpayerId, formCode: '1701v2018', returnPeriod: '2025', status: 'Draft', finalFlag: '0',
+		updatedAt: 1794441600000, values: {
+			'frm1701:txtPg1I1Year': '2025',
+			'frm1701:rdoPg1I7ATC': 'II012',
+			'frm1701:rdoPg1I21AMethodDeduction': 'Itemized',
+			'frm1701:txtPg3IShed4_17dDesc': 'Existing services',
+			'frm1701:txtPg3IShed4_17dA': '750'
+		}
+	}]);
+	await page.goto(`${list}/1701v2018?return=inline-services`);
+	await expect(page.getByRole('navigation', { name: 'Return pages' })).toBeVisible({ timeout: 45000 });
+	await goToReturnPage(page, 3);
+	const schedule = page.getByRole('region', { name: 'Schedule 4 · Ordinary itemized deductions', exact: true });
+	const row = schedule.locator('[data-income-item="17D"]');
+	const description = row.locator('[id="frm1701:txtPg3IShed4_17dDesc"]');
+	const amount = row.locator('[id="frm1701:txtPg3IShed4_17dA"]');
+	await expect(description).toHaveValue('Existing services');
+	await expect(amount).toHaveValue('750');
+	await description.fill('Equipment maintenance');
+	await amount.fill('900');
+	await amount.blur();
+	await expect(schedule.locator('[id="frm1701:txtPg3IShed4_18A"]')).toHaveText('₱900');
+	await expect(page.getByRole('dialog')).toHaveCount(0);
+	for (const width of [1440, 390]) {
+		await page.setViewportSize({ width, height: 920 });
+		expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+		await row.screenshot({
+			path: info.outputPath(`1701v2018-inline-17d-${width}.png`), animations: 'disabled',
+			style: '.eq-action-bar { position: static !important; }'
+		});
+	}
+});
+
+test('January 1701 edits Part VII Item 9 inline', async ({ page }, info) => {
+	await openReturn(page, '1701v2018');
+	await goToReturnPage(page, 4);
+	const field = (item: string) => page.locator(`[id="frm1701:txtPg4IPart7_${item}"]`);
+	const description = field('9Specify');
+	await expect(description).toBeEditable();
+	const row = page.locator('tr[data-income-item="9"]').filter({ has: description });
+	await expect(row.getByRole('rowheader')).toContainText(/other tax credits/i);
+	await description.fill('Credit certificate');
+	await row.locator('[id="frm1701:txtPg4IPart7_9A"]').fill('250');
+	await row.locator('[id="frm1701:txtPg4IPart7_9A"]').blur();
+	await expect(field('10A')).toHaveText('₱250');
+	await expect(page.getByRole('dialog')).toHaveCount(0);
+	for (const width of [1440, 390]) {
+		await page.setViewportSize({ width, height: 920 });
+		expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+		await row.screenshot({
+			path: info.outputPath(`1701v2018-inline-part-vii-9-${width}.png`), animations: 'disabled',
+			style: '.eq-action-bar { position: static !important; }'
+		});
+	}
+});
+
+test('1701 operating-loss headings and totals share one divider', async ({ page }) => {
+	await openReturn(page, '1701v2018');
+	await goToReturnPage(page, 3);
+	const computation = page.getByRole('region', { name: 'Schedule 6 · Computation of net operating loss', exact: true });
+	for (const width of [390, 1280]) {
+		await page.setViewportSize({ width, height: 900 });
+		await expect(computation.locator('header')).toHaveCSS('border-block-end-width', '1px');
+		await expect(computation.locator('.schedule-drawer-summary')).toHaveCSS('border-block-start-width', '0px');
+	}
+});
+
+test('1701 empty deduction schedules share the heading and summary rules', async ({ page }) => {
+	await openReturn(page, '1701v2018');
+	await goToReturnPage(page, 3);
+	const deductions = page.getByRole('region', { name: 'Schedule 5 · Special deductions · Taxpayer', exact: true });
+	const empty = deductions.getByText('No items added', { exact: true });
+	await expect(deductions.locator('header')).toHaveCSS('border-block-end-width', '1px');
+	await expect(empty).toHaveCSS('border-block-start-width', '0px');
+	await expect(empty).toHaveCSS('border-block-end-width', '0px');
+	for (const width of [1440, 390]) {
+		await page.setViewportSize({ width, height: 960 });
+		await expect(empty).toHaveCSS('text-align', 'start');
+		await expect(empty).toHaveCSS('font-weight', '400');
+		await expect(empty).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+		await expect(deductions.getByRole('button', { name: 'Add item', exact: true })).toBeEnabled();
+	}
+	await expect(deductions.locator('.schedule-drawer-summary')).toHaveCSS('border-block-start-width', '1px');
+});
 
 for (const code of ['1701', '1701v2018']) {
 	test(`${code} joint mobile references name each filer and open the matching amount`, async ({ page }) => {
@@ -84,7 +233,7 @@ test('June 1701 item reference opens and focuses the tax-due calculation', async
 	const taxDue = page.getByRole('table', { name: 'Calculated tax amounts' }).getByRole('row', { name: /^26 / });
 	await taxDue.getByRole('button', { name: 'From Item 72A · Taxpayer', exact: true }).click();
 	await expect(page.locator('[id="frm1701:txtPg3Pt5I72TotalIncomeTaxC1"]')).toBeFocused();
-	await expect(page.getByText('Page 3 of 12', { exact: true })).toBeVisible();
+	await expect(page.getByRole('button', { name: 'Find a page, page 3 of 12', exact: true })).toBeVisible();
 	await goToReturnPage(page, 1);
 	await expect(page.getByRole('textbox', { name: 'Filing year', exact: true })).toHaveValue('2017');
 });
@@ -96,7 +245,7 @@ test('January 1701 item reference reaches the tax-credit total by keyboard on mo
 	await reference.focus();
 	await reference.press('Enter');
 	await expect(page.locator('[id="frm1701:txtPg4IPart7_10A"]')).toBeFocused();
-	await expect(page.getByRole('navigation', { name: 'Return pages' }).locator('.page-summary > .page-count')).toHaveText(['4', '4']);
+	await expect(page.getByRole('navigation', { name: 'Return pages' }).getByRole('button', { name: /^Find a page,/ })).toHaveText('Page 4 of 4');
 });
 
 test('January 1701 links to separate activity inputs only for multiple activities', async ({ page }) => {
@@ -104,6 +253,7 @@ test('January 1701 links to separate activity inputs only for multiple activitie
 	await enableAttachments(page);
 	await goToReturnPage(page, 5);
 	const consolidation = page.getByRole('table', { name: 'Schedule B · Consolidated income tax', exact: true });
+	await page.getByRole('button', { name: /Show \d+ more income items/ }).click();
 	const activityReference = consolidation.getByRole('button', { name: 'From Part XI, Schedule B, Item 1A · Taxpayer', exact: true });
 	await expect(consolidation.getByRole('button', { name: 'From Schedule C, Item 18B · Taxpayer', exact: true })).toBeVisible();
 	await expect(activityReference).toHaveCount(0);
@@ -112,16 +262,19 @@ test('January 1701 links to separate activity inputs only for multiple activitie
 	await expect(page.locator('[id="frm1701:txtPg3mSchedB_1ATYPE"]')).toBeFocused();
 });
 
-test('June 1701 keeps the first amount visible beside optional descriptions on mobile', async ({ page }) => {
+test('June 1701 keeps optional descriptions and their amounts within the mobile drawer', async ({ page }) => {
 	await openReturn(page, '1701', 390);
 	await enableAttachments(page);
 	await goToReturnPage(page, 16);
 	const deductions = page.getByRole('table', { name: /Schedule H .*Ordinary itemized deductions/ });
-	const amount = deductions.locator('[id="frm1701:txtPg4mScHI36C2TYPE"]');
-	const description = deductions.locator('[id="frm1701:txtPg4mScHI36NatureOfIncomeC1TYPE"]');
+	await deductions.locator('[data-record-fields~="frm1701:txtPg4mScHI36NatureOfIncomeC1TYPE"]').click();
+	const drawer = page.getByRole('dialog', { name: 'Add item', exact: true });
+	const amount = drawer.locator('[id="frm1701:txtPg4mScHI36C2TYPE"]');
+	const description = drawer.locator('[id="frm1701:txtPg4mScHI36NatureOfIncomeC1TYPE"]');
 	await expect(description).toBeVisible();
+	await expect(amount).toBeVisible();
 	const amountInView = await amount.evaluate(input =>
-		input.getBoundingClientRect().right <= input.closest('.regime-viewport')!.getBoundingClientRect().right
+		input.getBoundingClientRect().right <= input.closest('dialog')!.getBoundingClientRect().right
 	);
 	expect(amountInView).toBe(true);
 });
@@ -207,11 +360,15 @@ for (const code of ['1701', '1701v2018']) {
 test('1701 January single-filer employer records its sole earner without an extra choice', async ({ page }) => {
 	await openReturn(page, '1701v2018');
 	await goToReturnPage(page, 2);
-	const employer = page.getByRole('region', { name: 'Schedule 1 · Employer 1', exact: true });
+	await page.getByRole('region', { name: 'Employers', exact: true }).getByRole('button', { name: 'Add employer', exact: true }).click();
+	const employer = page.getByRole('dialog', { name: 'Add employer', exact: true });
 	await expect(employer.getByRole('radiogroup', { name: 'Income earner', exact: true })).toHaveCount(0);
 	await expect(employer).toContainText('Taxpayer');
+	await employer.getByRole('textbox', { name: 'Employer name · Taxpayer', exact: true }).fill('Example Employer');
+	await employer.getByRole('textbox', { name: 'Employer TIN and branch code', exact: true }).fill('11122233300000');
 	await employer.locator('[id="frm1701:txtPg2IShed1c_1CI"]').fill('500000');
-	await employer.locator('[id="frm1701:txtPg2IShed1c_1CI"]').blur();
+	await employer.getByRole('button', { name: 'Add item', exact: true }).click();
+	await expect(employer).toBeHidden();
 	await page.getByRole('button', { name: 'Save draft', exact: true }).click();
 	await expect(page).toHaveURL(/\/forms$/);
 	const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('ebirforms-created-returns-v1')!).returns.find((record: { formCode: string }) => record.formCode === '1701v2018').values);
@@ -242,11 +399,14 @@ test('1701 January overpayment uses a select while preserving refund codes', asy
 for (const width of [1440, 390]) {
 	test(`1701 consolidated amounts display a populated value completely at ${width}px`, async ({ page }) => {
 		await openReturn(page, '1701', width);
+		await goToReturnPage(page, 5);
+		const source = page.locator('[id="frm1701:txtPg5Sc2I1TaxPayerC1"]');
+		await source.fill('123456789');
+		await source.blur();
 		await goToReturnPage(page, 12);
-		const amount = page.locator('[id="frm1701:txtPg12Pt9I1SalesC1"]');
-		await amount.fill('123456789.12');
-		await amount.blur();
-		const size = await amount.evaluate((input: HTMLInputElement) => ({ client: input.clientWidth, scroll: input.scrollWidth }));
+		const amount = page.locator('output[id="frm1701:txtPg12Pt9I1SalesC1"]');
+		await expect(amount).toHaveText('₱123,456,789');
+		const size = await amount.locator('..').evaluate(cell => ({ client: cell.clientWidth, scroll: cell.scrollWidth }));
 		expect(size.client).toBeGreaterThanOrEqual(size.scroll);
 		expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
 		await captureEvidence(page, `2013-06-regimes-${width}-left`);
@@ -256,16 +416,16 @@ for (const width of [1440, 390]) {
 }
 
 for (const [code, field] of [
-	['1701', 'frm1701:txtPg2Pt4I41GrossCompensationC1'],
+	['1701', 'frm1701:txtPg2Pt4I42LessNonC1'],
 	['1701v2018', 'frm1701:txtPg2IShed3_8A']
 ]) {
-	test(`${code} mobile schedule shows the complete formatted amount after blur`, async ({ page }) => {
+	test(`${code} mobile schedule shows the complete whole-peso amount after blur`, async ({ page }) => {
 		await openReturn(page, code, 390);
 		await goToReturnPage(page, 2);
 		const amount = page.locator(`[id="${field}"]`);
 		await amount.fill('123456789.12');
 		await amount.blur();
-		await expect(amount).toHaveValue('123,456,789.12');
+		await expect(amount).toHaveValue('123,456,789');
 		const size = await amount.evaluate((input: HTMLInputElement) => ({ client: input.clientWidth, scroll: input.scrollWidth }));
 		expect(size.client).toBeGreaterThanOrEqual(size.scroll);
 		await captureEvidence(page, `${code}-mobile-formatted-amount`);
@@ -279,25 +439,54 @@ test('1701 January consolidation identifies each taxpayer and regime column', as
 	await expandSections(page);
 	const schedule = page.getByRole('table', { name: /Schedule A.*Basis of Tax Relief/i });
 	await expect(schedule).toBeVisible();
-	await expect(schedule).toContainText(/Taxpayer/);
-	await expect(schedule).toContainText(/Spouse/);
+	const filer = page.getByRole('combobox', { name: 'Editing details for' });
+	const taxpayerAgency = page.locator('[id="frm1701:txtPg1mI1ASchdA"]');
+	const spouseAgency = page.locator('[id="frm1701:txtPg1mI1DSchdA"]');
+	await expect(taxpayerAgency).toBeVisible();
+	await taxpayerAgency.fill('Taxpayer agency');
+	await filer.selectOption('spouse');
+	await expect(taxpayerAgency).toBeHidden();
+	await spouseAgency.fill('Spouse agency');
+	await filer.selectOption('taxpayer');
+	await expect(taxpayerAgency).toHaveValue('Taxpayer agency');
+	await expect(spouseAgency).toBeHidden();
 	for (const regime of ['Exempt', 'Special', 'Regular']) await expect(schedule).toContainText(regime);
 	await captureEvidence(page, '2018-01-joint-consolidation-05');
 	await goToReturnPage(page, 6);
+	const picker = page.getByRole('combobox', { name: 'Add a deduction', exact: true });
+	const showAll = page.getByRole('button', { name: 'Show all 20 deduction items', exact: true });
+	await expect(picker).toBeVisible();
+	await expect(showAll).toBeVisible();
+	const [pickerBounds, buttonBounds] = await Promise.all([picker.boundingBox(), showAll.boundingBox()]);
+	expect(buttonBounds!.x).toBeGreaterThan(pickerBounds!.x + pickerBounds!.width);
+	expect(Math.abs(buttonBounds!.y - pickerBounds!.y)).toBeLessThanOrEqual(1);
+	expect(Math.abs(buttonBounds!.height - pickerBounds!.height)).toBeLessThanOrEqual(1);
+	await chooseDeduction(page, 'janitorial', '17A · Janitorial and messenger services');
 	const amount = page.locator('[id="frm1701:txtPg2mI17aASchdC"]');
+	await expect(amount).toBeFocused();
 	await amount.fill('123456789.12');
 	await amount.blur();
 	const size = await amount.evaluate((input: HTMLInputElement) => ({ client: input.clientWidth, scroll: input.scrollWidth }));
 	expect(size.client).toBeGreaterThanOrEqual(size.scroll);
+	await showAll.click();
+	await expect(page.getByRole('combobox', { name: 'Add a deduction', exact: true })).toBeHidden();
+	await page.getByRole('button', { name: 'Show entered deductions', exact: true }).click();
+	await expect(amount).toHaveValue('123,456,789');
+	await expect(page.getByRole('combobox', { name: 'Add a deduction', exact: true })).toHaveText('Choose a deduction');
 	await expect(page.locator('.income-editor')).not.toContainText(/(?:C[12]TYPE|\bm Sched|Desc Schd|LB Schd)/);
 	await captureEvidence(page, '2018-01-joint-consolidation-06');
+
+	await page.locator('summary').filter({ hasText: 'Consolidated special itemized deductions' }).click();
+	await chooseDeduction(page, '1 · Special itemized deduction', '1 · Special itemized deduction', 'Add a special deduction');
+	await expect(page.locator('[id="frm1701:txtPg2mI1DescSchdD"]')).toBeFocused();
 });
 
 test('1701 January matrix date segments fit beside the calendar button', async ({ page }) => {
 	await openReturn(page, '1701v2018');
 	await enableAttachments(page);
 	await goToReturnPage(page, 5);
-	const groups = page.locator('.column-schedule [data-slot="date-input"] [role="group"]');
+	await expandSections(page);
+	const groups = page.getByRole('table', { name: /Schedule A.*Basis of Tax Relief/i }).locator('[data-slot="date-input"] [role="group"]');
 	await expect(groups.first()).toBeVisible();
 	const defects = await groups.evaluateAll(elements => elements.flatMap(group => {
 		const outer = group.getBoundingClientRect();
@@ -314,7 +503,8 @@ test('1701 January matrix date segments fit beside the calendar button', async (
 test('1701 January joint employers retain the taxpayer and spouse earner choices', async ({ page }) => {
 	await openReturn(page, '1701v2018', 390, true);
 	await goToReturnPage(page, 2);
-	const employer = page.getByRole('region', { name: 'Schedule 1 · Employer 1', exact: true });
+	await page.getByRole('region', { name: 'Employers', exact: true }).getByRole('button', { name: 'Add employer', exact: true }).click();
+	const employer = page.getByRole('dialog', { name: 'Add employer', exact: true });
 	const earner = employer.getByRole('radiogroup', { name: 'Income earner', exact: true });
 	await expect(earner.getByRole('radio', { name: 'Taxpayer', exact: true })).toBeVisible();
 	await expect(earner.getByRole('radio', { name: 'Spouse', exact: true })).toBeVisible();
@@ -351,7 +541,7 @@ for (const { code, revision, total } of [
 			const editor = page.locator('.income-editor');
 			const pager = editor.getByRole('navigation', { name: 'Return pages' });
 			for (let number = 1; number <= total; number += 1) {
-				await expect(pager.locator('.page-summary > .page-count')).toHaveText([String(number), String(total)]);
+				await expect(pager.getByRole('button', { name: /^Find a page,/ })).toHaveText(`Page ${number} of ${total}`);
 				await expandSections(page);
 				await expect(editor.locator('details:not([open])')).toHaveCount(0);
 				const radios = await editor.getByRole('radiogroup').evaluateAll(groups => groups.map(group => ({
@@ -448,7 +638,7 @@ for (const { code, revision, total } of [
 					});
 				}
 			}
-			await expect(pager.locator('.page-summary > .page-count')).toHaveText([String(total), String(total)]);
+			await expect(pager.getByRole('button', { name: /^Find a page,/ })).toHaveText(`Page ${total} of ${total}`);
 			expect(checked).toBeGreaterThan(20);
 		});
 	}
@@ -470,8 +660,8 @@ for (const width of [1440, 390]) {
 		const action = (name: string, label: string) => section(name).getByRole('button', { name: label, exact: true });
 
 		await expect(field('5_1Desc')).toHaveCount(0);
-		await expect(section(special).getByText('No line items yet', { exact: true })).toBeVisible();
-		await action(special, 'Add first line item').click();
+		await expect(section(special).getByText('No items added', { exact: true })).toBeVisible();
+		await action(special, 'Add item').click();
 		const deductions = page.getByRole('dialog', { name: special, exact: true });
 		await expect(deductions).toBeVisible();
 		await expect.poll(async () => {
@@ -483,7 +673,7 @@ for (const width of [1440, 390]) {
 				aligned: [legal, amount].every(box => Math.abs(box.x - description.x) <= 1 && Math.abs(box.width - description.width) <= 1),
 			};
 		}).toEqual({ stacked: true, aligned: true });
-		const addDeduction = deductions.getByRole('button', { name: 'Add', exact: true });
+		const addDeduction = deductions.getByRole('button', { name: 'Add item', exact: true });
 		await addDeduction.click();
 		await expect(field('5_1Desc')).toBeFocused();
 		await expect(deductions.getByText('Enter the special deduction description.', { exact: true })).toBeVisible();
@@ -494,7 +684,7 @@ for (const width of [1440, 390]) {
 		await field('5_1Amt').fill('1200');
 		await field('5_1Amt').blur();
 		await page.screenshot({ path: testInfo.outputPath(`1701-deductions-drawer-${width}.png`), animations: 'disabled' });
-		await deductions.getByRole('button', { name: 'Add', exact: true }).click();
+		await deductions.getByRole('button', { name: 'Add item', exact: true }).click();
 		await expect(action(special, 'Edit Item 1')).toBeFocused();
 		const deductionLine = section(special).getByRole('listitem').filter({ hasText: 'Eligible deduction' });
 		await expect(deductionLine).toContainText('Legal basis · Statutory provision');
@@ -526,8 +716,8 @@ for (const width of [1440, 390]) {
 		await expect(field('6_7A')).toHaveText('₱600');
 		const lossDrawer = page.getByRole('dialog', { name: carryover, exact: true });
 		await lossDrawer.getByRole('button', { name: 'Cancel', exact: true }).click();
-		await action(carryover, 'Add line item').click();
-		const addLoss = lossDrawer.getByRole('button', { name: 'Add', exact: true });
+		await action(carryover, 'Add item').click();
+		const addLoss = lossDrawer.getByRole('button', { name: 'Add item', exact: true });
 		await field('6_4Year').fill('2026');
 		await field('6_4A').fill('1000');
 		await field('6_4D').fill('1400');
@@ -542,7 +732,7 @@ for (const width of [1440, 390]) {
 		await expect(field('6_4E')).toHaveText('₱600');
 		expect(await lossDrawer.evaluate(dialog => dialog.scrollWidth <= dialog.clientWidth)).toBe(true);
 		await page.screenshot({ path: testInfo.outputPath(`1701-carryover-drawer-${width}.png`), animations: 'disabled' });
-		await lossDrawer.getByRole('button', { name: 'Add', exact: true }).click();
+		await lossDrawer.getByRole('button', { name: 'Add item', exact: true }).click();
 		await expect(action(carryover, 'Edit Item 4')).toBeFocused();
 		const lossLine = section(carryover).getByRole('listitem').filter({ hasText: '2023' });
 		await expect(lossLine).toContainText('Net operating loss');
@@ -588,14 +778,14 @@ for (const width of [1440, 390]) {
 		const commit = (name: string, label: string) => drawer(name).getByRole('button', { name: label, exact: true }).click();
 
 		await expect(field('7I1Description')).toHaveCount(0);
-		await action(special, 'Add first line item').click();
+		await action(special, 'Add item').click();
 		await field('7I1Description').fill('Eligible deduction');
 		await field('7I1LegalBasis').fill('Statutory provision');
 		await field('7I1TaxPayer').fill('1200');
 		await field('7I1Spouse').fill('800');
 		await field('7I1Spouse').blur();
 		await page.screenshot({ path: testInfo.outputPath(`1701-june-deductions-${width}.png`), animations: 'disabled' });
-		await commit(special, 'Add');
+		await commit(special, 'Add item');
 		await expect(field('7I5TaxPayer')).toHaveText('₱1,200');
 		await expect(field('7I5Spouse')).toHaveJSProperty('tagName', 'OUTPUT');
 		await expect(field('7I5Spouse')).toHaveText('₱800');
@@ -616,10 +806,10 @@ for (const width of [1440, 390]) {
 		await expect(field('8B1I4Amount')).toBeFocused();
 		await expect(field('8B1I4Amount')).toHaveText('₱600');
 		await commit(carryover, 'Cancel');
-		await action(carryover, 'Add line item').click();
+		await action(carryover, 'Add item').click();
 		await field('8B1I5YearIncurred').fill('2018');
 		await field('8B1I5Amount').fill('1000');
-		await commit(carryover, 'Add');
+		await commit(carryover, 'Add item');
 		await expect(field('8B1I5YearIncurred')).toBeFocused();
 		await expect(drawer(carryover).getByText('Enter a year from 2014 to 2017.', { exact: true })).toBeVisible();
 		await field('8B1I5YearIncurred').fill('2016');
@@ -628,7 +818,7 @@ for (const width of [1440, 390]) {
 		await expect(field('8B1I5NetOperatingLoss')).toHaveText('₱600');
 		expect(await drawer(carryover).evaluate(dialog => dialog.scrollWidth <= dialog.clientWidth)).toBe(true);
 		await page.screenshot({ path: testInfo.outputPath(`1701-june-loss-carryover-${width}.png`), animations: 'disabled' });
-		await commit(carryover, 'Add');
+		await commit(carryover, 'Add item');
 		await expect(action(carryover, 'Edit Item 5')).toBeFocused();
 		await expect(field('8B1I8TotalNOLCO')).toHaveJSProperty('tagName', 'OUTPUT');
 		await expect(field('8B1I8TotalNOLCO')).toHaveText('₱400');
@@ -642,3 +832,76 @@ for (const width of [1440, 390]) {
 		await expect(field('8B1I8TotalNOLCO')).toHaveText('₱400');
 	});
 }
+
+test('January 1701 attachment pages use the full editor width and bottom pagination', async ({ page }) => {
+	await openReturn(page, '1701v2018');
+	await enableAttachments(page);
+	await goToReturnPage(page, 5);
+	const editor = page.locator('.income-editor');
+	const pager = editor.getByRole('navigation', { name: 'Return pages' });
+	for (let number = 5; number <= 8; number++) {
+		await expect(editor.locator('nav[aria-label="Tax relief attachment pages"]')).toHaveCount(0);
+		await expect(pager.getByRole('button', { name: /^Find a page,/ })).toHaveText(`Page ${number} of 8`);
+		const bounds = await editor.evaluate(element => ({
+			x: element.getBoundingClientRect().left + element.clientLeft,
+			width: element.clientWidth
+		}));
+		const content = (await editor.locator('.attachment-content').boundingBox())!;
+		expect(Math.abs(content.x - bounds.x)).toBeLessThan(1);
+		expect(Math.abs(content.width - bounds.width)).toBeLessThan(1);
+		if (number < 8) await pager.getByRole('button', { name: 'Next page', exact: true }).click();
+	}
+	await pager.getByRole('button', { name: 'Previous page', exact: true }).click();
+	await expect(pager.getByRole('button', { name: /^Find a page,/ })).toHaveText('Page 7 of 8');
+});
+
+test('January 1701 attachment lets mobile filers choose a deduction and follow its calculated total', async ({ page }) => {
+	await openReturn(page, '1701v2018', 390);
+	await page.getByRole('textbox', { name: 'Filing year', exact: true }).fill('2025');
+	await enableAttachments(page);
+	await goToReturnPage(page, 5);
+	const income = page.getByRole('table', { name: 'Schedule B · Consolidated income tax', exact: true });
+	const specialSales = page.locator('[id="frm1701:txtPg1mI1BSchdB"]');
+	await expect(page.getByRole('combobox', { name: 'Tax regime or total · Schedule B', exact: true })).toBeVisible();
+	await expect(specialSales).toBeVisible();
+	const exemptSales = income.locator('[id="frm1701:txtPg1mI1ASchdB"]');
+	await expect(exemptSales).toBeHidden();
+	await page.getByRole('combobox', { name: 'Tax regime or total · Schedule B', exact: true }).selectOption('Exempt');
+	await expect(exemptSales).toBeVisible();
+	await expect(specialSales).toBeHidden();
+
+	await goToReturnPage(page, 6);
+	const consolidatedRent = page.locator('[id="frm1701:txtPg2mI11BSchdC"]');
+	await chooseDeduction(page, 'rent', '11 · Rent');
+	await expect(consolidatedRent).toBeFocused();
+	await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+	await captureEvidence(page, '2018-01-single-consolidation-06-mobile');
+	await goToReturnPage(page, 5);
+
+	await page.getByRole('radio', { name: 'Two or more exempt or special-rate activities', exact: true }).check();
+	await page.getByRole('button', { name: 'Open activity attachment', exact: true }).click();
+	await expect(page.getByRole('heading', { name: 'Activity profile and income', exact: true })).toBeFocused();
+	await page.getByRole('radio', { name: 'Special Rate', exact: true }).check();
+	await goToReturnPage(page, 8);
+	const rent = page.locator('[id="frm1701:txtPg4mSchedC_11ATYPE"]');
+	await expect(rent).toBeHidden();
+	await chooseDeduction(page, 'rent', '11 · Rent');
+	await expect(rent).toBeFocused();
+	await rent.fill('18000');
+	await rent.blur();
+	const total = page.locator('[id="frm1701:txtPg4mSchedC_18ATYPE"]');
+	await expect(total).toHaveText(/₱18,000/);
+	await page.getByRole('button', { name: 'To Part XI, Schedule B, Item 6A · Taxpayer', exact: true }).click();
+	await expect(page.locator('[id="frm1701:txtPg3mSchedB_6ATYPE"]')).toBeFocused();
+	await expect(page.locator('[id="frm1701:txtPg3mSchedB_6ATYPE"]')).toHaveText(/₱18,000/);
+	await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+	await page.getByRole('button', { name: 'Save draft', exact: true }).click();
+	await expect(page).toHaveURL(/\/forms$/);
+	await page.getByRole('row').filter({ hasText: 'BIR Form 1701' }).getByRole('link', { name: 'Edit', exact: true }).click();
+	await expect(page.locator('.income-editor')).toBeVisible();
+	await goToReturnPage(page, 8);
+	await expect(rent).toHaveValue('18,000');
+	await expect(total).toHaveText(/₱18,000/);
+	await page.getByRole('button', { name: 'Review consolidation', exact: true }).click();
+	await expect(page.getByRole('heading', { name: 'Tax relief and income', exact: true })).toBeFocused();
+});

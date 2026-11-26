@@ -191,6 +191,10 @@ export function legacy1701ScheduleLayout(field: IncomeEditorField): Partial<Inco
 		};
 		const description = /Description|Amortizations/.test(name);
 		const label = scheduleLabels[`${scheduleNumber}:${number}`] || labels[scheduleNumber] || field.label.replace(/^\d+\s*/, '').replace(/ · (?:Taxpayer|Spouse)$/, '');
+		if (rawSchedule === '5' && Number(number) <= 5) {
+			if (name.endsWith('NatureOfIncome')) return layout(field, field.section, number, `${label} description`);
+			return layout(field, field.section, number, field.person === 'spouse' ? 'Spouse amount' : 'Taxpayer amount');
+		}
 		if (scheduleNumber === '7') {
 			const column = description ? 'Description' : /LegalBasis/.test(name) ? 'Legal basis' : name.endsWith('Spouse') ? 'Spouse' : 'Taxpayer';
 			return layout(field, 'Schedule 7 · Special deductions', number, label, { column, person: column === 'Spouse' ? 'spouse' : column === 'Taxpayer' ? 'taxpayer' : undefined });

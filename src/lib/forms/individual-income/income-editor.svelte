@@ -5,9 +5,8 @@
 	import { Button, ButtonLink, CalculatedValue, CheckboxInput, CurrencyInput, DateInput, FieldErrors, Input, Label, NumberInput, RadioGroup, Select, TinInput } from '$lib/components/ui';
 	import Icon from '$lib/components/ui/icon/icon.svelte';
 	import { Sheet } from '$lib/components/ui/sheet';
-	import BillList from '@solar-icons/svelte/category/money/Linear/BillList.svelte';
 	import { glyphs } from '$lib/components/ui/icons';
-	import { annualFilingFields, calculateIndividualIncome, incomeAmountDecimals, incomePaymentFieldIds, individualIncomePeriod, isShortFilingPeriod, type IncomeForm } from '.';
+	import { annualFilingFields, calculateIndividualIncome, hasActivityAttachment, incomeAmountDecimals, incomeCalculatedFields, incomePaymentFieldIds, individualIncomePeriod, isShortFilingPeriod, type IncomeForm } from '.';
 	import { annual1701AScheduleLabels, annual1701ASchedules, incomeChoiceLabel, incomeEditorFields, incomeEditorPageTitle, incomeEditorRowGroups, incomeEditorRows, legacyQuarterlyComputation, type IncomeEditorField } from './editor-layout';
 	import { legacy1700DependentClaim, legacy1700FirstYear, legacy1700IncomeSourceChecked, legacy1700LastYear, revised1700FieldApplies } from './compensation';
 	import { quarterlyFilerReady, quarterlyIncomeFieldApplies, quarterlyRateForAtc, quarterlySelectedRate, quarterlyTaxReliefPatch } from './quarterly';
@@ -18,10 +17,11 @@
 	import { june1700References } from './annual-1700-june-references';
 	import { annual1701AAtcOptions, annual1701AElectionPatch, annual1701AFilerRate, annual1701MSFilerReady, annual1701MSFilerRegime, shortAnnualFieldApplies } from './annual-short';
 	import Annual1701AIncomeDetail from './annual-1701a-income-detail.svelte';
+	import Annual2018Attachments from './annual-2018-attachments.svelte';
+	import IncomeRecords from './income-records.svelte';
 	import { msSpecialDeductionFields, msSpecialDeductionId, msSpecialDeductionIndices } from './annual-1701ms-special-deductions';
 	import Form1701MSOverpayment from './form-1701ms-overpayment.svelte';
 	import { clear1701MSOverpayment, has1701MSOverpayment, is1701MSOverpaymentField } from './form-1701ms-overpayment';
-	import { hasActivityAttachment } from './paper';
 	import { incomeIncludesSpouse, incomePersonalValues, incomeProfileFieldList, incomeSpouseFieldIds, incomeSpouseFiling, legacy1701ProfileIds } from './profile-fields';
 	import PaperFormHeader from '../paper-form-header.svelte';
 	import ReturnPagination from '../return-pagination.svelte';
@@ -29,6 +29,17 @@
 	import type { TaxpayerProfile } from '$lib/profiles/profile';
 	import type { TaxpayerItemKey } from '../withholding-paper-layout';
 	import '../form-editor-layout.css';
+
+	const inlineScheduleDescriptionIds = new Set([
+		'frm1701MS:addOtherCreditsPayments',
+		'frm1701q:txt43Desc',
+		'frm1701q:txt48Desc',
+		'frm1701q:txt61Desc',
+		'frm1701:txtPg2IShed3_19Desc',
+		'frm1701:txtPg2IShed3_20Desc',
+		'frm1701:txtPg3IShed4_17dDesc',
+		'frm1701:txtPg4IPart7_9Specify'
+	]);
 
 	let { form, values, errors, profile, taxpayerHref, onvaluechange: onPatch }: {
 		form: IncomeForm;
@@ -50,11 +61,11 @@
 	let deductionOpener: HTMLElement | undefined;
 	let heading: HTMLHeadingElement;
 	let editor: HTMLDivElement;
+	let attachments: { reveal: (field: IncomeEditorField) => void } | undefined = $state();
 	const fields = $derived(incomeEditorFields(form));
 	const fieldsById = $derived(new Map(fields.map(field => [field.id, field])));
 	const calculated = $derived(calculateIndividualIncome(form, values));
-	const selectors = $derived(Object.fromEntries(fields.filter(field => field.kind === 'select' || field.kind === 'radio').map(field => [field.id, values[field.id] ?? ''])));
-	const computed = $derived(new Set(Object.keys(calculateIndividualIncome(form, selectors)).filter(id => !(id in selectors))));
+	const computed = $derived(incomeCalculatedFields(form, values));
 	const spouseFieldIds = $derived(new Set(incomeSpouseFieldIds(form.code)));
 	const groupedSpouseTin = $derived(({
 		'1700': ['frm1700:txtPg1Pt1I17SpouseTIN1', 'frm1700:txtPg1Pt1I17SpouseTIN2', 'frm1700:txtPg1Pt1I17SpouseTIN3', 'frm1700:txtPg1Pt1I17SpouseBranchCode'],
@@ -74,7 +85,9 @@
 	const includesSpouse = $derived(incomeIncludesSpouse(form.code, values));
 	const paymentFields = $derived(incomePaymentFieldIds(form.code));
 	const pages = $derived([...new Set(fields.map(field => field.page))].filter(page => /^\d+$/.test(page) || hasActivityAttachment(form, values)));
+	const returnPages = $derived(pages.map(id => ({ id, title: incomeEditorPageTitle(form, id) })));
 	const selectedPage = $derived(pages.includes(currentPage) ? currentPage : pages[0]);
+	const guidedAttachment = $derived(form.code === '1701v2018' && !!selectedPage?.includes('m'));
 	const legacy1700 = $derived(form.code === '1700');
 	const compensationReturn = $derived(legacy1700 || form.code === '1700v2018');
 	const annualFiling = $derived(annualFilingFields[form.code]);
@@ -126,7 +139,7 @@
 	const annualTaxpayerName = $derived(legacyAnnual
 		? annualNameFields.map(id => values[id]?.trim()).filter(Boolean).join(', ')
 		: values[form.identity.taxpayerName!]);
-	const annualIdentificationIds = [legacy1701Filing.pages, legacy1701Filing.type, legacy1701Filing.number,
+	const annualIdentificationIds = [legacy1701Filing.type, legacy1701Filing.number,
 		legacy1701Filing.issueDate, legacy1701Filing.issuePlace, legacy1701Filing.amount];
 	const identificationType = $derived(legacyAnnual ? legacy1701Filing.type : 'GovorCTC');
 	const taxpayerItemKeys = ['tin', 'rdoCode', 'taxpayerName', 'address', 'zipCode', 'contactNumber', 'email'] as const;
@@ -153,18 +166,19 @@
 	const legacyIdFields = $derived((legacyAnnual ? annualIdentificationIds : legacyIdentificationFields).flatMap(id => {
 		const field = fields.find(field => field.id === id);
 		const isAmount = id === 'frm1700:txtPg1Pt2I34Amount' || id === legacy1701Filing.amount;
-		return field && (id === identificationType || id === legacy1701Filing.pages || (idType && (!isAmount || idType === 'CTC'))) ? [field] : [];
+		return field && (id === identificationType || (idType && (!isAmount || idType === 'CTC'))) ? [field] : [];
 	}));
-	const visibleFields = $derived(fields.filter(field => field.page === selectedPage && shouldShow(field) &&
+	const visibleFields = $derived(fields.filter(field => field.page === selectedPage && field.id !== form.pagesFiledField && shouldShow(field) &&
 		!(legacyAnnual && annualIdentificationIds.includes(field.id)) && !summaryIds.has(field.id) && !isRepeatedIdentity(field) && !taxpayerExtras.some(extra => extra.id === field.id)));
 	const hasVisibleSpouseFields = $derived(visibleFields.some(field => spouseFieldIds.has(field.id)));
 	const [formNumber, revision] = $derived(form.revision.split(' · '));
 	const description = $derived(form.title.split(' | ')[1].replace(/^(?:Annual|Quarterly) return for /i, 'For '));
 	const shortTitle = $derived(form.quarter ? 'Quarterly Income Tax Return' : 'Annual Income Tax Return');
 	const groups = $derived(visibleFields.reduce<{ title: string; fields: IncomeEditorField[] }[]>((groups, field) => {
+		const title = /(?:Employer|Dependent) \d+$/.test(field.section) ? (/Employer/.test(field.section) ? 'Employers' : 'Dependents') : field.section;
 		const group = groups.at(-1);
-		if (group?.title === field.section) group.fields.push(field);
-		else groups.push({ title: field.section, fields: [field] });
+		if (group?.title === title) group.fields.push(field);
+		else groups.push({ title, fields: [field] });
 		return groups;
 	}, []));
 	const msSpecialDeductionSchedules = $derived(microSmall ? visibleFields.filter(field =>
@@ -308,6 +322,38 @@
 		return field.kind === 'money' || (microSmall && field.kind === 'percent');
 	}
 
+	function numberedRecords(group: { title: string; fields: IncomeEditorField[] }) {
+		const sections = [...new Set(group.fields.map(field => field.section))];
+		return sections.map(section => ({
+			key: section,
+			item: section.match(/\d+$/)?.[0],
+			fields: fields.filter(field => field.page === selectedPage && field.section === section && field.kind !== 'hidden')
+		}));
+	}
+
+	function recordTransactions(sectionFields: IncomeEditorField[]) {
+		const transaction = (field: IncomeEditorField) => field.transaction ?? field.label.match(/ · Entry (\d+)$/)?.[1];
+		const entries = [...new Set(sectionFields.flatMap(field => transaction(field) ? [transaction(field)!] : []))];
+		return entries.map(entry => ({ key: entry, item: entry, fields: sectionFields.filter(field => transaction(field) === entry) }));
+	}
+
+	function optionalRecordLabel(row: ReturnType<typeof incomeEditorRows>[number]) {
+		const detail = row.fields.find(field => field.kind === 'text') ?? row.fields[0];
+		return (detail?.shortLabel ?? detail?.label ?? '').replace(/^\d+[A-Z]?\s+/, '').replace(/ description$/i, '');
+	}
+
+	function relatedOptionalRecords(row: ReturnType<typeof incomeEditorRows>[number], scheduleFields: IncomeEditorField[]) {
+		return incomeEditorRows(scheduleFields).filter(item => !(shortAnnual && (item.item === '42' || item.item === '51')) &&
+			optionalRecord(item) && optionalRecordLabel(item) === optionalRecordLabel(row));
+	}
+
+	function optionalRecord(row: ReturnType<typeof incomeEditorRows>[number]) {
+		return row.fields.some(field => field.kind === 'text' && !computed.has(field.id) &&
+			!inlineScheduleDescriptionIds.has(field.id) &&
+			/description|specify|particular|amortiz|other.*(?:income|credit|deduction)/i.test(field.label)) &&
+			row.fields.some(field => field.kind === 'money' && !computed.has(field.id));
+	}
+
 	function isDependentField(field: IncomeEditorField) {
 		return /(?:Pg4T2|P4T2)/.test(field.id);
 	}
@@ -332,7 +378,7 @@
 			if (field.id === spouseCountId) return dependentClaim === 'spouse';
 			if (field.id === spouseClaimId) return includesSpouse;
 			if (field.page === '4' && isDependentField(field)) {
-				return !!errors[field.id] || (!!dependentClaim && Number(field.id.at(-1)) <= visibleDependentRows);
+				return !!errors[field.id] || !!dependentClaim;
 			}
 		}
 		if (errors[field.id]) return true;
@@ -440,6 +486,24 @@
 		}
 	}
 
+	async function deleteDeductionItem() {
+		const drawer = deductionDrawer;
+		if (!drawer || !deductionSchedule || !drawer.item) return;
+		const row = incomeEditorRows(deductionSchedule.fields).find(row => row.item === drawer.item);
+		if (!row) return;
+		const patch = Object.fromEntries(row.fields.filter(field => !isDeductionDrawerBalance(field) && !isDeductionDrawerTotal(field)).map(field => [field.id, '']));
+		if (microSmall) {
+			const spouse = row.fields[0].person === 'spouse';
+			const remaining = msSpecialDeductionIndices({ ...values, ...patch }, spouse);
+			if (!remaining.length) patch[`frm1701MS:txtSpecialAllowableNo10${spouse ? 'b' : 'a'}`] = '0';
+		}
+		onvaluechange(patch);
+		deductionDrawer = undefined;
+		deductionDraft = {};
+		await tick();
+		deductionDrawerOpener(drawer.title)?.focus({ preventScroll: true });
+	}
+
 	async function closeDeductionDrawer(apply = false) {
 		const drawer = deductionDrawer;
 		if (!drawer) return;
@@ -465,11 +529,26 @@
 		const item = drawerField && !isOperatingLossComputation(drawerField) ? drawerField.item : undefined;
 		currentPage = page;
 		await tick();
+		if (attachments && destination) {
+			attachments.reveal(destination);
+			await tick();
+		}
 		if (drawerField) {
 			const trigger = deductionDrawerOpener(drawerField.section, item);
 			if (trigger) {
 				trigger.scrollIntoView({ block: 'nearest', behavior: 'instant' });
 				await openDeductionDrawer(drawerField.section, trigger, item, false, fieldId);
+				return;
+			}
+		}
+		if (fieldId) {
+			const recordButton = editor.querySelector<HTMLButtonElement>(`[data-record-fields~="${fieldId}"]`);
+			if (recordButton) {
+				recordButton.dataset.recordFocusId = fieldId;
+				recordButton.click();
+				await tick();
+				const target = document.getElementById(fieldId);
+				if (target?.closest('dialog')) target.focus();
 				return;
 			}
 		}
@@ -495,24 +574,9 @@
 		}
 	}
 
-	async function goToSection(index: string) {
-		if (index === 'quarterly-credits') {
-			await showPage('1', 'frm1701q:txt38A');
-			return;
-		}
-		if (index === 'taxpayer-details' || index === 'tax-computation') {
-			await showPage(index === 'taxpayer-details' ? '1' : '2');
-			return;
-		}
+	async function focusSection(index: number) {
 		await tick();
-		if (index === 'page-navigation') {
-			const pagination = editor.querySelector('nav[aria-label="Return pages"]');
-			const button = pagination?.querySelector<HTMLButtonElement>('[aria-label="Next page"], [aria-label="Previous page"]');
-			button?.focus({ preventScroll: true });
-			pagination?.scrollIntoView({ block: 'center' });
-			return;
-		}
-		const section = editor.querySelector<HTMLElement>(`[data-section-index="${Number(index)}"]`);
+		const section = editor.querySelector<HTMLElement>(`[data-section-index="${index}"]`);
 		const summary = section?.querySelector('summary');
 		if (summary && !summary.closest('details')?.open) {
 			summary.click();
@@ -525,7 +589,7 @@
 	async function open1701ASchedule(item: number) {
 		await showPage('2');
 		const index = groups.findIndex(group => group.fields.some(field => field.item === String(item)));
-		if (index >= 0) await goToSection(String(index));
+		if (index >= 0) await focusSection(index);
 	}
 
 	function msFilerSetup(spouse: boolean) {
@@ -790,9 +854,10 @@
 	{@const available = rows.find(row => !entries.includes(row) && !row.fields.some(field =>
 		isDeductionDrawerBalance(field) && field.column === 'Net operating loss'
 	))}
-	<header class="eq-section-header">
-		<h3>{title}</h3>
-		<span class="schedule-entry-count">{unlimited ? entries.length : `${entries.length} / ${rows.length}`} {unlimited && entries.length === 1 ? 'line item' : 'line items'}</span>
+	<header class="eq-section-header schedule-record-header">
+		<h3>{title}<span class="schedule-entry-count font-mono">{unlimited ? ` (${entries.length})` : ` (${entries.length}/${rows.length})`}</span></h3>
+		<Button type="button" size="sm" variant="secondary" data-schedule-add aria-haspopup="dialog" disabled={!available}
+			onclick={(event) => available && void openDeductionDrawer(title, event.currentTarget, available.item, true)}>Add item</Button>
 	</header>
 	{#if entries.length}
 		<ol class="schedule-entry-list" aria-label="Line items">
@@ -808,39 +873,27 @@
 				))}
 				<li class:carryover-line={year}>
 					<div class="schedule-entry-label">
-						<span class="schedule-entry-item">Item {row.item}</span>
-						<strong>{entryLabel || (current ? 'Current-year loss' : row.fields[0].label.replace(/^\d+\s+/, ''))}</strong>
+						<span class="schedule-entry-item">Item <span class="font-mono">{row.item}</span></span>
+						<button type="button" class="schedule-entry-link" aria-label={`Edit Item ${row.item}`} aria-haspopup="dialog"
+							data-schedule-edit={row.item} onclick={(event) => void openDeductionDrawer(title, event.currentTarget, row.item)}>
+							{entryLabel || (current ? 'Current-year loss' : row.fields[0].label.replace(/^\d+\s+/, ''))}
+						</button>
 						{#if basis}<span class="schedule-entry-basis">Legal basis · {basis}</span>{/if}
 					</div>
 					<dl class="schedule-entry-amounts" style:--entry-amount-count={balances.length}>
 						{#each balances as field (field.id)}
 							<div class:carryover-balance={year && isDeductionDrawerBalance(field) && !is1701CurrentLoss(field.id)}>
 								<dt>{field.column}</dt>
-								<dd>{formatScheduleAmount(calculated[field.id])}</dd>
+								<dd class="font-mono">{formatScheduleAmount(calculated[field.id])}</dd>
 							</div>
 						{/each}
 					</dl>
-					<Button type="button" variant="ghost" size="sm" aria-label={`Edit Item ${row.item}`} aria-haspopup="dialog"
-						data-schedule-edit={row.item} onclick={(event) => void openDeductionDrawer(title, event.currentTarget, row.item)}>
-						<span class="schedule-edit-icon" aria-hidden="true"><Icon icon={glyphs.pencil} /></span>
-						Edit
-					</Button>
+
 				</li>
 			{/each}
 		</ol>
-		{#if available}
-			<div class="schedule-add-row">
-				<Button type="button" size="sm" variant="secondary" data-schedule-add aria-haspopup="dialog"
-					onclick={(event) => void openDeductionDrawer(title, event.currentTarget, available.item, true)}>Add line item</Button>
-			</div>
-		{/if}
-	{:else if available}
-		<div class="schedule-entry-empty">
-			<span class="schedule-entry-icon" aria-hidden="true"><BillList size={24} color="currentColor" /></span>
-			<p>No line items yet</p>
-			<Button type="button" size="sm" variant="secondary" data-schedule-add aria-haspopup="dialog"
-				onclick={(event) => void openDeductionDrawer(title, event.currentTarget, available.item, true)}>{prefilled ? 'Add deduction details' : 'Add first line item'}</Button>
-		</div>
+	{:else}
+		<p class="schedule-empty-message">No items added</p>
 	{/if}
 {/snippet}
 
@@ -875,6 +928,14 @@
 					{@const rowLabel = (amountLabel ?? amountField?.label ?? firstField.label).replace(/^\d+[A-Z]?\s+| · (?:Taxpayer|Spouse)$/g, '')}
 					{@const description = firstField.rowHeading ?? rowLabel}
 					{@const detailFields = row.fields.filter(field => !field.column || scheduleDetailColumns.includes(field.column))}
+					{#if optionalRecord(row)}
+						{@const related = rows.filter(item => optionalRecord(item) && optionalRecordLabel(item) === optionalRecordLabel(row))}
+						{#if related[0].key === row.key}
+							<tr data-income-item={row.item} class="record-table-row"><td colspan={1 + displayColumns.length}>
+								<IncomeRecords title={optionalRecordLabel(row)} records={related} {form} {values} {calculated} {computed} {errors} {onvaluechange} {includesSpouse} singleton={related.length === 1} />
+							</td></tr>
+						{/if}
+					{:else}
 					<tr data-income-item={row.item}>
 						<th scope="row">
 							{#if row.item}<span class="column-item">{row.item}</span>{/if}
@@ -904,6 +965,7 @@
 							</td>
 						{/each}
 					</tr>
+					{/if}
 				{/each}
 			</tbody>
 		</table>
@@ -951,7 +1013,7 @@
 									{#if !field}
 										<span aria-label="Not applicable">—</span>
 									{:else if computed.has(field.id)}
-										<output id={field.id}>{currency.format(Number((calculated[field.id] ?? '').replaceAll(',', '')))}</output>
+										<output id={field.id} aria-label={`Item ${row.item} ${label} · ${person === 'spouse' ? 'Spouse' : 'Taxpayer'} · ${regime}`} aria-live="off">{formatScheduleAmount(calculated[field.id])}</output>
 									{:else}
 										{@render signedScheduleAmount(field, `Item ${row.item} ${label} · ${person} · ${regime}`)}
 									{/if}
@@ -1014,6 +1076,13 @@
 					{/if}
 					{#if shortAnnual && (item === '42' || item === '51')}
 						<Annual1701AIncomeDetail {item} {label} {values} {calculated} {people} {errors} {onvaluechange} />
+					{:else if optionalRecord(row)}
+						{@const related = relatedOptionalRecords(row, scheduleFields)}
+						{#if related[0].key === row.key}
+							<tr data-income-item={item} class="record-table-row"><td colspan={2 + people.length}>
+								<IncomeRecords title={optionalRecordLabel(row)} records={related} {form} {values} {calculated} {computed} {errors} {onvaluechange} {includesSpouse} singleton={related.length === 1} />
+							</td></tr>
+						{/if}
 					{:else}
 						{@const combined = legacy1700 && joint && title === 'Part IV · Amount payable' && !amountField?.person ? amountField : undefined}
 						{@const aggregate = legacyQuarterly && item === '41C' ? row.fields[0] : combined}
@@ -1036,7 +1105,7 @@
 										<CurrencyInput {decimals} id={aggregate.id} aria-label={label} value={calculated[aggregate.id] ?? ''}
 											error={errors[aggregate.id] ?? ''} onchange={(next) => setValue(aggregate.id, next)} />
 									{:else}
-										<output id={aggregate.id}>{currency.format(Number((calculated[aggregate.id] ?? '').replaceAll(',', '')))}</output>
+										<output id={aggregate.id} aria-label={`Item ${item} ${label}`} aria-live="off">{formatScheduleAmount(calculated[aggregate.id])}</output>
 									{/if}
 								</td>
 							{:else}
@@ -1053,7 +1122,7 @@
 										{:else if microSmall && field.kind === 'percent'}
 											{@render microSmallRateInput(field, joint ? `${label} · ${person === 'spouse' ? 'Spouse' : 'Taxpayer'}` : label, false)}
 										{:else if computed.has(field.id) || (microSmall && item === '10B')}
-											<output id={field.id}>{revisedQuarterly && ['46', '54', '63', '68'].includes(item) &&
+											<output id={field.id} aria-label={inputLabel} aria-live="off">{revisedQuarterly && ['46', '54', '63', '68'].includes(item) &&
 												!(person === 'spouse' ? quarterlySpouseReady : quarterlyTaxpayerReady) ? '—' : currency.format(Number(value.replaceAll(',', '')))}</output>
 											{#if errors[field.id]}<FieldErrors errors={[errors[field.id]]} />{/if}
 										{:else if /loss|overpayment|net income per books/i.test(label) || /^[(-]/.test(value)}
@@ -1129,7 +1198,7 @@
 		{@const parts = id === groupedSpouseTin[0] ? groupedSpouseTin : [1, 2, 3, 4].map(part => part === 4 && form.code === '1701A' ? id.replace('TIN1', 'BranchCode') : id.replace('TIN1', `TIN${part}`))}
 		<dl class="managed-value">
 			<dt>Spouse TIN and branch code</dt>
-			<dd>
+			<dd class="font-mono">
 				{#if parts.some(part => calculated[part])}
 					{#each parts as part, index (part)}{index ? '-' : ''}<span id={part}>{calculated[part] || '—'}</span>{/each}
 				{:else}
@@ -1184,7 +1253,7 @@
 		{#if locked}
 			<dl class="managed-value" {id}>
 				<dt>{dateLabel}</dt>
-				<dd>{birthDate === '//' ? '—' : birthDate}</dd>
+				<dd class="font-mono">{birthDate === '//' ? '—' : birthDate}</dd>
 			</dl>
 			{#if error}<FieldErrors errors={[error]} />{/if}
 		{:else}
@@ -1193,11 +1262,11 @@
 				onvaluechange(Object.fromEntries(birthParts.map((part, index) => [part, date[index] ?? ''])));
 			}} />
 		{/if}
-	{:else if /(?:PagesFiled|PagesFilled|Number(?:Of)?Attachments|txtSheets)$/.test(id)}
+	{:else if /(?:Number(?:Of)?Attachments|txtSheets)$/.test(id)}
 		<NumberInput {id} {label} {value} {error} min={0} max={99} maxlength={field.maxLength ?? undefined} onchange={(next) => setValue(id, next)} />
 	{:else if historicalCount || historicalYear}
 		<NumberInput {id} label={draft?.label ?? label} {value} {error} min={historicalYear ? 1900 : 0}
-			max={historicalYear ? 9999 : id.endsWith('Dependent') ? 4 : undefined}
+			max={historicalYear ? 9999 : undefined}
 			maxlength={field.maxLength ?? undefined} onchange={draft?.change ?? ((next) => setValue(id, next))} />
 	{:else if microSmall && kind === 'percent'}
 		{@render microSmallRateInput(field, label, true)}
@@ -1224,7 +1293,7 @@
 	{:else if form.code === '1700v2018' && id === 'frm1700:txtPg1I3ATC'}
 		<dl class="managed-value" {id}>
 			<dt>{label}</dt>
-			<dd>{value || '—'}</dd>
+			<dd class="font-mono">{value || '—'}</dd>
 		</dl>
 	{:else if computed.has(id) && legacy1700 && field.page !== '1' && kind === 'money'}
 		<div class="schedule-calculated">
@@ -1233,7 +1302,7 @@
 		</div>
 		{#if error}<FieldErrors errors={[error]} />{/if}
 	{:else if computed.has(id) && column}
-		<output {id} aria-label={label}>{kind === 'money' && value !== '' ? currency.format(Number(value.replaceAll(',', ''))) : value || '—'}</output>
+		<output {id} aria-label={label} aria-live="off">{kind === 'money' && value !== '' ? currency.format(Number(value.replaceAll(',', ''))) : value || '—'}</output>
 		{#if error}<FieldErrors errors={[error]} />{/if}
 	{:else if computed.has(id)}
 		<CalculatedValue {id} {label} value={kind === 'money' && value !== '' ? currency.format(Number(value.replaceAll(',', ''))) : value} {error} />
@@ -1243,12 +1312,12 @@
 		{@const atcError = error || (choices.length && value && !selected ? 'Choose a tax code for this taxpayer type.' : '')}
 		<div class="annual-atc-field" data-slot="form-item">
 			<Label for={id}>{label}<span class="annual-atc-required" aria-hidden="true"> *</span></Label>
-			<select {id} value={selected?.value ?? ''} title={selected?.label} required disabled={!choices.length}
+			<select {id} class:font-mono={!!selected} value={selected?.value ?? ''} title={selected?.label} required disabled={!choices.length}
 				aria-invalid={!!atcError || undefined} aria-describedby={atcError ? `${id}-error` : undefined}
 				onchange={(event) => setValue(id, event.currentTarget.value)}>
 				<option value="" disabled>{choices.length ? 'Select tax code' : 'Choose taxpayer type first'}</option>
 				{#each choices as option (option.value)}
-					<option value={option.value}>{quarterlyAtc ? option.label
+					<option class="font-mono" value={option.value}>{quarterlyAtc ? option.label
 						.replace('Income from Profession', 'Profession')
 						.replace(' Income', '')
 						.replace(/\s*-\s*(Graduated|8%) IT Rates?$/, ' · $1') : option.label}</option>
@@ -1287,7 +1356,9 @@
 		<RadioGroup {id} {label} {value} {options} {error}
 			required={id === legacy1701Filing.overpayment || revisedFilingChoice || employerEarner || (legacy1700 && id === 'frm1700:rdoPg1Pt1I3JointFiling')}
 			help={id === 'frm1701:rdoPg1m'
-				? 'For two or more activities, complete a Part XI attachment for each activity and enter the consolidated amounts here.'
+				? value === '2'
+					? 'Complete a Part XI attachment for each activity, then enter the combined amounts here.'
+					: 'Enter the applicable amounts in the schedules below.'
 				: form.code === '1700v2018' && /I(?:6|20)TaxpayerType$/.test(id)
 					? 'The 25% option is for nonresident aliens not engaged in trade or business.'
 				: employerEarner && !value ? 'Choose who earned this income.' : undefined}
@@ -1496,25 +1567,6 @@
 			{/each}
 		</div>
 	{/if}
-	{#if compactAnnual || form.quarter || (fullAnnual && groups.length > 2)}
-		{#key selectedPage}
-			<div class="section-jump">
-				<Select label="Go to section" value="" options={[
-					...groups.map((group, index) => ({
-						value: String(index),
-						label: selectedPage === '1' && /^(?:Part II|Part III)/.test(group.title) && group.fields.some(field => /(?:I32|I29)/.test(field.id))
-							? 'Total tax payable' : group.title
-					})),
-					...(legacyQuarterly ? [{ value: 'quarterly-credits', label: 'Tax credits and payments' }] : []),
-					...(compactAnnual || revisedQuarterly ? [selectedPage === '1'
-						? { value: 'tax-computation', label: 'Page 2 · Schedules and tax computation' }
-						: { value: 'taxpayer-details', label: 'Page 1 · Taxpayer details and return summary' }] : []),
-					...(pages.length > 1 ? [{ value: 'page-navigation', label: 'Page navigation' }] : [])
-				]}
-					placeholder="Select a section" onchange={(index) => void goToSection(index)} />
-			</div>
-		{/key}
-	{/if}
 	{#snippet editSpouseDetails()}
 		<ButtonLink href={taxpayerHref} size="icon" variant="ghost" aria-label="Edit spouse details" title="Edit spouse details">
 			<span class="edit-spouse-icon"><Icon icon={glyphs.pencil} /></span>
@@ -1542,6 +1594,11 @@
 			</div>
 		{/if}
 	{/snippet}
+	{#if guidedAttachment}
+		<Annual2018Attachments bind:this={attachments} page={selectedPage} {groups}
+			{values} {includesSpouse} {fieldControl} references={annualReferences} hasEntry={hasScheduleEntry}
+			onpage={(page) => void showPage(page)} />
+	{:else}
 	{#each groups as group, index (`${selectedPage}-${index}`)}
 		{#if selectedPage === '1' && index === 1 && Object.keys(itemNumbers).length}
 			{@render taxpayerDetails()}
@@ -1746,7 +1803,7 @@
 									</div>
 								{:else}
 									{#each row.fields as field (field.id)}
-										<div class="income-control" class:wide={field.kind === 'radio' || /Name|Address|Description/.test(field.id)} class:pages-filed={field.id === 'frm1700:txtPg1Pt2NumberofPagesFiled'}>
+										<div class="income-control" class:wide={field.kind === 'radio' || /Name|Address|Description/.test(field.id)}>
 											{@render fieldControl(field)}
 										</div>
 									{/each}
@@ -1757,7 +1814,11 @@
 				{/each}
 				{/if}
 			{/snippet}
-			{#if group.fields.some(isDeductionDrawerField)}
+			{#if group.title === 'Employers' || group.title === 'Dependents'}
+				<IncomeRecords title={group.title} singular={group.title === 'Employers' ? 'employer' : 'dependent'} records={numberedRecords(group)} {form} {values} {calculated} {computed} {errors} {onvaluechange} {includesSpouse} />
+			{:else if recordTransactions(group.fields).length}
+				<IncomeRecords title={group.title} records={recordTransactions(group.fields)} {form} {values} {calculated} {computed} {errors} {onvaluechange} {includesSpouse} />
+			{:else if group.fields.some(isDeductionDrawerField)}
 				{@const autofilled = group.fields.every(isAutofilledOperatingLoss)}
 				{@const totals = autofilled ? group.fields : group.fields.filter(isDeductionDrawerTotal)}
 				{@const computation = group.fields.every(isOperatingLossComputation)}
@@ -1809,13 +1870,6 @@
 			{/if}
 		</section>
 	{/each}
-	{#if legacy1700 && selectedPage === '4' && dependentClaim && visibleDependentRows < 4}
-		<div class="income-spouse-action">
-			<Button size="sm" variant="secondary" onclick={() => {
-				addedDependentRows = visibleDependentRows + 1;
-				void showPage('4', `frm1700:txtPg4T2LastName${addedDependentRows}`);
-			}}>Add dependent</Button>
-		</div>
 	{/if}
 	{#if legacy1700 && selectedPage === '4' && !visibleFields.length}
 		<div class="schedule-taxpayer schedule-empty">
@@ -1831,7 +1885,7 @@
 			<header class="eq-section-header"><h3 id="legacy-1700-identification">Filing identification</h3></header>
 			<div class="filing-identification" class:annual-identification={legacyAnnual} class:government-id={idType === 'Gov'}>
 				{#each legacyIdFields as field (field.id)}
-					<div class:identification-type={field.id === identificationType} class:identification-pages={field.id === legacy1701Filing.pages}>
+					<div class:identification-type={field.id === identificationType}>
 						{#if field.id !== identificationType}<span class="paper-item-number" aria-hidden="true">{field.item}</span>{/if}
 						<div class="income-control">{@render fieldControl(field)}</div>
 					</div>
@@ -1843,49 +1897,39 @@
 		{@render taxpayerDetails()}
 	{/if}
 	{#if fullAnnual || microSmall}
-		<Sheet open={!!deductionSchedule} title={deductionSchedule?.title} size="lg"
-			onOpenChange={(open) => { if (!open) void closeDeductionDrawer(); }}>
+		<Sheet
+			bind:open={() => !!deductionSchedule, (open) => { if (!open) void closeDeductionDrawer(); }}
+			title={deductionSchedule?.title}
+			size="lg"
+		>
 			{#if deductionSchedule}
 				{@render deductionDrawerDetails(deductionSchedule.fields, deductionDrawer?.item)}
 			{/if}
 			{#snippet footer()}
+				{#if deductionDrawer?.item && !deductionDrawer.adding}
+					<Button type="button" variant="danger" data-agent-confirm="delete" onclick={() => void deleteDeductionItem()}>Delete item</Button>
+				{/if}
 				<Button type="button" variant="secondary" onclick={() => void closeDeductionDrawer()}>Cancel</Button>
-				<Button type="button" onclick={() => void closeDeductionDrawer(true)}>{deductionDrawer?.adding ? 'Add' : 'Update'}</Button>
+				<Button type="button" onclick={() => void closeDeductionDrawer(true)}>{deductionDrawer?.adding ? 'Add item' : 'Update'}</Button>
 			{/snippet}
 		</Sheet>
 	{/if}
-	<ReturnPagination pages={pages.map(page => ({ id: page, title: incomeEditorPageTitle(form, page) }))}
-		current={selectedPage} onchange={(page) => void showPage(page)} />
+	<ReturnPagination pages={returnPages}
+		current={selectedPage} onchange={showPage} />
 </div>
 
 <style>
 	.income-editor { min-width: 0; }
+	.income-editor output { font-family: var(--font-mono); }
+	.record-table-row > td { padding: 0; }
 	.tax-summary .ms-special-deduction-details > td { padding: 0; }
+	.schedule-record-header { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: .5rem; align-items: center; }
+	.schedule-entry-link { min-height: 2rem; padding: 0; border: 0; color: var(--accent); background: transparent; font: inherit; text-align: start; text-decoration: underline; text-underline-offset: .15em; cursor: pointer; overflow-wrap: anywhere; }
 	.schedule-entry-count {
 		color: var(--fg-muted);
 		font-size: var(--form-label-size);
 		font-variant-numeric: tabular-nums;
 		white-space: nowrap;
-	}
-	.schedule-entry-empty {
-		display: grid;
-		justify-items: center;
-		gap: .75rem;
-		margin-inline: .75rem;
-		padding: 1.5rem .75rem;
-		border: 1px dashed var(--border);
-		background: var(--bg);
-		text-align: center;
-		font-weight: 600;
-	}
-	.schedule-entry-icon {
-		display: grid;
-		place-items: center;
-		width: 2.5rem;
-		height: 2.5rem;
-		border: 1px solid var(--border);
-		border-radius: var(--radius-md);
-		color: var(--fg-muted);
 	}
 	.schedule-entry-list {
 		margin: 0;
@@ -1894,8 +1938,8 @@
 	}
 	.schedule-entry-list li {
 		display: grid;
-		grid-template-columns: minmax(0, 1fr) auto;
-		grid-template-areas: "identity edit" "amounts amounts";
+		grid-template-columns: minmax(0, 1fr);
+		grid-template-areas: "identity" "amounts";
 		align-items: start;
 		gap: .75rem 1rem;
 		padding: .875rem;
@@ -1937,17 +1981,17 @@
 		overflow-wrap: anywhere;
 	}
 	.schedule-entry-amounts .carryover-balance dd { font-weight: 700; }
-	.schedule-entry-list :global([data-schedule-edit]) { grid-area: edit; min-block-size: 2rem; }
+	.schedule-entry-list :global([data-schedule-edit]) { min-block-size: 2rem; }
 	.schedule-edit-icon { display: inline-flex; inline-size: 1rem; }
 	.schedule-add-row { padding: .5rem .875rem; }
 	@container paper-form (min-width: 38rem) {
 		.schedule-entry-list li {
-			grid-template-columns: minmax(0, 2fr) minmax(8rem, 1fr) auto;
-			grid-template-areas: "identity amounts edit";
+			grid-template-columns: minmax(0, 2fr) minmax(8rem, 1fr);
+			grid-template-areas: "identity amounts";
 			align-items: center;
 		}
 		.schedule-entry-list .carryover-line {
-			grid-template-columns: minmax(5rem, 1fr) minmax(0, 3fr) auto;
+			grid-template-columns: minmax(5rem, 1fr) minmax(0, 3fr);
 		}
 		.schedule-entry-amounts {
 			padding-block-start: 0;
@@ -1964,6 +2008,8 @@
 		gap: .75rem 1.25rem;
 		padding: .75rem;
 	}
+	.eq-section-header + .schedule-drawer-summary,
+	.schedule-entry-list + .schedule-drawer-summary { border-block-start: 0; }
 	.schedule-summary-totals {
 		flex: 1 1 18rem;
 		min-width: 0;
@@ -2035,17 +2081,10 @@
 	@container paper-form (min-width: 36rem) {
 		.legacy-schedule .income-row-controls { grid-template-columns: repeat(var(--income-column-count, 1), minmax(0, 1fr)); }
 	}
-	.annual-identification > .identification-pages { grid-column: 1 / -1; }
-	.annual-identification .identification-pages .income-control { max-inline-size: 13rem; }
 	.income-editor :global(input[inputmode="decimal"]) { text-align: right; font-variant-numeric: tabular-nums; }
 	.page-context { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: .25rem 1rem; padding: .625rem .875rem; border-bottom: 1px solid var(--border); }
 	.page-context h2, .income-section h3 { font: inherit; font-size: .875rem; font-weight: 650; margin: 0; }
 	.page-context p, .schedule-taxpayer { font-size: .8rem; color: var(--fg-muted); margin: 0; }
-	.section-jump {
-		padding: .5rem .875rem;
-		border-block-end: 1px solid var(--border);
-	}
-	.section-jump > :global([data-slot="form-item"]) { max-inline-size: 24rem; }
 	.full-annual-editor > .income-section { scroll-margin-block-start: 4rem; }
 	.schedule-empty { display: grid; gap: .625rem; }
 	.schedule-empty p { margin: 0; }
@@ -2217,10 +2256,11 @@
 	.tax-summary.joint-summary .summary-amount { width: 5.75rem; }
 	.tax-summary th, .tax-summary td { padding: .45rem .625rem; border-bottom: 1px solid var(--border); text-align: start; overflow-wrap: anywhere; }
 	.tax-summary thead th { color: var(--fg-muted); font-size: .75rem; font-weight: 550; white-space: nowrap; }
-	.tax-summary tr > :first-child { padding-inline: .5rem; }
-	.tax-summary tbody th { font-weight: 500; }
+	/* Scope table roots while avoiding Svelte analysis of deep table selectors. */
+	.tax-summary :global(tr > :first-child) { padding-inline: .5rem; }
+	.tax-summary :global(tbody th) { font-weight: 500; }
 	.tax-summary .summary-value { text-align: end; font-variant-numeric: tabular-nums; }
-	.tax-summary.joint-summary tr > :nth-child(4) { border-inline-start: 1px solid var(--border); }
+	.tax-summary.joint-summary :global(tr > :nth-child(4)) { border-inline-start: 1px solid var(--border); }
 	.tax-summary .summary-input { padding: .3rem .5rem; }
 	.tax-summary .summary-input :global([data-slot="form-item"]) { grid-template-columns: minmax(0, 1fr); }
 	.tax-summary.compact-joint-amounts .summary-input :global([data-slot="form-item"] > div:has(> input[data-slot="input"]:not([data-amount-input]))) { padding-inline: .3125rem; gap: .25rem; }
@@ -2229,13 +2269,13 @@
 		.tax-summary .summary-amount { width: 13rem; }
 		.tax-summary.joint-summary .summary-amount { width: 11rem; }
 	}
-	.tax-summary .tax-total { background: var(--paper-section-background, var(--bg-hover)); border-top: 2px solid var(--border); }
+	.tax-summary .tax-total { background: var(--paper-section-background, var(--bg-hover)); }
 	.tax-summary .tax-total > * { padding-block: .625rem; font-weight: 700; }
 	.annual-schedule { background: var(--bg-elev); }
-	.annual-schedule tbody tr:last-child > * { border-bottom: 0; }
-	.annual-schedule tbody :is(td, th) { vertical-align: middle; }
+	.annual-schedule :global(tbody tr:last-child > *) { border-bottom: 0; }
+	.annual-schedule :global(tbody :is(td, th)) { vertical-align: middle; }
 	.full-annual-editor { --schedule-item-width: 2.75rem; }
-	.full-annual-editor :global(.annual-schedule tbody td:first-child) { font-variant-numeric: tabular-nums; font-weight: 600; }
+	.full-annual-editor :global(.annual-schedule tbody td:first-child) { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-weight: 600; }
 	.full-annual-editor :global(.annual-schedule tbody tr[data-income-item] > td:first-child) { white-space: nowrap; }
 	.schedule-with-detail > .summary-input { vertical-align: bottom; padding-block-end: .45rem; }
 	.annual-schedule th :global([data-slot="form-item"]) { max-inline-size: 26rem; margin-block-start: .3rem; }
@@ -2281,7 +2321,7 @@
 	.column-schedule .column-description { width: var(--schedule-description-width); }
 	.column-schedule .column-value { width: var(--schedule-value-width); }
 	.column-schedule thead th { white-space: normal; }
-	.column-schedule tbody th { vertical-align: top; }
+	.column-schedule :global(tbody th) { vertical-align: top; }
 	.column-item { display: inline-block; min-inline-size: 1.65rem; font-weight: 650; margin-inline-end: .375rem; }
 	.column-schedule .column-cell { position: relative; padding: .3rem .375rem; }
 	.column-cell :global(:is([data-slot="form-item"], [data-slot="date-input"]) > label) {
@@ -2303,13 +2343,13 @@
 			border-collapse: separate;
 			border-spacing: 0;
 		}
-		.full-annual-editor .joint-schedule-viewport > .annual-schedule tr:not(.schedule-subheading) > :nth-child(-n+2) {
+		.full-annual-editor :global(.joint-schedule-viewport > .annual-schedule tr:not(.schedule-subheading) > :nth-child(-n+2)) {
 			position: sticky;
 			inset-inline-start: 0;
 			z-index: 1;
 			background: var(--bg-elev);
 		}
-		.full-annual-editor .joint-schedule-viewport > .annual-schedule tr:not(.schedule-subheading) > :nth-child(2) {
+		.full-annual-editor :global(.joint-schedule-viewport > .annual-schedule tr:not(.schedule-subheading) > :nth-child(2)) {
 			inset-inline-start: var(--schedule-item-width);
 			border-inline-end: 1px solid var(--border);
 		}
@@ -2362,7 +2402,7 @@
 		}
 		.filer-reference-list .schedule-reference { padding-block: .1875rem; }
 		.joint-schedule-viewport > .compensation-amount-table { min-inline-size: 29rem; }
-		.legacy-1700-editor .return-summary tbody th { padding-block: .3rem; }
+		.legacy-1700-editor :global(.return-summary tbody th) { padding-block: .3rem; }
 		.legacy-1700-editor .return-summary .filer-reference-list { margin-block-start: .125rem; }
 		.legacy-1700-editor .return-summary .filer-reference-list .schedule-reference { padding-block: .0625rem; }
 	}
@@ -2460,7 +2500,7 @@
 			overflow: hidden;
 			clip-path: inset(50%);
 		}
-		.historical-regimes tbody tr {
+		.historical-regimes :global(tbody tr) {
 			position: relative;
 			display: grid;
 			grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2468,8 +2508,8 @@
 			gap: .625rem .75rem;
 			padding: .75rem;
 		}
-		.historical-regimes tbody tr + tr { border-top: 1px solid var(--border); }
-		.historical-regimes tbody tr > :is(th, td) { padding: 0; border: 0; }
+		.historical-regimes :global(tbody tr + tr) { border-top: 1px solid var(--border); }
+		.historical-regimes :global(tbody tr > :is(th, td)) { padding: 0; border: 0; }
 		.historical-regimes .regime-item {
 			position: absolute;
 			inset-block-start: .75rem;
@@ -2497,7 +2537,7 @@
 		}
 	}
 	@container paper-form (44rem <= width < 58rem) {
-		.historical-regimes tbody tr { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+		.historical-regimes :global(tbody tr) { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 	}
 	.legacy-quarterly-editor .annual-schedule .summary-number { width: 4rem; }
 	.income-control :global(input:not([type="checkbox"]):not([type="radio"])) { min-width: 0; max-width: 100%; }
@@ -2522,6 +2562,9 @@
 	}
 	@container paper-form (width >= 58rem) {
 		.return-filing > .income-row:not(:last-child):not(:nth-child(3n)) { border-inline-end: 1px solid var(--border-soft); }
+		/* Close the three-column grid across the empty tracks beside the June 1701 ATC. */
+		.legacy-1701-editor .return-filing:has(> [data-income-item="4"]:last-child) { border-block-end: 1px solid var(--border); }
+		.legacy-1701-editor .return-filing > [data-income-item="4"]:last-child { border-block-end: 0; }
 		.revised-1700-editor .return-filing { grid-template-columns: minmax(0, .75fr) minmax(0, 1fr) minmax(0, 1.25fr); }
 		.micro-small-editor .return-filing > [data-income-item="5"] { grid-column: span 2; }
 	}
@@ -2529,7 +2572,6 @@
 		.return-filing.quarter-filing { grid-template-columns: minmax(0, .8fr) minmax(0, 2fr) minmax(0, .9fr) minmax(0, 1fr); }
 		.return-filing.quarter-filing > .income-row:not(:last-child) { border-inline-end: 1px solid var(--border-soft); }
 	}
-	.pages-filed :global([data-slot="form-item"]) { max-inline-size: 13rem; }
 	.legacy-1700-editor .income-fields:not(.legacy-filing) { grid-template-columns: minmax(0, 1fr); }
 	.legacy-1700-editor .income-fields > div { border-inline-end: 0; }
 	.legacy-filing {

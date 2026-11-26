@@ -1,19 +1,34 @@
 /** Whole-peso results retain the saved return’s decimal string format. */
 import { roundWholePeso } from '$lib/components/ui/currency-input/currency';
 import { incomeIncludesSpouse } from "./profile-fields";
+import { calculateJuneActivities, calculateRevisedActivities } from "./annual-activity-calculations";
+import { calculateJuneConsolidation, calculateJuneReconciliation, calculateJuneSupplementalIncome } from "./annual-june-schedules";
 
 type Values = Record<string, string>;
 const prefix = "frm1701:";
 const id = (name: string) => prefix + name;
 const isChecked = (value: string) => ["Y", "true", "1", "on"].includes(value);
 const number = (value: string | undefined) => {
-  const cleaned = (value ?? "").replace(/,/g, "").trim();
+  const cleaned = (value ?? "").replace(/,/g, "").trim().replace(/%$/, "");
   const parsed = Number(cleaned.replace(/^\((.*)\)$/, "-$1"));
   return Number.isFinite(parsed) ? parsed : 0;
 };
 const range = (first: number, last: number) =>
   Array.from({ length: last - first + 1 }, (_, i) => first + i);
 const legacyEmployerRows = [1, 2, 3, 4];
+const dependentRows = range(1, 4);
+
+function birthYear(value: string): number {
+  const iso = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(value);
+  const local = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(value);
+  if (!iso && !local) return 0;
+  const [year, month, day] = iso
+    ? [Number(iso[1]), Number(iso[2]), Number(iso[3])]
+    : [Number(local![3]), Number(local![1]), Number(local![2])];
+  const date = new Date(year, month - 1, day);
+  return date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day ? year : 0;
+}
+
 export const legacy1701Filing = {
   total: id("txtPg1Pt2I32TotalUponFiling"), overpayment: id("rdoPg1Pt2Overpayment"),
   pages: id("txtPg1Pt2I33PagesFilled"), type: id("rdoPg1I34CTCGovID"),
@@ -139,10 +154,11 @@ export function annualAmountField(code: string): string {
   );
 }
 
-export function calculateAnnual(code: string, values: Values): Values {
+export function calculateAnnual(code: string, values: Values, computed?: Set<string>): Values {
   const result = { ...values };
   const n = (name: string) => number(result[id(name)]);
   const set = (name: string, amount: number) => {
+    computed?.add(id(name));
     const rounded = roundWholePeso(amount);
     result[id(name)] = rounded.toFixed(2);
     return rounded;
@@ -157,14 +173,19 @@ export function calculateAnnual(code: string, values: Values): Values {
   // An upstream schedule is authoritative when it contains entered data. Imported
   // returns with only the downstream amount retain that amount until edited.
   const derive = (target: string, sources: string[], amount: () => number) => {
+    computed?.add(id(target));
     if (sources.some((name) => Object.hasOwn(result, id(name))))
       set(target, amount());
   };
+  const copy = (target: string, source: string) => derive(target, [source], () => n(source));
+  const total = (target: string, sources: string[]) => derive(target, sources, () => sum(sources));
+  const worksheet = { read: n, copy, total, derive };
   const deriveOperatingLoss = (grossIncome: string, deductions: string, loss: string, carryover: string) => {
     derive(loss, [grossIncome, deductions], () => n(grossIncome) - n(deductions));
     derive(carryover, [loss], () => Math.max(0, -n(loss)));
   };
   if (code === "1701v2018") {
+    calculateRevisedActivities(worksheet, selected("Pg3mTaxRegimeTYPE"));
     const year = n("txtPg1I1Year");
     for (const column of ["A", "B"]) {
       const active = column === "A" || joint;
@@ -304,10 +325,9 @@ export function calculateAnnual(code: string, values: Values): Values {
         n(`txtPg4IPart8_3${column}`) - activeAmount(`txtPg4IPart8_4${column}`),
       );
       const specialElection = column === "A" ? "rdoPg1I20IncomeSpecial" : "rdoPg2I11IncomeSpecial";
-      if (selected(specialElection) === "Yes") {
-        const credit = `txtPg4IPart7_8${column}`;
-        derive(`txtPg4IPart8_6${column}`, [credit], () => n(credit));
-      }
+      const specialCredit = `txtPg4IPart8_6${column}`;
+      computed?.add(id(specialCredit));
+      if (selected(specialElection) === "Yes") copy(specialCredit, `txtPg4IPart7_8${column}`);
       set(
         `txtPg4IPart8_7${column}`,
         n(`txtPg4IPart8_5${column}`) + activeAmount(`txtPg4IPart8_6${column}`),
@@ -331,6 +351,15 @@ export function calculateAnnual(code: string, values: Values): Values {
     );
     return result;
   }
+  calculateJuneSupplementalIncome(worksheet);
+  const attachmentRegime = selected("rdoPg1mTaxRegimeTYPE");
+  const attachmentActive = (person: "taxpayer" | "spouse", regime: string) => {
+    const special = regime === "SpecialRate";
+    return person === "taxpayer"
+      ? selected(special ? "rdoPg1Pt1I23IncomeSpecial" : "rdoPg1Pt1I22IncomeExempt") === "Yes"
+      : joint && selected(special ? "rdoPg4Pt7I108YesNo" : "rdoPg4Pt7I107YesNo") === "Yes";
+  };
+  calculateJuneActivities(worksheet, attachmentRegime, attachmentActive, selected, (base) => tax(base, 2017, true));
   const employerRows = legacyEmployerRows.map(legacyEmployer).filter(({ gross, withheld }) =>
     Object.hasOwn(values, id(gross)) || Object.hasOwn(values, id(withheld)),
   );
@@ -348,8 +377,17 @@ export function calculateAnnual(code: string, values: Values): Values {
     const deduction = selected(
       column === "C1" ? "rdoPg1Pt1I20Deduction" : "rdoPg4Pt7I105Itemized",
     );
-    if (employerRows.length) {
-      const personChoice = column === "C1" ? "1" : "2";
+    const personChoice = column === "C1" ? "1" : "2";
+    const employerColumn = column === "C1" ? "A" : "B";
+    const grossTotal = `txtPg5Sc1I5${employerColumn}TotalComIncome`;
+    const withheldTotal = `txtPg5Sc1I5${employerColumn}TotalTaxWithheld`;
+    const employerInputs = legacyEmployerRows.flatMap((row) => {
+      const { gross, withheld } = legacyEmployer(row);
+      return [gross, withheld];
+    });
+    computed?.add(id(grossTotal));
+    computed?.add(id(withheldTotal));
+    if (employerInputs.some((name) => Object.hasOwn(values, id(name)))) {
       let compensation = 0;
       let withholding = 0;
       for (const { earner, gross, withheld } of employerRows) {
@@ -357,12 +395,11 @@ export function calculateAnnual(code: string, values: Values): Values {
         compensation += Math.trunc(n(gross));
         withholding += Math.trunc(n(withheld));
       }
-      const employerColumn = column === "C1" ? "A" : "B";
-      set(`txtPg5Sc1I5${employerColumn}TotalComIncome`, compensation);
-      set(`txtPg5Sc1I5${employerColumn}TotalTaxWithheld`, withholding);
-      set(field(41, "GrossCompensation"), compensation);
-      set(`txtPg9Sc9I5${person}${column}`, withholding);
+      set(grossTotal, compensation);
+      set(withheldTotal, withholding);
     }
+    copy(field(41, "GrossCompensation"), grossTotal);
+    copy(`txtPg9Sc9I5${person}${column}`, withheldTotal);
 
     const saleInputs = [1, 2, 4].map(
       (item) => `txtPg5Sc2I${item}${person}${column}`,
@@ -379,6 +416,7 @@ export function calculateAnnual(code: string, values: Values): Values {
       n(`txtPg5Sc2I5${person}${column}`),
     );
     const filerType = selected("rdoPg1Pt1I7Type");
+    computed?.add(id(field(45, "PersonalExemp")));
     if (filerType || selected("rdoPg1Pt1I4ATC") === "Compensation") {
       const exemption = ["Estate", "Trust"].includes(filerType) ? 20000 : 50000;
       const applies =
@@ -420,22 +458,11 @@ export function calculateAnnual(code: string, values: Values): Values {
     derive(cost(5), tradingInputs, () => n(cost(3)) - n(cost(4)));
     const manufacturing = (item: number) =>
       `txtPg6Sc4BI${item}${person}${column}`;
-    const manufactureInputs = range(6, 18)
-      .filter((item) => ![8, 10, 13, 16].includes(item))
-      .map(manufacturing);
-    if (manufactureInputs.some((name) => Object.hasOwn(result, id(name)))) {
-      set(manufacturing(8), n(manufacturing(6)) + n(manufacturing(7)));
-      set(manufacturing(10), n(manufacturing(8)) - n(manufacturing(9)));
-      set(manufacturing(13), sum([10, 11, 12].map(manufacturing)));
-      set(
-        manufacturing(16),
-        n(manufacturing(13)) + n(manufacturing(14)) - n(manufacturing(15)),
-      );
-      set(
-        manufacturing(19),
-        n(manufacturing(16)) + n(manufacturing(17)) - n(manufacturing(18)),
-      );
-    }
+    total(manufacturing(8), [6, 7].map(manufacturing));
+    derive(manufacturing(10), [8, 9].map(manufacturing), () => n(manufacturing(8)) - n(manufacturing(9)));
+    total(manufacturing(13), [10, 11, 12].map(manufacturing));
+    derive(manufacturing(16), [13, 14, 15].map(manufacturing), () => n(manufacturing(13)) + n(manufacturing(14)) - n(manufacturing(15)));
+    derive(manufacturing(19), [16, 17, 18].map(manufacturing), () => n(manufacturing(16)) + n(manufacturing(17)) - n(manufacturing(18)));
     const services = range(20, 25).map(
       (item) => `txtPg6Sc4CI${item}${person}${column}`,
     );
@@ -513,8 +540,33 @@ export function calculateAnnual(code: string, values: Values): Values {
           : `txtPg7Sc6I${item}SpouseSumC2`,
       ),
     ];
-    if (deduction !== "OSD")
-      derive(field(57, "Ordinary"), ordinary, () => sum(ordinary));
+    const ordinaryTotal = column === "C1" ? "txtPg7Sc6I40TaxTotalPayerC1" : "txtPg7Sc6I40TotalSpouseC2";
+    total(ordinaryTotal, ordinary);
+    if (deduction !== "OSD") copy(field(57, "Ordinary"), ordinaryTotal);
+    else computed?.add(id(field(57, "Ordinary")));
+
+    const dependentCount = column === "C1" ? "txtPg1Pt1I24Dependent" : "txtPg4Pt7I111Dependent";
+    const exemption = field(46, "AdditionalExemp");
+    const taxpayerClaim = selected("rdoPg1Pt1I24Claiming");
+    const spouseClaim = selected("rdoPg4Pt7I110YesNo");
+    const claimsDependents = column === "C1" ? taxpayerClaim === "Yes" :
+      joint && taxpayerClaim !== "Yes" && spouseClaim === "Yes";
+    const birth = birthYear(selected(column === "C1" ? "txtPg1Pt1I11Month" : "ddlPg4Pt7I99Month"));
+    const yearText = selected("txtPg1I1Year");
+    const filingYear = Number(/^\d{2}$/.test(yearText) ? "20" + yearText : yearText);
+    computed?.add(id(dependentCount));
+    if ((column === "C1" ? taxpayerClaim : spouseClaim) && !claimsDependents) {
+      result[id(dependentCount)] = "0";
+    } else if (claimsDependents && dependentRows.some(row => Object.hasOwn(values, id(`txtPg4Pt7ALastName${row}`)))) {
+      const eligible = dependentRows.filter(row => {
+        const childBirth = birthYear(selected(`txtPg4Pt7AMonth${row}`));
+        return !!selected(`txtPg4Pt7ALastName${row}`).trim() && !!selected(`txtPg4Pt7AFirstMiddleName${row}`).trim() &&
+          childBirth > 0 && childBirth <= filingYear &&
+          (checked(`chkPg4Pt7AIncapacitated${row}`) || (birth > 0 && childBirth > birth && filingYear - childBirth <= 21));
+      });
+      result[id(dependentCount)] = String(eligible.length);
+    }
+    derive(exemption, [dependentCount], () => Math.min(4, Math.max(0, n(dependentCount))) * 25000);
     const p3 = (item: number, name: string) =>
       `txtPg3Pt5I${item}${name}${column}`;
     set(
@@ -597,6 +649,16 @@ export function calculateAnnual(code: string, values: Values): Values {
       tax(n(field(66, "TotalTaxable")), 2017, true),
     );
     set(p3(68, "RegularRate"), n(field(67, "TaxDueRegular")));
+    const specialRegime = column === "C1" ? "C2" : "C6";
+    const exemptRegime = column === "C1" ? "C3" : "C7";
+    for (const [target, source, regime, applies] of [
+      [p3(69, "SpecialRate"), "18TotalIncome", specialRegime, attachmentActive(column === "C1" ? "taxpayer" : "spouse", "SpecialRate")],
+      [p3(74, "Special"), "19TotalTaxCredits", specialRegime, attachmentActive(column === "C1" ? "taxpayer" : "spouse", "SpecialRate")],
+      [p3(75, "Exempt"), "19TotalTaxCredits", exemptRegime, attachmentActive(column === "C1" ? "taxpayer" : "spouse", "Exempt")],
+    ] as const) {
+      computed?.add(id(target));
+      if (applies) copy(target, `txtPg12Pt9I${source}${regime}`);
+    }
     set(
       p3(71, "NetSpecial"),
       n(p3(69, "SpecialRate")) - n(p3(70, "LessShare")),
@@ -616,6 +678,17 @@ export function calculateAnnual(code: string, values: Values): Values {
       set(creditTotal, Object.hasOwn(result, id(creditTotal)) ? n(creditTotal) : n(regularCredit));
     }
     set(regularCredit, n(creditTotal));
+    const beforeSpecial = column === "C1" ? "txtPg3Pt5I88TaxRelief1" : "txtPg3Pt5I88TaxRelief2";
+    set(p3(86, "Regular"), tax(n(field(66, "TotalTaxable")) + n(field(58, "Special")), 2017, true));
+    copy(p3(87, "LessTax"), field(67, "TaxDueRegular"));
+    derive(beforeSpecial, [p3(86, "Regular"), p3(87, "LessTax")], () => n(p3(86, "Regular")) - n(p3(87, "LessTax")));
+    copy(p3(89, "AddSpecial"), `txtPg9Sc9I8${person}${column}`);
+    total(p3(90, "RegularTax"), [beforeSpecial, p3(89, "AddSpecial")]);
+    copy(p3(91, "SpecialTax"), `txtPg12Pt9I21TaxRelief${specialRegime}`);
+    copy(p3(92, "ExemptTax"), `txtPg12Pt9I21TaxRelief${exemptRegime}`);
+    total(p3(93, "TotalTax"), [p3(90, "RegularTax"), p3(91, "SpecialTax"), p3(92, "ExemptTax")]);
+    calculateJuneConsolidation(worksheet, column, person, deduction === "OSD");
+    calculateJuneReconciliation(worksheet, column);
     set(
       p3(76, "TotalTax"),
       sum([p3(73, "Regular"), p3(74, "Special"), p3(75, "Exempt")]),
@@ -641,6 +714,7 @@ export function calculateAnnual(code: string, values: Values): Values {
         n(`txtPg9Sc10I16${person}${column}`),
     );
   }
+  total("txtPg3Pt5I94TotalTax", ["txtPg3Pt5I93TotalTaxC1", ...(joint ? ["txtPg3Pt5I93TotalTaxC2"] : [])]);
   set(
     "txtPg1Pt2I26IncomeTax",
     n("txtPg3Pt5I72TotalIncomeTaxC1") +
@@ -880,7 +954,7 @@ export function validateAnnual(code: string, values: Values): Values {
       ])
         require(name, label);
     if (n("txtPg1Pt2I29PortionTax") > n("txtPg1Pt2I26IncomeTax") * 0.5)
-      errors[id("txtPg1Pt2I29PortionTax")] =
+      errors[id("txtPg3Pt5I79LessPortion")] =
         "Deferred tax cannot exceed 50% of Item 26.";
     if (n("txtPg1Pt2I32TotalUponFiling") < 0)
       require("rdoPg1Pt2Overpayment", "the overpayment disposition");
