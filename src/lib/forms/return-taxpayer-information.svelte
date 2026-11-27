@@ -166,11 +166,16 @@
 	dl > div { min-width: 0; }
 	dt { color: var(--fg-muted); font-size: .75rem; }
 	dd { margin: .25rem 0 0; font-size: .875rem; overflow-wrap: anywhere; }
-	.paper { padding: 0; border-bottom: 0; }
+	.paper {
+		--profile-item-width: 1.75rem;
+		--profile-item-gap: .375rem;
+		padding: 0;
+		border-bottom: 0;
+	}
 	.paper .eq-section-header { margin: 0; padding: .375rem .875rem; background: var(--paper-section-background, var(--bg-hover)); }
 	.paper dl { gap: 0; }
 	.paper dl > div { padding: .75rem .875rem; border-top: 1px solid var(--border); }
-	.taxpayer-item { font-family: var(--font-mono); margin-inline-end: .5rem; color: var(--fg); font-weight: 650; }
+	.taxpayer-item { font-family: var(--font-mono); color: var(--fg); font-weight: 650; }
 	@container paper-form (min-width: 36rem) {
 		.paper:not(.payment, .remittance, .mapped-paper) dl { grid-template-columns: minmax(0, 1.2fr) minmax(0, .6fr) minmax(0, 2fr); }
 		.paper:not(.payment, .remittance, .mapped-paper) dl > div:nth-child(n + 2):nth-child(-n + 3) { border-inline-start: 1px solid var(--border); }
@@ -208,27 +213,24 @@
 		padding: .75rem .875rem;
 		background: var(--bg-elev);
 	}
-	.profile-extra {
-		--profile-item-width: 1.75rem;
-		--profile-item-gap: .375rem;
+	dt:has(> .taxpayer-item), .profile-extra {
 		display: grid;
 		grid-template-columns: var(--profile-item-width) minmax(0, 1fr);
 		gap: var(--profile-item-gap);
 		align-items: start;
 	}
+	dt:has(> .taxpayer-item) + dd {
+		margin-inline-start: calc(var(--profile-item-width) + var(--profile-item-gap));
+	}
 	.profile-extra.grouped { flex-basis: 100%; }
 	.profile-extra-controls { display: grid; min-width: 0; gap: .75rem; }
-	.profile-extra-controls > :global(dl > dd) {
-		margin-inline-start: calc(-1 * (var(--profile-item-width) + var(--profile-item-gap)));
-	}
 	@container paper-form (min-width: 36rem) {
 		.profile-extra-controls { grid-template-columns: repeat(var(--extra-column-count, 1), minmax(0, 1fr)); }
-		.profile-extra-controls > :global(dl:not(:first-child) > dd) { margin-inline-start: 0; }
 	}
 	.income-profile > .eq-section-header { border-block-start: 0; }
 	.income-profile > .profile-grid { --radio-choice-row-gap: .25rem; border-block-end: 1px solid var(--border); }
 	.legacy-1700 .profile-grid > [data-profile-key="address"] { flex-basis: 100%; }
-	.legacy-1700 .profile-extra { --profile-item-width: 1.1rem; }
+	.legacy-1700 { --profile-item-width: 1.1rem; }
 	.legacy-1700 .profile-extra.grouped { flex-basis: 100%; }
 	.profile-item-controls { margin-top: .625rem; }
 	.profile-required { color: var(--danger); font-weight: 600; }
@@ -241,7 +243,7 @@
 		.legacy-1700 [data-profile-key="address"] > :is(dt, dd:not(.profile-item-controls)) { grid-column: 1; }
 		.legacy-1700 .profile-item-controls { grid-area: 1 / 2 / 3; align-self: center; margin: 0; }
 	}
-	.profile-extra > .taxpayer-item { font-family: var(--font-mono); margin-inline-end: 0; font-size: .8rem; }
+	.profile-extra > .taxpayer-item { font-size: .8rem; }
 	.profile-extra :global([data-slot="form-item"]) { grid-template-columns: minmax(0, 1fr); }
 	@container paper-form (min-width: 36rem) {
 		.profile-grid { --profile-cell-width: calc((100% - 1px) / 2); }
@@ -252,9 +254,7 @@
 		.profile-grid > [data-profile-key="address"] { --profile-cell-width: calc((100% - 1px) / 2); }
 	}
 	.revised-1700 .profile-grid > :is(dl, .profile-extra) { padding-block: .625rem; }
-	.revised-1700 .profile-extra { --profile-item-width: 1.4rem; }
-	.revised-1700 .profile-grid > dl > dt { display: grid; grid-template-columns: 1.4rem minmax(0, 1fr); gap: .375rem; }
-	.revised-1700 .profile-grid > dl .taxpayer-item { font-family: var(--font-mono); margin-inline-end: 0; }
+	.revised-1700 { --profile-item-width: 1.4rem; }
 	@container paper-form (width >= 54rem) {
 		.revised-1700 .profile-grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); }
 		.revised-1700 [data-income-item="4"] { grid-column: 1 / 5; }

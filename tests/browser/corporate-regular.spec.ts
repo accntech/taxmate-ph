@@ -5,6 +5,86 @@ import type { CorporateField } from '../../src/lib/forms/corporate-income/types'
 
 const id = (name: string) => `[id="frm1702RT:${name}"]`;
 
+for (const code of ['1702RTv2018', '1702RTv2018C']) {
+ test(`${code} displays each item number once across all pages`, async ({ page }, info) => {
+  await seedWorkspace(page, 'light', 'loaded', { taxpayerClassification: 'N' }, []);
+  await page.setViewportSize({ width: 390, height: 900 });
+  await page.goto(`/ebirforms/taxpayers/${taxpayerId}/forms/${code}?new=true`);
+  const editor = page.locator('.corporate-editor');
+  await expect(editor).toBeVisible({ timeout: 20_000 });
+  const totals = editor.getByRole('region', { name: 'Part II - Total Tax Payable' });
+  await expect.soft(totals.locator('[data-corporate-item="14"] .value-label')).toHaveText('Tax Due');
+  await expect(totals.locator('[data-corporate-item="16"] .value-label')).toContainText('(Item 14 Less Item 15)');
+
+  for (const pageNumber of [1, 2, 3, 4]) {
+   await goToReturnPage(page, pageNumber);
+   const repeated = await editor.locator('.corporate-row > .paper-item-number').evaluateAll(numbers => numbers.flatMap(number => {
+    const item = number.textContent?.trim().toUpperCase();
+    const labels = Array.from(number.parentElement!.querySelectorAll('label, legend, .value-label, .amount-caption > span'));
+    return labels.map(label => label.textContent?.trim() ?? '')
+     .filter(label => label.split(/\s+/, 1)[0].toUpperCase() === item);
+   }));
+   expect.soft(repeated, `Page ${pageNumber} repeats item numbers in field labels`).toEqual([]);
+   await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+   if (process.env.BIR_BACKGROUND_PREVIEWS === '1') {
+    for (const [device, width] of [['desktop', 1280], ['narrow', 390]] as const) {
+     await page.setViewportSize({ width, height: 900 });
+     await editor.screenshot({ path: info.outputPath(`${code}-page-${pageNumber}-${device}.png`), animations: 'disabled',
+      style: '.eq-action-bar { position: static; }' });
+    }
+   }
+  }
+ });
+}
+
+test('legacy 1702RT cover aligns item labels and displays each item number once', async ({ page }, info) => {
+ await seedWorkspace(page, 'light', 'loaded', {
+  taxpayerClassification: 'N', lineOfBusiness: 'Accounting services', psicCode: '69200'
+ }, []);
+ await page.goto(`/ebirforms/taxpayers/${taxpayerId}/forms/1702RT?new=true`);
+
+ const background = page.getByRole('region', { name: /Part I - Background Information/ });
+ const totals = page.getByRole('region', { name: /Part II - Total Tax Payable/ });
+ await expect(totals).toBeVisible({ timeout: 15_000 });
+ const row = (section: typeof background, item: number) => section.locator(`[data-corporate-item="${item}"]`);
+ const labelOffset = async (section: typeof background, item: number, selector = '.value-label') => row(section, item).evaluate((element, selector) => {
+  const number = element.querySelector('.paper-item-number')!.getBoundingClientRect();
+  const label = element.querySelector(selector)!;
+  const text = document.createRange();
+  text.selectNodeContents(label);
+  return text.getBoundingClientRect().left - number.left;
+ }, selector);
+
+ for (const [device, width] of [['desktop', 1440], ['narrow', 390]] as const) {
+  await page.setViewportSize({ width, height: 1000 });
+  await expect(row(totals, 16).locator('.value-label')).toHaveText('Total Income Tax Due (Overpayment)');
+  await expect(row(totals, 18).locator('.value-label')).toHaveText(/\(Item 16 Less than Item 17\)$/);
+  for (const item of [16, 17, 18, 19, 20]) {
+   await expect(row(totals, item).locator('.paper-item-number')).toHaveText(String(item));
+   await expect(row(totals, item).locator('.value-label')).not.toHaveText(new RegExp(`^${item}\\s+`));
+  }
+  const offset = await labelOffset(background, 9);
+  for (const item of [10, 11, 12, 13, 14]) {
+   expect(await labelOffset(background, item)).toBeCloseTo(offset, 0);
+  }
+  expect(await labelOffset(totals, 16, '.schedule-reference')).toBeCloseTo(offset, 0);
+  const visibleTotalLabel = device === 'desktop' ? '.amount-caption > span' : '.value-label';
+  expect(await labelOffset(totals, 16, visibleTotalLabel)).toBeCloseTo(offset, 0);
+  await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+  const screenshot = { animations: 'disabled', style: '.eq-action-bar { position: static; }' } as const;
+  await background.screenshot({ ...screenshot, path: info.outputPath(`1702rt-background-${device}.png`) });
+  await totals.screenshot({ ...screenshot, path: info.outputPath(`1702rt-totals-${device}.png`) });
+ }
+
+ await row(totals, 16).getByRole('button', { name: 'From Part IV, Item 44' }).click();
+ const computation = page.getByRole('region', { name: /Part IV - Computation of Tax/ });
+ await expect(row(computation, 44).locator('.value-label')).toHaveText(/^Total Income Tax Due/);
+ for (const [device, width] of [['desktop', 1440], ['narrow', 390]] as const) {
+  await page.setViewportSize({ width, height: 1000 });
+  await row(computation, 44).screenshot({ path: info.outputPath(`1702rt-item-44-${device}.png`), animations: 'disabled' });
+ }
+});
+
 test('legacy 1702RT share classes save as independent radio selections', async ({ page }, info) => {
  const formCode = '1702RT';
  const draftId = 'share-class-draft';

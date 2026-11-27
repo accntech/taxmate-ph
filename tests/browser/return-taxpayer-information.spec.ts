@@ -23,19 +23,20 @@ const taxpayerLabels: Partial<Record<string, string[]>> = {
 
 test('all supported returns show their taxpayer information', async ({ page }) => {
 	test.setTimeout(120_000);
+	await page.routeWebSocket('**/*', socket => socket.close());
 	await page.goto('/');
 	await expect(page.getByRole('heading', { name: 'Tax workspaces', exact: true })).toBeVisible({ timeout: 15_000 });
 	// Vite handles the form catalog's JSON imports in the browser.
 	const forms = await page.evaluate(async () => {
 		const root = '/src/lib/forms';
 		const { listForms } = await import(`${root}/index.ts`) as typeof import('../../src/lib/forms');
-		const { getIndividualIncomeForm } = await import(`${root}/individual-income/index.ts`) as typeof import('../../src/lib/forms/individual-income');
 		const { getWithholdingPaperLayout } = await import(`${root}/withholding-paper-layout.ts`) as typeof import('../../src/lib/forms/withholding-paper-layout');
-		return listForms().filter(form => form.status === 'ready').map(({ code }) => ({
+		return listForms().filter(form => form.status === 'ready').map(({ code, category }) => ({
 			code,
-			taxpayer: ['1601EQ', '0605', '0619E', '0619F'].includes(code) || getIndividualIncomeForm(code)
-				? null
-				: getWithholdingPaperLayout(code).taxpayer
+			corporate: category === 'Corporate Income Tax',
+			taxpayer: category === 'Withholding Tax' && !['1601EQ', '0619E', '0619F'].includes(code)
+				? getWithholdingPaperLayout(code).taxpayer
+				: null
 		}));
 	});
 	expect(forms.length).toBeGreaterThan(0);
@@ -45,8 +46,22 @@ test('all supported returns show their taxpayer information', async ({ page }) =
 	for (const form of forms) {
 		await test.step(form.code, async () => {
 			await page.goto(returnPath(form.code));
-			const information = page.getByRole('region', { name: 'Taxpayer information', exact: true });
+			const information = form.corporate
+				? page.getByRole('region', { name: /background information/i })
+				: page.getByRole('region', { name: 'Taxpayer information', exact: true });
 			await expect(information).toBeVisible({ timeout: 15_000 });
+			await expect(information.getByRole('link', { name: 'Edit taxpayer information' })).toHaveAttribute('href', `/ebirforms/taxpayers/${taxpayerId}/edit`);
+			if (form.corporate) {
+				for (const [label, value] of [
+					['TIN and branch code', '001-234-567-0008'],
+					['RDO code', '040'],
+					['Registered name', 'Example Services Corporation'],
+					['Registered address', '123 Example Street']
+				]) {
+					await expect(information.getByRole('status', { name: label, exact: true })).toContainText(value);
+				}
+				return;
+			}
 			const contact = form.code === '1701MS'
 				? ['example@example.com', '09171234567']
 				: ['123 Example Street', 'Example City'];
@@ -62,7 +77,6 @@ test('all supported returns show their taxpayer information', async ({ page }) =
 				await expect(information.getByText(/TIN and branch code$/).first()).toBeVisible();
 				await expect(information.getByText(/RDO code$/)).toBeVisible();
 			}
-			await expect(information.getByRole('link', { name: 'Edit taxpayer information' })).toHaveAttribute('href', `/ebirforms/taxpayers/${taxpayerId}/edit`);
 		});
 	}
 });

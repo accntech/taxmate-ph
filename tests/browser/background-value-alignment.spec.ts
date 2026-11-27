@@ -10,6 +10,8 @@ const codes = [
 	'1702Q', '1702Qv2008C', '1702Qv2018C', '1702RT', '1702RTv2018', '1702RTv2018C'
 ];
 
+const previewStyle = '.window-titlebar, .eq-action-bar { visibility: hidden; }';
+
 test('background alignment cases cover the form catalog', async ({ page }) => {
 	await page.route('**/__background_alignment_catalog', route =>
 		route.fulfill({ contentType: 'text/html', body: '<!doctype html><title>Form catalog fixture</title>' }));
@@ -23,7 +25,7 @@ test('background alignment cases cover the form catalog', async ({ page }) => {
 });
 
 for (const code of codes) {
-	test(`${code} background values share a left inset`, async ({ page }, info) => {
+	test(`${code} background values and numbered labels align`, async ({ page }, info) => {
 		const corporate = code.startsWith('1702');
 		const individual = code.startsWith('17') && !corporate;
 		await seedWorkspace(page, 'light', 'loaded', {
@@ -35,6 +37,7 @@ for (const code of codes) {
 			lineOfBusiness: 'Manufacturing and distribution of commercial equipment', psocCode: '4311',
 			birthDate: '1984-02-29', civilStatus: 'Single', citizenship: 'FILIPINO'
 		}, []);
+		await page.routeWebSocket('**/*', socket => socket.close());
 		await page.setViewportSize({ width: 1280, height: 900 });
 		await page.goto(`/ebirforms/taxpayers/${taxpayerId}/forms/${code}?new=true`);
 		const background = corporate ? page.locator('.corporate-section.background') :
@@ -42,50 +45,75 @@ for (const code of codes) {
 		await expect(background).toBeVisible({ timeout: 20_000 });
 		await page.evaluate(() => document.fonts.ready);
 
-		for (const width of [1280, 390]) {
+		for (const width of code === '0619E' ? [1600, 1280, 390] : [1280, 390]) {
 			await page.setViewportSize({ width, height: 900 });
-			const geometry = await background.locator(corporate ? '.corporate-row output' :
-				'dd:not(.profile-item-controls)').evaluateAll(values =>
-				values.map(value => {
-					const labelGroup = value.closest('dl');
-					const extra = value.closest('.profile-extra');
-					const controls = extra?.querySelector('.profile-extra-controls');
-					const hasOwnColumn = controls && controls.firstElementChild !== labelGroup &&
-						getComputedStyle(controls).gridTemplateColumns.split(' ').length > 1;
-					const cell = value.closest('.corporate-row, dl[data-profile-key]') ??
-						(hasOwnColumn ? labelGroup : extra) ?? value.parentElement!;
-					const cellBox = cell.getBoundingClientRect();
-					const verticalOrigin = extra ? labelGroup!.getBoundingClientRect().top : cellBox.top;
-					const border = parseFloat(getComputedStyle(cell).borderInlineStartWidth);
-					const range = document.createRange();
-					range.selectNodeContents(value);
-					const lineStarts = new Map<number, number>();
-					for (const rect of range.getClientRects()) {
-						if (rect.width === 0) continue;
-						const top = rect.top - verticalOrigin;
-						const left = rect.left - cellBox.left - border;
-						lineStarts.set(top, Math.min(left, lineStarts.get(top) ?? Infinity));
-					}
-					return {
-						item: cell.getAttribute('data-corporate-item') ?? value.parentElement?.querySelector('dt')?.textContent?.trim(),
-						hasOwnColumn: Boolean(hasOwnColumn),
-						lines: Array.from(lineStarts, ([top, left]) => ({ left, top }))
-					};
-				})
-			);
-			expect(geometry.length).toBeGreaterThanOrEqual(4);
-			const inset = await background.evaluate(() => .875 * parseFloat(getComputedStyle(document.documentElement).fontSize));
+			const labels = await background.locator(corporate ? '.corporate-row > .paper-item-number' :
+				'.taxpayer-item').evaluateAll(numbers => numbers.flatMap(number => {
+				const cell = number.parentElement!;
+				const item = number.textContent?.trim();
+				if (!item) return [];
+				const range = document.createRange();
+				if (cell.matches('dt')) {
+					range.setStartAfter(number);
+					range.setEnd(cell, cell.childNodes.length);
+				} else {
+					const label = cell.querySelector('label, legend, .value-label, .profile-extra-controls dt');
+					if (!label) return [];
+					range.selectNodeContents(label);
+				}
+				const label = Array.from(range.getClientRects()).find(rect => rect.width > 1);
+				if (!label) return [];
+				return [{ item, offset: label.left - number.getBoundingClientRect().left }];
+			}));
+			expect(labels.length).toBeGreaterThanOrEqual(3);
+			const labelOffset = labels[0].offset;
+			expect.soft(labels.filter(label => Math.abs(label.offset - labelOffset) > .5),
+				`${width}px viewport, expected ${labelOffset}px between item and label starts`).toEqual([]);
+
+			const values = background.locator(corporate ? '.corporate-row output' : 'dd:not(.profile-item-controls)');
+			await expect.poll(() => values.count()).toBeGreaterThanOrEqual(4);
+			const stackedValues = code === '0619E' ? values.or(page.locator('.constant-codes dd')) : values;
+			const geometry = await stackedValues.evaluateAll(elements => elements.map(value => {
+				const cell = value.closest('.corporate-row, dl[data-profile-key], .constant-codes > div') ??
+					value.parentElement!;
+				const label = value.parentElement!.querySelector('dt, .value-label')!;
+				const number = label.querySelector('.taxpayer-item, .paper-item-number');
+				const labelRange = document.createRange();
+				labelRange.selectNodeContents(label);
+				if (number) labelRange.setStartAfter(number);
+				const labelLines = Array.from(labelRange.getClientRects()).filter(rect => rect.width > 0);
+				const valueRange = document.createRange();
+				valueRange.selectNodeContents(value);
+				const lineStarts = new Map<number, number>();
+				for (const rect of valueRange.getClientRects()) {
+					if (rect.width === 0) continue;
+					const top = rect.top - cell.getBoundingClientRect().top;
+					lineStarts.set(top, Math.min(rect.left, lineStarts.get(top) ?? Infinity));
+				}
+				return {
+					item: cell.getAttribute('data-corporate-item') ?? label.textContent?.trim(),
+					labelStart: labelLines[0]?.left,
+					lines: Array.from(lineStarts, ([top, left]) => ({ left, top }))
+				};
+			}));
 			if (process.env.BIR_BACKGROUND_PREVIEWS === '1') {
 				await info.attach(`geometry-${width}`, { body: JSON.stringify(geometry), contentType: 'application/json' });
 				await background.screenshot({
 					path: info.outputPath(`background-${width}.png`),
 					animations: 'disabled',
-					style: '.eq-action-bar { visibility: hidden; }'
+					style: previewStyle
 				});
+				if (code === '0619E') {
+					await page.getByRole('region', { name: 'Return period', exact: true }).screenshot({
+						path: info.outputPath(`return-period-${width}.png`),
+						animations: 'disabled',
+						style: previewStyle
+					});
+				}
 			}
-			const misaligned = geometry.filter(({ hasOwnColumn, lines }) =>
-				!lines.length || lines.some(line => Math.abs(line.left - (hasOwnColumn ? 0 : inset)) > .5));
-			expect.soft(misaligned, `${width}px viewport, expected ${inset}px text inset`).toEqual([]);
+			const misaligned = geometry.filter(({ labelStart, lines }) =>
+				labelStart === undefined || !lines.length || lines.some(line => Math.abs(line.left - labelStart) > .5));
+			expect.soft(misaligned, `${width}px viewport, expected each value line to start under its label`).toEqual([]);
 			if (code === '1702Qv2018C' && width === 390) {
 				const registered = geometry.filter(({ item }) => item === '8' || item === '9');
 				expect(registered).toHaveLength(2);

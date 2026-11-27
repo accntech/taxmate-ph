@@ -117,8 +117,14 @@
 			{@render periodItem('5', 'txtTaxTypeCode')}
 		{:else}
 			<dl class="constant-codes">
-				<div><dt><span class="paper-item-number" aria-hidden="true">5</span> ATC</dt><dd>WME10</dd></div>
-				<div><dt><span class="paper-item-number" aria-hidden="true">6</span> Tax type code</dt><dd>WE</dd></div>
+				<div>
+					<dt><span class="paper-item-number" aria-hidden="true">5</span> ATC</dt>
+					<dd>WME10</dd>
+				</div>
+				<div>
+					<dt><span class="paper-item-number" aria-hidden="true">6</span> Tax type code</dt>
+					<dd>WE</dd>
+				</div>
 			</dl>
 		{/if}
 	</section>
@@ -170,12 +176,30 @@
 		grid-template-columns: minmax(0, 1fr);
 	}
 	.period-cell :global([data-slot="input"]:not([role="spinbutton"])), .remittance-row :global([data-slot="input"]) { width: 100%; min-width: 0; }
-	.constant-codes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); margin: 0; }
+	.constant-codes {
+		--constant-item-width: 1rem;
+		--constant-item-gap: .375rem;
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		margin: 0;
+	}
 	.constant-codes div { min-width: 0; padding: .75rem .875rem; }
 	.constant-codes div + div { border-inline-start: 1px solid var(--border); }
-	.constant-codes dt { color: var(--fg-muted); font-size: .8rem; line-height: var(--form-label-line-height); }
-	.constant-codes dt span { margin-inline-end: .5rem; color: var(--fg); }
-	.constant-codes dd { margin: .375rem 0 0; font-size: .875rem; font-weight: 600; }
+	.constant-codes dt {
+		display: grid;
+		grid-template-columns: var(--constant-item-width) minmax(0, 1fr);
+		gap: var(--constant-item-gap);
+		color: var(--fg-muted);
+		font-size: .8rem;
+		line-height: var(--form-label-line-height);
+	}
+	.constant-codes .paper-item-number { color: var(--fg); }
+	.constant-codes dd {
+		margin: .375rem 0 0;
+		margin-inline-start: calc(var(--constant-item-width) + var(--constant-item-gap));
+		font-size: .875rem;
+		font-weight: 600;
+	}
 	.remittance-heading, .penalties-heading {
 		margin: 0;
 		padding: .5rem .875rem;

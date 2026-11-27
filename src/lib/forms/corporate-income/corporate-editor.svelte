@@ -126,10 +126,14 @@
 		}
 	}
 
+	function withoutItemPrefix(label: string, item?: string) {
+		const prefix = `${item} `;
+		return item && label.slice(0, prefix.length).toUpperCase() === prefix.toUpperCase() ? label.slice(prefix.length) : label;
+	}
+
 	function filingField(field: CorporateField, row: CorporateRow): CorporateField {
 		const label = field.id === form.periodType ? 'Accounting period' : field.label || row.label;
-		const prefix = `${row.item} `;
-		return { ...field, label: row.item && label.startsWith(prefix) ? label.slice(prefix.length) : label };
+		return { ...field, label: withoutItemPrefix(label, row.item) };
 	}
 
 
@@ -422,7 +426,8 @@
 
 {#snippet control(field: CorporateField, fallback: string, column?: string, row?: CorporateRow, inSheet = false, amountContext?: string, useColumnLabel = false)}
 	{@const id = field.id}
-	{@const baseLabel = field.label && field.label !== column ? field.label : fallback}
+	{@const fieldLabel = field.label && field.label !== column ? field.label : fallback}
+	{@const baseLabel = (legacyRegular || revisedRegular) && !inSheet ? withoutItemPrefix(fieldLabel, row?.item) : fieldLabel}
 	{@const source = inSheet ? draftSource : calculated}
 	{@const certificate = source[identificationFields.type]}
 	{@const ctc = certificate === 'CTC'}
@@ -594,7 +599,7 @@
 		</section>
 	{/snippet}
 
-<div class={['paper-sheet corporate-editor', legacyExemptCover && 'legacy-exempt-cover', mixedScheduleLayout && 'mixed-schedules']} style:--exempt-amount-width={legacyIdentification ? '14rem' : undefined} style:--exempt-item-gutter={legacyIdentification ? '2.5rem' : undefined} role="region" aria-label={form.title}>
+<div class={['paper-sheet corporate-editor', legacyRegular && current === '1' && 'legacy-regular-cover', legacyExemptCover && 'legacy-exempt-cover', mixedScheduleLayout && 'mixed-schedules']} style:--exempt-amount-width={legacyIdentification ? '14rem' : undefined} style:--exempt-item-gutter={legacyIdentification ? '2.5rem' : undefined} role="region" aria-label={form.title}>
 	<PaperFormHeader {number} revision={form.revision} {title} {subtitle} />
 	<div class="page-context">
 		<h2 id={headingId} tabindex="-1">{pages[Number(current) - 1].title}</h2>
@@ -729,7 +734,7 @@
 									&& (visible.length === 1 || tin.length === visible.length)
 							}]}
 								data-corporate-item={row.item}>
-								{#if row.item}<span class="paper-item-number" aria-hidden="true">{row.item.toUpperCase()}</span>{/if}
+								{#if row.item}<span class="paper-item-number" aria-hidden={legacyRegular || revisedRegular ? undefined : 'true'}>{row.item.toUpperCase()}</span>{/if}
 								{#if registered}
 									<div class="managed-value">
 										<RegisteredInformation fields={visible} values={calculated} {errors} {onvaluechange} />
@@ -1056,15 +1061,9 @@
 		grid-template-columns: var(--background-item-width) minmax(0, 1fr);
 		column-gap: var(--background-item-gap);
 	}
-	/* Keep the label in the numbered grid track and let the value use the full cell width. */
-	.background .corporate-row:has(> .paper-item-number):not(.managed-cell) :global(output) {
-		margin-inline-start: calc(-1 * (var(--background-item-width) + var(--background-item-gap)));
-	}
 	.background .paper-item-number { padding-top: 0; }
-	.background .managed-cell:has(.paper-item-number) { grid-template-columns: minmax(0, 1fr); }
-	.background .managed-cell:has(.paper-item-number) > * { grid-area: 1 / 1; }
 	.background .managed-cell .paper-item-number { font-size: .75rem; }
-	.background .managed-cell .paper-item-number ~ * :global(.value-label) { padding-inline-start: 1.2rem; }
+	.legacy-regular-cover { --corporate-item-width: 1.1rem; }
 	@container paper-form (width < 36rem) {
 		.annual-background :is(.identity-cell, .short-cell) {
 			--background-cell-width: calc((100% - 1px) / 2);
@@ -1393,9 +1392,6 @@
 	.legacy-exempt-cover {
 		--exempt-amount-width: 14rem;
 		--exempt-item-gutter: 2.5rem;
-	}
-	.legacy-exempt-cover .background .managed-cell .paper-item-number ~ * :global(.value-label) {
-		padding-inline-start: 1.5rem;
 	}
 	.legacy-exempt-cover .background [data-corporate-item='15'] :global([data-slot='calculated-value']) {
 		grid-template-columns: minmax(0, 1fr);
