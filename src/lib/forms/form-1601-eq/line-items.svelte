@@ -411,14 +411,18 @@
 	.preview-content { grid-column: 2; display: flex; flex-wrap: wrap; gap: .375rem 1rem; align-content: center; padding: .5rem; }
 	@container return-fields (max-width: 42rem) {
 		.column-head { display: none; }
-		.item .line-cells { grid-template-columns: repeat(2, minmax(0, 1fr)); padding: .375rem .25rem; gap: .25rem .75rem; }
+		.item .line-cells {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+			padding-block: .375rem;
+			padding-inline: .25rem var(--paper-amount-inset);
+			gap: .25rem .75rem;
+		}
 		.line-cells > * { padding: 0; }
 		.item-number { grid-column: 1 / -1; }
 		.item-number > .mobile-label { margin-inline-end: .25em; }
 		.mobile-label { display: inline; }
 		.entry-cell > .mobile-label, .number-cell > .mobile-label { display: block; margin-bottom: .125rem; color: var(--fg-muted); font-size: .75rem; }
-		.number-cell output { font-family: var(--font-mono); }
-	.number-cell { text-align: start; }
+		.number-cell { text-align: start; }
 		.withheld-cell { text-align: end; }
 	}
 	.error { color: var(--danger); font-size: .8rem; }

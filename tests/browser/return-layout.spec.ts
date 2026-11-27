@@ -6,13 +6,15 @@ test('1601EQ draws a single rule at each edge of the empty withholding section',
 	await page.goto(`/ebirforms/taxpayers/${taxpayerId}/forms/1601EQ?new=true`);
 	await page.getByRole('radiogroup', { name: 'Any taxes withheld?' }).getByRole('radio', { name: 'Yes' }).check();
 	const lines = page.getByRole('region', { name: 'Taxes withheld', exact: true });
-	const empty = lines.locator('.empty');
+	const empty = lines.getByText('No items added', { exact: true });
 	const summary = page.getByRole('complementary', { name: 'Summary' });
 	for (const width of [390, 1280]) {
 		await page.setViewportSize({ width, height: 900 });
 		await expect(lines.locator('header')).toHaveCSS('border-block-end-width', '1px');
 		await expect(empty).toHaveCSS('border-block-start-width', '0px');
 		await expect(empty).toHaveCSS('border-block-end-width', '0px');
+		await expect(lines).toHaveCSS('border-block-start-width', '0px');
+		await expect(lines).toHaveCSS('border-block-end-width', '0px');
 		await expect(summary).toHaveCSS('border-block-start-width', '1px');
 	}
 });
@@ -144,15 +146,23 @@ test('currency amounts align right while resting and editing', async ({ page }) 
 	await seedWorkspace(page);
 	await page.goto(formPath);
 	const remittance = page.getByRole('textbox', { name: 'First month', exact: true });
-	const taxBase = page.getByRole('textbox', { name: 'Item 13 Tax base', exact: true });
+	const taxBaseSummary = page.getByRole('status', { name: 'Item 13 Tax base', exact: true });
 	await expect(remittance).toHaveValue('1,234.56');
 	await expect(remittance).toHaveCSS('text-align', 'right');
-	await expect(taxBase).toHaveCSS('text-align', 'right');
+	await expect(taxBaseSummary).toHaveText('₱100,000.00');
+	await expect(taxBaseSummary).toHaveCSS('text-align', /^(end|right)$/);
 
 	await page.setViewportSize({ width: 390, height: 844 });
 	await remittance.focus();
 	await expect(remittance).toHaveValue('1234.56');
 	await expect(remittance).toHaveCSS('text-align', 'right');
+	await page.getByRole('button', { name: 'Edit line item 1', exact: true }).click();
+	const drawer = page.getByRole('dialog', { name: 'Edit line item 1', exact: true });
+	const taxBase = drawer.getByRole('textbox', { name: 'Tax Base', exact: true });
+	await expect(taxBase).toHaveValue('100,000.00');
+	await expect(taxBase).toHaveCSS('text-align', 'right');
+	await taxBase.focus();
+	await expect(taxBase).toHaveValue('100000');
 	await expect(taxBase).toHaveCSS('text-align', 'right');
 });
 
@@ -177,7 +187,10 @@ test('1601EQ mobile withholding lines line up with the quarterly total', async (
 		const input = document.getElementById(output.getAttribute('for')!)!;
 		const text = document.createRange();
 		text.selectNodeContents(output);
-		return input.getBoundingClientRect().right - text.getBoundingClientRect().right;
+		const style = getComputedStyle(input);
+		const inputTextEdge = input.getBoundingClientRect().right -
+			parseFloat(style.paddingInlineEnd) - parseFloat(style.borderInlineEndWidth);
+		return inputTextEdge - text.getBoundingClientRect().right;
 	});
 	expect(Math.abs(offset)).toBeLessThanOrEqual(2);
 });
