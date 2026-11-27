@@ -16,7 +16,16 @@ export type CorporateField = {
 	column?: number;
 };
 
-export type CorporateRow = { label: string; item?: string; fields: CorporateField[]; entry?: { group: string; index: number }; list?: string };
+export type CorporateRow = {
+	label: string;
+	item?: string;
+	fields: CorporateField[];
+	entry?: { group: string; index: number };
+	list?: string;
+	heading?: string;
+	layout?: 'deduction';
+	disabled?: boolean;
+};
 export type CorporateSection = { title: string; rows: CorporateRow[]; columns?: string[] };
 export type CorporatePage = { title: string; sections: CorporateSection[] };
 

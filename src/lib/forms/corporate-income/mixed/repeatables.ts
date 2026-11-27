@@ -92,7 +92,7 @@ const revised: DetailGroup[] = [
   {
     base: "txtPg3Sc5It17i",
     count: "txtCtrmodalPg3Sc5I17i",
-    label: "Other ordinary allowable deductions",
+    label: "Other Ordinary Allowable Deductions",
     fields: [
       "txtPg3Sc5It17i",
       "txtPg3Sc5Itm17iA",
@@ -155,13 +155,13 @@ function attachmentGroups(code: string, instance: string): DetailGroup[] {
       group(
         "txtPg2AttMScDI17i",
         "txtAttMCtrPg2MScDI17i",
-        "other ordinary allowable deductions",
+        "Other Ordinary Allowable Deductions",
         ["txtPg2AttMScDI17iother", "txtPg2AttMScDI25"],
       ),
       special,
     ];
   return [
-    group("txtPg3AttMScF", "txtAttMCtrPg3MScFI3", "other taxable income", [
+    group("txtPg3AttMScF", "txtAttMCtrPg3MScFI3", "Other Taxable Income", [
       "txtPg3AttMScFI3other",
       "txtPg3AttMScFI3C1",
     ]),
@@ -172,7 +172,7 @@ function attachmentGroups(code: string, instance: string): DetailGroup[] {
     group(
       "txtPg4AttMScGI39",
       "txtAttMCtrPg4MScGI39",
-      "other ordinary allowable deductions",
+      "Other Ordinary Allowable Deductions",
       ["txtPg4AttMScGI39other", "txtPg4AttMScGI39C1"],
     ),
     special,
@@ -273,11 +273,15 @@ function preparePages(
             );
         }
     row.label = group.label;
-    row.item =
-      group.fields[0].match(/(?:Itm|It|I)(\d+[a-z]?)/)?.[1] ?? row.item;
+    if (row.layout !== "deduction") {
+      row.item =
+        group.fields[0].match(/(?:Itm|It|I)(\d+[a-z]?)/)?.[1] ?? row.item;
+    }
     row.fields = [
       ...row.fields.filter((field) => !sourceIds.has(field.id)),
-      ...baseFields(group),
+      ...baseFields(group).map((field) => row.layout === "deduction"
+        ? { ...field, maxLength: row.fields.find(source => source.id === field.id)?.maxLength }
+        : field),
       ...(totalField
         ? [{ ...totalField, label: "Total", column: undefined }]
         : []),

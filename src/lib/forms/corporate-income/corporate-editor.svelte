@@ -6,6 +6,7 @@
 	import { legacyExemptIdentificationFields, legacyExemptIdentificationPatch } from './exempt';
 	import { legacyMixedAtc, legacyMixedOtherAtc, legacyMixedOtherAtcElected } from './mixed/atc';
 	import { legacyMixedIdentificationFields } from './mixed/identification';
+	import { isValidLegacyReliefMonth } from './mixed';
 	import { legacyRegularIdentificationFields } from './regular/identification';
 	import RegisteredInformation from './registered-information.svelte';
 	import { corporateScheduleReferences } from './schedule-references';
@@ -427,6 +428,7 @@
 	{@const ctc = certificate === 'CTC'}
 	{@const legacyNumber = legacyIdentification && id === identificationFields.number}
 	{@const legacyCertificateAmount = legacyIdentification && id === identificationFields.amount}
+	{@const legacyReliefMonth = legacyMixed && /^frm1702MX:txtPg1(?:EX|SP)\d+ScAI[56]month$/.test(id)}
 	{@const label = id === form.year ? 'Year ended' : id === form.month ? 'Year-end month'
 		: legacyNumber && ctc ? 'CTC number'
 		: legacyNumber && certificate === identificationFields.registration ? 'SEC registration number'
@@ -491,11 +493,16 @@
 	{:else if field.kind === 'money'}
 		<CurrencyInput {id} {label} value={legacyCertificateAmount && !ctc ? '' : value} {decimals} {error} {required}
 			aria-label={amountContext ? `${amountContext} · ${label}` : undefined}
-			disabled={legacyCertificateAmount && !ctc} allowNegative={!legacyCertificateAmount}
+			disabled={row?.disabled || legacyCertificateAmount && !ctc} allowNegative={!legacyCertificateAmount}
 			data-taxmate-agent-currency={legacyCertificateAmount ? undefined : 'signed'} onchange={(next) => write(id, next)} />
 	{:else if field.kind === 'integer' || field.kind === 'percent'}
-		<NumberInput {id} {label} {value} {error} {required} min={0} max={field.kind === 'percent' ? 100 : undefined}
+		<NumberInput {id} {label} {value} {error} {required} min={legacyReliefMonth ? 1 : 0}
+			max={legacyReliefMonth ? 12 : field.kind === 'percent' ? 100 : undefined}
 			decimal={field.kind === 'percent'} maxlength={field.maxLength} onchange={(next) => write(id, next)}
+			onblur={legacyReliefMonth ? (event) => {
+				const input = event.currentTarget;
+				if (input.value && !isValidLegacyReliefMonth(input.value)) write(id, '');
+			} : undefined}
 			trailing={field.kind === 'percent' ? percentUnit : undefined} />
 	{:else if field.kind === 'date'}
 		<DateInput {id} {label} value={dateValue(value)} {error} {required} onchange={(next) => saveDate(id, next, write)} />
@@ -509,7 +516,7 @@
 				onvaluechange(patch);
 			}} />
 	{:else}
-		<Input {id} {label} {value} {error} {required} inputmode="text" maxlength={field.maxLength} oninput={(event) => write(id, event.currentTarget.value)} />
+		<Input {id} {label} {value} {error} {required} disabled={row?.disabled} inputmode="text" maxlength={field.maxLength} oninput={(event) => write(id, event.currentTarget.value)} />
 	{/if}
 {/snippet}
 
@@ -674,6 +681,7 @@
 							&& visible.every(field => field.kind === 'text' || field.kind === 'money')
 							&& visible.some(field => field.kind === 'text' && !field.readonly && field.label === 'Description')}
 						{@const deductionCategory = revisedRegular && /^17[abc]$/.test(row.item ?? '')}
+						{@const deductionEntry = row.layout === 'deduction'}
 						{@const supplementalAmounts = legacyRegular && /^frm1702RT:txtPg8Sc12I[1-3]C1$/.test(row.fields[0]?.id ?? '')}
 						{#if reliefBasis && row.item === (legacyMixed ? '31' : '1') && section.columns?.length}
 							<div class="relief-regime-header">
@@ -683,6 +691,9 @@
 							</div>
 						{/if}
 						{#if visible.length && !hiddenEntry}
+							{#if row.heading}
+								<h4 class="schedule-subheading">{row.heading}</h4>
+							{/if}
 							{#if balanceSheet && row.item && balanceGroupLabels[row.item]}
 								<h4 class="schedule-subheading">{balanceGroupLabels[row.item]}</h4>
 							{/if}
@@ -754,8 +765,9 @@
 											{@render control(field, row.label, undefined, row)}
 										{/each}
 									</div>
-								{:else if inlineDescription}
-									<div class={['inline-entry', inlineAmounts.length > 1 && 'multiple-amounts', sectionLabeledAmounts && 'section-labeled-amounts']}>
+								{:else if inlineDescription || deductionEntry}
+									<div class={['inline-entry', inlineAmounts.length > 1 && 'multiple-amounts', sectionLabeledAmounts && 'section-labeled-amounts', deductionEntry && 'deduction-entry']}
+										role={deductionEntry ? 'group' : undefined} aria-label={deductionEntry ? row.label : undefined}>
 										<div class="inline-entry-details">
 											{#each visible.filter(field => field.kind === 'text') as field (field.id)}
 												<div class="field-control">
@@ -815,7 +827,9 @@
 						{/if}
 						{#if list}
 							{@const counter = list.counter}
-							{@const listItem = legacyMixedSchedules ? legacyListItems[list.label] : undefined}
+							{@const listItem = legacyMixedSchedules ? legacyListItems[list.label]
+								: !legacyMixed && counter?.id.endsWith('CtrPg2MScDI17i') ? 'ordinary deduction'
+								: !legacyMixed && counter?.id.endsWith('CtrPg4MScHI4') ? 'special deduction' : undefined}
 							{@const alignEntryAmounts = (legacyMixed && current === '5' && list.label === 'Other taxable income')
 								|| (mixed2018Schedules && current === '3' && counter?.id === 'frm1702MX:txtCtrmodalPg3Sc5I17i')}
 							{@const separateItem = legacyMixedSchedules ? {
@@ -1273,6 +1287,7 @@
 		}
 		.deduction-category > .paper-item-number { align-self: center; padding: 0; }
 		.inline-entry { grid-template-columns: minmax(0, 1fr) var(--paper-inline-amount-width); align-items: start; }
+		.deduction-entry .inline-entry-details { grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); }
 		.inline-entry.multiple-amounts { grid-template-columns: minmax(0, 1fr) min(calc(100% * var(--schedule-amount-share, .55)), var(--schedule-amount-width, 32rem)); }
 		.inline-entry-amounts { grid-template-columns: repeat(var(--column-count), minmax(0, 1fr)); align-items: start; }
 		.profile-row { grid-template-columns: repeat(auto-fit, minmax(min(100%, 10rem), 1fr)); }

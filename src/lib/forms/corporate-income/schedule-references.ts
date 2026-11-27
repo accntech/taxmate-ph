@@ -130,7 +130,13 @@ function activityTransfers(code: string, activityIds: string[]): Transfer[] {
 		if (legacy) {
 			return [
 				...[1, 2, 3, 5].map((item): Transfer => [`txtPg4Sc3I${item}C${column}`, `txtPg2${id}ScDI${item}`]),
-				[`txtPg1${id}ScBI8`, `txtPg4${id}ScIAI8CD`]
+				[`txtPg1${id}ScBI1`, `txtPg2${id}ScDI6`],
+				[`txtPg1${id}ScBI2`, `txtPg2${id}ScE3I27`],
+				[`txtPg1${id}ScBI4`, `txtPg3${id}ScFI4C1`],
+				[`txtPg1${id}ScBI6`, `txtPg4${id}ScGI40`],
+				[`txtPg1${id}ScBI7`, `txtPg4${id}ScHI5`],
+				[`txtPg1${id}ScBI8`, `txtPg4${id}ScIAI8CD`],
+				[`txtPg1${id}ScCI4`, `txtPg1${id}ScBI12`]
 			];
 		}
 		return [
@@ -138,6 +144,8 @@ function activityTransfers(code: string, activityIds: string[]): Transfer[] {
 			[`txtPg2Sc2Itm2${column}`, `txtPg1${id}ScBI2`],
 			[`txtPg2Sc2Itm4${column}`, `txtPg1${id}ScBI4`],
 			[`txtPg2Sc2Itm6${column}`, `txtPg1${id}ScBI56`],
+			[`txtPg1${id}ScBI8`, `txtPg4${id}ScGI40`],
+			[`txtPg1${id}ScBI9`, `txtPg4${id}ScHI5`],
 			[`txtPg2Sc2It10${column}`, `txtPg1${id}ScBI10`],
 			[`txtPg1${id}ScBI10`, `txtPg2${id}ScF1I8D`],
 			[`txtPg2${id}ScF1I7A`, `txtPg2${id}ScFI3`]

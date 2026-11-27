@@ -10,6 +10,7 @@ import { validateLegacyExemptIdentification } from '../exempt/identification';
 import { legacyMixedIdentificationFields } from './identification';
 import { revisedNolcoField } from "./nolco";
 import { refineMixedPages } from "./layout";
+import { layoutLegacyMixedAttachmentDeductions, layoutMixedAttachmentDeductions, setMixedAttachmentDeductionAvailability } from "./attachment-deductions";
 import type { CorporateForm, CorporatePage, CorporateValues } from "../types";
 import {
   calculateMixed,
@@ -64,6 +65,12 @@ const fieldLabels: Record<string, string> = {
   rdoPg2I1: "Activities under exempt or special tax regimes",
   chkPg2Pt4I30MoreThanOne: "30 More than one activity or project?",
 };
+const legacyReliefDateLabels: Record<string, string> = {
+  txtPg1AttMScAI5month: "Relief from month (MM)",
+  txtPg1AttMScAI5year: "Relief from year (YY)",
+  txtPg1AttMScAI6month: "Relief to month (MM)",
+  txtPg1AttMScAI6year: "Relief to year (YY)",
+};
 const columns = {
   A: "Exempt",
   B: "Special rate",
@@ -117,6 +124,7 @@ function pagesFor(code: MixedCode): CorporatePage[] {
         ];
       if (
         !reliefBasis &&
+        !(code === "1702MX" && page.title === "Mandatory attachment 1" && section.title === "Tax return") &&
         section.rows.some(
           (row) =>
             row.fields.filter((field) => field.kind === "money").length === 4,
@@ -136,7 +144,7 @@ function pagesFor(code: MixedCode): CorporatePage[] {
         }
         for (const field of row.fields) {
           const name = field.id.slice(p.length);
-          field.label = labels[name] ?? field.label;
+          field.label = (code === "1702MX" ? legacyReliefDateLabels[name] : undefined) ?? labels[name] ?? field.label;
           if (name === "rdoPg2I1")
             field.options = [
               { value: "C", label: "One activity or project" },
@@ -313,7 +321,18 @@ function pagesFor(code: MixedCode): CorporatePage[] {
         .filter((row) => row.fields.length);
     }
   }
-  return refineMixedPages(code, pages);
+  const refined = refineMixedPages(code, pages);
+  if (code === "1702MX") {
+    layoutLegacyMixedAttachmentDeductions(refined);
+  } else {
+    const attachment = refined.find(page => page.title === "Mandatory attachment 2");
+    if (attachment) layoutMixedAttachmentDeductions(attachment);
+  }
+  return refined;
+}
+
+export function isValidLegacyReliefMonth(value: string): boolean {
+  return /^(?:0?[1-9]|1[0-2])$/.test(value);
 }
 
 export function validateMixed(
@@ -379,6 +398,13 @@ export function validateMixed(
       ) {
         const activity = group + index;
         const stem = `txtPg1${activity}`;
+        if (code === "1702MX") {
+          for (const item of ["5", "6"]) {
+            const id = p + stem + `ScAI${item}month`;
+            if (values[id] && !isValidLegacyReliefMonth(values[id]))
+              errors[id] = "Enter a month from 01 to 12.";
+          }
+        }
         if (n(stem + (code === "1702MX" ? "ScBI5" : "ScBI57")) !== 0) {
           need(
             stem + "ScAI1",
@@ -542,8 +568,11 @@ export const mixedForms: CorporateForm[] = (
         })),
       })),
     })),
-    expandPages: (pages, values, id) =>
-      expandMixedAttachmentDetails(code, pages, values, id),
+    expandPages: (pages, values, id) => {
+      const expanded = expandMixedAttachmentDetails(code, pages, values, id);
+      setMixedAttachmentDeductionAvailability(expanded, values, code === "1702MX");
+      return expanded;
+    },
     applies: (values) => mixedHasActivities(code, values),
   })),
   calculate: (values) => calculateMixed(code, values),

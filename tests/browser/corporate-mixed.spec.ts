@@ -53,6 +53,187 @@ for (const code of ["1702MX", "1702MXv2018", "1702MXv2018C"]) {
   });
 }
 
+for (const code of ["1702MXv2018", "1702MXv2018C"]) {
+  test(`${code} groups activity deductions, opens the next lines and transfers their totals`, async ({ page }, info) => {
+    await seedWorkspace(page, "light", "loaded", { taxpayerClassification: "N" }, [{
+      id: "attachment-deductions", taxpayerId, formCode: code, returnPeriod: "2025",
+      status: "Draft", updatedAt: 1794441600000, finalFlag: "0",
+      values: {
+        "frm1702MX:rdoPg2I1": "F", "frm1702MX:totalSPAttach": "1",
+        "frm1702MX:txtPg2SP1ScDI22": "75",
+        "frm1702MX:txtPg2SP1ScDI24": "0.00"
+      }
+    }]);
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto(`/ebirforms/taxpayers/${taxpayerId}/forms/${code}?return=attachment-deductions`);
+    await goToReturnPage(page, 6);
+
+    const ordinary = page.getByRole("region", { name: /^Schedule D.*Continuation/ });
+    const special = page.getByRole("region", { name: /^Schedule E/ });
+    const row = (section: typeof ordinary, item: string) => section.locator(`[data-corporate-item="${item}"]`);
+    const ordinaryFirst = row(ordinary, "17d");
+    const ordinaryNext = row(ordinary, "17e");
+    const specialFirst = row(special, "1");
+    const specialNext = row(special, "2");
+    const amount = (entry: typeof ordinary) => entry.getByRole("textbox", { name: "Amount", exact: true });
+    const fill = async (entry: typeof ordinary, field: string, value: string) => {
+      const input = entry.getByRole("textbox", { name: field, exact: true });
+      await input.fill(value);
+      await input.blur();
+    };
+
+    await expect(ordinary.getByRole("heading", { name: /17.*Others.*Withholding Tax/ })).toBeVisible();
+    await expect(ordinaryNext.getByRole("textbox", { name: "Description" })).toBeDisabled();
+    await expect(amount(ordinaryNext)).toBeDisabled();
+    await expect(amount(row(ordinary, "17f"))).toHaveValue("75");
+    await expect(amount(row(ordinary, "17f"))).toBeEnabled();
+    await expect(amount(row(ordinary, "17h"))).toBeDisabled();
+    await fill(ordinaryFirst, "Description", "Office supplies");
+    await expect(amount(ordinaryNext)).toBeDisabled();
+    await fill(ordinaryFirst, "Amount", "1200");
+    await expect(amount(ordinaryNext)).toBeEnabled();
+    await fill(ordinaryNext, "Description", "Courier fees");
+    await fill(ordinaryNext, "Amount", "200");
+
+    await expect(amount(specialNext)).toBeDisabled();
+    await fill(specialFirst, "Description", "Training deduction");
+    await expect(amount(specialNext)).toBeDisabled();
+    await fill(specialFirst, "Legal basis", "Sample basis");
+    await expect(amount(specialNext)).toBeEnabled();
+    await fill(specialFirst, "Amount", "800");
+    await fill(specialNext, "Description", "Research deduction");
+    await fill(specialNext, "Legal basis", "Sample basis");
+    await fill(specialNext, "Amount", "100");
+
+    for (const [schedule, button, entry, hasBasis] of [
+      [ordinary, "Add ordinary deduction", "Additional ordinary expense", false],
+      [special, "Add special deduction", "Additional special expense", true]
+    ] as const) {
+      await schedule.getByRole("button", { name: button, exact: true }).click();
+      const drawer = page.getByRole("dialog");
+      await fill(drawer, "Description", entry);
+      if (hasBasis) await fill(drawer, "Legal basis", "Sample basis");
+      await fill(drawer, "Amount", "25");
+      await drawer.getByRole("button", { name: "Add item", exact: true }).click();
+      await expect(drawer).toBeHidden();
+      await expect(schedule.getByRole("button", { name: entry })).toBeVisible();
+    }
+
+    for (const width of [1440, 390]) {
+      await page.setViewportSize({ width, height: 900 });
+      await page.keyboard.press("Escape");
+      const fields = specialNext.getByRole("textbox");
+      await expect(fields).toHaveCount(3);
+      const [description, legalBasis, specialAmount] = await Promise.all(
+        [0, 1, 2].map(index => fields.nth(index).boundingBox())
+      );
+      if (width === 1440) {
+        expect(description!.y).toBe(legalBasis!.y);
+        expect(legalBasis!.y).toBe(specialAmount!.y);
+      } else {
+        expect(description!.y + description!.height).toBeLessThan(legalBasis!.y);
+        expect(legalBasis!.y + legalBasis!.height).toBeLessThan(specialAmount!.y);
+      }
+      if (process.env.EBIRFORMS_CAPTURE_TEST_PDFS === "1") {
+        for (const [schedule, name] of [[ordinary, "D"], [special, "E"]] as const)
+          await schedule.screenshot({
+            path: info.outputPath(`${code}-schedule-${name}-${width}.png`),
+            animations: "disabled", style: ".eq-action-bar, .window-titlebar, .skip-link { visibility: hidden }"
+          });
+      }
+    }
+
+    for (const [schedule, item, total] of [[ordinary, "8", "1,500"], [special, "9", "925"]] as const) {
+      await schedule.getByRole("button", { name: new RegExp(`^To .*Schedule B, Item ${item}$`) }).click();
+      await expect(page.locator(id(`txtPg1SP1ScBI${item}`))).toBeFocused();
+      await expect(page.locator(id(`txtPg1SP1ScBI${item}`))).toHaveText(total);
+      await goToReturnPage(page, 6);
+    }
+
+    await page.getByRole("button", { name: "Save draft", exact: true }).click();
+    await page.getByRole("link", { name: "Edit", exact: true }).click();
+    await goToReturnPage(page, 6);
+    await expect(amount(ordinaryNext)).toHaveValue("200");
+    await expect(amount(specialNext)).toHaveValue("100");
+  });
+}
+
+test("June 2013 activity Schedules F and G edit descriptions inline and carry their totals to Schedule B", async ({ page }) => {
+  const list = `/ebirforms/taxpayers/${taxpayerId}/forms`;
+  await seedWorkspace(page, "light", "loaded", { taxpayerClassification: "N" }, [{
+    id: "legacy-activity-deductions", taxpayerId, formCode: "1702MX", returnPeriod: "2025",
+    status: "Draft", updatedAt: 1794441600000, finalFlag: "0",
+    values: {
+      "frm1702MX:chkPg2Pt4I30MoreThanOne": "Y", "frm1702MX:totalEXAttach": "1",
+      "frm1702MX:txtPg1I2YearEnd": "2025", "frm1702MX:ddlPg1I2Date": "12"
+    }
+  }]);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(`${list}/1702MX?return=legacy-activity-deductions`);
+  await expect(page.getByRole("navigation", { name: "Return pages" })).toBeVisible();
+  await goToReturnPage(page, 12);
+  const income = page.getByRole("region", { name: /^Schedule F / });
+  const amortization = page.getByRole("region", { name: /^Schedule G / });
+  const ordinaryDescription = page.locator(id("txtPg3EX1ScGI2other"));
+  const ordinaryAmount = page.locator(id("txtPg3EX1ScGI2C1"));
+  const first = income.getByRole("group", { name: "Item 1", exact: true });
+  const nextDescription = page.locator(id("txtPg3EX1ScFI2other"));
+  const firstDescription = first.getByRole("textbox", { name: "Description", exact: true });
+  await expect(firstDescription).toHaveAttribute("maxlength", "45");
+  await expect(nextDescription).toBeDisabled();
+  await income.getByRole("button", { name: "Add item", exact: true }).click();
+  const drawer = page.getByRole("dialog", { name: "Add item", exact: true });
+  await expect(drawer.getByRole("textbox", { name: "Description", exact: true })).toBeEnabled({ timeout: 1500 });
+  await expect(drawer.getByRole("textbox", { name: "Amount", exact: true })).toBeEnabled();
+  await drawer.getByRole("button", { name: "Cancel", exact: true }).click();
+  await firstDescription.fill("Interest income");
+  await expect(nextDescription).toBeEnabled();
+  await firstDescription.clear();
+  await expect(nextDescription).toBeDisabled();
+  await firstDescription.fill("Interest income");
+  const firstAmount = first.getByRole("textbox", { name: "Amount", exact: true });
+  await firstAmount.fill("275");
+  await firstAmount.blur();
+  await expect(income.locator(id("txtPg3EX1ScFI4C1"))).toHaveText("275");
+  await expect(amortization.getByRole("heading", { name: "Amortizations", exact: true })).toBeVisible();
+  await ordinaryDescription.fill("Leasehold amortization");
+  await ordinaryAmount.fill("400");
+  await ordinaryAmount.blur();
+
+  for (const width of [1440, 390]) {
+    await page.setViewportSize({ width, height: 900 });
+    const [description, amount] = await Promise.all([ordinaryDescription.boundingBox(), ordinaryAmount.boundingBox()]);
+    expect(description && amount).toBeTruthy();
+    if (width === 1440) {
+      expect(Math.abs(description!.y - amount!.y)).toBeLessThan(3);
+      expect(description!.x + description!.width).toBeLessThan(amount!.x);
+    } else {
+      expect(description!.y + description!.height).toBeLessThan(amount!.y);
+      expect(amount!.x + amount!.width).toBeLessThanOrEqual(width);
+    }
+  }
+
+  await goToReturnPage(page, 13);
+  const continuation = page.getByRole("region", { name: /^Schedule G / });
+  const continuationDescription = continuation.getByRole("group", { name: "Item 36", exact: true })
+    .getByRole("textbox", { name: "Description", exact: true });
+  await continuationDescription.fill("Equipment inspection");
+  const continuationAmount = continuation.locator(id("txtPg4EX1ScGI36C1"));
+  await continuationAmount.fill("25");
+  await continuationAmount.blur();
+  await expect(continuation.locator(id("txtPg4EX1ScGI40"))).toHaveText("425");
+  await continuation.getByRole("button", { name: /To .*Schedule B, Item 6/ }).click();
+  await expect(page.locator(id("txtPg1EX1ScBI6"))).toHaveText("425");
+  await expect(page.locator(id("txtPg1EX1ScBI4"))).toHaveText("275");
+  await page.getByRole("button", { name: "Save draft", exact: true }).click();
+  await page.getByRole("link", { name: "Edit", exact: true }).click();
+  await goToReturnPage(page, 12);
+  await expect(firstDescription).toHaveValue("Interest income");
+  await expect(ordinaryDescription).toHaveValue("Leasehold amortization");
+  await goToReturnPage(page, 13);
+  await expect(continuationDescription).toHaveValue("Equipment inspection");
+});
+
 test("June 2013 groups the ATC elections and enables the picker only when elected", async ({ page }) => {
   await seedWorkspace(page, "light", "loaded", { taxpayerClassification: "N" }, []);
   await page.goto(`/ebirforms/taxpayers/${taxpayerId}/forms/1702MX?new=true`);
@@ -696,7 +877,7 @@ test("January 2018 aligns added Item 17I deductions with the Schedule 5 headings
   await expect(page.locator(".corporate-editor")).toBeVisible({ timeout: 15000 });
   await goToReturnPage(page, 3);
   const schedule = page.getByRole("region", { name: /^Schedule 5 .*Ordinary Allowable Itemized Deductions/ });
-  const list = schedule.locator(".line-list").filter({ has: page.getByRole("heading", { name: /^Other ordinary allowable deductions/ }) });
+  const list = schedule.locator(".line-list").filter({ has: page.getByRole("heading", { name: /^Other Ordinary Allowable Deductions/ }) });
   await list.getByRole("button", { name: "Add item", exact: true }).click();
   const drawer = page.getByRole("dialog");
   await drawer.getByRole("textbox", { name: "Description", exact: true }).fill("Other services");

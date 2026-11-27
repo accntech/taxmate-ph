@@ -240,6 +240,63 @@ it("retains source-named per-activity extra deductions and excludes removed deta
   ).toBe(true);
 });
 
+it("maps June 2013 activity income and deductions to their numbered description and amount controls", async () => {
+  const { getCorporateIncomeForm, corporateEditorPages } =
+    await import("../../../lib/forms/corporate-income");
+  const form = getCorporateIncomeForm("1702MX")!;
+  const { corporateScheduleReferences } =
+    await import("../../../lib/forms/corporate-income/schedule-references");
+  const input = values({
+    chkPg2Pt4I30MoreThanOne: "Y",
+    totalEXAttach: "1",
+    totalSPAttach: "1",
+    txtPg3EX1ScFI1other: "Interest income",
+    txtPg3EX1ScFI1C1: "275",
+    txtPg3SP1ScGI2other: "Leasehold amortization",
+    txtPg3SP1ScGI2C1: "400",
+    txtPg4SP1ScGI38C1: "25",
+  });
+  const calculated = calculateMixed("1702MX", input);
+  const pages = corporateEditorPages(form, calculated);
+  const groups = [
+    ["Pg3", "F", [1, 2, 3]],
+    ["Pg3", "G", [2, 3, 4]],
+    ["Pg4", "G", [36, 37, 38, 39]],
+  ] as const;
+  for (const activity of ["EX1", "SP1"]) {
+    for (const [page, schedule, numbers] of groups) {
+      for (const number of numbers) {
+        const stem = p + `txt${page}${activity}Sc${schedule}I${number}`;
+        const row = pages.flatMap(page => page.sections).flatMap(section => section.rows)
+          .find(row => row.fields[0].id === stem + "other")!;
+        expect(row.item).toBe(String(number));
+        expect(row.fields.slice(0, 2).map(({id, label, kind}) => [id, label, kind])).toEqual([
+          [stem + "other", "Description", "text"],
+          [stem + "C1", "Amount", "money"],
+        ]);
+        if (number === numbers.at(-1)) {
+          expect(row.fields[2].repeatable?.rollup).toBe(true);
+          expect(row.disabled).toBeUndefined();
+        } else {
+          const completesPrevious = number === numbers[0] ||
+            (activity === "EX1" && schedule === "F" && number === 2) ||
+            (activity === "SP1" && page === "Pg3" && schedule === "G" && number === 3);
+          const hasSavedAmount = activity === "SP1" && page === "Pg4" && number === 38;
+          expect(row.disabled).toBe(!completesPrevious && !hasSavedAmount);
+          expect(row.fields.every(field => !field.readonly)).toBe(true);
+        }
+      }
+    }
+  }
+  expect(calculated[p + "txtPg3EX1ScFI4C1"]).toBe("275");
+  expect(calculated[p + "txtPg1EX1ScBI4"]).toBe("275");
+  expect(calculated[p + "txtPg4SP1ScGI40"]).toBe("425");
+  expect(calculated[p + "txtPg1SP1ScBI6"]).toBe("425");
+  const references = corporateScheduleReferences(form.code, pages, () => true, ["EX1", "SP1"]);
+  expect(references.get(p + "txtPg3EX1ScFI4C1")?.[0]?.target).toBe(p + "txtPg1EX1ScBI4");
+  expect(references.get(p + "txtPg4SP1ScGI40")?.[0]?.target).toBe(p + "txtPg1SP1ScBI6");
+});
+
 it("uses the exact regular and special NOLCO IDs in revised tax computation", () => {
   const result = calculateMixed(
     "1702MXv2018C",
