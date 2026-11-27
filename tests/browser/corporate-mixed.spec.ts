@@ -12,15 +12,43 @@ for (const code of ["1702MX", "1702MXv2018", "1702MXv2018C"]) {
     const filing = page.getByRole("region", { name: "Taxpayer and filing information", exact: true });
     const elections = filing.locator('[data-corporate-item="5"]');
     await expect(elections).toHaveCount(1, { timeout: 15000 });
-    await expect(elections.getByRole("checkbox", { name: /Subject to minimum corporate income tax/ })).toBeVisible();
-    await expect(elections.getByRole("combobox", { name: "Alphanumeric tax code (ATC)" })).toBeVisible();
-    await expect(elections.getByRole("checkbox", { name: code === "1702MX" ? "Select another ATC" : "Other alphanumeric tax code?" })).toBeVisible();
-    if (code === "1702MXv2018C") {
-      for (const width of [1280, 390]) {
-        await page.setViewportSize({ width, height: 900 });
-        await page.keyboard.press("Escape");
-        await filing.screenshot({ path: info.outputPath(`filing-information-${width}.png`) });
+    const mcitElection = elections.getByRole("checkbox", { name: /Subject to minimum corporate income tax/ });
+    await expect(mcitElection).toBeVisible();
+    const otherName = code === "1702MX" ? "Select another ATC" : "Other alphanumeric tax code?";
+    const picker = elections.getByRole("combobox", { name: "Alphanumeric tax code (ATC)" });
+    const heading = elections.getByRole("heading", { name: "Alphanumeric tax code (ATC)", exact: true });
+    await expect(picker).toBeVisible();
+    await expect(elections.getByRole("checkbox", { name: otherName, exact: true })).toBeVisible();
+    await expect(heading).toBeVisible();
+    for (const width of [1280, 390]) {
+      await page.setViewportSize({ width, height: 900 });
+      await page.keyboard.press("Escape");
+      const [title, mcit, other, atc] = await Promise.all([
+        heading, elections.getByText(/Subject to minimum corporate income tax/),
+        elections.getByText(otherName, { exact: true }), picker
+      ].map(locator => locator.boundingBox()));
+      expect(title!.y).toBeLessThan(mcit!.y);
+      expect(mcit!.y + mcit!.height).toBeLessThanOrEqual(other!.y);
+      expect(other!.y + other!.height).toBeLessThanOrEqual(atc!.y);
+      expect(atc!.x).toBeGreaterThan(title!.x);
+      expect(atc!.x + atc!.width).toBeLessThanOrEqual(width);
+      if (process.env.EBIRFORMS_CAPTURE_TEST_PDFS === "1") {
+        await filing.screenshot({
+          path: info.outputPath(`${code}-filing-information-${width}.png`), animations: "disabled",
+          style: ".eq-action-bar { visibility: hidden }"
+        });
       }
+    }
+    if (code !== "1702MX") {
+      await expect(picker).toHaveText("IC010");
+      await expect(picker).toBeEnabled();
+      const required = heading.getByText("*", { exact: true });
+      await expect(required).toBeVisible();
+      await mcitElection.check();
+      await expect(required).toHaveCount(0);
+      await mcitElection.uncheck();
+      await expect(required).toBeVisible();
+      await expect(picker).toHaveText("IC010");
     }
   });
 }

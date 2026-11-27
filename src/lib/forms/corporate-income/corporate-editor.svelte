@@ -445,7 +445,7 @@
 			oninput={(event) => write(id, event.currentTarget.value)} />
 	{:else if legacyMixed && field.profileKey === 'psicCode' && !profilePsicClass}
 		<div class="psic-picker">
-			<Label for={id}>{label}<span aria-hidden="true" class="psic-required">*</span></Label>
+			<Label for={id}>{label}<span aria-hidden="true" class="required-marker">*</span></Label>
 			<Combobox
 				{id}
 				options={psicOptionsForCode(value, true)}
@@ -723,9 +723,14 @@
 									<div class="managed-value">
 										<RegisteredInformation fields={visible} values={calculated} {errors} {onvaluechange} />
 									</div>
-								{:else if legacyMixed && atcChoice}
+								{:else if atcChoice && form.code.startsWith('1702MX')}
 									<div class="mixed-atc-fields">
-										<h4>{row.label}</h4>
+										<h4>
+											{row.label}
+											{#if !legacyMixed && visible.some(field => field.id === legacyMixedAtc && corporateFieldRequired(form, field, calculated, row))}
+												<span aria-hidden="true" class="required-marker">*</span>
+											{/if}
+										</h4>
 										{#each visible as field (field.id)}
 											<div class={['field-control', field.id === legacyMixedAtc && 'mixed-atc-picker']}>
 												{@render control(filingField(field, row), row.label, undefined, row)}
@@ -1068,7 +1073,7 @@
 		.legacy-mixed-background .corporate-row[data-corporate-item='14'] { --background-cell-width: 28%; }
 	}
 	.psic-picker { display: grid; gap: var(--form-label-gap); max-inline-size: 12rem; }
-	.psic-required { color: var(--danger); margin-inline-start: .25rem; }
+	.required-marker { color: var(--danger); margin-inline-start: .25rem; }
 	.legacy-mixed-background :is([data-corporate-item='13'], [data-corporate-item='15']) :global([data-slot='calculated-value']) {
 		grid-template-columns: minmax(0, 1fr);
 	}

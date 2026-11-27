@@ -136,9 +136,15 @@ export function refineMixedPages(
           current.rows.push({
             ...sourceRow,
             label: "Alphanumeric tax code (ATC)",
-            fields: code === "1702MX" && otherAtc
-              ? [...sourceRow.fields, { ...otherAtc.fields[1], label: "Select another ATC" }, otherAtc.fields[0]]
-              : [...sourceRow.fields, ...(otherAtc?.fields ?? [])],
+            fields: otherAtc
+              ? [
+                  ...sourceRow.fields,
+                  code === "1702MX"
+                    ? { ...otherAtc.fields[1], label: "Select another ATC" }
+                    : otherAtc.fields[1],
+                  otherAtc.fields[0],
+                ]
+              : sourceRow.fields,
           });
           continue;
         }
