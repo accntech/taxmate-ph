@@ -2989,7 +2989,7 @@
             "fields": [
               {
                 "id": "frm1702RT:txtPg6Sc7I1ExcessCredits",
-                "label": "1 Prior Year's Excess Credits Other Than MCIT",
+                "label": "Prior Year's Excess Credits Other Than MCIT",
                 "kind": "money",
                 "maxLength": 12,
                 "defaultValue": "0"
@@ -3002,7 +3002,7 @@
             "fields": [
               {
                 "id": "frm1702RT:txtPg6Sc7I2IncomeTaxPaymentUnderMCIT",
-                "label": "2 Income Tax Payment under MCIT from Previous Quarter/s",
+                "label": "Income Tax Payment under MCIT from Previous Quarter/s",
                 "kind": "money",
                 "maxLength": 12,
                 "defaultValue": "0"
@@ -3015,7 +3015,7 @@
             "fields": [
               {
                 "id": "frm1702RT:txtPg6Sc7I3IncomeTaxUnderRegular",
-                "label": "3 Income Tax Payment under Regular/Normal Rate from Previous Quarter/s",
+                "label": "Income Tax Payment under Regular/Normal Rate from Previous Quarter/s",
                 "kind": "money",
                 "maxLength": 12,
                 "defaultValue": "0"
@@ -3028,7 +3028,7 @@
             "fields": [
               {
                 "id": "frm1702RT:txtPg6Sc7I4ExcessMCIT",
-                "label": "4 Excess MCIT Applied this Current Taxable Year",
+                "label": "Excess MCIT Applied this Current Taxable Year",
                 "kind": "money",
                 "maxLength": 12,
                 "readonly": true,
@@ -3042,7 +3042,7 @@
             "fields": [
               {
                 "id": "frm1702RT:txtPg6Sc7I5CreditableTaxWithheldFromPrevious",
-                "label": "5 Creditable Tax Withheld from Previous Quarter/s per BIR Form No. 2307",
+                "label": "Creditable Tax Withheld from Previous Quarter/s per BIR Form No. 2307",
                 "kind": "money",
                 "maxLength": 12,
                 "defaultValue": "0"
@@ -3055,7 +3055,7 @@
             "fields": [
               {
                 "id": "frm1702RT:txtPg6Sc7I6CreditableTaxWithheldFor4thQuarter",
-                "label": "6 Creditable Tax Withheld per BIR Form No. 2307 for the 4th Quarter",
+                "label": "Creditable Tax Withheld per BIR Form No. 2307 for the 4th Quarter",
                 "kind": "money",
                 "maxLength": 12,
                 "defaultValue": "0"
@@ -3068,7 +3068,7 @@
             "fields": [
               {
                 "id": "frm1702RT:txtPg6Sc7I7ForeignTaxCredits",
-                "label": "7 Foreign Tax Credits, if applicable",
+                "label": "Foreign Tax Credits, if applicable",
                 "kind": "money",
                 "maxLength": 12,
                 "defaultValue": "0"
@@ -3081,7 +3081,7 @@
             "fields": [
               {
                 "id": "frm1702RT:txtPg6Sc7I8TaxPaidInReturn",
-                "label": "8 Tax Paid in Return Previously Filed, if this is an Amended Return",
+                "label": "Tax Paid in Return Previously Filed, if this is an Amended Return",
                 "kind": "money",
                 "maxLength": 12,
                 "defaultValue": "0"
@@ -3094,7 +3094,7 @@
             "fields": [
               {
                 "id": "frm1702RT:txtPg6Sc7I9SpecialTaxCredits",
-                "label": "9 Special Tax Credits",
+                "label": "Special Tax Credits",
                 "kind": "money",
                 "maxLength": 12,
                 "defaultValue": "0"
@@ -3145,7 +3145,7 @@
             "fields": [
               {
                 "id": "frm1702RT:txtPg6Sc7I12TotalTaxCredits",
-                "label": "12 Total Tax Credits/Payments (Sum of Items 1 to 11)",
+                "label": "Total Tax Credits/Payments (Sum of Items 1 to 11)",
                 "kind": "money",
                 "maxLength": 12,
                 "readonly": true,

@@ -125,6 +125,62 @@ test('legacy 1702RT share classes save as independent radio selections', async (
  await expect(common(shareClassB)).toBeChecked();
 });
 
+test('legacy 1702RT Schedule 7 shows each item once and enables Item 8 for amended returns', async ({ page }, info) => {
+ const formPath = `/ebirforms/taxpayers/${taxpayerId}/forms/1702RT`;
+ await seedWorkspace(page, 'light', 'loaded', { taxpayerClassification: 'N' }, []);
+ await page.setViewportSize({ width: 390, height: 844 });
+ await page.goto(`${formPath}?new=true`);
+ await goToReturnPage(page, 6);
+
+ const schedule = page.getByRole('region', { name: /^Schedule 7 - Tax Credits/ });
+ const row = (item: number) => schedule.locator(`[data-corporate-item="${item}"]`);
+ const priorPaymentLabel = 'Tax Paid in Return Previously Filed, if this is an Amended Return';
+ const priorPayment = row(8).getByRole('textbox', { name: priorPaymentLabel, exact: true });
+ const priorPaymentOutput = row(8).locator(id('txtPg6Sc7I8TaxPaidInReturn'));
+ const total = schedule.locator(id('txtPg6Sc7I12TotalTaxCredits'));
+
+ await expect(row(8).locator('.value-label')).toHaveText(priorPaymentLabel);
+ await expect(priorPaymentOutput).toHaveText('0');
+ await expect(priorPayment).toHaveCount(0);
+ for (const item of [1, 2, 3, 4, 5, 6, 7, 8, 9, 12]) {
+  await expect(row(item).getByText(String(item), { exact: true })).toHaveCount(1);
+  const label = row(item).locator('label, .value-label');
+  await expect(label).toHaveCount(1);
+  await expect(label).not.toHaveText(new RegExp(`^${item}\\s+`));
+ }
+ await expect(row(1).getByRole('textbox', { name: "Prior Year's Excess Credits Other Than MCIT", exact: true })).toBeVisible();
+
+ const setAmended = async (amended: 'Y' | 'N') => {
+  await goToReturnPage(page, 1);
+  await page.getByRole('radiogroup', { name: 'Amended return?', exact: true })
+   .getByRole('radio', { name: amended === 'Y' ? 'Yes' : 'No', exact: true }).check();
+  await goToReturnPage(page, 6);
+ };
+ await setAmended('Y');
+ await priorPayment.fill('1250');
+ await priorPayment.blur();
+ await expect(total).toHaveText('1,250');
+ for (const [device, width] of [['desktop', 1440], ['mobile', 390]] as const) {
+  await page.setViewportSize({ width, height: 1000 });
+  await expect(priorPayment).toHaveValue('1,250');
+  await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+  await schedule.screenshot({ path: info.outputPath(`schedule-7-amended-${device}.png`), animations: 'disabled' });
+ }
+ await page.getByRole('button', { name: 'Save draft', exact: true }).click();
+ await page.getByRole('link', { name: 'Edit', exact: true }).click();
+ await goToReturnPage(page, 6);
+ await expect(priorPayment).toHaveValue('1,250');
+ await expect(total).toHaveText('1,250');
+
+ await setAmended('N');
+ await expect(priorPayment).toHaveCount(0);
+ await expect(priorPaymentOutput).toHaveText('0');
+ await expect(total).toHaveText('0');
+ await setAmended('Y');
+ await expect(priorPayment).toHaveValue('1,250');
+ await expect(total).toHaveText('1,250');
+});
+
 test('legacy 1702RT Schedule 7 keeps item 10 on one numbered row', async ({ page }, info) => {
  const draftId = 'other-tax-credit-draft';
  await seedWorkspace(page, 'light', 'loaded', { taxpayerClassification: 'N' }, [{

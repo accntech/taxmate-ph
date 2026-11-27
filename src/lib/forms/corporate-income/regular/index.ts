@@ -14,6 +14,8 @@ const calculatedRates = new Set([
  regularField('txtPg2Pt4I42MinimumCorporate'),
  regularField('txtPg2Pt5I57SpecialAllowable')
 ]);
+const legacyAmendedReturn = regularField('rdoPg1I2Ammend');
+const legacyPreviouslyPaidTax = regularField('txtPg6Sc7I8TaxPaidInReturn');
 
 const revisions = [
  { code: '1702RT', revision: 'June 2013', pages: legacyPages },
@@ -37,7 +39,9 @@ export const regularForms: CorporateForm[] = revisions.map(({ code, revision, pa
   pages: editorPages,
   pagesFiledField: legacy ? regularField('txtPg1Pt2PagesFilled') : undefined,
   expandPages: expandedPages,
-  fieldReadonly: legacy ? undefined : (id, values) => calculatedRates.has(id) && !regularUsesManualRates(code, values),
+  fieldReadonly: legacy
+   ? (id, values) => id === legacyPreviouslyPaidTax && values[legacyAmendedReturn] !== 'Y'
+   : (id, values) => calculatedRates.has(id) && !regularUsesManualRates(code, values),
   continuations: (values: CorporateValues) => [...regularContinuations(code, editorPages, values), ...(legacy ? supplementalContinuations(editorPages, values) : [])],
   calculate: (values: CorporateValues) => {
    const result = calculateRegular(code, rollupRegularDetails(code, editorPages, values));
@@ -53,7 +57,7 @@ export const regularForms: CorporateForm[] = revisions.map(({ code, revision, pa
   validate: (values: CorporateValues) => ({ ...validateRegular(code, expandedPages(values), values), ...validateRegularDetails(code, editorPages, values), ...(legacy ? validateSupplementalDetails(editorPages, values) : {}) }),
   fieldApplies: (id: string, values: CorporateValues) => {
    if (id === regularField('drpPg1I5AtcOther')) return values[regularField('rdoPg1I5AtcOther')] === 'Y';
-   if (id === regularField(legacy ? 'txtPg6Sc7I8TaxPaidInReturn' : 'txtPg2Pt4I51TaxPaidInReturn')) return values[regularField(legacy ? 'rdoPg1I2Ammend' : 'rdoPg1I3Ammend')] === 'Y';
+   if (!legacy && id === regularField('txtPg2Pt4I51TaxPaidInReturn')) return values[regularField('rdoPg1I3Ammend')] === 'Y';
    if (id === regularField('txtPg2Pt5I57SpecialAllowable') && regularUsesOsd(values, legacy)) return false;
    if (id === regularField('Pg1Pt2I21')) return Number(values[regularField(legacy ? 'txtPg1Pt2I18NetTax' : 'txtPg1Pt2I16NetTax')]) < 0;
    if (regularUsesOsd(values, legacy) && /Sc(?:1|2|3A?)I/.test(id) && !legacy) return false;
