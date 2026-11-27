@@ -34,8 +34,8 @@ export async function goToReturnPage(page: Page, target: number) {
 }
 
 /** Isolated browser data: native calls never reach the user's saved profiles. */
-export async function seedWorkspace(page: Page, theme = 'light', profileState: 'loaded' | 'empty' | 'error' | 'error-once' = 'loaded', profileOverrides: Partial<TaxpayerProfileInput> = {}, returns?: CreatedReturn[], options: { persistProfile?: boolean; uiAgent?: boolean } = {}) {
-	await page.addInitScript(({ taxpayerId, theme, profileState, profileOverrides, returns, persistProfile, uiAgent }) => {
+export async function seedWorkspace(page: Page, theme = 'light', profileState: 'loaded' | 'empty' | 'error' | 'error-once' = 'loaded', profileOverrides: Partial<TaxpayerProfileInput> = {}, returns?: CreatedReturn[], options: { persistProfile?: boolean; uiAgent?: boolean; defaultReturnValues?: CreatedReturn['values'] } = {}) {
+	await page.addInitScript(({ taxpayerId, theme, profileState, profileOverrides, returns, persistProfile, uiAgent, defaultReturnValues }) => {
 		localStorage.setItem('taxmate-ph-theme', theme);
 		const profile = {
 			id: taxpayerId, tin1: '001', tin2: '234', tin3: '567', branchCode: '0008',
@@ -53,7 +53,8 @@ export async function seedWorkspace(page: Page, theme = 'light', profileState: '
 			'frm1601EQ:txtYear': '2026', 'frm1601EQ:optQuarter': 'Q2',
 			'frm1601EQ:optAmendedReturn': 'N', 'frm1601EQ:optTaxesWithheld': 'Y',
 			'frm1601EQ:txtSheetsAttached': '0', 'frm1601EQ:txtATC13': 'WI120',
-			'frm1601EQ:txtTaxBase13': '100000', 'frm1601EQ:txtRemittanceFirstMonth': '1234.56'
+			'frm1601EQ:txtTaxBase13': '100000', 'frm1601EQ:txtRemittanceFirstMonth': '1234.56',
+			...defaultReturnValues
 		};
 		localStorage.setItem('ebirforms-created-returns-v1', JSON.stringify({
 			version: 1, archivedTaxpayerIds: [], returns: returns ?? [{
@@ -127,5 +128,5 @@ export async function seedWorkspace(page: Page, theme = 'light', profileState: '
 				throw new Error(`Unexpected native command in browser review: ${command}`);
 			}
 		} });
-	}, { taxpayerId, theme, profileState, profileOverrides, returns, persistProfile: options.persistProfile, uiAgent: options.uiAgent });
+	}, { taxpayerId, theme, profileState, profileOverrides, returns, ...options });
 }

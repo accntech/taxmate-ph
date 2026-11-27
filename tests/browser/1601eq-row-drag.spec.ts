@@ -5,15 +5,16 @@ const list = (page: Page) => page.getByRole('list', { name: 'ATC line items', ex
 
 test.beforeEach(async ({ page }) => {
 	await page.setViewportSize({ width: 1440, height: 1100 });
-	await seedWorkspace(page);
+	await page.routeWebSocket('**/*', socket => socket.close());
+	await seedWorkspace(page, 'light', 'loaded', {}, undefined, {
+		defaultReturnValues: { 'frm1601EQ:txtATC14': 'WI010', 'frm1601EQ:txtTaxBase14': '20000' }
+	});
 	await page.addInitScript(() => {
 		// Exercise pointer gestures even when the host intercepts native HTML dragging.
 		window.addEventListener('dragstart', event => event.preventDefault(), true);
-		const data = JSON.parse(localStorage.getItem('ebirforms-created-returns-v1')!);
-		Object.assign(data.returns[0].values, { 'frm1601EQ:txtATC14': 'WI010', 'frm1601EQ:txtTaxBase14': '20000' });
-		localStorage.setItem('ebirforms-created-returns-v1', JSON.stringify(data));
 	});
 	await page.goto(formPath);
+	await expect(list(page)).toBeVisible({ timeout: 15_000 });
 	await expect(list(page).getByRole('listitem')).toHaveCount(2);
 	await expect(list(page).getByRole('listitem').first()).toHaveCSS('display', 'grid');
 	await expect(page.getByRole('region', { name: 'Return period' })).toHaveCSS('display', 'grid');
