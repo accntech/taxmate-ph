@@ -1818,23 +1818,6 @@
                 "maxLength": 20
               }
             ]
-          },
-          {
-            "label": "/",
-            "fields": [
-              {
-                "id": "frm1702EX:txtCurrentPage",
-                "label": "txt Current Page",
-                "kind": "text"
-              },
-              {
-                "id": "frm1702EX:txtMaxPage",
-                "label": "txt Max Page",
-                "kind": "text",
-                "readonly": true,
-                "defaultValue": "3"
-              }
-            ]
           }
         ]
       }

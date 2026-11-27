@@ -646,6 +646,29 @@ test('legacy EX groups auditor TIN segments', async ({ page }) => {
 	await expect(editor.locator('[id="frm1702EX:txtPg2Pt6I46TinC2"]')).toHaveCount(0);
 });
 
+test('1702EXv2018C uses the return pager without showing legacy pagination fields', async ({ page }, info) => {
+	await seedWorkspace(page, 'light', 'loaded', { taxpayerClassification: 'N' }, []);
+	await page.goto(`/ebirforms/taxpayers/${taxpayerId}/forms/1702EXv2018C?new=true`);
+
+	const editor = page.locator('.corporate-editor');
+	const pager = page.getByRole('navigation', { name: 'Return pages' });
+	await expect(pager.locator('[aria-current="page"]')).toHaveText('1', { timeout: 20_000 });
+	await goToReturnPage(page, 3);
+	await expect(editor.getByRole('heading', { level: 2, name: 'Schedules' })).toBeVisible();
+	await expect(editor.getByText(/^txt (?:Current|Max) Page$/)).toHaveCount(0);
+	await expect(pager.locator('[aria-current="page"]')).toHaveText('3');
+	await expect(pager.getByRole('button', { name: 'Next page' })).toHaveCount(0);
+	if (process.env.EBIRFORMS_CAPTURE_TEST_PDFS === '1') {
+		for (const width of [1280, 390]) {
+			await page.setViewportSize({ width, height: 900 });
+			await pager.evaluate(element => element.scrollIntoView({ block: 'center' }));
+			await page.screenshot({ path: info.outputPath(`1702exv2018c-page-3-${width}.png`), animations: 'disabled' });
+		}
+	}
+	await goToReturnPage(page, 2);
+	await expect(pager.locator('[aria-current="page"]')).toHaveText('2');
+});
+
 test('keyboard activation of a calculated-field error opens its schedule and moves focus', async ({ page }) => {
 	const code = '1702EXv2018C';
 	const key = (field: string) => `frm1702EX:${field}`;
