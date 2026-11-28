@@ -1,6 +1,27 @@
 import { expect, test } from '@playwright/test';
 import { seedWorkspace, taxpayerId } from './fixtures';
 
+test('taxpayer checkpoint keeps the primary action and long profile values readable in a narrow window', async ({ page }) => {
+	const email = 'long.taxpayer.registration.address@example-business-services.test';
+	await seedWorkspace(page, 'light', 'loaded', { email, civilStatus: 'Married' });
+	await page.setViewportSize({ width: 320, height: 640 });
+	await page.goto(`/ebirforms/taxpayers/${taxpayerId}`);
+	const emailValue = page.getByText(email, { exact: true });
+	const forms = page.getByRole('link', { name: 'Create or manage forms', exact: true });
+	await expect(emailValue).toBeVisible();
+	await expect(page.getByText('No spouse details saved.', { exact: true })).toBeVisible();
+	expect(await emailValue.evaluate(element => element.scrollWidth)).toBeLessThanOrEqual(
+		await emailValue.evaluate(element => element.clientWidth)
+	);
+	expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(320);
+	await expect(forms).toBeInViewport();
+	await page.getByRole('link', { name: 'Back to taxpayers', exact: true }).focus();
+	await page.keyboard.press('Tab');
+	await expect(forms).toBeFocused();
+	await page.keyboard.press('Enter');
+	await expect(page).toHaveURL(`/ebirforms/taxpayers/${taxpayerId}/forms`);
+});
+
 for (const width of [1440, 390]) {
 	for (const mode of ['new', 'edit']) {
 		test(`${mode} taxpayer at ${width}px uses the compact workspace and accessible actions`, async ({ page }, testInfo) => {

@@ -1,12 +1,11 @@
 <script lang="ts">
-	import * as stylex from '@stylexjs/stylex';
-	import { styles } from './taxpayer.styles';
 	import { onMount } from 'svelte';
 	import { buildTaxpayerRoute } from '$lib/apps/app-shell';
 	import { ebirformsWorkspace as workspace } from '$lib/ebirforms/ebirforms-workspace.svelte';
-	import { ButtonLink, Card, Page, PageHeader } from '$lib/components/ui';
+	import { Badge, ButtonLink, Page } from '$lib/components/ui';
 	import { formatTinInput } from '$lib/profiles/profile';
 	import { describePsoc } from '$lib/profiles/psoc';
+	import ChevronLeft from '@solar-icons/svelte/category/arrows/Linear/AltArrowLeft.svelte';
 	import CheckCircle from '@solar-icons/svelte/category/ui/Linear/CheckCircle.svelte';
 	import DocumentAdd from '@solar-icons/svelte/category/notes/Linear/DocumentAdd.svelte';
 	import FileText from '@solar-icons/svelte/category/files/Linear/FileText.svelte';
@@ -16,6 +15,7 @@
 	let formsHref = $derived(`${buildTaxpayerRoute(params.id)}/forms`);
 	let profile = $derived(workspace.profile.id === params.id ? workspace.profile : undefined);
 	let spouse = $derived(profile?.spouse);
+	const numericLabels = ['TIN and branch code', 'RDO code', 'Date of birth', 'ZIP code', 'Contact number'];
 	const dateFormatter = new Intl.DateTimeFormat('en-PH', { dateStyle: 'medium', timeZone: 'UTC' });
 
 	function birthDate(value: string | undefined) {
@@ -53,86 +53,267 @@
 	<title>Taxpayer | eBIRForms</title>
 </svelte:head>
 
+{#snippet field(label: string, value: string | undefined, mono = false)}
+	<div>
+		<dt>{label}</dt>
+		<dd class={{ 'font-mono': mono }}>{value}</dd>
+	</div>
+{/snippet}
+
 {#snippet details(id: string, title: string, rows: (string | undefined)[][])}
-	<section aria-labelledby={id}>
-		<Card variant="muted" class={stylex.attrs(styles.detailsCard).class}>
-			<h2 id={id} class={stylex.attrs(styles.detailsHeading).class}>{title}</h2>
-			{#if rows.length}
-				<dl class={stylex.attrs(styles.detailsGrid).class}>
-					{#each rows as [label, value] (label)}
+	<section class="detail-section" aria-labelledby={id}>
+		<h2 id={id}>{title}</h2>
+		{#if rows.length}
+			<dl class="detail-grid">
+				{#each rows as [label, value] (label)}
+					{#if label === 'Occupation code (PSOC)'}
 						<div>
-							<dt class={stylex.attrs(styles.summaryLabel).class}>{label}</dt>
-							<dd class={stylex.attrs(styles.detailValue).class}>
-								{#if label === 'Occupation code (PSOC)'}
-									<span class="font-mono">{value?.split(' · ')[0]}</span>{value?.includes(' · ') ? value.slice(value.indexOf(' · ')) : ''}
-								{:else if label && ['TIN and branch code', 'RDO code', 'Date of birth', 'ZIP code', 'Contact number'].includes(label)}
-									<span class="font-mono">{value}</span>
-								{:else}{value}{/if}
+							<dt>{label}</dt>
+							<dd>
+								<span class="font-mono">{value?.split(' · ')[0]}</span>{value?.includes(' · ') ? value.slice(value.indexOf(' · ')) : ''}
 							</dd>
 						</div>
-					{/each}
-				</dl>
-			{:else}
-				<p class={stylex.attrs(styles.detailsEmpty).class}>No spouse details saved.</p>
-			{/if}
-		</Card>
+					{:else if label}
+						{@render field(label, value, numericLabels.includes(label))}
+					{/if}
+				{/each}
+			</dl>
+		{:else}
+			<p class="empty">No spouse details saved.</p>
+		{/if}
 	</section>
 {/snippet}
 
-<Page size="md">
-	<ButtonLink href="/ebirforms/taxpayers" variant="ghost" size="sm" class={stylex.attrs(styles.backLink).class}>
+<Page size="lg" class="taxpayer-checkpoint">
+	<ButtonLink href="/ebirforms/taxpayers" variant="ghost" size="sm" class="checkpoint-back">
+		<ChevronLeft size={16} color="currentColor" aria-hidden="true" />
 		Back to taxpayers
 	</ButtonLink>
 
-	<PageHeader
-		eyebrow="Taxpayer checkpoint"
-		title={workspace.profile.taxpayerName || 'Selected taxpayer'}
-		description="Confirm the taxpayer details, then continue to the available BIR forms."
-	>
-		{#snippet icon()}
-			<UserCheck size={22} color="currentColor" />
-		{/snippet}
-		{#snippet actions()}
-			<Card variant="muted" class={stylex.attrs(styles.taxpayerCard).class}>
-				<div class={stylex.attrs(styles.taxpayerIdentity).class}>
-					<CheckCircle size={18} color="currentColor" />
-					Ready for forms
+	<div class="checkpoint">
+		<header class="checkpoint-header">
+			<div class="identity">
+				<div class="identity-icon">
+					<UserCheck size={24} color="currentColor" aria-hidden="true" />
 				</div>
-				<p class={stylex.attrs(styles.tin).class}>{workspace.activeTin}</p>
-			</Card>
-		{/snippet}
-	</PageHeader>
+				<div>
+					<h1>{workspace.profile.taxpayerName || 'Selected taxpayer'}</h1>
+					<div class="identity-meta">
+						<dl class="tin">
+							<dt>TIN</dt>
+							<dd class="font-mono">{workspace.activeTin}</dd>
+						</dl>
+						<Badge tone="success" size="sm">
+							<CheckCircle size={14} color="currentColor" aria-hidden="true" />
+							Ready for forms
+						</Badge>
+					</div>
+				</div>
+			</div>
+			<div class="actions">
+				<ButtonLink href={formsHref} size="touch">
+					<DocumentAdd size={18} color="currentColor" aria-hidden="true" />
+					Create or manage forms
+				</ButtonLink>
+				<ButtonLink href={`${buildTaxpayerRoute(params.id)}/edit`} variant="secondary" size="touch">
+					<FileText size={18} color="currentColor" aria-hidden="true" />
+					Edit profile
+				</ButtonLink>
+			</div>
+		</header>
 
-	<div class={stylex.attrs(styles.summaryGrid).class}>
-		{#each [['RDO', workspace.profile.rdoCode || 'not set'], ['Email', workspace.profile.email || 'not set'], ['Profile file', workspace.profileFilename], ['Current return', workspace.returnFilename]] as [label, value] (label)}
-			<Card variant="muted" class={stylex.attrs(styles.summaryCard).class}>
-				<p class={stylex.attrs(styles.summaryLabel).class}>{label}</p>
-				<p class={stylex.attrs(styles.summaryValue).class}>{value}</p>
-			</Card>
-		{/each}
+		<div class="checkpoint-content">
+			<div class="profile-details">
+				<section class="detail-section" aria-labelledby="registration-details">
+					<h2 id="registration-details">Registration</h2>
+					<dl class="detail-grid">
+						{@render field('RDO', workspace.profile.rdoCode || 'Not set', Boolean(workspace.profile.rdoCode))}
+						{@render field('Email', workspace.profile.email || 'Not set')}
+					</dl>
+				</section>
+
+				{#if personalDetails.length}
+					{@render details('personal-details', 'Personal details', personalDetails)}
+				{/if}
+				{#if spouseDetails.length || profile?.civilStatus === 'Married'}
+					{@render details('spouse-details', 'Spouse details', spouseDetails)}
+				{/if}
+			</div>
+
+			<section class="files detail-section" aria-labelledby="taxpayer-files">
+				<h2 id="taxpayer-files">Files</h2>
+				<dl class="file-list">
+					{@render field('Profile file', workspace.profileFilename, true)}
+					{@render field('Return filename', workspace.returnFilename, true)}
+				</dl>
+			</section>
+		</div>
 	</div>
-
-
-	{#if personalDetails.length}
-		{@render details('personal-details', 'Personal details', personalDetails)}
-	{/if}
-	{#if spouseDetails.length || profile?.civilStatus === 'Married'}
-		{@render details('spouse-details', 'Spouse details', spouseDetails)}
-	{/if}
-
-	<Card variant="muted" class={stylex.attrs(styles.actions).class}>
-		<ButtonLink href={formsHref} size="touch" class={stylex.attrs(styles.action).class}>
-			<DocumentAdd size={18} color="currentColor" />
-			Create or manage forms
-		</ButtonLink>
-		<ButtonLink
-			href={`${buildTaxpayerRoute(params.id)}/edit`}
-			variant="secondary"
-			size="touch"
-			class={stylex.attrs(styles.action).class}
-		>
-			<FileText size={18} color="currentColor" />
-			Edit profile
-		</ButtonLink>
-	</Card>
 </Page>
+
+<style>
+	:global(.taxpayer-checkpoint > .checkpoint-back) {
+		justify-self: start;
+	}
+
+	.checkpoint {
+		--checkpoint-padding: clamp(1rem, 3vw, 1.75rem);
+		container: taxpayer-checkpoint / inline-size;
+		border: 1px solid var(--border);
+		border-radius: 14px;
+		background: var(--bg-elev);
+	}
+
+	.checkpoint-header {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		justify-content: space-between;
+		gap: 1.25rem 1.5rem;
+		padding: var(--checkpoint-padding);
+		border-block-end: 1px solid var(--border);
+	}
+
+	.identity {
+		display: grid;
+		flex: 1 1 21rem;
+		grid-template-columns: auto minmax(0, 1fr);
+		align-items: start;
+		gap: 0.875rem;
+		min-width: 0;
+	}
+
+	.identity-icon {
+		display: grid;
+		place-items: center;
+		width: 2.75rem;
+		height: 2.75rem;
+		border-radius: 10px;
+		background: var(--accent-soft);
+		color: var(--accent);
+	}
+
+	h1 {
+		margin: 0;
+		font-family: var(--font-sans);
+		font-size: clamp(1.375rem, 2.7vw, 2rem);
+		font-weight: 650;
+		letter-spacing: -0.03em;
+		line-height: 1.18;
+		overflow-wrap: anywhere;
+	}
+
+	.identity-meta,
+	.tin,
+	.actions {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+	}
+
+	.identity-meta {
+		gap: 0.5rem 0.875rem;
+		margin-block-start: 0.625rem;
+	}
+
+	.tin {
+		gap: 0.25rem 0.5rem;
+		min-width: 0;
+		margin: 0;
+	}
+
+	.tin dd {
+		margin: 0;
+	}
+
+	.actions {
+		gap: 0.5rem;
+		max-width: 100%;
+	}
+
+	.checkpoint-content {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr);
+	}
+
+	.detail-section {
+		padding: var(--checkpoint-padding);
+	}
+
+	.detail-section + .detail-section,
+	.files {
+		border-block-start: 1px solid var(--border-soft);
+	}
+
+	.files {
+		border-end-start-radius: 13px;
+		border-end-end-radius: 13px;
+		background: var(--bg-elev-2);
+	}
+
+	h2 {
+		margin: 0 0 0.875rem;
+		font-family: var(--font-sans);
+		font-size: 0.9375rem;
+		font-weight: 650;
+		line-height: 1.4;
+	}
+
+	.detail-grid,
+	.file-list {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr);
+		gap: 0.875rem 1.25rem;
+		margin: 0;
+	}
+
+	dt {
+		color: var(--fg-muted);
+		font-size: 0.75rem;
+		font-weight: 500;
+		line-height: 1.4;
+	}
+
+	dd {
+		margin: 0.25rem 0 0;
+		font-size: 0.875rem;
+		line-height: 1.45;
+		overflow-wrap: anywhere;
+	}
+
+	.file-list dd {
+		font-size: 0.8125rem;
+	}
+
+	.empty {
+		margin: 0;
+		color: var(--fg-muted);
+		font-size: 0.875rem;
+	}
+
+	@container taxpayer-checkpoint (width >= 30rem) {
+		.detail-grid {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+		}
+	}
+
+	@container taxpayer-checkpoint (width >= 48rem) {
+		.checkpoint-content {
+			grid-template-columns: minmax(0, 1fr) minmax(16rem, 34%);
+		}
+
+		.files {
+			border-block-start: 0;
+			border-inline-start: 1px solid var(--border-soft);
+			border-end-start-radius: 0;
+		}
+	}
+
+	@container taxpayer-checkpoint (width < 30rem) {
+		.actions {
+			display: grid;
+			grid-template-columns: minmax(0, 1fr);
+			width: 100%;
+		}
+	}
+</style>
