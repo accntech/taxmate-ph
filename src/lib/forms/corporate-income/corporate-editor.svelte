@@ -390,7 +390,7 @@
 		if (!row && /:total(?:EX|SP)Attach$/.test(id)) return `${headingId}-section-activities`;
 		if (index === 0 && section && /background information/i.test(section.title)) {
 			const registered = corporateBackgroundRows(form, section.rows).find(row =>
-				isRegisteredInformationRow(row) && row.fields.some(field => field.id === id && (field.profileKey || field.readonly)));
+				isRegisteredInformationRow(row) && row.fields.some(field => field.id === id));
 			if (registered) return registered.fields[0].id;
 		}
 		if (section && row) {
@@ -765,7 +765,7 @@
 								{#if row.item}<span class="paper-item-number" aria-hidden={legacyRegular || revisedRegular ? undefined : 'true'}>{row.item.toUpperCase()}</span>{/if}
 								{#if registered}
 									<div class="managed-value">
-										<RegisteredInformation fields={visible} values={calculated} {errors} {onvaluechange} />
+										<RegisteredInformation fields={visible} values={calculated} {errors} />
 									</div>
 								{:else if atcChoice && form.code.startsWith('1702MX')}
 									<div class="mixed-atc-fields">

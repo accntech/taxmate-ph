@@ -176,6 +176,10 @@
 								error={validationErrors.taxpayerName}
 								bind:value={workspace.profile.taxpayerName} />
 						</div>
+						<Input label="Registered name line 2"
+							bind:value={() => workspace.profile.taxpayerName2 ?? '', (value) => workspace.profile.taxpayerName2 = value} />
+						<Input label="Registered name line 3"
+							bind:value={() => workspace.profile.taxpayerName3 ?? '', (value) => workspace.profile.taxpayerName3 = value} />
 						<div class="full-width">
 							<TinInput
 								label="TIN and branch code"
@@ -320,6 +324,8 @@
 							<Textarea rows={2} label="Address line 1" bind:value={workspace.profile.address} />
 						</div>
 						<Textarea rows={2} label="Address line 2" bind:value={workspace.profile.address2} />
+						<Textarea rows={2} label="Address line 3"
+							bind:value={() => workspace.profile.address3 ?? '', (value) => workspace.profile.address3 = value} />
 						<Input
 							label="ZIP code"
 							maxlength={4}

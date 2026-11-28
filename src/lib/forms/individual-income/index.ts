@@ -1,5 +1,5 @@
 import { normalizeCurrencyInput, roundWholePeso, type CurrencyDecimals } from '$lib/components/ui/currency-input/currency';
-import { taxpayerEmailError, type TaxpayerProfile } from '../../profiles/profile';
+import { joinRegisteredLines, mapRegisteredLines, registeredAddressLines, registeredNameLines, taxpayerEmailError, type TaxpayerProfile } from '../../profiles/profile';
 import { isPackagedRdoCode } from '../../profiles/rdo-codes';
 import type { FormDefinition, FormField } from '..';
 import { philippineCalendarDate } from '../filing-calendar';
@@ -96,6 +96,9 @@ export function getIndividualIncomeForm(code: string): IncomeForm | undefined {
 	return Object.hasOwn(definitions, code) ? definitions[code as IncomeCode] : undefined;
 }
 
+// The two legacy returns reserve separate boxes for the taxpayer’s name components.
+export const incomeRegisteredNameContinuation = 'income:registeredNameContinuation';
+
 export type IncomeProfileOptions = { openingDraft?: boolean };
 
 export function incomeProfileValues(
@@ -105,7 +108,13 @@ export function incomeProfileValues(
 	{ openingDraft = true }: IncomeProfileOptions = {}
 ): Values {
 	const branchCode = profile.branchCode;
+	const fullName = joinRegisteredLines(registeredNameLines(profile));
 	const result = Object.fromEntries(Object.entries(form.identity).map(([key, id]) => [id, key === 'email' ? (profile.email ?? '').trim().toLowerCase() : String(profile[key as ProfileKey] ?? '')]));
+	if (form.identity.taxpayerName) result[form.identity.taxpayerName] = fullName;
+	const addressFields = [form.identity.address, form.identity.address2,
+		form.code === '1700' ? 'frm1700:txtPg1Pt1I9Address3' : undefined]
+		.filter((id): id is string => !!id);
+	Object.assign(result, mapRegisteredLines(addressFields, registeredAddressLines(profile), values));
 	for (const field of form.fields) {
 		const name = field.id.split(':').at(-1) ?? '';
 		if (form.code === '1701v2018' && /^txtPg2I1(?:TIN[123]|BranchCode)$/.test(name)) continue;
@@ -116,16 +125,23 @@ export function incomeProfileValues(
 		} else if (/^txtPg[1-9]\d*m?(?:Pt\d+)?(?:I\d+)?BranchCode(?:TYPE)?$/i.test(name)) {
 			result[field.id] = branchCode;
 		} else if (/^(?:txt)?Pg[1-9]\d*m?(?:Pt\d+)?(?:I\d+)?Taxpayer(?:Name)?(?:TYPE)?$/i.test(name)) {
-			result[field.id] = profile.taxpayerName;
+			result[field.id] = fullName;
 		} else if (form.code === '1701' && /^txtPg(?:[2-4]|12Pt9)TaxFiler$/.test(name)) {
 			result[field.id] = profile.taxpayerName.split(',')[0].trim();
 		} else if (form.code === '1701' && /^txtPg\d+m?(?:RegName|TaxName|RegisteredName)(?:TYPE)?$/.test(name)) {
-			result[field.id] = profile.taxpayerName;
+			result[field.id] = fullName;
 		}
 	}
 
 	const taxpayerType = incomeTaxpayerTypeValues(form.code, profile, values);
 	const personal = incomePersonalValues(form.code, profile, { ...values, ...taxpayerType });
+	if (form.code === '1700' || form.code === '1701') {
+		const continuation = joinRegisteredLines(registeredNameLines(profile).slice(1));
+		if (continuation || incomeRegisteredNameContinuation in values) {
+			personal[incomeRegisteredNameContinuation] = continuation;
+		}
+		if (form.code === '1700' && continuation) personal['frm1700:txtPg1Pt2TaxFiler'] = fullName;
+	}
 	if (form.code === '1701') {
 		const { tradeName: tradeNameId, taxpayerType: taxpayerTypeId } = legacy1701ProfileIds;
 		const tradeName = profile.tradeName?.trim();
@@ -270,6 +286,7 @@ export function incomeOutputValues(form: IncomeForm, values: Values): Values {
 	const output = { ...values };
 	omitted.add('income:useSavedSpouse');
 	omitted.add(incomeProfileFieldList);
+	omitted.add(incomeRegisteredNameContinuation);
 	if (form.code === '1701A') {
 		if (!annual1701AFilerRate(values, false)) omitted.add('frm1701A:optTaxRate');
 		if (!annual1701AFilerRate(values, true)) omitted.add('frm1701A:optSpouseTaxRate');

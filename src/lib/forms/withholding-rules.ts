@@ -1,4 +1,4 @@
-import { taxpayerEmailError, type TaxpayerProfile } from "$lib/profiles/profile";
+import { joinRegisteredLines, mapRegisteredLines, registeredAddressLines, registeredNameLines, taxpayerEmailError, type TaxpayerProfile } from "$lib/profiles/profile";
 import { isPackagedRdoCode } from "$lib/profiles/rdo-codes";
 import { normalizeCurrencyInput } from "$lib/components/ui/currency-input/currency";
 import {
@@ -78,17 +78,29 @@ export function hasConflictingInstallmentPrices(values: Values): boolean {
   return normalizedSelling === null || normalizedGross === null || Number(normalizedSelling) !== Number(normalizedGross);
 }
 
+export function withholdingProfileValues(d: WithholdingDefinition, profile: TaxpayerProfile): Values {
+  const fields = withholdingFields(d);
+  const addressFields = ["address", "address2"].flatMap(key =>
+    fields.filter(field => field.profileKey === key).map(field => field.id)
+  );
+  const values: Values = Object.fromEntries(fields.flatMap(({ id, profileKey }) => {
+    if (!profileKey) return [];
+    const value = profile[profileKey];
+    if (profileKey === "taxpayerName") return [[id, joinRegisteredLines(registeredNameLines(profile))]];
+    if (profileKey === "email") return [[id, (profile.email ?? "").trim().toLowerCase()]];
+    return [[id, typeof value === "string" ? value : ""]];
+  }));
+  return { ...values, ...mapRegisteredLines(addressFields, registeredAddressLines(profile)) };
+}
+
 export function createWithholdingValues(
   code: string,
   profile?: TaxpayerProfile,
 ): Values {
   const d = definition(code),
     values: Values = {};
-  for (const field of withholdingFields(d))
-    values[field.id] =
-      field.profileKey && profile
-        ? (field.profileKey === "email" ? (profile.email ?? '').toLowerCase() : profile[field.profileKey] ?? "")
-        : (field.defaultValue ?? "");
+  for (const field of withholdingFields(d)) values[field.id] = field.defaultValue ?? "";
+  if (profile) Object.assign(values, withholdingProfileValues(d, profile));
   const { year, month, day } = philippineCalendarDate();
   if (d.yearField in values) {
     const reportingYear = annualInformationReturns.includes(code) ? year - 1 : year;

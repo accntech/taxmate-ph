@@ -44,8 +44,11 @@ export type TaxpayerSpouse = Partial<TinParts & {
 export type TaxpayerProfileInput = TinParts & {
 	rdoCode: string;
 	taxpayerName: string;
+	taxpayerName2?: string;
+	taxpayerName3?: string;
 	address: string;
 	address2: string;
+	address3?: string;
 	zipCode: string;
 	contactNumber: string;
 	category: string;
@@ -282,6 +285,31 @@ export function upsertTaxpayerProfile(
 	return profiles.map((item, index) => (index === profileIndex ? profile : item));
 }
 
+export function joinRegisteredLines(lines: readonly (string | undefined)[]): string {
+	return lines.map(line => line?.trim()).filter(Boolean).join(', ');
+}
+
+export function registeredNameLines(profile: TaxpayerProfile) {
+	return [profile.taxpayerName, profile.taxpayerName2, profile.taxpayerName3];
+}
+
+export function registeredAddressLines(profile: TaxpayerProfile) {
+	return [profile.address, profile.address2, profile.address3];
+}
+
+/** Keep separate BIR fields where available and combine overflow in the last slot. */
+export function mapRegisteredLines(
+	fields: readonly string[],
+	lines: readonly (string | undefined)[],
+	saved: Record<string, string> = {}
+): Record<string, string> {
+	return Object.fromEntries(fields.map((id, index) => {
+		const line = lines[index] ?? saved[id];
+		const remaining = index === fields.length - 1 ? lines.slice(index + 1) : [];
+		return [id, joinRegisteredLines([line, ...remaining])];
+	}));
+}
+
 export function buildTaxpayerProfileFormValues(profile: TaxpayerProfile): Record<string, string> {
 	return {
 		'frm1601EQ:txtTIN1': profile.tin1,
@@ -289,9 +317,9 @@ export function buildTaxpayerProfileFormValues(profile: TaxpayerProfile): Record
 		'frm1601EQ:txtTIN3': profile.tin3,
 		'frm1601EQ:txtBranchCode': profile.branchCode,
 		'frm1601EQ:txtRDOCode': profile.rdoCode,
-		'frm1601EQ:txtTaxpayerName': profile.taxpayerName,
+		'frm1601EQ:txtTaxpayerName': joinRegisteredLines(registeredNameLines(profile)),
 		'frm1601EQ:txtAddress': profile.address,
-		'frm1601EQ:txtAddress2': profile.address2,
+		'frm1601EQ:txtAddress2': joinRegisteredLines([profile.address2, profile.address3]),
 		'frm1601EQ:txtZipCode': profile.zipCode,
 		'frm1601EQ:txtTelNum': profile.contactNumber,
 		'frm1601EQ:optCategory': profile.category,

@@ -1,3 +1,4 @@
+import { corporateBackgroundRows, isRegisteredInformationRow } from './background-layout';
 import { corporateOwnerRequired, corporateOwnerSelection, corporateRecordSection, ownerListLabel } from './editor-lists';
 import { exemptForms } from './exempt';
 import { corporateContinuationRowsPerPage } from './continuation-pagination';
@@ -6,7 +7,7 @@ import { legacyMixedOtherAtcElected } from './mixed/atc';
 import { quarterlyForms } from './quarterly';
 import { regularForms } from './regular';
 import type { FormDefinition } from '..';
-import { taxpayerEmailError, type TaxpayerProfile } from '$lib/profiles/profile';
+import { joinRegisteredLines, mapRegisteredLines, registeredAddressLines, registeredNameLines, taxpayerEmailError, type TaxpayerProfile } from '$lib/profiles/profile';
 import { isPackagedRdoCode } from '$lib/profiles/rdo-codes';
 import { psicClassCode } from '$lib/profiles/psic';
 import { normalizeCurrencyInput } from '$lib/components/ui/currency-input/currency';
@@ -140,7 +141,16 @@ export function corporateProfileField(form: CorporateForm, key: keyof TaxpayerPr
 	return corporateFields(form).find(field => field.profileKey === key)?.id;
 }
 
-export function corporateProfileValues(form: CorporateForm, profile: TaxpayerProfile): CorporateValues {
+function registeredRows(form: CorporateForm) {
+	return form.pages[0].sections.filter(section => /background information/i.test(section.title))
+		.flatMap(section => corporateBackgroundRows(form, section.rows)).filter(isRegisteredInformationRow);
+}
+
+export function corporateProfileValues(
+	form: CorporateForm,
+	profile: TaxpayerProfile,
+	saved: CorporateValues = {}
+): CorporateValues {
 	const result: CorporateValues = {};
 	for (const { id, profileKey } of corporateFields(form)) {
 		if (!profileKey) continue;
@@ -149,10 +159,14 @@ export function corporateProfileValues(form: CorporateForm, profile: TaxpayerPro
 			if (code) result[id] = code;
 			continue;
 		}
-		const value = profile[profileKey];
+		const value = profileKey === 'taxpayerName' ? joinRegisteredLines(registeredNameLines(profile)) : profile[profileKey];
 		if (form.code === '1702MX' && profileKey === 'lineOfBusiness' && !profile.lineOfBusiness?.trim()) continue;
 		if (typeof value === 'string') result[id] = profileKey === 'email' ? value.trim().toLowerCase() : value;
 		else result[id] = '';
+	}
+	for (const row of registeredRows(form)) {
+		const lines = row.fields[0].profileKey === 'taxpayerName' ? registeredNameLines(profile) : registeredAddressLines(profile);
+		Object.assign(result, mapRegisteredLines(row.fields.map(field => field.id), lines, saved));
 	}
 	return result;
 }
@@ -162,6 +176,8 @@ export function calculateCorporateIncome(form: CorporateForm, values: CorporateV
 	const instances = corporateAttachmentInstances(form, result);
 	if (!instances.length && !form.pagesFiledField) return result;
 	const populated = { ...result };
+	const nameRow = instances.length ? registeredRows(form).find(row => row.fields[0].profileKey === 'taxpayerName') : undefined;
+	const registeredName = nameRow && joinRegisteredLines(nameRow.fields.map(field => result[field.id]));
 	if (form.pagesFiledField) {
 		const attachmentPages = instances.reduce((total, { group }) => total + group.templatePages.length, 0);
 		const continuationPages = (form.continuations?.(result) ?? []).reduce(
@@ -174,7 +190,7 @@ export function calculateCorporateIncome(form: CorporateForm, values: CorporateV
 		for (const field of pageFields(group.templatePages)) {
 			if (!field.profileKey) continue;
 			const source = corporateProfileField(form, field.profileKey);
-			if (source) populated[field.id.replaceAll('AttM', id)] = result[source] ?? '';
+			if (source) populated[field.id.replaceAll('AttM', id)] = (field.profileKey === 'taxpayerName' ? registeredName : undefined) ?? result[source] ?? '';
 		}
 	}
 	return populated;

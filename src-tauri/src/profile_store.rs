@@ -47,8 +47,14 @@ pub struct TaxpayerProfile {
     pub branch_code: String,
     pub rdo_code: String,
     pub taxpayer_name: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub taxpayer_name2: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub taxpayer_name3: Option<String>,
     pub address: String,
     pub address2: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub address3: Option<String>,
     pub zip_code: String,
     pub contact_number: String,
     pub category: String,
@@ -304,6 +310,12 @@ fn normalize_income_details(profile: &mut TaxpayerProfile) {
         });
     }
 
+    // Keep an explicit empty line so clearing it also clears older drafts.
+    for line in [&mut profile.taxpayer_name2, &mut profile.taxpayer_name3, &mut profile.address3] {
+        if let Some(value) = line {
+            *value = value.trim().to_owned();
+        }
+    }
     trim(&mut profile.birth_date);
     trim(&mut profile.trade_name);
     trim(&mut profile.psoc_code);
@@ -366,6 +378,9 @@ fn serialize_profile_xml(profile: &TaxpayerProfile) -> Result<String, ProfileSto
         field_xml("taxpayerSize", &escape_legacy_value(&profile.taxpayer_size)),
     ];
     for (key, value) in [
+        ("taxMateRegisteredName2", profile.taxpayer_name2.as_deref()),
+        ("taxMateRegisteredName3", profile.taxpayer_name3.as_deref()),
+        ("taxMateRegisteredAddress3", profile.address3.as_deref()),
         ("taxMateBirthDate", profile.birth_date.as_deref()),
         ("taxMateTradeName", profile.trade_name.as_deref()),
         ("taxMatePsocCode", profile.psoc_code.as_deref()),
@@ -412,8 +427,11 @@ fn parse_profile_xml(xml: &str) -> Result<TaxpayerProfile, ProfileStoreError> {
         branch_code,
         rdo_code: read_field(xml, "rdo"),
         taxpayer_name: unescape_legacy_value(&read_field(xml, "fn"))?,
+        taxpayer_name2: read_app_profile_field(xml, "taxMateRegisteredName2")?,
+        taxpayer_name3: read_app_profile_field(xml, "taxMateRegisteredName3")?,
         address: unescape_legacy_value(&read_field(xml, "addr"))?,
         address2: unescape_legacy_value(&read_field(xml, "addr2"))?,
+        address3: read_app_profile_field(xml, "taxMateRegisteredAddress3")?,
         zip_code: read_field(xml, "zip"),
         contact_number: read_field(xml, "tel"),
         category: read_field(xml, "category"),

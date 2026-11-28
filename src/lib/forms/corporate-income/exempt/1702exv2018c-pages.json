@@ -217,6 +217,32 @@
             ]
           },
           {
+            "label": "Registered name line 2",
+            "item": "8",
+            "fields": [
+              {
+                "id": "frm1702EX:txtPg1Pt1I8RegisteredName2",
+                "label": "Registered name line 2",
+                "kind": "text",
+                "readonly": true,
+                "maxLength": 60
+              }
+            ]
+          },
+          {
+            "label": "Registered name line 3",
+            "item": "8",
+            "fields": [
+              {
+                "id": "frm1702EX:txtPg1Pt1I8RegisteredName3",
+                "label": "Registered name line 3",
+                "kind": "text",
+                "readonly": true,
+                "maxLength": 60
+              }
+            ]
+          },
+          {
             "label": "Registered address",
             "item": "9",
             "fields": [
@@ -241,6 +267,19 @@
                 "kind": "text",
                 "readonly": true,
                 "profileKey": "address2",
+                "maxLength": 80
+              }
+            ]
+          },
+          {
+            "label": "Registered address line 3",
+            "item": "9",
+            "fields": [
+              {
+                "id": "frm1702EX:txtPg1Pt1I9RegisteredAddress3",
+                "label": "Registered address line 3",
+                "kind": "text",
+                "readonly": true,
                 "maxLength": 80
               }
             ]

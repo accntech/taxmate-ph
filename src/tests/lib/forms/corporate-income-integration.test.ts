@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { getFormDefinition, listForms } from '$lib/forms';
 import { createInitialFormValues, initialProfile } from '$lib/ebirforms/ebirforms-workspace.svelte';
-import { getReturnExportValues, getReturnTin, getReturnEmail, getReturnPeriod, validateReturnValues } from '$lib/forms/form-runtime';
+import { getManagedTaxpayerValues, getReturnExportValues, getReturnTin, getReturnEmail, getReturnPeriod, validateReturnValues } from '$lib/forms/form-runtime';
 import { calculateCorporateIncome, corporateEditorPages, getCorporateIncomeForm } from '$lib/forms/corporate-income';
 import { corporateBackgroundRows } from '$lib/forms/corporate-income/background-layout';
 
@@ -105,6 +105,39 @@ describe('corporate income returns', () => {
 		expect(getReturnTin(code, values, initialProfile)).toEqual({ tin1: '007', tin2: '456', tin3: '789', branchCode: '00012' });
 		expect(getReturnEmail(code, values, initialProfile)).toBe('corp@example.com');
 		expect(getReturnPeriod(code, values)).toMatch(/^\d{4}/);
+	});
+
+	it('retains saved continuation lines until the profile explicitly replaces them', () => {
+		const code = '1702RTv2018';
+		const id = 'frm1702RT:txtPg1Pt1I8Name2';
+		const saved = { [id]: 'Previous division' };
+		expect({ ...saved, ...getManagedTaxpayerValues(code, initialProfile, 'Draft', saved) }[id]).toBe(saved[id]);
+		expect(getManagedTaxpayerValues(code, { ...initialProfile, taxpayerName2: '' }, 'Draft', saved)[id]).toBe('');
+	});
+
+	it.each([
+		['1601EQ', 'frm1601EQ:txtTaxpayerName', 'frm1601EQ:txtAddress2', 'City, Building 3'],
+		['1701Q', 'frm1701q:txtTaxPayername', 'frm1701q:txt11Address', 'Street, City, Building 3']
+	])('uses every profile line in the available legacy fields of %s', (code, name, address, expected) => {
+		const profile = { ...initialProfile, taxpayerName: 'Sample Name', taxpayerName2: ' Division ', taxpayerName3: '', address: 'Street', address2: 'City', address3: 'Building 3' };
+		const exported = getReturnExportValues(code, createInitialFormValues(profile, code));
+		expect(exported[name]).toBe('Sample Name, Division');
+		expect(exported[address]).toBe(expected);
+	});
+
+	it.each(listForms().map(form => form.code))('carries registered continuations into new and reopened %s export values', code => {
+		const profile = { ...initialProfile, taxpayerName2: 'Name continuation two', taxpayerName3: 'Name continuation three', address2: 'Address continuation two', address3: 'Address continuation three' };
+		const draft = createInitialFormValues(profile, code);
+		const reopened = { ...draft, ...getManagedTaxpayerValues(code, profile, 'Draft', draft) };
+		for (const values of [draft, reopened]) {
+			const exported = Object.values(getReturnExportValues(code, values)).join(' ');
+			expect(exported).toContain('Name continuation two');
+			expect(exported).toContain('Name continuation three');
+			if (code !== '1701MS') {
+				expect(exported).toContain('Address continuation two');
+				expect(exported).toContain('Address continuation three');
+			}
+		}
 	});
 
 	it.each(['1702RT', '1702RTv2018', '1702RTv2018C'])('keeps the conditional regular ATC inside Item 5 in %s', code => {

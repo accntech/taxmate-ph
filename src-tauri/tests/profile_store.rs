@@ -13,6 +13,9 @@ fn sample_profile() -> TaxpayerProfile {
         branch_code: "0000".into(),
         rdo_code: "040".into(),
         taxpayer_name: "Sample Taxpayer".into(),
+        taxpayer_name2: None,
+        taxpayer_name3: None,
+        address3: None,
         address: "123 Sample Street".into(),
         address2: "Barangay Example, Makati City".into(),
         zip_code: "1200".into(),
@@ -61,6 +64,22 @@ fn lists_saved_taxpayer_profiles_from_disk() {
     let profiles = list_taxpayer_profiles_from_root(root.path()).expect("list profiles");
 
     assert_eq!(profiles, vec![sample_profile()]);
+}
+
+#[test]
+fn saves_registered_continuations_including_explicit_empty_lines() {
+    let root = tempfile::tempdir().expect("temp app data root");
+    let mut profile = sample_profile();
+    profile.taxpayer_name2 = Some("  Example & Company  ".into());
+    profile.taxpayer_name3 = Some(String::new());
+    profile.address3 = Some("Suite 3".into());
+    save_taxpayer_profile_to_root(root.path(), profile.clone()).expect("save profile");
+
+    profile.taxpayer_name2 = Some("Example & Company".into());
+    assert_eq!(
+        list_taxpayer_profiles_from_root(root.path()).expect("list profiles"),
+        vec![profile]
+    );
 }
 
 #[test]

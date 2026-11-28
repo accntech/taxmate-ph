@@ -145,24 +145,26 @@ test('1702-Q retains blank registered fields for missing profile values', async 
 	await expect(background.getByRole('link', { name: 'Edit taxpayer information' })).toBeVisible();
 });
 
-test('1702-RT groups registered name and address while preserving their saved lines', async ({ page }, info) => {
+test('1702-RT uses registered details saved in the taxpayer profile', async ({ page }, info) => {
 	const code = '1702RTv2018';
-	await seedWorkspace(page, 'light', 'loaded', { taxpayerClassification: 'N' }, []);
+	await seedWorkspace(page, 'light', 'loaded', { taxpayerClassification: 'N' }, [], { persistProfile: true });
 	await page.setViewportSize({ width: 1280, height: 900 });
 	await page.goto(`/ebirforms/taxpayers/${taxpayerId}/forms/${code}?new=true`);
 	const background = page.getByRole('region', { name: /background information/i });
 	const name = background.getByRole('status', { name: 'Registered name', exact: true });
 	const address = background.getByRole('status', { name: 'Registered address', exact: true });
-	const nameLine2 = background.getByRole('textbox', { name: 'Registered name line 2', exact: true });
-	const nameLine3 = background.getByRole('textbox', { name: 'Registered name line 3', exact: true });
-	const addressLine3 = background.getByRole('textbox', { name: 'Registered address line 3', exact: true });
-	const profileName = 'Example Services Corporation';
-	const profileAddress = '123 Example Street\nExample City';
+	const profileName = 'Example Services Corporation, Manufacturing Division, Philippines';
+	const profileAddress = '123 Example Street, Example City, Building 2';
+	await background.getByRole('link', { name: 'Edit taxpayer information' }).click();
+	await page.getByRole('textbox', { name: 'Registered name line 2', exact: true }).fill('Manufacturing Division', { timeout: 5000 });
+	await page.getByRole('textbox', { name: 'Registered name line 3', exact: true }).fill('Philippines');
+	await page.getByRole('textbox', { name: 'Address line 3', exact: true }).fill('Building 2');
+	await page.getByRole('button', { name: 'Save profile', exact: true }).click();
+	await expect(page).toHaveURL(/\/ebirforms\/taxpayers$/);
+	await page.goto(`/ebirforms/taxpayers/${taxpayerId}/forms/${code}?new=true`);
 	await expect(name).toHaveText(profileName);
 	await expect(address).toHaveText(profileAddress);
-	await nameLine2.fill('Manufacturing Division');
-	await nameLine3.pressSequentially('Philippines');
-	await addressLine3.fill('Building 2');
+	await expect(background.getByRole('textbox', { name: /Registered (name|address) line/ })).toHaveCount(0);
 	for (const width of [1280, 390]) {
 		await page.setViewportSize({ width, height: 900 });
 		await page.keyboard.press('Escape');
@@ -187,9 +189,16 @@ test('1702-RT groups registered name and address while preserving their saved li
 	await edit.click();
 	await expect(name).toHaveText(profileName);
 	await expect(address).toHaveText(profileAddress);
-	await expect(nameLine2).toHaveValue('Manufacturing Division');
-	await expect(nameLine3).toHaveValue('Philippines');
-	await expect(addressLine3).toHaveValue('Building 2');
+	await page.getByRole('link', { name: /Back to forms/ }).click();
+	const printed = await printSavedReturn(page, code, info.outputPath('1702rt-registered-information.pdf'));
+	for (const [key, value] of Object.entries({
+		txtPg1Pt1I8Name2: 'Manufacturing Division',
+		txtPg1Pt1I8Name3: 'Philippines',
+		txtPg1Pt1I9Address3: 'Building 2'
+	})) {
+		await expect(printed.locator(`[data-corporate-field="frm1702RT:${key}"]`)).toHaveValue(value);
+	}
+	await printed.close();
 });
 
 test('corporate tax and schedule dividers span the form with content inset', async ({ page }, info) => {

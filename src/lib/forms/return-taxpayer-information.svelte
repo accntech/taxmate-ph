@@ -4,8 +4,8 @@
 	import Icon from '$lib/components/ui/icon/icon.svelte';
 	import { glyphs } from '$lib/components/ui/icons';
 	import type { TaxpayerProfile } from '$lib/profiles/profile';
-	import { formatTinInput, isValidPsocCode } from '$lib/profiles/profile';
-	import { getIndividualIncomeForm } from './individual-income';
+	import { formatTinInput, isValidPsocCode, joinRegisteredLines, registeredAddressLines, registeredNameLines } from '$lib/profiles/profile';
+	import { getIndividualIncomeForm, incomeRegisteredNameContinuation } from './individual-income';
 	import { isLegacy1700ContactValid } from './individual-income/compensation';
 	import { getWithholdingDefinition } from './withholding-definitions';
 	import { compareFormItems, type TaxpayerItemKey } from './withholding-paper-layout';
@@ -46,9 +46,21 @@
 	const classification = $derived(value('taxpayerClassification'));
 	const category = $derived(value('category'));
 	const tin = $derived(formatTinInput({ tin1: value('tin1'), tin2: value('tin2'), tin3: value('tin3'), branchCode: value('branchCode') }));
-	const address = $derived([value('address'), value('address2'), formCode === '1700' ? values['frm1700:txtPg1Pt1I9Address3'] : ''].filter(Boolean).join(', '));
-	const legacyName = $derived(['LastName', 'FirstName', 'MiddleName'].map(part => values['frm1700:txtPg1Pt1I8TaxFiler' + part]).filter(Boolean).join(', '));
-	const annualName = $derived(['', 'FirstName', 'MiddleName'].map(part => values['frm1701:txtPg1Pt1I8TaxFiler' + part]).filter(Boolean).join(', '));
+	const address = $derived(profileFields.address2
+		? joinRegisteredLines([value('address'), value('address2'), legacy1700 ? values['frm1700:txtPg1Pt1I9Address3'] : undefined])
+		: profileFields.address && values[profileFields.address] !== undefined
+			? joinRegisteredLines([values[profileFields.address]])
+			: joinRegisteredLines(registeredAddressLines(profile)));
+	const taxpayerName = $derived((profileFields.taxpayerName ? values[profileFields.taxpayerName] : undefined)
+		?? joinRegisteredLines(registeredNameLines(profile)));
+	const legacyName = $derived(joinRegisteredLines([
+		...['LastName', 'FirstName', 'MiddleName'].map(part => values['frm1700:txtPg1Pt1I8TaxFiler' + part]),
+		values[incomeRegisteredNameContinuation]
+	]));
+	const annualName = $derived(joinRegisteredLines([
+		...['', 'FirstName', 'MiddleName'].map(part => values['frm1701:txtPg1Pt1I8TaxFiler' + part]),
+		values[incomeRegisteredNameContinuation]
+	]));
 	const legacyCivilStatus: Record<string, string> = {
 		'frm1700:rdoPg1Pt1I13SingleInd': 'Single', 'frm1700:rdoPg1Pt1I13MarriedInd': 'Married',
 		'frm1700:rdoPg1Pt1I13LegalSeparatedInd': 'Legally separated', 'frm1700:rdoPg1Pt1I13WidowerInd': 'Widowed'
@@ -78,12 +90,13 @@
 		...Object.entries(itemNumbers ?? {}).map(([rawKey, item]) => {
 			const key = rawKey as TaxpayerItemKey;
 			const legacyDetails: Partial<Record<TaxpayerItemKey, string>> = formCode === '1700' ? {
-				taxpayerName: legacyName || value('taxpayerName'),
+				taxpayerName: legacyName || taxpayerName,
 				psocCode: legacyPsoc,
 				birthDate: values['frm1700:txtPg1Pt1I10DOB'] ?? '',
 				civilStatus: legacyCivilStatus[values['frm1700:rdoPg1Pt1I13CivilStatusInd']] ?? ''
-			} : formCode === '1701' ? { taxpayerName: annualName || profile.taxpayerName } : {};
+			} : formCode === '1701' ? { taxpayerName: annualName || taxpayerName } : {};
 			const content = key === 'tin' ? tin : key === 'address' ? address :
+				key === 'taxpayerName' ? legacyDetails.taxpayerName ?? taxpayerName :
 				key === 'category' ? category === 'P' ? 'Private' : category === 'G' ? 'Government' : '' : legacyDetails[key] ?? value(key);
 			const label = formCode === '1606' && key === 'taxpayerName' ? 'Buyer’s name' :
 				formCode === '1606' && key === 'address' ? 'Buyer’s registered address' : income && key === 'taxpayerName' ? 'Taxpayer name' : profileLabels[key] ?? key;
@@ -96,14 +109,14 @@
 	const details = $derived(remittance ? [
 		{ item: remittanceTinItem, key: 'tin', label: 'TIN and branch code', content: tin },
 		{ item: remittanceTinItem + 1, key: 'rdoCode', label: 'RDO code', content: value('rdoCode') },
-		{ item: remittanceTinItem + 2, label: 'Withholding agent’s name', content: value('taxpayerName') },
+		{ item: remittanceTinItem + 2, label: 'Withholding agent’s name', content: taxpayerName },
 		{ item: remittanceTinItem + 3, label: 'Registered address', content: address },
 		{ item: `${remittanceTinItem + 3}A`, key: 'zipCode', label: 'ZIP code', content: value('zipCode') },
 		{ item: remittanceTinItem + 4, key: 'contactNumber', label: 'Contact number', content: value('contactNumber') },
 		{ item: remittanceTinItem + 5, label: 'Category of withholding agent', content: category === 'P' ? 'Private' : category === 'G' ? 'Government' : '' },
 		{ item: remittanceTinItem + 6, label: 'Email address', content: value('email') }
 	] : [
-		{ item: payment ? 13 : 8, label: 'Taxpayer name', content: value('taxpayerName') },
+		{ item: payment ? 13 : 8, label: 'Taxpayer name', content: taxpayerName },
 		{ item: payment ? 9 : 6, key: 'tin', label: 'TIN and branch code', content: tin },
 		{ item: payment ? 10 : 7, key: 'rdoCode', label: 'RDO code', content: value('rdoCode') },
 		{ item: payment ? 15 : 9, label: 'Registered address', content: address },

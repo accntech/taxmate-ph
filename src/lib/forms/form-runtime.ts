@@ -4,7 +4,7 @@ import { buildTaxpayerProfileFormValues, taxpayerEmailError, type TaxpayerProfil
 import type { CreatedReturnStatus } from '$lib/ebirforms/created-returns';
 import { calculate1601EQ, validate1601EQ } from './form-1601-eq/form-1601-eq-rules';
 import { getWithholdingDefinition, withholdingPriorRemittanceFields } from './withholding-definitions';
-import { calculateWithholding, validateWithholding, withholdingReturnPeriod } from './withholding-rules';
+import { calculateWithholding, validateWithholding, withholdingProfileValues, withholdingReturnPeriod } from './withholding-rules';
 
 export function calculateReturn(code: string, values: Record<string, string>): Record<string, string> {
  const normalized = Object.fromEntries(Object.entries(values).map(([id, value]) => [id, /email/i.test(id) ? value.toLowerCase() : value]));
@@ -92,14 +92,11 @@ export function getManagedTaxpayerValues(
  const income = getIndividualIncomeForm(code);
  if (income) return incomeProfileValues(income, profile, values, options);
  const corporate = getCorporateIncomeForm(code);
- if (corporate) return corporateProfileValues(corporate, profile);
+ if (corporate) return corporateProfileValues(corporate, profile, values);
  if (code === '1601EQ') return buildTaxpayerProfileFormValues(profile);
  const definition = getWithholdingDefinition(code);
  if (!definition) return {};
- const managed = Object.fromEntries(definition.sections.flatMap(section => section.fields).flatMap(field => {
-  const key = field.profileKey;
-  return key ? [[field.id, key === 'email' ? (profile.email ?? '').trim().toLowerCase() : profile[key] ?? '']] : [];
- }));
+ const managed = withholdingProfileValues(definition, profile);
  if (code === '0605' && profile.taxpayerClassification === 'I') {
   managed[definition.prefix + 'itemYearEndMonth'] = '12';
   managed[definition.prefix + 'itemFiscalStartMonth'] = 'Calendar';

@@ -40,7 +40,11 @@ test('all supported returns show their taxpayer information', async ({ page }) =
 		}));
 	});
 	expect(forms.length).toBeGreaterThan(0);
-	await seedWorkspace(page, 'light', 'loaded', profile, forms.map(({ code }) => ({
+	const registeredName = 'Example Services Corporation, Operations, North Division';
+	const registeredAddress = '123 Example Street, Example City, Building 2';
+	await seedWorkspace(page, 'light', 'loaded', {
+		...profile, taxpayerName2: 'Operations', taxpayerName3: 'North Division', address3: 'Building 2'
+	}, forms.map(({ code }) => ({
 		...draft, id: `info-${code}`, formCode: code
 	})));
 	for (const form of forms) {
@@ -55,8 +59,8 @@ test('all supported returns show their taxpayer information', async ({ page }) =
 				for (const [label, value] of [
 					['TIN and branch code', '001-234-567-0008'],
 					['RDO code', '040'],
-					['Registered name', 'Example Services Corporation'],
-					['Registered address', '123 Example Street']
+					['Registered name', registeredName],
+					['Registered address', registeredAddress]
 				]) {
 					await expect(information.getByRole('status', { name: label, exact: true })).toContainText(value);
 				}
@@ -64,8 +68,8 @@ test('all supported returns show their taxpayer information', async ({ page }) =
 			}
 			const contact = form.code === '1701MS'
 				? ['example@example.com', '09171234567']
-				: ['123 Example Street', 'Example City'];
-			for (const value of ['Example Services Corporation', '001-234-567-0008', '040', ...contact]) {
+				: [registeredAddress];
+			for (const value of [registeredName, '001-234-567-0008', '040', ...contact]) {
 				await expect(information).toContainText(value);
 			}
 			const labels = taxpayerLabels[form.code];

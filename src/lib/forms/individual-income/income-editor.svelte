@@ -7,7 +7,7 @@
 	import MonthYearInput from '$lib/components/ui/month-year-input/month-year-input.svelte';
 	import { Sheet } from '$lib/components/ui/sheet';
 	import { glyphs } from '$lib/components/ui/icons';
-	import { annualFilingFields, calculateIndividualIncome, hasActivityAttachment, incomeAmountDecimals, incomeCalculatedFields, incomeFilingYear, incomeFilingYearBounds, incomePaymentFieldIds, individualIncomePeriod, isShortFilingPeriod, type IncomeForm } from '.';
+	import { annualFilingFields, calculateIndividualIncome, hasActivityAttachment, incomeAmountDecimals, incomeCalculatedFields, incomeFilingYear, incomeFilingYearBounds, incomePaymentFieldIds, incomeRegisteredNameContinuation, individualIncomePeriod, isShortFilingPeriod, type IncomeForm } from '.';
 	import { annual1701AScheduleLabels, annual1701ASchedules, incomeChoiceLabel, incomeEditorFields, incomeEditorPageTitle, incomeEditorRowGroups, incomeEditorRows, legacyQuarterlyComputation, type IncomeEditorField } from './editor-layout';
 	import { legacy1700DependentClaim, legacy1700FirstYear, legacy1700IncomeSourceChecked, legacy1700LastYear, revised1700FieldApplies } from './compensation';
 	import { quarterlyFilerReady, quarterlyIncomeFieldApplies, quarterlyRateForAtc, quarterlySelectedRate, quarterlyTaxReliefPatch } from './quarterly';
@@ -27,7 +27,7 @@
 	import PaperFormHeader from '../paper-form-header.svelte';
 	import ReturnPagination from '../return-pagination.svelte';
 	import ReturnTaxpayerInformation from '../return-taxpayer-information.svelte';
-	import type { TaxpayerProfile } from '$lib/profiles/profile';
+	import { joinRegisteredLines, registeredNameLines, type TaxpayerProfile } from '$lib/profiles/profile';
 	import type { TaxpayerItemKey } from '../withholding-paper-layout';
 	import '../form-editor-layout.css';
 
@@ -140,7 +140,7 @@
 
 	const annualNameFields = ['frm1701:txtPg1Pt1I8TaxFiler', 'frm1701:txtPg1Pt1I8TaxFilerFirstName', 'frm1701:txtPg1Pt1I8TaxFilerMiddleName'];
 	const annualTaxpayerName = $derived(legacyAnnual
-		? annualNameFields.map(id => values[id]?.trim()).filter(Boolean).join(', ')
+		? joinRegisteredLines([...annualNameFields.map(id => values[id]), values[incomeRegisteredNameContinuation]])
 		: values[form.identity.taxpayerName!]);
 	const annualIdentificationIds = [legacy1701Filing.type, legacy1701Filing.number,
 		legacy1701Filing.issueDate, legacy1701Filing.issuePlace, legacy1701Filing.amount];
@@ -1506,7 +1506,7 @@
 		{#if values[form.year]}<p>{individualIncomePeriod(form, values)}</p>{/if}
 	</div>
 	{#if selectedPage !== '1'}
-		<p class="schedule-taxpayer">{(legacy1700 ? profile.taxpayerName : annualTaxpayerName) || profile.taxpayerName}</p>
+		<p class="schedule-taxpayer">{(legacy1700 ? values['frm1700:txtPg1Pt2TaxFiler'] : annualTaxpayerName) || joinRegisteredLines(registeredNameLines(profile))}</p>
 	{/if}
 	{#if shortAnnual && selectedPage === '2'}
 		<div class="schedule-taxpayer schedule-empty">
