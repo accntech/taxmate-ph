@@ -1,15 +1,17 @@
+import { fillFourBranchCodeBoxes } from '$lib/printing/branch-code-boxes';
 import { formatCurrencyInput } from '$lib/components/ui/currency-input/currency';
 import { corporateAttachmentInstances, corporateFields } from '.';
 import { legacyMixedRateLabel, legacyMixedSpecialRate } from './mixed/atc';
 import { corporateContinuationRowsPerPage as rowsPerPage } from './continuation-pagination';
 import type { CorporateForm, CorporateSection, CorporateValues } from './types';
 
+import branchCodeStyles from '$lib/printing/branch-code-boxes.css?raw';
 import sharedPrintStyles from '../printing/withholding-print.css?raw';
 import sourceStyles from '../individual-income/templates/source-layout.css?raw';
 import printStyles from './paper.css?raw';
 
 const templates = import.meta.glob<string>('./templates/form-*.html', { query: '?raw', import: 'default' });
-export const corporatePaperStyles = `${sharedPrintStyles}\n${sourceStyles}\n${printStyles}`;
+export const corporatePaperStyles = `${sharedPrintStyles}\n${sourceStyles}\n${printStyles}\n${branchCodeStyles}`;
 
 function appendContinuation(surface: HTMLElement, section: CorporateSection, values: CorporateValues, form: CorporateForm) {
 	for (let offset = 0; offset < section.rows.length; offset += rowsPerPage) {
@@ -85,6 +87,11 @@ export async function renderCorporatePaper(surface: HTMLElement, form: Corporate
 		}
 		if (control instanceof HTMLInputElement && control.type === 'checkbox') {
 			if (value !== undefined) control.checked = ['Y', 'true', '1', 'on', control.value].includes(value) && value !== 'N';
+			continue;
+		}
+		if (control.hasAttribute('data-print-branch-boxes')) {
+			control.dataset.fieldId = sourceId;
+			fillFourBranchCodeBoxes(control, value ?? '');
 			continue;
 		}
 		if (value === undefined) continue;

@@ -1,3 +1,4 @@
+import { fillFourBranchCodeBoxes } from '$lib/printing/branch-code-boxes';
 import { paperControls } from './paper';
 
 const datePart = /^(\w+Month(?:[1-4]|C[12])?)([MDY])$/;
@@ -48,11 +49,8 @@ export function renderLegacy1701Print(root: ParentNode, controls: ParentNode): v
 			value = read('txtPg4Pt8I116BIRAccreditation').slice(bounds[index - 1], bounds[index]);
 		}
 		if (otherIncome) value = splitLine(read(otherIncome[1]), otherIncome[1].endsWith('C1') ? 17 : 16)[Number(otherIncome[2]) - 1];
-		if (slot.firstElementChild?.hasAttribute('data-legacy-branch-part')) {
-			if (/^\d{4,5}$/.test(value)) {
-				const digits = [value.slice(0, -3), ...value.slice(-3)];
-				for (const [index, part] of [...slot.children].entries()) part.textContent = digits[index];
-			}
+		if (slot.hasAttribute('data-print-branch-boxes') || slot.firstElementChild?.hasAttribute('data-legacy-branch-part')) {
+			fillFourBranchCodeBoxes(slot, value);
 			continue;
 		}
 		// The artwork's individual digit grids need their original spacing.

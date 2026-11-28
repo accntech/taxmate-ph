@@ -2,6 +2,7 @@ import { execFileSync } from 'node:child_process';
 import { expect, test } from '@playwright/test';
 import { captureTestPdfs, seedWorkspace, taxpayerId } from './fixtures';
 
+const repeatedBranchForms = new Set(['1601Cv2018', '1601FQ', '1603Qv2018', '1604Ev2018', '1604F']);
 const codes = ['0605','0619E','0619F','1600','1600PTv2018','1600VTv2018','1600WP','1601C','1601Cv2018','1601E','1601EQ','1601F','1601FQ','1602','1602Qv2018','1603','1603Qv2018','1604C','1604CF','1604E','1604Ev2018','1604F','1606'];
 for (const code of codes) {
  test(`${code} normalizes values without uppercasing template text`, async ({page, context}, testInfo) => {
@@ -14,12 +15,15 @@ for (const code of codes) {
    const source=await import(`${base}/forms/withholding-definitions.ts`);
    const rules=await import(`${base}/forms/withholding-rules.ts`);
    const reports=await import(`${base}/printing/return-report.ts`);
-   const profile={tin1:'123',tin2:'456',tin3:'789',branchCode:'0000',rdoCode:'047',taxpayerName:name,address:'28 Narra Street',address2:'Makati City',zipCode:'1209',contactNumber:'0285550148',category:'P',email:'Mixed.Case@Example.COM',lineOfBusiness:'Wholesale Trade And Business Services',taxpayerClassification:'N'};
+   const profile={tin1:'123',tin2:'456',tin3:'789',branchCode:'01234',rdoCode:'047',taxpayerName:name,address:'28 Narra Street',address2:'Makati City',zipCode:'1209',contactNumber:'0285550148',category:'P',email:'Mixed.Case@Example.COM',lineOfBusiness:'Wholesale Trade And Business Services',taxpayerClassification:'N'};
    const d=source.getWithholdingDefinition(code);
    const values=d?rules.createWithholdingValues(code,profile):(await import(`${base}/ebirforms/ebirforms-workspace.svelte.ts`)).createInitialFormValues(profile);
    return reports.buildReturnReport(catalog.getFormDefinition(code),values,'Draft','long');
   },{code,name});
   const print=await context.newPage();await print.setContent(html);await print.emulateMedia({media:'print'});await print.evaluate(()=>document.fonts.ready);
+  if (repeatedBranchForms.has(code)) {
+   await expect(print.locator('input[data-field-id$=":txtPg2BranchCode"]')).toHaveValue('01234');
+  }
   const native=print.locator('input:not([type="radio"]):not([type="checkbox"])');
   const textValues=print.locator('input:not([type="radio"]):not([type="checkbox"]), [data-print-value], [data-print-control="select"], [data-field-id]:not(input):not([data-field-id*="opt"]):not([data-field-id*="item"]):not([data-field-id*="Classification"]), .legacy-label-value');
   expect(await textValues.count()).toBeGreaterThan(0);

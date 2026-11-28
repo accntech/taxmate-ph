@@ -1,3 +1,4 @@
+import { fillFourBranchCodeBoxes } from '$lib/printing/branch-code-boxes';
 import type { IncomeForm } from '.';
 import { paperControls, renderIndividualIncomeValues } from './paper';
 
@@ -24,11 +25,8 @@ export function renderLegacy1700Print(
 		const value = date
 			? printedValues.get(date[1].replace(/_$/, ''))?.split('/')[Number(date[2]) - 1] ?? ''
 			: printedValues.get(id) ?? '';
-		if (slot.firstElementChild?.hasAttribute('data-legacy-branch-part')) {
-			if (/^\d{4,5}$/.test(value)) {
-				const digits = [value.slice(0, -3), ...value.slice(-3)];
-				for (const [index, part] of [...slot.children].entries()) part.textContent = digits[index];
-			}
+		if (slot.hasAttribute('data-print-branch-boxes') || slot.firstElementChild?.hasAttribute('data-legacy-branch-part')) {
+			fillFourBranchCodeBoxes(slot, value);
 			continue;
 		}
 		if (!date && !digitSlot.test(id)) slot.style.removeProperty('letter-spacing');

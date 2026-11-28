@@ -94,7 +94,7 @@ export function originalFieldValue(
   const prefix = getWithholdingDefinition(code)?.prefix ?? `frm${code}:`;
   const short = id.startsWith(prefix) ? id.slice(prefix.length) : id;
   const lower = short.toLowerCase();
-  if (/^BrachMask[12]$/.test(short)) {
+  if (/^(?:BrachMask[12]|txtPg[23]BranchCode)$/i.test(short)) {
     const key = prefix + "txtBranchCode";
     return { key, value: values[key] ?? "" };
   }

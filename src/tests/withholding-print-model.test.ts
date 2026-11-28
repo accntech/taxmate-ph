@@ -9,6 +9,17 @@ describe("withholding print model", () => {
       expect(originalFieldValue('1606','frm1606:SpecialLaw',values)).toEqual({key:'frm1606:Habitual',value:habitual});
     }
   });
+  it.each([
+    ['1601Cv2018', 'frm1601c:'],
+    ['1601FQ', 'frm1601FQ:'],
+    ['1603Qv2018', 'frm1603Q:'],
+    ['1604Ev2018', 'frm1604e:'],
+    ['1604F', 'frm1604f:'],
+  ])('prints the taxpayer branch code on the %s continuation', (code, prefix) => {
+    const key = prefix + 'txtBranchCode';
+    expect(originalFieldValue(code, prefix + 'txtPg2BranchCode', { [key]: '01234' }))
+      .toEqual({ key, value: '01234' });
+  });
   it("maps original identity aliases and the quarter radio values", () => {
     expect(
       originalFieldValue("1603", "frm1603:registeredName", {

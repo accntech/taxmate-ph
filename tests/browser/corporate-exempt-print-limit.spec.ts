@@ -11,7 +11,7 @@ function propertyField(drawer: Locator, suffix: string) {
 }
 
 test('1702EX adds the first exempt property to a printable continuation', async ({ page }, info) => {
-	await seedWorkspace(page, 'light', 'loaded', { taxpayerClassification: 'N' }, []);
+	await seedWorkspace(page, 'light', 'loaded', { taxpayerClassification: 'N', branchCode: '01234' }, []);
 	await page.goto(`${base}/${code}?new=true`);
 	await goToReturnPage(page, 7);
 
@@ -35,6 +35,12 @@ test('1702EX adds the first exempt property to a printable continuation', async 
 	await expect(page).toHaveURL(base);
 
 	const printed = await printSavedReturn(page, code, info.outputPath('exempt-properties.pdf'));
+	const branchCodes = printed.locator('[data-source-page] [data-print-branch-boxes]:not([id])');
+	await expect(branchCodes).toHaveText(Array(7).fill('1234'));
+	for (const branch of await branchCodes.all()) {
+		await expect(branch).toHaveCSS('display', 'grid');
+		await expect(branch.locator('span')).toHaveText(['1', '2', '3', '4']);
+	}
 	await expect(printed.locator('.original-continuation').filter({ hasText: 'Exempt properties received' }))
 		.toContainText('Printable gift lot');
 });

@@ -3,13 +3,14 @@ import type { IncomeForm } from '.';
 import { legacy1700IncomeSourceChecked } from './compensation';
 import { calculateIndividualIncome, hasActivityAttachment, incomeAmountDecimals, incomeCalculatedFields, incomeOutputValues, isIncomeAmount } from '.';
 import { is1701MSOverpaymentSelected, overpaymentOptions1701MS } from './form-1701ms-overpayment';
+import branchCodeStyles from '$lib/printing/branch-code-boxes.css?raw';
 import sourceStyles from './templates/source-layout.css?raw';
 import paginationStyles from '../printing/withholding-print.css?raw';
 import paperStyles from './paper.css?raw';
 
 const templates = import.meta.glob('./templates/form-*.html', { query: '?raw', import: 'default' });
 
-export const legacy1700PrintStyles = `${paginationStyles}\n${paperStyles}`;
+export const legacy1700PrintStyles = `${paginationStyles}\n${paperStyles}\n${branchCodeStyles}`;
 export const individualIncomePaperStyles = `${sourceStyles}\n${legacy1700PrintStyles}`;
 
 export async function loadIndividualIncomePaper(code: string): Promise<string> {

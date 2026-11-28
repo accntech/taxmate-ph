@@ -1151,10 +1151,10 @@ for (const [code, count] of Object.entries(cases)) {
 				const slot = (id: string) => print.locator(`[data-legacy-print-id="${id}"]`);
 				expect(first).toContain('SAMPLEID42');
 				await expect(slot('txtPg1Pt1I7Psoc')).toHaveText('0110');
-				await expect(slot('txtPg1Pt1I5BranchCode')).toHaveText('00008');
-				await expect(slot('txtPg2Pt4BranchCode')).toHaveText('00008');
-				await expect(slot('txtPg3Pt5BranchCode')).toHaveText('00008');
-				await expect(slot('txtPg4BranchCode')).toHaveText('00008');
+				await expect(slot('txtPg1Pt1I5BranchCode')).toHaveText('0008');
+				await expect(slot('txtPg2Pt4BranchCode')).toHaveText('0008');
+				await expect(slot('txtPg3Pt5BranchCode')).toHaveText('0008');
+				await expect(slot('txtPg4BranchCode')).toHaveText('0008');
 				await expect(slot('txtPg1Pt1I10DOB3')).toHaveText('1984');
 				await expect(slot('SourceOfIncome_1')).toHaveText('X');
 				await expect(slot('SourceOfIncome_2')).toHaveText('X');
@@ -1545,7 +1545,7 @@ test('legacy 1700 groups employer TIN entry and preserves each saved segment', a
   ...Object.fromEntries([1, 2, 3].flatMap(number => [[`frm1700:txtPg2Pt4I${number}NameOfEmployer`, `Employer ${number}`], [`frm1700:rdoPg2Pt4I${number}Employer`, `frm1700:rdoPg2Pt4I${number}TaxFiler`]])),
   'frm1700:txtPg2Pt4I2EMPTINBranchCode': '00007',
   'frm1700:txtPg2Pt4I3EMPTIN1': '065', 'frm1700:txtPg2Pt4I3EMPTIN2': '043',
-  'frm1700:txtPg2Pt4I3EMPTIN3': '021', 'frm1700:txtPg2Pt4I3EMPTINBranchCode': '00009'
+  'frm1700:txtPg2Pt4I3EMPTIN3': '021', 'frm1700:txtPg2Pt4I3EMPTINBranchCode': '12345'
  };
  await seedWorkspace(page, 'light', 'loaded', { ...fixture, civilStatus: 'Single' }, [{
   id: 'legacy-tin-draft', taxpayerId, formCode: '1700', returnPeriod: '2017', status: 'Draft', updatedAt: 1794441600000, finalFlag: '0', values: existing
@@ -1565,7 +1565,7 @@ test('legacy 1700 groups employer TIN entry and preserves each saved segment', a
  await expect(tin).toHaveValue('001-024-350-00008');
  await employer.getByRole('button', { name: 'Update', exact: true }).click();
  await expect(employer).toBeHidden();
- for (const [number, value] of [[2, '---00007'], [3, '065-043-021-00009']] as const) {
+ for (const [number, value] of [[2, '---00007'], [3, '065-043-021-12345']] as const) {
   await page.getByRole('button', { name: `Employer ${number}`, exact: true }).click();
   await expect(tin).toHaveValue(value);
   await employer.getByRole('button', { name: 'Cancel', exact: true }).click();
@@ -1621,13 +1621,16 @@ test('legacy 1700 groups employer TIN entry and preserves each saved segment', a
 	await print.setContent(html);
 	await print.emulateMedia({ media: 'print' });
 	const slot = (number: number, suffix: string) => print.locator(`[data-legacy-print-id="txtPg2Pt4I${number}EMPTIN${suffix}"]`);
-	for (const [suffix, value] of [['1', '001'], ['2', '024'], ['3', '350'], ['BranchCode', '00008']]) {
+	for (const [suffix, value] of [['1', '001'], ['2', '024'], ['3', '350'], ['BranchCode', '0008']]) {
 		await expect(slot(1, suffix)).toHaveText(value);
 	}
 	await expect(slot(2, '1')).toBeEmpty();
-	await expect(slot(2, 'BranchCode')).toHaveText('00007');
+	await expect(slot(2, 'BranchCode')).toHaveText('0007');
+	await expect(slot(2, 'BranchCode')).toHaveCSS('display', 'grid');
+	await expect(slot(2, 'BranchCode').locator('span')).toHaveText(['0', '0', '0', '7']);
 	await expect(print.locator('[data-legacy-print-id="rdoPg2Pt4I1TaxFiler"]')).toHaveText('X');
-	for (const [suffix, value] of [['1', '065'], ['2', '043'], ['3', '021'], ['BranchCode', '00009']]) {
+	await expect(slot(3, 'BranchCode').locator('span')).toHaveText(['12', '3', '4', '5']);
+	for (const [suffix, value] of [['1', '065'], ['2', '043'], ['3', '021'], ['BranchCode', '12345']]) {
 		await expect(slot(3, suffix)).toHaveText(value);
 		const first = await slot(1, suffix).evaluate(element => getComputedStyle(element.parentElement!).left);
 		await expect(slot(3, suffix).locator('..'), `Employer 3 ${suffix} uses the same print column as Employer 1`).toHaveCSS('left', first);

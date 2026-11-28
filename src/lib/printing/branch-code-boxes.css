@@ -1,0 +1,25 @@
+[data-print-branch-boxes],
+[data-print-branch-boxes][data-legacy-print-id] {
+	display: grid;
+	grid-template-columns: repeat(4, minmax(0, 1fr));
+	width: 100%;
+	letter-spacing: normal;
+	font: 700 12px/1 Arial, Helvetica, sans-serif;
+}
+
+[data-print-branch-boxes] > span {
+	display: grid;
+	place-items: center;
+	justify-self: center;
+	width: 15px;
+	height: 14px;
+	background: #fff;
+}
+
+.corporate-ocr [data-print-branch-boxes] > span {
+	height: 16px;
+}
+
+[data-print-branch-boxes] .print-branch-box-pair {
+	font-size: 10px;
+}

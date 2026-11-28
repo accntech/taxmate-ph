@@ -2,6 +2,30 @@ import { expect, test } from '@playwright/test';
 import { execFileSync } from 'node:child_process';
 import { seedWorkspace } from './fixtures';
 
+for (const [code, branchId] of [
+	['1700', 'txtPg1Pt1I5BranchCode'],
+	['1701', 'txtPg1Pt1I5TIN4']
+] as const) {
+	test(`June 2013 Form ${code} prints a saved three-digit branch code`, async ({ page, context }) => {
+		await page.route('**/__legacy-branch-test', route => route.fulfill({ contentType: 'text/html', body: '<!doctype html>' }));
+		await page.goto('/__legacy-branch-test');
+		const html = await page.evaluate(async ({ code, branchId }) => {
+			const base = '/src/lib';
+			const { getFormDefinition } = await import(`${base}/forms/index.ts`);
+			const { buildReturnReport } = await import(`${base}/printing/return-report.ts`);
+			return buildReturnReport(getFormDefinition(code), { [`frm${code}:${branchId}`]: '078' }, 'Draft', 'a4');
+		}, { code, branchId });
+		const print = await context.newPage();
+		await print.setContent(html);
+		await print.emulateMedia({ media: 'print' });
+		const branch = print.locator(`[data-legacy-print-id="${branchId}"]`);
+		await expect(branch.locator('[data-legacy-branch-part]')).toHaveText(['0', '0', '7', '8']);
+		const pdf = await print.pdf({ preferCSSPageSize: true, printBackground: true });
+		const firstPage = execFileSync('pdftotext', ['-f', '1', '-l', '1', '-layout', '-', '-'], { input: pdf }).toString();
+		expect(firstPage).toMatch(/\b0[^\S\r\n]*0[^\S\r\n]*7[^\S\r\n]*8\b/);
+	});
+}
+
 test('June 2013 Form 1701 uses the active HTA artwork and prints entered values', async ({ page, context }) => {
 	await page.route('**/__legacy-1701-print-test', route => route.fulfill({ contentType: 'text/html', body: '<!doctype html>' }));
 	await page.goto('/__legacy-1701-print-test');
@@ -33,7 +57,7 @@ test('June 2013 Form 1701 uses the active HTA artwork and prints entered values'
 	await expect(print.locator('[data-legacy-print-id="rdoPg1Pt1I4Business"]')).toHaveText('X');
 	await expect(print.locator('[data-legacy-print-id="txtPg1Pt1I11MonthD"]')).toHaveText('29');
 	await expect(print.locator('[data-legacy-print-id="ddlPg1Pt1I6RDOCode"]')).toHaveText('047');
-	await expect(print.locator('[data-legacy-print-id="txtPg1Pt1I5TIN4"]')).toHaveText('00008');
+	await expect(print.locator('[data-legacy-print-id="txtPg1Pt1I5TIN4"]')).toHaveText('0008');
 	await expect(print.locator('[data-legacy-print-id="ddlPg11Sc12AI12KindPSCSC1"]')).toBeEmpty();
 	const pdf = await print.pdf({ preferCSSPageSize: true, printBackground: true });
 	const text = execFileSync('pdftotext', ['-layout', '-', '-'], { input: pdf }).toString();

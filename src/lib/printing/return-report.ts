@@ -112,7 +112,7 @@ function fitSourceFrames(surface: HTMLElement): void {
 function fitValues(surface: HTMLElement): void {
  const candidates = [...surface.querySelectorAll<HTMLElement>(
   'input:not([type="radio"]):not([type="checkbox"]), textarea, [data-print-value], [data-print-control="select"], [data-field-id], .legacy-label-value'
- )].filter(value => !value.matches('[type="radio"], [type="checkbox"], .wh-print-check') &&
+ )].filter(value => !value.matches('[type="radio"], [type="checkbox"], .wh-print-check, [data-print-branch-boxes]') &&
   !(/:([YNGPF]|Q[1-4])$/.test(value.dataset.fieldId ?? '') && !value.hasAttribute('data-print-value')));
  const boxes = candidates.map(value => {
   const box = value.getBoundingClientRect();
