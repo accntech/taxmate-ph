@@ -38,6 +38,8 @@
 	const selectedPage = $derived(getReturnPage());
 	let editing = $state.raw<CorporateEntry>();
 	let editingList = $state.raw<CorporateList>();
+	let removed = $state.raw<{ anchor: string; focusId: string; previous: CorporateValues; patch: CorporateValues; source: CorporateValues }>();
+	const canUndo = $derived(removed?.source === values && Object.entries(removed.patch).every(([id, value]) => values[id] === value));
 	let editingContext = $state('');
 	let draft = $state<CorporateValues>({});
 	let editErrors = $state<CorporateValues>({});
@@ -201,9 +203,10 @@
 		editingContext = section.title;
 	}
 
-	function removeEntry(list: CorporateList, index: number, restoreFocus = true) {
+	function removalPatch(list: CorporateList, entry: CorporateEntry): CorporateValues {
 		const counter = list.counter;
-		if (!counter) return;
+		if (!counter || !entry.rows[0].entry) return Object.fromEntries(editableFields(entry).map(field => [field.id, '']));
+		const index = list.entries.indexOf(entry);
 		const entries = list.entries.filter(entry => entry.rows[0].entry);
 		const offset = list.entries.length - entries.length;
 		const patch: CorporateValues = { [counter.id]: String(entries.length - 1) };
@@ -218,21 +221,31 @@
 			for (const field of anchor?.fields ?? []) if (field !== counter) patch[field.id] = '';
 		}
 		if (entries.length === 1) for (const id of counter.repeatable?.seedFrom ?? []) patch[id] = '';
-		onvaluechange(patch);
-		if (restoreFocus) void tick().then(() => document.getElementById(listAnchor(counter.id))?.focus());
+		return patch;
 	}
 
 	function deleteListEntry() {
 		const list = editingList;
 		const entry = editing;
 		if (!list || !entry) return;
-		if (entry.rows[0].entry) {
-			removeEntry(list, list.entries.indexOf(entry), false);
-		} else {
-			onvaluechange(Object.fromEntries(editableFields(entry).map(field => [field.id, ''])));
-		}
-		trigger = document.getElementById(`${listAnchor(list.counter?.id ?? list.entries[0]?.rows[0].fields[0].id)}-add`) ?? undefined;
+		const anchor = listAnchor(list.counter?.id ?? list.entries[0].rows[0].fields[0].id);
+		const patch = removalPatch(list, entry);
+		removed = {
+			anchor, focusId: listAnchor(entry.rows[0].fields[0].id) + '-edit', source: values, patch,
+			previous: Object.fromEntries(Object.keys(patch).map(id => [id, values[id] ?? '']))
+		};
+		onvaluechange(patch);
+		trigger = document.getElementById(anchor + '-add') ?? undefined;
 		closeEntry();
+	}
+
+	async function undoRemoval() {
+		if (!removed || !canUndo) return;
+		const { previous, focusId } = removed;
+		removed = undefined;
+		onvaluechange(previous);
+		await tick();
+		document.getElementById(focusId)?.focus();
 	}
 
 	function nolcoYear(entry: CorporateEntry) {
@@ -310,6 +323,7 @@
 			void focusEntryField(Object.keys(editErrors)[0]);
 			return;
 		}
+		if (removed && Object.keys(removed.patch).some(id => id in draft)) removed = undefined;
 		onvaluechange(draft);
 		closeEntry();
 	}
@@ -920,7 +934,7 @@
 												<span class="entry-number">{item}</span>
 												<div class={['entry-summary', alignEntryAmounts && 'amount-row']}>
 													{#if editable.includes(entry)}
-														<button type="button" class="income-description" onclick={(event) => openListEntry(list, entry, event.currentTarget)}>{summary}</button>
+														<button id={listAnchor(entry.rows[0].fields[0].id) + '-edit'} type="button" class="income-description" onclick={(event) => openListEntry(list, entry, event.currentTarget)}>{summary}</button>
 													{:else}
 														<span>{summary}</span>
 													{/if}
@@ -938,6 +952,9 @@
 									</ul>
 								{:else if !deductions}
 									<p class="schedule-empty-message">{income ? 'No income items added' : owners ? 'No owners entered' : 'No items added'}</p>
+								{/if}
+								{#if canUndo && removed?.anchor === anchor}
+									<div class="eq-undo"><span role="status">Line item removed.</span><Button variant="ghost" size="sm" onclick={undoRemoval}>Undo</Button></div>
 								{/if}
 							</div>
 						{/if}
@@ -1165,7 +1182,6 @@
 	.inline-attachments .activity-list { margin: .25rem 0 0; }
 	.relief-regime-header {
 		display: none;
-		border-block: 1px solid var(--border-soft);
 		padding: .375rem var(--corporate-row-inset);
 		padding-inline-start: calc(var(--corporate-row-inset) + var(--corporate-item-width) + .5rem);
 	}
@@ -1183,7 +1199,10 @@
 		.section-labeled-amounts .inline-entry-amounts :global([data-slot='calculated-value']) {
 			grid-template-columns: minmax(0, 1fr);
 		}
-		.relief-regime-header { display: block; }
+		.relief-regime-header {
+			display: block;
+			border-block: 1px solid var(--border-soft);
+		}
 		.relief-regime-header .corporate-columns { grid-column: -2 / -1; width: auto; margin: 0; padding: 0; align-items: end; }
 		.relief-regime-header .corporate-columns span { text-align: start; }
 	}

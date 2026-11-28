@@ -560,7 +560,8 @@ for (const width of [1280, 390]) {
 		for (const [code] of revisions) {
 			await page.goto(`/ebirforms/taxpayers/${taxpayerId}/forms/${code}?new=true`, { waitUntil: 'domcontentloaded' });
 			const editor = page.locator('.corporate-editor');
-			await expect(editor.getByRole('link', { name: 'Edit taxpayer information' }).first()).toBeVisible();
+			await expect(editor.getByRole('link', { name: 'Edit taxpayer information' }).first(),
+				`${code} cover at ${width}px`).toBeVisible({ timeout: 20_000 });
 			const pager = editor.getByRole('navigation', { name: 'Return pages' });
 			await expect(pager).toBeVisible();
 			const next = pager.getByRole('button', { name: 'Next page' });
@@ -727,15 +728,16 @@ test('legacy EX groups auditor TIN segments', async ({ page }) => {
 	await expect(editor.locator('[id="frm1702EX:txtPg2Pt6I46TinC2"]')).toHaveCount(0);
 });
 
-test('1702EXv2018C uses the return pager without showing legacy pagination fields', async ({ page }, info) => {
+for (const code of ['1702EXv2018', '1702EXv2018C']) test(`${code} uses the return pager without showing legacy pagination fields`, async ({ page }, info) => {
 	await seedWorkspace(page, 'light', 'loaded', { taxpayerClassification: 'N' }, []);
-	await page.goto(`/ebirforms/taxpayers/${taxpayerId}/forms/1702EXv2018C?new=true`);
+	await page.goto(`/ebirforms/taxpayers/${taxpayerId}/forms/${code}?new=true`);
 
 	const editor = page.locator('.corporate-editor');
 	const pager = page.getByRole('navigation', { name: 'Return pages' });
 	await expect(pager.locator('[aria-current="page"]')).toHaveText('1', { timeout: 20_000 });
 	await goToReturnPage(page, 3);
 	await expect(editor.getByRole('heading', { level: 2, name: 'Schedules' })).toBeVisible();
+	await expect(editor.getByRole('status', { name: 'Net Taxable Income/(Loss) (Item 4 Less Item 9)', exact: true })).toBeVisible();
 	await expect(editor.getByText(/^txt (?:Current|Max) Page$/)).toHaveCount(0);
 	await expect(pager.locator('[aria-current="page"]')).toHaveText('3');
 	await expect(pager.getByRole('button', { name: 'Next page' })).toHaveCount(0);
@@ -743,7 +745,7 @@ test('1702EXv2018C uses the return pager without showing legacy pagination field
 		for (const width of [1280, 390]) {
 			await page.setViewportSize({ width, height: 900 });
 			await pager.evaluate(element => element.scrollIntoView({ block: 'center' }));
-			await page.screenshot({ path: info.outputPath(`1702exv2018c-page-3-${width}.png`), animations: 'disabled' });
+			await page.screenshot({ path: info.outputPath(`${code.toLowerCase()}-page-3-${width}.png`), animations: 'disabled' });
 		}
 	}
 	await goToReturnPage(page, 2);

@@ -284,14 +284,14 @@ function legacyPages(code: string): CorporateForm["pages"] {
               "Creditable tax withheld for previous quarters",
               "Creditable tax withheld per BIR Form 2307 this quarter",
               "Tax paid in return previously filed, if amended",
-              "Other tax credits / payments",
             ].map((label, index) =>
               row("31" + String.fromCharCode(65 + index), label, [
                 money("txt31" + String.fromCharCode(65 + index)),
               ]),
             ),
-            row("31G", "Other credits description", [
-              field("txt31Gothers", "text"),
+            row("31G", "Other tax credits / payments", [
+              field("txt31Gothers", "text", { label: "Description" }),
+              money("txt31G", false, "Other tax credits / payments"),
             ]),
             row("31H", "Total tax credits / payments", [money("txt31H", true)]),
             row("32", "Tax payable / (overpayment)", [money("txt32", true)]),

@@ -109,7 +109,6 @@ const fixedLists = [
 	[/^frm1702EX:txtPg3Pt6S3I([23])NonDeductExpenseOtherIncomeDesc$/, 'Reconciliation additions'],
 	[/^frm1702EX:txtPg3Pt6S3I([56])NonTaxIncomeAndIncomeSubjectToFinTaxDesc$/, 'Reconciliation income exclusions'],
 	[/^frm1702EX:txtPg3Pt6S3I([78])SpecialDeductDesc$/, 'Reconciliation deductions'],
-	[/^frm1702q:txt31G(?:others)?$/, 'Other tax credits'],
 	[/^frm1702q:Sched4:txtOthrTxCrdts([01])$/, 'Additional other tax credits'],
 	[/^frm1702RT:txtPg4Sc3I([123])C1$/, 'Other taxable income'],
 	[/^frm1702RT:txtPg4Sc4I([234])C1$/, 'Other amortization'],

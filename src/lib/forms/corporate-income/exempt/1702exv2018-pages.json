@@ -1392,12 +1392,12 @@
             ]
           },
           {
-            "label": "a Janitorial and Messengerial Services",
+            "label": "Janitorial and Messengerial Services",
             "item": "17A",
             "fields": [
               {
                 "id": "frm1702EX:txtPg3Pt6S1I17aJanitorAndMessengerServ",
-                "label": "a Janitorial and Messengerial Services",
+                "label": "Janitorial and Messengerial Services",
                 "kind": "money",
                 "defaultValue": "0.00",
                 "maxLength": 20
@@ -1405,12 +1405,12 @@
             ]
           },
           {
-            "label": "b Professional Fees",
+            "label": "Professional Fees",
             "item": "17B",
             "fields": [
               {
                 "id": "frm1702EX:txtPg3Pt6S1I17bProfessionalFee",
-                "label": "b Professional Fees",
+                "label": "Professional Fees",
                 "kind": "money",
                 "defaultValue": "0.00",
                 "maxLength": 20
@@ -1418,12 +1418,12 @@
             ]
           },
           {
-            "label": "c Security Services",
+            "label": "Security Services",
             "item": "17C",
             "fields": [
               {
                 "id": "frm1702EX:txtPg3Pt6S1I17cSecurityServices",
-                "label": "c Security Services",
+                "label": "Security Services",
                 "kind": "money",
                 "defaultValue": "0.00",
                 "maxLength": 20
@@ -1432,7 +1432,7 @@
           },
           {
             "label": "d",
-            "item": "17",
+            "item": "17D",
             "fields": [
               {
                 "id": "frm1702EX:txtPg3Pt6I17OthersDDesc",
@@ -1451,7 +1451,7 @@
           },
           {
             "label": "e",
-            "item": "17",
+            "item": "17E",
             "fields": [
               {
                 "id": "frm1702EX:txtPg3Pt6I17OthersEDesc",
@@ -1470,7 +1470,7 @@
           },
           {
             "label": "f",
-            "item": "17",
+            "item": "17F",
             "fields": [
               {
                 "id": "frm1702EX:txtPg3Pt6I17OthersFDesc",
@@ -1489,7 +1489,7 @@
           },
           {
             "label": "g",
-            "item": "17",
+            "item": "17G",
             "fields": [
               {
                 "id": "frm1702EX:txtPg3Pt6I17OthersGDesc",
@@ -1508,7 +1508,7 @@
           },
           {
             "label": "h",
-            "item": "17",
+            "item": "17H",
             "fields": [
               {
                 "id": "frm1702EX:txtPg3Pt6I17OthersHDesc",
@@ -1527,7 +1527,7 @@
           },
           {
             "label": "i",
-            "item": "17",
+            "item": "17I",
             "fields": [
               {
                 "id": "frm1702EX:txtPg3Pt6I17OthersIDesc",
@@ -1854,23 +1854,6 @@
                 "readonly": true,
                 "defaultValue": "0.00",
                 "maxLength": 20
-              }
-            ]
-          },
-          {
-            "label": "/",
-            "fields": [
-              {
-                "id": "frm1702EX:txtCurrentPage",
-                "label": "txt Current Page",
-                "kind": "text"
-              },
-              {
-                "id": "frm1702EX:txtMaxPage",
-                "label": "txt Max Page",
-                "kind": "text",
-                "readonly": true,
-                "defaultValue": "3"
               }
             ]
           }

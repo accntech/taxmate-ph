@@ -186,24 +186,32 @@ test('reopens the corporate schedule drawer after dismissing it with Close', asy
 	await expect(description).toHaveValue('');
 });
 
-test('1702EXv2018C displays the item 17 deduction labels without repeated letters', async ({ page }) => {
+for (const code of ['1702EXv2018', '1702EXv2018C']) test(`${code} displays the item 17 deduction labels without repeated letters`, async ({ page }, info) => {
 	await seedWorkspace(page, 'dark', 'loaded', { taxpayerClassification: 'N' }, []);
-	await page.goto(`${base}/1702EXv2018C?new=true`);
+	await page.goto(`${base}/${code}?new=true`);
 	await goToReturnPage(page, 3);
 
-	for (const [item, label] of [
-		['17A', 'Janitorial and Messengerial Services'],
-		['17B', 'Professional Fees'],
-		['17C', 'Security Services']
-	]) {
-		const row = page.locator(`[data-corporate-item="${item}"]`);
-		await expect(row.locator('.amount-caption')).toHaveText(label);
-		await expect(row.getByRole('textbox', { name: label, exact: true })).toBeVisible();
+	for (const [viewport, width] of [['desktop', 1280], ['mobile', 390]] as const) {
+		await page.setViewportSize({ width, height: 900 });
+		for (const [item, label] of [
+			['17A', 'Janitorial and Messengerial Services'],
+			['17B', 'Professional Fees'],
+			['17C', 'Security Services']
+		]) {
+			const row = page.locator(`[data-corporate-item="${item}"]`);
+			await expect(row.locator('.paper-item-number')).toHaveText(item);
+			await expect(row.locator('.amount-caption')).toHaveText(label);
+			await expect(row.getByRole('textbox', { name: label, exact: true })).toBeVisible();
+		}
+		if (code === '1702EXv2018' && process.env.EBIRFORMS_CAPTURE_TEST_PDFS === '1') {
+			await page.locator('[data-corporate-item="17B"]').evaluate(element => element.scrollIntoView({ block: 'center' }));
+			await page.screenshot({ path: info.outputPath(`deduction-labels-${viewport}.png`), animations: 'disabled' });
+		}
 	}
 });
 
-test('1702EXv2018C adds each custom item 17 deduction separately', async ({ page }, info) => {
-	const code = '1702EXv2018C';
+for (const code of ['1702EXv2018', '1702EXv2018C']) test(`${code} adds each custom item 17 deduction separately`, async ({ page }, info) => {
+	await page.routeWebSocket('**/*', socket => socket.close());
 	await page.setViewportSize({ width: 1280, height: 900 });
 	await seedWorkspace(page, 'dark', 'loaded', { taxpayerClassification: 'N' }, [{
 		id: 'item-17-draft', taxpayerId, formCode: code, returnPeriod: '2025-12',

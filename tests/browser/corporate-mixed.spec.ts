@@ -696,6 +696,19 @@ test("June 2013 puts the relief headers after Item 30 and adapts its attachment 
   }
   await expect(headings).toBeHidden();
   await expect(item31.getByText("Special tax relief under regular rate", { exact: true })).toBeVisible();
+  const divider = await item31.evaluate(element => {
+    const row = element.getBoundingClientRect();
+    const section = element.closest("section")!.getBoundingClientRect();
+    return {
+      width: getComputedStyle(element).borderBlockStartWidth,
+      leftInset: Math.abs(row.left - section.left),
+      rightInset: Math.abs(section.right - row.right),
+    };
+  });
+  expect(divider.width).toBe("1px");
+  expect(divider.leftInset).toBeLessThanOrEqual(1);
+  expect(divider.rightInset).toBeLessThanOrEqual(1);
+  await relief.screenshot({ ...screenshots, path: info.outputPath("relief-390px.png") });
   const [exempt, special, actions] = await Promise.all([addExempt.boundingBox(), addSpecial.boundingBox(), activityActions.boundingBox()]);
   expect(special!.y).toBeGreaterThan(exempt!.y);
   expect(Math.abs(exempt!.width - special!.width)).toBeLessThanOrEqual(1);
