@@ -333,7 +333,19 @@
 		{#if field.readonly}
 			<CalculatedValue id={field.id} label={displayLabel(field.label)} value={draftInvalidAmounts && field.type === 'money' ? '' : display(field, draftCalculated[field.id] ?? draft[field.id] ?? '')} error={draftErrors[field.id] ?? ''} amountColumn={field.type === 'money'} />
 		{:else if displayLabel(field.label) === 'ATC'}
-			<AtcPicker id={field.id} label={displayLabel(field.label)} formCode={definition.code} fieldOptions={field.options ?? []} category={editorValues[definition.prefix + 'optCategory'] ?? ''} year={Number(editorValues[definition.yearField])} required={field.required ?? false} value={draft[field.id] ?? ''} error={draftErrors[field.id] ?? ''} onchange={(value) => changeDraft(field, value)} />
+			<AtcPicker
+				id={field.id}
+				label={displayLabel(field.label)}
+				formCode={definition.code}
+				fieldOptions={field.options ?? []}
+				category={editorValues[definition.prefix + 'optCategory'] ?? ''}
+				year={Number(editorValues[definition.yearField])}
+				month={definition.monthField ? Number(editorValues[definition.monthField]) : undefined}
+				required={field.required ?? false}
+				value={draft[field.id] ?? ''}
+				error={draftErrors[field.id] ?? ''}
+				onchange={(value) => changeDraft(field, value)}
+			/>
 		{:else if schedule.id === 'payees' && /:dtSched:txtTin\d+$/.test(field.id)}
 			<div class="schedule-tin">
 				<TinInput id={field.id} label={displayLabel(field.label)} value={draft[field.id] ?? ''} error={draftErrors[field.id] ?? ''} onchange={(value) => changeDraft(field, value)} />

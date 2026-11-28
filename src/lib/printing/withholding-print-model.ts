@@ -2,6 +2,7 @@ import { formatCurrencyInput, normalizeCurrencyInput } from "$lib/components/ui/
 import {
   getWithholdingAtcs,
   getWithholdingDefinition,
+  is1602QDecedentWithdrawalInactive,
   withholdingFields,
   withholdingSchedules,
 } from "$lib/forms/withholding-definitions";
@@ -465,6 +466,10 @@ export function createWithholdingPrintModel(
     if (transaction !== "Exempt" && transaction !== "Others")
       inactiveFields.add(prefix + "txtOthers20");
   }
+  if (code === "1602Qv2018" && is1602QDecedentWithdrawalInactive(rawValues)) {
+    inactiveFields.add(prefix + "txtSched1Amount15");
+    inactiveFields.add(prefix + "txtSched1Tax15");
+  }
   for (const schedule of inactiveSchedules) {
     for (const row of schedule.rows) {
       for (const field of row.fields) {
@@ -484,7 +489,10 @@ export function createWithholdingPrintModel(
   const mapped = new Set<string>();
   const text: Values = {};
   const checks: Record<string, boolean> = {};
-  const catalog = getWithholdingAtcs(code);
+  const catalog = getWithholdingAtcs(code, undefined, {
+    year: Number(values[definition.yearField]),
+    month: definition.monthField ? Number(values[definition.monthField]) : undefined,
+  });
   const hasAddress2 = bindings.some(
     (binding) =>
       originalFieldValue(code, binding.source ?? binding.id, values)?.key ===

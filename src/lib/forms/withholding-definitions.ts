@@ -779,12 +779,12 @@ for (const code of ["1603", "1603Qv2018"]) {
       : [
           [320, 85, 15],
           [330, 75, 25],
-          [360, 65, 35],
+          [360, 68, 32],
         ]
     ).map(([n, divisor, rate]) => ({
       id: `fringe-${n}`,
       label:
-        rate === 35
+        n === 360 || rate === 35
           ? "Citizens and resident / engaged aliens"
           : rate === 25
             ? "Non-resident aliens not engaged in business"
@@ -1025,7 +1025,7 @@ for (const code of ["1602", "1602Qv2018"]) {
             m(p, `txt${n}A`, "Interest in foreign currency"),
             f(p, `txt${n}B`, "Rate (%)", "number", {
               readonly: true,
-              defaultValue: "15",
+              defaultValue: "7.5",
             }),
             f(p, `txt${n}C`, "Conversion factor", "number"),
             m(p, `txt${n}D`, "Tax withheld", true),
@@ -5145,6 +5145,14 @@ export const withholdingAtcRecords: readonly {
   },
   {
     form: "1600VTv2018",
+    code: "WV040",
+    description:
+      "FINAL WITHHOLDING VAT ON PAYMENTS FOR LEASE OR USE OF PROPERTIES OR PROPERTY RIGHTS OWNED BY NONRESIDENTS (GOVERNMENT WITHHOLDING AGENT)",
+    rate: "12.0",
+    category: "PG",
+  },
+  {
+    form: "1600VTv2018",
     code: "WV050",
     description:
       "FINAL WITHHOLDING VAT ON PAYMENTS FOR LEASE OR USE OF PROPERTIES OR PROPERTY RIGHTS OWNED BY NONRESIDENTS (PRIVATE WITHHOLDING AGENT)",
@@ -5470,26 +5478,35 @@ export const withholdingAtcRecords: readonly {
     category: "P",
   },
 ];
-export function getWithholdingAtcs(code: string, category?: string) {
-  const records = withholdingAtcRecords.filter(
+export function getWithholdingAtcs(code: string, category?: string, period?: { year: number; month?: number }) {
+  let records = withholdingAtcRecords.filter(
     (r) =>
       r.form === code &&
       (!category ||
         r.category === category ||
         (["1600PTv2018", "1600VTv2018"].includes(code) && r.category === "PG")),
   );
+  if (period && Number.isInteger(period.year) && period.year > 0) {
+    if (code === "1601FQ") {
+      // CREATE (RA 11534), Section 28(B)(1), and RR 5-2021 apply from January 1, 2021.
+      const rate = period.year >= 2021 ? "25.0" : "30.0";
+      records = records.filter(record => !["WC212", "WC213", "WC230"].includes(record.code) || record.rate === rate);
+    }
+    const month = period.month ?? 0;
+    if ((code === "1600" || code === "1600PTv2018") && Number.isInteger(month) && month >= 1 && month <= 12) {
+      // The temporary Section 116 rate under RR 4-2021 covered July 2020 through June 2023.
+      const yearMonth = period.year * 100 + month;
+      const rate = yearMonth >= 202007 && yearMonth <= 202306 ? "1.0" : "3.0";
+      records = records.filter(record => !["WB080", "WB082", "WB084"].includes(record.code) || record.rate === rate);
+    }
+  }
   return ["1600", "1601E"].includes(code)
-    ? [
-        ...records,
-        {
-          form: code,
-          code: "N/A",
-          description: "SPECIAL LAW",
-          rate: "0",
-          category: category ?? "P",
-        },
-      ]
+    ? [...records, { form: code, code: "N/A", description: "SPECIAL LAW", rate: "0", category: category ?? "P" }]
     : records;
+}
+
+export function is1602QDecedentWithdrawalInactive(values: Record<string, string>): boolean {
+  return Number(values["frm1602Q:txtYear"]) > 2018;
 }
 
 export function withholdingSchedules(
@@ -5497,6 +5514,9 @@ export function withholdingSchedules(
   values: Record<string, string> = {},
 ): WithholdingSchedule[] {
   return d.schedules
+    .map(schedule => d.code === "1602Qv2018" && schedule.id === "interest" && is1602QDecedentWithdrawalInactive(values)
+      ? { ...schedule, rows: schedule.rows.filter(row => row.id !== "interest-15") }
+      : schedule)
     .map((schedule) => {
       if (!schedule.repeatable) return schedule;
       const requested = Number(

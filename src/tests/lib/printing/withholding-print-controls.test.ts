@@ -8,11 +8,42 @@ import { printBindings as propertyBindings } from '$lib/forms/printing/form-1606
 import { printBindings as compensationBindings } from '$lib/forms/printing/form-1604c-print.svelte';
 import { printBindings as annualCompensationBindings } from '$lib/forms/printing/form-1604cf-print.svelte';
 import { printBindings as finalWithholdingBindings } from '$lib/forms/printing/form-1601f-print.svelte';
+import { printBindings as quarterlyFinalWithholdingBindings } from '$lib/forms/printing/form-1601fq-print.svelte';
+import { printBindings as depositInterestBindings } from '$lib/forms/printing/form-1602qv2018-print.svelte';
+import Form1603Print from '$lib/forms/printing/form-1603-print.svelte';
 import { createWithholdingValues } from '$lib/forms/withholding-rules';
 import { createWithholdingPrintModel } from '$lib/printing/withholding-print-model';
 import { initialProfile } from '$lib/ebirforms/ebirforms-workspace.svelte';
 
 describe('source-native withholding print controls', () => {
+ it('prints the full 1601FQ ATC reference at the filing-period rates', () => {
+  const model = createWithholdingPrintModel('1601FQ', {
+   'frm1601FQ:txtYear': '2025',
+   'frm1601FQ:optCategory': 'G'
+  }, quarterlyFinalWithholdingBindings);
+  expect(model.referenceRows).toEqual(expect.arrayContaining([
+   expect.objectContaining({ id: 'WC230', rate: '25.0' }),
+   expect.objectContaining({ id: 'WC810' })
+  ]));
+ });
+
+ it('leaves the WI165 amounts blank when printing 1602-Q for 2019 onward', () => {
+  const values = {
+   'frm1602Q:txtYear': '2019', 'frm1602Q:optWithheld': 'Y', 'frm1602Q:txtSched1Amount15': '1000'
+  };
+  const current = createWithholdingPrintModel('1602Qv2018', values, depositInterestBindings).text;
+  expect(current['frm1602Q:txtSched1Amount15']).toBe('');
+  expect(current['frm1602Q:txtSched1Tax15']).toBe('');
+  const historical = createWithholdingPrintModel('1602Qv2018', { ...values, 'frm1602Q:txtYear': '2018' }, depositInterestBindings).text;
+  expect(historical['frm1602Q:txtSched1Amount15']).toBe('1,000.00');
+  expect(historical['frm1602Q:txtSched1Tax15']).toBe('60.00');
+ });
+
+ it('prints the pre-TRAIN general fringe divisor and rate on Form 1603', () => {
+  const { body } = render(Form1603Print, { props: { values: { 'frm1603:txtYear': '2017', 'frm1603:txtFringe360': '68000' } } });
+  expect(body).toContain('data-field-id="frm1603:divisor360">68%</span>');
+  expect(body).toContain('data-field-id="frm1603:rate360">32%</span>');
+ });
  it.each([
   ['0619E', expandedRemittanceBindings, 'txtTax15', 'txtTax16'],
   ['0619F', finalRemittanceBindings, 'txtTax16', 'txtTax17']

@@ -26,6 +26,77 @@ const calculate = (code: string, v: Record<string, string>) => {
 const total = (code: string, v: Record<string, string>) =>
   calculate(code, v)[getWithholdingDefinition(code)!.totalField];
 describe("packaged withholding arithmetic", () => {
+  it.each(["1600", "1600PTv2018"])("applies section 116's temporary rate by month on %s", (code) => {
+    for (const [year, month, tax] of [
+      ["2020", "06", "3000.00"], ["2020", "07", "1000.00"],
+      ["2023", "06", "1000.00"], ["2023", "07", "3000.00"],
+    ]) {
+      for (const atc of ["WB080", "WB082", "WB084"]) {
+        const category = atc === "WB080" ? "G" : "P";
+        expect(total(code, { txtYear: year, txtMonth: month, optCategory: category, optWithheld: "Y", txtAtcCode1: atc, txtTaxBase1: "100000" })).toBe(tax);
+      }
+    }
+  });
+
+  it.each(["G", "P"])("restores the WV040 lookup for 1600-VT category %s", (category) => {
+    const values = {
+      "frm1600VT:optCategory": category, "frm1600VT:optWithheld": "Y",
+      "frm1600VT:txtAtcCode1": "WV040", "frm1600VT:txtTaxBase1": "100000",
+    };
+    expect(calculateWithholding("1600VTv2018", values)["frm1600VT:txtTaxbeWithHeld1"]).toBe("12000.00");
+    expect(validateWithholding("1600VTv2018", values)["frm1600VT:txtAtcCode1"]).toBeUndefined();
+  });
+
+  it.each(["G", "P"])("applies the CREATE rate to general NRFC payments in 1601-FQ category %s", (category) => {
+    for (const atc of ["WC212", "WC213", "WC230"]) {
+      const inputs = { optCategory: category, optWithheld: "Y", txtAtcCode1: atc, txtTaxBase1: "100000" };
+      expect(total("1601FQ", { ...inputs, txtYear: "2020", optQuarter: "Q4" })).toBe("30000.00");
+      expect(total("1601FQ", { ...inputs, txtYear: "2021", optQuarter: "Q1" })).toBe("25000.00");
+    }
+  });
+
+  it("uses pre-TRAIN foreign-currency rates for historical Form 1602", () => {
+    const result = calculate("1602", {
+      optWithheld: "Y", txtYear: "2017", txtMonth: "12", txt24A: "1000", txt24C: "50", txt25A: "1000", txt25C: "50",
+    });
+    expect(result["frm1602:txt24B"]).toBe("7.5");
+    expect(result["frm1602:txt25B"]).toBe("7.5");
+    expect(result["frm1602:txt24D"]).toBe("3750.00");
+    expect(result["frm1602:txt25D"]).toBe("3750.00");
+  });
+
+  it.each([["1998", "66000", "34000.00"], ["1999", "67000", "33000.00"], ["2017", "68000", "32000.00"]])(
+    "uses the historical fringe benefit divisor and rate for a %s Form 1603",
+    (year, amount, tax) => expect(total("1603", { txtYear: year, txtFringe360: amount })).toBe(tax),
+  );
+
+  it("excludes WI165 from 2019 Form 1602-Q and keeps the saved amount for the prior year", () => {
+    const values = { "frm1602Q:optWithheld": "Y", "frm1602Q:txtYear": "2019", "frm1602Q:txtSched1Amount15": "1000" };
+    const current = calculateWithholding("1602Qv2018", values);
+    expect(current["frm1602Q:txtSched1Amount15"]).toBe("1000");
+    expect(current["frm1602Q:txtSched1Total"]).toBe("0.00");
+    const schedule = withholdingSchedules(getWithholdingDefinition("1602Qv2018")!, values).find(({ id }) => id === "interest");
+    expect(schedule?.rows).toHaveLength(14);
+    expect(validateWithholding("1602Qv2018", values)["frm1602Q:optWithheld"]).toBeTruthy();
+    const historical = calculateWithholding("1602Qv2018", { ...current, "frm1602Q:txtYear": "2018" });
+    expect(historical["frm1602Q:txtSched1Total"]).toBe("60.00");
+  });
+
+  it("rejects unsupported Form 0605 catalogue codes from saved data", () => {
+    const invalid = validateWithholding("0605", { "frm0605:txtATCCode": "BOGUS", "frm0605:txtTaxTypeCode": "BOGUS" });
+    expect(invalid["frm0605:txtATCCode"]).toBeTruthy();
+    expect(invalid["frm0605:txtTaxTypeCode"]).toBeTruthy();
+    const valid = validateWithholding("0605", { "frm0605:txtATCCode": "MC200", "frm0605:txtTaxTypeCode": "MC" });
+    expect(valid["frm0605:txtATCCode"]).toBeUndefined();
+    expect(valid["frm0605:txtTaxTypeCode"]).toBeUndefined();
+  });
+
+  it("requires positive scheduled tax if Form 1603-Q reports withholding", () => {
+    const values = { "frm1603Q:optWithheld": "Y", "frm1603Q:Sched1:txtValue2": "0.01" };
+    expect(validateWithholding("1603Qv2018", values)["frm1603Q:optWithheld"]).toBeTruthy();
+    expect(validateWithholding("1603Qv2018", { ...values, "frm1603Q:Sched1:txtValue2": "0.03" })["frm1603Q:optWithheld"]).toBeUndefined();
+  });
+
   it.each([
     ["WB", "Y", "100", "0.00", "100.00"],
     ["WF", "Y", "0.00", "250", "250.00"],
@@ -165,8 +236,8 @@ describe("packaged withholding arithmetic", () => {
   });
   it("grosses up benefits and sums both revised fringe regimes", () => {
     expect(
-      total("1603", { optAmend: "Y", txtFringe360: "65000", txt19: "5000", txt21A: "100" }),
-    ).toBe("30100.00");
+      total("1603", { optAmend: "Y", txtYear: "2017", txtFringe360: "68000", txt19: "5000", txt21A: "100" }),
+    ).toBe("27100.00");
     expect(
       total("1603Qv2018", {
         "Sched1:txtValue1": "65000",

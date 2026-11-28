@@ -4,6 +4,7 @@ import { normalizeCurrencyInput } from "$lib/components/ui/currency-input/curren
 import {
   getWithholdingDefinition,
   getWithholdingAtcs,
+  is1602QDecedentWithdrawalInactive,
   withholdingFields,
   withholdingSchedules,
   withholdingSchedulesEnabled,
@@ -13,6 +14,7 @@ import {
   type WithholdingDefinition,
   type WithholdingField,
 } from "./withholding-definitions";
+import { taxTypeOptions } from "./form-0605/tax-types";
 
 import { philippineCalendarDate } from "./filing-calendar";
 
@@ -162,7 +164,10 @@ export function calculateWithholding(code: string, values: Values): Values {
   let atcTotal = 0,
     treatyTotal = 0,
     adjustment = 0;
-  const atc = getWithholdingAtcs(code, values[p + "optCategory"]);
+  const atc = getWithholdingAtcs(code, values[p + "optCategory"], {
+    year: Number(values[d.yearField]),
+    month: d.monthField ? Number(values[d.monthField]) : undefined,
+  });
   for (const schedule of schedules) {
     if (schedule.id === "atc" || schedule.id === "payees") {
       let total = 0;
@@ -357,8 +362,11 @@ export function calculateWithholding(code: string, values: Values): Values {
         tax = 0;
       for (const row of d.schedules.find((s) => s.id === "fringe")!.rows) {
         const [amount, divisor, base, rate, out] = row.fields;
-        const div = number(divisor.defaultValue),
-          pct = number(rate.defaultValue);
+        const historicGeneral = code === "1603" && row.id === "fringe-360";
+        // NIRC Section 33 prescribed these rates before TRAIN took effect in 2018.
+        const year = n("txtYear");
+        const pct = historicGeneral ? (year === 1998 ? 34 : year === 1999 ? 33 : 32) : number(rate.defaultValue);
+        const div = historicGeneral ? 100 - pct : number(divisor.defaultValue);
         r[divisor.id] = String(div);
         r[rate.id] = String(pct);
         const benefit = readNumber(amount.id);
@@ -391,7 +399,7 @@ export function calculateWithholding(code: string, values: Values): Values {
       tax +=
         set("txt22F", n("txt22D") * 0.12) + set("txt22I", n("txt22G") * 0.05);
       for (const i of [24, 25])
-        tax += set(`txt${i}D`, n(`txt${i}A`) * 0.15 * n(`txt${i}C`));
+        tax += set(`txt${i}D`, (n(`txt${i}A`) * n(`txt${i}B`) * n(`txt${i}C`)) / 100);
       set("txt26", tax);
       for (const i of [27, 28, 30, 31])
         set(`txt${i}D`, (n(`txt${i}B`) * n(`txt${i}C`)) / 100);
@@ -418,7 +426,13 @@ export function calculateWithholding(code: string, values: Values): Values {
     }
     case "1602Qv2018": {
       let tax = 0;
+      const decedentWithdrawalInactive = is1602QDecedentWithdrawalInactive(values);
       for (let i = 1; i <= 15; i++) {
+        if (i === 15 && decedentWithdrawalInactive) {
+          r[p + "txtSched1TaxRate15"] = "";
+          set("txtSched1Tax15", 0);
+          continue;
+        }
         const foreign = i === 13 || i === 14;
         const rate = foreign
           ? n("txtYear") > 2025 ||
@@ -645,7 +659,10 @@ export function validateWithholding(
     if (s.repeatable && number(values[withholdingRowCountKey(d, s.id)]) > 1000)
       errors[withholdingRowCountKey(d, s.id)] =
         "This return supports up to 1,000 rows per schedule.";
-  const atcs = getWithholdingAtcs(code, text("optCategory"));
+  const atcs = getWithholdingAtcs(code, text("optCategory"), {
+    year: Number(values[d.yearField]),
+    month: d.monthField ? Number(values[d.monthField]) : undefined,
+  });
   const requiresMainAtc = d.schedules.some((s) => s.id === "payees");
   let activeTaxRows = 0;
   let validMainAtc = false;
@@ -770,6 +787,10 @@ export function validateWithholding(
     if (amount <= 0) errors[p + key] = "Enter withholding greater than zero.";
   }
   if (code === "0605") {
+    if (text("txtATCCode") && !getWithholdingAtcs(code).some(atc => atc.code === text("txtATCCode")))
+      errors[p + "txtATCCode"] = "Choose a supported Form 0605 ATC.";
+    if (text("txtTaxTypeCode") && !taxTypeOptions.some(taxType => taxType.value === text("txtTaxTypeCode")))
+      errors[p + "txtTaxTypeCode"] = "Choose a supported tax type.";
     if (text("txtNoOfSheets") && !/^\d{1,2}$/.test(text("txtNoOfSheets")))
       errors[p + "txtNoOfSheets"] = "Enter a number of sheets from 0 to 99.";
     if (
@@ -872,6 +893,8 @@ export function validateWithholding(
     }
   }
   const computed = calculateWithholding(code, values);
+  if (code === "1603Qv2018" && text("optWithheld") === "Y" && number(computed[p + "txtTax14"]) <= 0)
+    errors[p + "optWithheld"] = "Enter fringe benefits that produce positive withholding in Schedule 1.";
   if (code === "1606" && text("optWithheld") === "Y" && number(computed[p + "txtTax"]) <= 0) {
     const baseFields: Record<string, string> = {
       "Cash sale": "txtGross",

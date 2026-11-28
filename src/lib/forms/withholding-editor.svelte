@@ -200,7 +200,19 @@
 		{#if field.readonly}
 			<CalculatedValue id={field.id} label={label} value={invalidAmounts && field.type === 'money' ? '' : display(field, calculated[field.id] ?? source[field.id] ?? '')} error={displayLabel(errors[field.id] ?? '')} />
 		{:else if label === 'ATC'}
-			<AtcPicker id={field.id} label={label} formCode={definition.code} fieldOptions={field.options ?? []} category={source[definition.prefix + 'optCategory'] ?? ''} year={Number(source[definition.yearField])} required={field.required ?? false} value={source[field.id] ?? ''} error={displayLabel(errors[field.id] ?? '')} onchange={(value) => write(field.id, value)} />
+			<AtcPicker
+				id={field.id}
+				{label}
+				formCode={definition.code}
+				fieldOptions={field.options ?? []}
+				category={source[definition.prefix + 'optCategory'] ?? ''}
+				year={Number(source[definition.yearField])}
+				month={definition.monthField ? Number(source[definition.monthField]) : undefined}
+				required={field.required ?? false}
+				value={source[field.id] ?? ''}
+				error={displayLabel(errors[field.id] ?? '')}
+				onchange={(value) => write(field.id, value)}
+			/>
 		{:else if propertyReturn && shortName(field) === 'sellerTin'}
 			<div class="seller-tin-control">
 				<TinInput id={field.id} label={label} required={field.required ?? false} value={source[field.id] ?? ''} error={errors[field.id] ?? ''} onchange={(value) => write(field.id, value)} />

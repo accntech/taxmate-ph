@@ -185,6 +185,7 @@ export const printBindings: readonly PrintBinding[] = [
     "id": "frm1603:txtFringe360",
     "fallback": "0.00"
   },
+  { "id": "frm1603:divisor360" },
   {
     "id": "frm1603:txtBase360",
     "fallback": "0.00"
@@ -193,6 +194,7 @@ export const printBindings: readonly PrintBinding[] = [
     "id": "frm1603:txtReq360",
     "fallback": "0.00"
   },
+  { "id": "frm1603:rate360" },
   {
     "id": "frm1603:txt18A",
     "fallback": "0.00"
@@ -1436,9 +1438,7 @@ export const printBindings: readonly PrintBinding[] = [
                                       </td>
                                       <td>
                                         <div class="wh-inline-a30033456d9a">
-                                          <span class="wh-inline-97f71f169000"
-                                            >65%
-                                          </span>
+                                          <span class="wh-inline-97f71f169000" data-field-id="frm1603:divisor360">{model.text['frm1603:divisor360']}%</span>
                                         </div>
                                       </td>
                                       <td>
@@ -1450,9 +1450,7 @@ export const printBindings: readonly PrintBinding[] = [
                                       </td>
                                       <td>
                                         <div class="wh-inline-a30033456d9a">
-                                          <span class="wh-inline-97f71f169000"
-                                            >35%</span
-                                          >
+                                          <span class="wh-inline-97f71f169000" data-field-id="frm1603:rate360">{model.text['frm1603:rate360']}%</span>
                                         </div>
                                       </td>
                                       <td>

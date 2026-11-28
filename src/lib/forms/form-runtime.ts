@@ -3,7 +3,7 @@ import { calculateIndividualIncome, getIndividualIncomeForm, incomeOutputValues,
 import { buildTaxpayerProfileFormValues, taxpayerEmailError, type TaxpayerProfile } from '$lib/profiles/profile';
 import type { CreatedReturnStatus } from '$lib/ebirforms/created-returns';
 import { calculate1601EQ, validate1601EQ } from './form-1601-eq/form-1601-eq-rules';
-import { getWithholdingDefinition, withholdingPriorRemittanceFields } from './withholding-definitions';
+import { getWithholdingDefinition, is1602QDecedentWithdrawalInactive, withholdingPriorRemittanceFields } from './withholding-definitions';
 import { calculateWithholding, validateWithholding, withholdingProfileValues, withholdingReturnPeriod } from './withholding-rules';
 
 export function calculateReturn(code: string, values: Record<string, string>): Record<string, string> {
@@ -23,6 +23,10 @@ export function getReturnExportValues(code: string, values: Record<string, strin
  if (priorCredit && withholding && calculated[withholding.prefix + 'optAmend'] !== 'Y') {
   const id = withholding.prefix + priorCredit;
   if (id in calculated) calculated[id] = '0.00';
+ }
+ if (code === '1602Qv2018' && is1602QDecedentWithdrawalInactive(calculated)) {
+  const id = 'frm1602Q:txtSched1Amount15';
+  if (id in calculated) calculated[id] = '';
  }
  return calculated;
 }

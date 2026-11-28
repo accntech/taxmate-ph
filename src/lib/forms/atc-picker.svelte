@@ -7,12 +7,13 @@
 	import { filterATCOptions, getLegacyInterestATCOptions } from './atc-picker';
 	import { getWithholdingAtcs } from './withholding-definitions';
 
-	let { id, label = 'ATC', value, category, year = NaN, formCode = '1601EQ', fieldOptions = [], error = '', required = true, allowCustom = true, disabled = false, onchange }: {
+	let { id, label = 'ATC', value, category, year = NaN, month, formCode = '1601EQ', fieldOptions = [], error = '', required = true, allowCustom = true, disabled = false, onchange }: {
 		id: string;
 		label?: string;
 		value: string;
 		category: string;
 		year?: number;
+		month?: number;
 		formCode?: string;
 		fieldOptions?: { value: string; label: string }[];
 		error?: string;
@@ -26,7 +27,7 @@
 			const rate = get1601EQRate(option.value, category, year);
 			return { value: option.value, label: option.value, secondary: option.description, badge: rate === undefined ? undefined : `${Number(rate)}%` };
 		});
-		const records = getWithholdingAtcs(formCode, formCode === '0605' ? undefined : category);
+		const records = getWithholdingAtcs(formCode, formCode === '0605' ? undefined : category, { year, month });
 		const result = records.filter((record, index) => records.findIndex(item => item.code === record.code) === index).map(record => ({ value: record.code, label: record.code, secondary: record.description, badge: record.rate ? `${Number(record.rate)}%` : undefined }));
 		for (const option of [...fieldOptions, ...(formCode === '1602' ? getLegacyInterestATCOptions(category) : [])]) {
 			if (!result.some(item => item.value === option.value)) result.push({ value: option.value, label: option.value, secondary: option.label, badge: undefined });

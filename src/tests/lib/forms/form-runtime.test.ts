@@ -14,6 +14,16 @@ it('exports a zero prior credit on an original return while preserving the saved
  expect(getReturnExportValues('0619E', { ...values, [amended]: 'Y' })[credit]).toBe('250');
 });
 
+it('omits an inactive 1602Q decedent withdrawal from export without losing the draft entry', () => {
+ const year = 'frm1602Q:txtYear';
+ const withdrawal = 'frm1602Q:txtSched1Amount15';
+ const values = { [year]: '2019', [withdrawal]: '1000' };
+
+ expect(calculateReturn('1602Qv2018', values)[withdrawal]).toBe('1000');
+ expect(getReturnExportValues('1602Qv2018', values)[withdrawal]).toBe('');
+ expect(getReturnExportValues('1602Qv2018', { ...values, [year]: '2018' })[withdrawal]).toBe('1000');
+});
+
 it('normalizes saved email values across every return without altering other text', async () => {
  const { listForms } = await import('$lib/forms');
  const { calculateReturn, getReturnEmail, getReturnEmailFieldId } = await import('$lib/forms/form-runtime');
