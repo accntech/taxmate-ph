@@ -295,10 +295,10 @@ function legacyPages(code: string): CorporateForm["pages"] {
             ]),
             row("31H", "Total tax credits / payments", [money("txt31H", true)]),
             row("32", "Tax payable / (overpayment)", [money("txt32", true)]),
-            row("33", "Penalties", [
-              money("txt33A", false, "Surcharge"),
-              money("txt33B", false, "Interest"),
-              money("txt33C", false, "Compromise"),
+            row("33A", "Surcharge", [money("txt33A", false, "Surcharge")]),
+            row("33B", "Interest", [money("txt33B", false, "Interest")]),
+            row("33C", "Compromise", [money("txt33C", false, "Compromise")]),
+            row("33D", "Total penalties", [
               money("txt33D", true, "Total penalties"),
             ]),
             row("34", "Total amount payable / (overpayment)", [

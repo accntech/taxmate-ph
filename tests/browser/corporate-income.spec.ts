@@ -251,6 +251,70 @@ test('older quarterly filing grids have a single full-width bottom divider', asy
 	}
 });
 
+for (const code of ['1702Q', '1702Qv2008C']) {
+	test(`${code} stacks the four numbered penalty items`, async ({ page }, info) => {
+		await page.setViewportSize({ width: 1440, height: 1000 });
+		await seedWorkspace(page, 'light', 'loaded', { taxpayerClassification: 'N' }, []);
+		await page.goto(`/ebirforms/taxpayers/${taxpayerId}/forms/${code}?new=true`);
+		const rows = page.locator('[data-corporate-item^="33"]');
+		await expect(rows.locator('> .paper-item-number')).toHaveText(['33A', '33B', '33C', '33D']);
+		const fields = ['Surcharge', 'Interest', 'Compromise'].map(label => page.getByRole('textbox', { name: label, exact: true }));
+		const total = rows.last().getByRole('status', { name: 'Total penalties', exact: true });
+		await expect(total).toHaveText('0.00');
+		for (const width of [1440, 390]) {
+			await page.setViewportSize({ width, height: 1000 });
+			const boxes = await rows.evaluateAll(elements => elements.map(row => {
+				const { x, top, right, bottom } = row.getBoundingClientRect();
+				return { x, top, right, bottom };
+			}));
+			for (const [index, box] of boxes.entries()) {
+				expect(box.x).toBeGreaterThanOrEqual(0);
+				expect(box.right).toBeLessThanOrEqual(width);
+				if (index > 0) expect(Math.abs(box.top - boxes[index - 1].bottom)).toBeLessThan(1);
+			}
+			const rightEdges = await Promise.all(fields.map(async field => {
+				const box = (await field.boundingBox())!;
+				return box.x + box.width;
+			}));
+			for (const edge of rightEdges) expect(Math.abs(edge - rightEdges[0])).toBeLessThan(1);
+			if (process.env.EBIRFORMS_CAPTURE_TEST_PDFS === '1') {
+				await rows.first().evaluate(row => row.scrollIntoView({ block: 'center', behavior: 'instant' }));
+				const first = (await rows.first().boundingBox())!;
+				const last = (await rows.last().boundingBox())!;
+				await page.screenshot({
+					path: info.outputPath(`${code}-penalties-${width}.png`),
+					animations: 'disabled',
+					clip: { x: first.x, y: first.y, width: first.width, height: last.y + last.height - first.y }
+				});
+			}
+		}
+		for (const [index, field] of fields.entries()) {
+			await expect(field).toBeEditable();
+			await field.fill(['100.25', '200.50', '1000.00'][index]);
+			await field.blur();
+		}
+		await expect(total).toHaveText('1,300.75');
+		await expect(page.locator('[data-corporate-item="34"] output')).toHaveText('1,300.75');
+
+		await page.setViewportSize({ width: 1440, height: 1000 });
+		await page.getByRole('button', { name: 'Save draft', exact: true }).click();
+		await expect(page).toHaveURL(`/ebirforms/taxpayers/${taxpayerId}/forms`);
+		await page.getByRole('link', { name: 'Edit', exact: true }).click();
+		await expect(total).toHaveText('1,300.75');
+		await page.getByRole('link', { name: 'Back to forms', exact: false }).click();
+		const printed = await printSavedReturn(page, code, info.outputPath(`${code}-penalties.pdf`), async () => {
+			await page.getByRole('button', { name: /^More actions for BIR Form/ }).click();
+			await page.getByRole('menuitem', { name: 'Generate PDF', exact: true }).click();
+		});
+		await expect(printed.locator('.withholding-print-page')).toHaveCount(2);
+		for (const [item, value] of [['33A', 100.25], ['33B', 200.50], ['33C', 1000], ['33D', 1300.75], ['34', 1300.75]] as const) {
+			const field = printed.locator(`[data-corporate-field="frm1702q:txt${item}"]`);
+			expect(Number((await field.inputValue()).replaceAll(',', ''))).toBe(value);
+		}
+		await printed.close();
+	});
+}
+
 test('corporate filing grid shares the outer right edge with the form border', async ({ page }) => {
 	await page.setViewportSize({ width: 1280, height: 900 });
 	await seedWorkspace(page, 'dark', 'loaded', { taxpayerClassification: 'N' }, []);
