@@ -53,11 +53,11 @@ test('form command highlights fuzzy matches in codes, titles, and categories', a
 	const form = dialog.getByRole('option', { name: /^BIR Form 1601EQ\b/ });
 	await expect(form.locator('mark')).toHaveCount(0);
 
-	for (const query of ['1601‑EQ', '16EQ', 'quarterly rmt', 'wthldng tx']) {
+	for (const query of ['1601‑EQ', '16EQ', 'remttnce', 'wthldng', '16EQ wthldng']) {
 		await search.fill(query);
 		await expect(form).toBeVisible();
-		const highlighted = await form.locator('mark').allTextContents();
-		expect(highlighted.join('').toLowerCase()).toBe(query.toLowerCase().replace(/[\s‑]/g, ''));
+		await expect.poll(async () => (await form.locator('mark').allTextContents()).join('').toLowerCase())
+			.toBe(query.toLowerCase().replace(/[\s‑]/g, ''));
 	}
 
 	await search.clear();
@@ -86,7 +86,8 @@ test('form command filters, handles no matches, and creates with the keyboard', 
 	await expect(selectedForm).toHaveAccessibleName(/^BIR Form 0619F\b/);
 	await search.press('ArrowUp');
 	await expect(selectedForm).toHaveAccessibleName(/^BIR Form 0619E\b/);
-	await search.fill('1601eq');
+	await search.fill('16eq');
+	await expect(selectedForm).toHaveAccessibleName(/^BIR Form 1601EQ\b/);
 	await search.press('Enter');
 	await expect(page.getByRole('heading', { name: /^Quarterly Remittance Return/ })).toBeVisible();
 	await page.getByRole('link', { name: '← Back to forms', exact: true }).click();

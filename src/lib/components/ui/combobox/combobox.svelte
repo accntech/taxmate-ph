@@ -36,6 +36,7 @@
     observeElementRect,
   } from "@tanstack/svelte-virtual";
   import fuzzysort from "fuzzysort";
+  import SearchHighlight from "../search-highlight.svelte";
 
   import { onMount, tick } from "svelte";
   import { getPopoverPortalParent, place } from "../date-input/date-popover";
@@ -132,11 +133,6 @@
   type Row =
     | { kind: "header"; key: string; label: string }
     | { kind: "option"; key: string; option: MatchedOption; position: number };
-  type HighlightedSegment = {
-    start: number;
-    text: string;
-    highlighted: boolean;
-  };
 
   const selectedSet = $derived.by<Set<TValue>>(() => {
     if (multiple) return new Set(Array.isArray(value) ? value : []);
@@ -349,25 +345,6 @@
     getStore(rowVirtualizer).measureElement(node);
   }
 
-  function getHighlightedSegments(
-    text: string,
-    indexes: ReadonlyArray<number>,
-  ): HighlightedSegment[] {
-    const highlightedIndexes = new Set(indexes);
-    const segments: HighlightedSegment[] = [];
-
-    for (let index = 0; index < text.length; index += 1) {
-      const character = text.charAt(index);
-      const highlighted = highlightedIndexes.has(index);
-      const previous = segments.at(-1);
-
-      if (previous?.highlighted === highlighted) previous.text += character;
-      else segments.push({ start: index, text: character, highlighted });
-    }
-
-    return segments;
-  }
-
   function triggerCreate() {
     if (!onCreate || !trimmedQuery) return;
     onCreate(trimmedQuery);
@@ -577,19 +554,7 @@
 </script>
 
 {#snippet highlightedText(text: string, indexes: ReadonlyArray<number> = [])}
-  {#if indexes.length === 0}
-    {text}
-  {:else}
-    {#each getHighlightedSegments(text, indexes) as segment (segment.start)}
-      {#if segment.highlighted}
-        <mark class={[stylex.attrs(comboboxLayout.match).class]}
-          >{segment.text}</mark
-        >
-      {:else}
-        {segment.text}
-      {/if}
-    {/each}
-  {/if}
+  <SearchHighlight {text} {indexes} />
 {/snippet}
 
 {#snippet itemBadge(label: string, indexes: ReadonlyArray<number> = [])}

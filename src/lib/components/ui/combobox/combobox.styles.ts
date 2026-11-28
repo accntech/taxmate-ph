@@ -1,10 +1,6 @@
 import * as stylex from "@stylexjs/stylex";
 
 export const combobox = stylex.create({
-  match: {
-    backgroundColor: "var(--accent-soft)",
-    color: "inherit",
-  },
   displayLabel: {
     maxWidth: "100%",
     flex: "none",

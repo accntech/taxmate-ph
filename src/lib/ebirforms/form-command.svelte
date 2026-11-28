@@ -1,5 +1,6 @@
 <script lang="ts">
 	import * as stylex from '@stylexjs/stylex';
+	import fuzzysort from 'fuzzysort';
 	import { formCommand } from './form-command.styles';
 	import { tick } from 'svelte';
 	import type { FormSummary } from '$lib/forms';
@@ -8,6 +9,10 @@
 	import { InputControl } from '$lib/components/ui/input';
 	import Icon from '$lib/components/ui/icon/icon.svelte';
 	import { glyphs } from '$lib/components/ui/icons';
+	import SearchHighlight from '$lib/components/ui/search-highlight.svelte';
+
+	const formLabel = 'BIR Form';
+	const minimumFuzzyScore = 0.2;
 
 	const formTypeColors = new Map([
 		['Payment', 'var(--success)'],
@@ -27,11 +32,44 @@
 	const uid = $props.id();
 	let query = $state('');
 	let activeCode = $state('');
-	const terms = $derived(normalizeSearch(query.trim()).split(/\s+/));
-	const matches = $derived(forms.filter(form => {
-		const text = normalizeSearch(`BIR Form ${form.code} ${form.title} ${form.category}`);
-		return terms.every(word => text.includes(word));
-	}).sort((a, b) => a.code.localeCompare(b.code, 'en', { numeric: true })));
+	const orderedForms = $derived(forms.toSorted((a, b) => a.code.localeCompare(b.code, 'en', { numeric: true })));
+	const matches = $derived.by(() => {
+		const search = normalizeSearch(query.trim());
+		const terms = search ? search.split(/\s+/) : [];
+		const results = orderedForms.flatMap(form => {
+			const fields = [formLabel, form.code, form.title, form.category].map(text => ({
+				text,
+				normalized: normalizeSearch(text),
+				indexes: [] as number[]
+			}));
+			let exact = true;
+			let score = 0;
+
+			for (const term of terms) {
+				const hits = fuzzysort.go(term, fields, { key: 'text', threshold: 0 });
+				const literal = hits.find(hit => hit.obj.normalized.includes(term));
+				const hit = literal ?? hits[0];
+				if (!hit || (!literal && hit.score < minimumFuzzyScore)) return [];
+				hit.obj.indexes.push(...hit.indexes);
+				exact &&= !!literal;
+				score += hit.score;
+			}
+
+			const [label, code, title, category] = fields;
+			return [{
+				...form,
+				labelIndexes: label.indexes,
+				codeIndexes: code.indexes,
+				titleIndexes: title.indexes,
+				categoryIndexes: category.indexes,
+				exact,
+				score
+			}];
+		});
+		// Keep form-number order for literal searches and rank fuzzy results by relevance.
+		const literals = results.filter(result => result.exact);
+		return literals.length ? literals : results.toSorted((a, b) => b.score - a.score);
+	});
 	const available = $derived(matches.filter(form => form.status === 'ready'));
 	const active = $derived(available.find(form => form.code === activeCode) ?? available[0]);
 
@@ -102,14 +140,23 @@
 				onclick={() => select(form.code)}
 				class={stylex.attrs(formCommand.result, formCommand.formResult).class}
 			>
-				<span class={stylex.attrs(formCommand.resultTitle).class}>BIR Form <span class="font-mono">{form.code}</span></span>
-				<span class={stylex.attrs(formCommand.resultDescription).class}>{form.title}</span>
+				<span class={stylex.attrs(formCommand.resultTitle).class}>
+					<SearchHighlight text={formLabel} indexes={form.labelIndexes} />
+					<span class="font-mono"><SearchHighlight text={form.code} indexes={form.codeIndexes} /></span>
+				</span>
+				<span class={stylex.attrs(formCommand.resultDescription).class}>
+					<SearchHighlight text={form.title} indexes={form.titleIndexes} />
+				</span>
 				<span
 					class={[stylex.attrs(formCommand.resultCategory).class, { 'colored-form-type': typeColor }]}
 					style:--form-type-color={typeColor}
 				>
 					<Badge size="sm" class="form-type-badge">
-						{form.status === 'ready' ? form.category : 'Coming soon'}
+						{#if form.status === 'ready'}
+							<SearchHighlight text={form.category} indexes={form.categoryIndexes} />
+						{:else}
+							Coming soon
+						{/if}
 					</Badge>
 				</span>
 			</button>
