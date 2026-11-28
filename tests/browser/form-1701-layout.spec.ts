@@ -35,6 +35,8 @@ async function enableAttachments(page: Page) {
 	await page.getByRole('radiogroup', { name: /Income subject to a special rate\?/i }).getByRole('radio', { name: 'Yes', exact: true }).check();
 }
 
+const multipleActivities = (page: Page) => page.getByRole('radio', { name: 'Two or more exempt or special-rate activities', exact: true });
+
 async function chooseDeduction(page: Page, query: string, label: string, pickerName = 'Add a deduction') {
 	const picker = page.getByRole('combobox', { name: pickerName, exact: true });
 	await picker.press('Enter');
@@ -254,14 +256,108 @@ test('January 1701 links to separate activity inputs only for multiple activitie
 	await openReturn(page, '1701v2018');
 	await enableAttachments(page);
 	await goToReturnPage(page, 5);
+	const pager = page.getByRole('navigation', { name: 'Return pages' });
+	const findPage = pager.getByRole('button', { name: /^Find a page,/ });
+	await expect(findPage).toHaveText('Page 5 of 6');
+	const oneActivity = page.getByRole('radio', { name: 'One exempt or special-rate activity', exact: true });
+	await oneActivity.check();
 	const consolidation = page.getByRole('table', { name: 'Schedule B · Consolidated income tax', exact: true });
 	await page.getByRole('button', { name: /Show \d+ more income items/ }).click();
 	const activityReference = consolidation.getByRole('button', { name: 'From Part XI, Schedule B, Item 1A · Taxpayer', exact: true });
 	await expect(consolidation.getByRole('button', { name: 'From Schedule C, Item 18B · Taxpayer', exact: true })).toBeVisible();
 	await expect(activityReference).toHaveCount(0);
-	await page.getByRole('radio', { name: 'Two or more exempt or special-rate activities', exact: true }).check();
+	await goToReturnPage(page, 6);
+	await expect(pager.getByRole('button', { name: 'Next page', exact: true })).toHaveCount(0);
+	await findPage.click();
+	const picker = page.getByRole('dialog', { name: 'Go to page', exact: true });
+	await expect(picker.getByRole('option')).toHaveCount(6);
+	await picker.getByRole('option', { name: /^Page 5 ·/ }).click();
+	await multipleActivities(page).check();
+	await expect(findPage).toHaveText('Page 5 of 8');
 	await activityReference.click();
 	await expect(page.locator('[id="frm1701:txtPg3mSchedB_1ATYPE"]')).toBeFocused();
+	await goToReturnPage(page, 5);
+	await oneActivity.check();
+	await expect(findPage).toHaveText('Page 5 of 6');
+	await expect(page.getByRole('button', { name: 'Open activity attachment', exact: true })).toHaveCount(0);
+	await expect(activityReference).toHaveCount(0);
+});
+
+test('January 1701 saves two separate activities and consolidates their sales', async ({ page }) => {
+	await openReturn(page, '1701v2018');
+	await filingYear(page).fill('2025');
+	await enableAttachments(page);
+	await goToReturnPage(page, 5);
+	const consolidatedSales = page.locator('[id="frm1701:txtPg1mI1BSchdB"]');
+	const oneActivity = page.getByRole('radio', { name: 'One exempt or special-rate activity', exact: true });
+	await oneActivity.check();
+	await consolidatedSales.fill('725');
+	await consolidatedSales.blur();
+	await multipleActivities(page).check();
+	await page.getByRole('button', { name: 'Open activity attachment', exact: true }).click();
+	const sales = page.locator('[id="frm1701:txtPg3mSchedB_1ATYPE"]');
+	const chooseSpecialRate = page.getByRole('radio', { name: 'Special Rate', exact: true });
+	await chooseSpecialRate.check();
+	await expandSections(page);
+	await sales.fill('70000');
+	await sales.blur();
+	const addActivity = page.getByRole('button', { name: 'Add activity', exact: true });
+	await expect(addActivity).toBeVisible();
+	await addActivity.click();
+	await chooseSpecialRate.check();
+	await expandSections(page);
+	await expect(sales).not.toHaveValue('70,000');
+	await sales.fill('55000');
+	await sales.blur();
+	const activities = page.getByRole('combobox', { name: 'Activity', exact: true });
+	const chooseActivity = async (number: number) => {
+		const option = activities.getByRole('option', { name: new RegExp(`^Activity ${number}\\b`) });
+		await activities.selectOption(await option.evaluate((element: HTMLOptionElement) => element.value));
+	};
+	await chooseActivity(1);
+	await expect(sales).toHaveValue('70,000');
+	await page.getByRole('button', { name: 'Remove activity', exact: true }).click();
+	await expect(activities.getByRole('option')).toHaveCount(1);
+	await goToReturnPage(page, 5);
+	await expect(consolidatedSales).toHaveText('₱55,000');
+	await goToReturnPage(page, 7);
+	await page.getByRole('button', { name: 'Undo removal', exact: true }).click();
+	await expect(activities.getByRole('option')).toHaveCount(2);
+	await chooseActivity(2);
+	await expect(sales).toHaveValue('55,000');
+	await goToReturnPage(page, 5);
+	await expect(consolidatedSales).toHaveText('₱125,000');
+	await oneActivity.check();
+	await expect(consolidatedSales).toHaveValue('725');
+	await consolidatedSales.fill('850');
+	await consolidatedSales.blur();
+	await multipleActivities(page).check();
+	await expect(consolidatedSales).toHaveText('₱125,000');
+	await captureEvidence(page, '2018-01-two-activities-consolidation');
+	await page.getByRole('button', { name: 'Save draft', exact: true }).click();
+	await expect(page).toHaveURL(/\/forms$/);
+	await page.getByRole('link', { name: /^Edit BIR Form 1701v2018,/ }).click();
+	await expect(page.locator('.income-editor')).toBeVisible();
+	await goToReturnPage(page, 5);
+	await expect(consolidatedSales).toHaveText('₱125,000');
+	await oneActivity.check();
+	await expect(consolidatedSales).toHaveValue('850');
+	await multipleActivities(page).check();
+	await goToReturnPage(page, 7);
+	await chooseActivity(1);
+	await expect(sales).toHaveValue('70,000');
+	await chooseActivity(2);
+	await expect(sales).toHaveValue('55,000');
+	await page.getByRole('radio', { name: 'Exempt', exact: true }).check();
+	await goToReturnPage(page, 5);
+	await expect(page.locator('[id="frm1701:txtPg1mI1ASchdB"]')).toHaveText('₱55,000');
+	await expect(consolidatedSales).toHaveText('₱70,000');
+	const exemptSource = page.getByRole('button', { name: 'From Part XI, Schedule B, Item 1A (Exempt) · Taxpayer', exact: true });
+	await exemptSource.click();
+	await expect(activities.locator('option:checked')).toHaveText('Activity 2 · Exempt');
+	await expect(sales).toBeFocused();
+	await sales.blur();
+	await expect(sales).toHaveValue('55,000');
 });
 
 test('June 1701 keeps optional descriptions and their amounts within the mobile drawer', async ({ page }) => {
@@ -398,6 +494,27 @@ test('1701 January overpayment uses a select while preserving refund codes', asy
 	expect(saved['frm1701:rdoPg1Overpayment']).toBe('Refund');
 });
 
+test('January 1701 clears an ineligible overpayment choice at zero', async ({ page }) => {
+	await openReturn(page, '1701v2018');
+	const refund = page.getByRole('combobox', { name: 'Apply overpayment as', exact: true });
+	const setTaxCredits = async (amount: string) => {
+		await goToReturnPage(page, 4);
+		const credit = page.locator('[id="frm1701:txtPg4IPart7_1A"]');
+		await credit.fill(amount);
+		await credit.blur();
+		await goToReturnPage(page, 1);
+	};
+	await setTaxCredits('500');
+	await refund.click();
+	await page.getByRole('option', { name: 'Refund', exact: true }).click();
+	await expect(refund).toHaveText('Refund');
+	await setTaxCredits('0');
+	await expect(refund).toBeHidden();
+	await setTaxCredits('500');
+	await expect(refund).toBeEnabled();
+	await expect(refund).not.toHaveText('Refund');
+});
+
 for (const width of [1440, 390]) {
 	test(`1701 consolidated amounts display a populated value completely at ${width}px`, async ({ page }) => {
 		await openReturn(page, '1701', width);
@@ -517,6 +634,8 @@ test('1701 January joint employers retain the taxpayer and spouse earner choices
 test('1701 January activity tax rates have percentage controls and readable labels', async ({ page }) => {
 	await openReturn(page, '1701v2018');
 	await enableAttachments(page);
+	await goToReturnPage(page, 5);
+	await multipleActivities(page).check();
 	await goToReturnPage(page, 7);
 	await expandSections(page);
 	const rate = page.locator('[id="frm1701:txtPg3mSchedA_4ATYPE"]');
@@ -540,6 +659,11 @@ for (const { code, revision, total } of [
 			await openReturn(page, code, width, true);
 			await filingYear(page).fill(code === '1701' ? '2017' : '2025');
 			await enableAttachments(page);
+			if (code === '1701v2018') {
+				await goToReturnPage(page, 5);
+				await multipleActivities(page).check();
+				await goToReturnPage(page, 1);
+			}
 			const editor = page.locator('.income-editor');
 			const pager = editor.getByRole('navigation', { name: 'Return pages' });
 			for (let number = 1; number <= total; number += 1) {
@@ -577,6 +701,10 @@ for (const { code, revision, total } of [
 			test.setTimeout(180000);
 			await openReturn(page, code, width, true);
 			await enableAttachments(page);
+			if (code === '1701v2018') {
+				await goToReturnPage(page, 5);
+				await multipleActivities(page).check();
+			}
 			const editor = page.locator('.income-editor');
 			const pager = editor.getByRole('navigation', { name: 'Return pages' });
 			let checked = 0;
@@ -839,6 +967,7 @@ test('January 1701 attachment pages use the full editor width and bottom paginat
 	await openReturn(page, '1701v2018');
 	await enableAttachments(page);
 	await goToReturnPage(page, 5);
+	await multipleActivities(page).check();
 	const editor = page.locator('.income-editor');
 	const pager = editor.getByRole('navigation', { name: 'Return pages' });
 	for (let number = 5; number <= 8; number++) {

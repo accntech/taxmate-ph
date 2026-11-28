@@ -12,7 +12,7 @@ for (const { item, atc, total } of [
 	{ item: '42', atc: 'II012', total: '44' },
 	{ item: '51', atc: 'II015', total: '52' }
 ]) {
-	test(`1701A caps Item ${item} at one printable entry`, async ({ page }, info) => {
+	test(`1701A enters Item ${item} inline as one printable entry`, async ({ page }, info) => {
 		await seedWorkspace(page, 'light', 'loaded', {
 			civilStatus: 'Single', taxpayerClassification: 'I', taxpayerType: 'single-proprietor'
 		});
@@ -22,16 +22,17 @@ for (const { item, atc, total } of [
 		await goToReturnPage(page, 2);
 
 		const schedule = page.locator(`[data-income-detail-items="${item}"]`);
-		const addEntry = schedule.getByRole('button', { name: 'Add item', exact: true });
-		const drawer = page.getByRole('dialog');
-		await addEntry.click();
-		await drawer.getByRole('textbox', { name: 'Description', exact: true }).fill('Printable income');
-		await drawer.getByRole('textbox', { name: 'Taxpayer amount', exact: true }).fill('12500');
-		await drawer.getByRole('button', { name: 'Add item', exact: true }).click();
-		await expect(drawer).toBeHidden();
-		await expect(addEntry).toBeDisabled({ timeout: 2500 });
-		await expect(schedule.getByRole('heading')).toContainText('(1/1)');
-		await schedule.screenshot({ path: info.outputPath(`1701a-item-${item}-cap.png`), animations: 'disabled' });
+		const description = schedule.locator(`[id="frm1701A:txt${item}Desc"]`);
+		const amount = schedule.locator(`[id="frm1701A:txt${item}A"]`);
+		await expect(description).toBeEditable();
+		await expect(amount).toBeEditable();
+		await expect(schedule.getByRole('textbox')).toHaveCount(2);
+		await expect(schedule.getByRole('button', { name: 'Add item', exact: true })).toHaveCount(0);
+		await description.fill('Printable income');
+		await amount.fill('12500');
+		await amount.blur();
+		await expect(page.locator(`[id="frm1701A:txt${total}A"]`)).toHaveText('₱12,500');
+		await schedule.screenshot({ path: info.outputPath(`1701a-item-${item}-inline.png`), animations: 'disabled' });
 
 		await page.getByRole('button', { name: 'Save draft', exact: true }).click();
 		await expect(page).toHaveURL(list);
@@ -60,20 +61,24 @@ for (const { item, atc, total } of [
 		await goToReturnPage(page, 2);
 
 		const schedule = page.locator(`[data-income-detail-items="${item}"]`);
-		const addEntry = schedule.getByRole('button', { name: 'Add item', exact: true });
-		const drawer = page.getByRole('dialog');
-		await expect(addEntry).toBeDisabled({ timeout: 2500 });
+		const original = schedule.locator(`[id="frm1701A:txtmodalPart${part}Desc_1C1"]`);
+		const additional = schedule.locator(`[id="frm1701A:txtmodalPart${part}Desc_4C1"]`);
+		const additionalAmount = schedule.locator(`[id="frm1701A:txtmodalPart${part}_4C2"]`);
 		const itemTotal = page.locator(`[id="frm1701A:txt${item}A"]`);
 		const sectionTotal = page.locator(`[id="frm1701A:txt${total}A"]`);
 		await expect(itemTotal).toHaveText('₱50,000');
 		await expect(sectionTotal).toHaveText('₱50,000');
+		await expect(schedule.getByRole('button', { name: 'Add item', exact: true })).toHaveCount(0);
 		await page.setViewportSize({ width: 390, height: 920 });
-		await schedule.getByRole('button', { name: 'Additional income', exact: true }).click();
-		await drawer.getByRole('textbox', { name: 'Taxpayer amount', exact: true }).fill('1234567.89');
-		await drawer.getByRole('textbox', { name: 'Taxpayer amount', exact: true }).blur();
-		expect(await drawer.evaluate(element => element.scrollWidth - element.clientWidth)).toBe(0);
-		await page.screenshot({ path: info.outputPath(`1701a-${item}-drawer-mobile.png`), animations: 'disabled' });
-		await drawer.getByRole('button', { name: 'Cancel', exact: true }).click();
+		await additionalAmount.fill('1234567.89');
+		await additionalAmount.blur();
+		await expect(itemTotal).toHaveText('₱1,247,068');
+		expect(await additionalAmount.evaluate(element => element.getBoundingClientRect().right)).toBeLessThanOrEqual(390);
+		await additionalAmount.locator('xpath=ancestor::tr').screenshot({
+			path: info.outputPath(`1701a-${item}-legacy-inline-mobile.png`), animations: 'disabled'
+		});
+		await additionalAmount.fill('37500');
+		await additionalAmount.blur();
 		await page.setViewportSize({ width: 1280, height: 900 });
 		await expect(itemTotal).toHaveText('₱50,000');
 
@@ -84,8 +89,8 @@ for (const { item, atc, total } of [
 			await goToReturnPage(page, 2);
 		}
 		await saveAndReopen();
-		await expect(schedule.getByRole('button', { name: 'Original income', exact: true })).toBeVisible();
-		await expect(schedule.getByRole('button', { name: 'Additional income', exact: true })).toBeVisible();
+		await expect(original).toHaveValue('Original income');
+		await expect(additional).toHaveValue('Additional income');
 		await expect(itemTotal).toHaveText('₱50,000');
 		const html = await page.evaluate(async () => {
 			const formsModule = '/src/lib/forms/index.ts';
@@ -105,21 +110,50 @@ for (const { item, atc, total } of [
 		await expect(print.locator(`[data-income-field="frm1701A:txt${item}A"]`)).toHaveValue('50,000');
 		await print.close();
 
-		await schedule.getByRole('button', { name: 'Original income', exact: true }).click();
-		await drawer.getByRole('button', { name: 'Delete item', exact: true }).click();
-		await expect(schedule.getByRole('button', { name: 'Original income', exact: true })).toHaveCount(0);
+		await schedule.getByRole('button', { name: `Clear Item ${item}.1`, exact: true }).click();
+		await expect(original).toHaveCount(0);
 		await expect(itemTotal).toHaveText('₱37,500');
-		await expect(addEntry).toBeDisabled();
+		await expect(additional).toBeFocused();
 		await saveAndReopen();
-		await expect(schedule.getByRole('button', { name: 'Additional income', exact: true })).toBeVisible();
-		await schedule.getByRole('button', { name: 'Additional income', exact: true }).click();
-		await drawer.getByRole('button', { name: 'Delete item', exact: true }).click();
-		await expect(addEntry).toBeFocused();
+		await expect(additional).toHaveValue('Additional income');
+		await schedule.getByRole('button', { name: `Clear Item ${item}.4`, exact: true }).click();
+		const baseDescription = schedule.locator(`[id="frm1701A:txt${item}Desc"]`);
+		await expect(baseDescription).toBeFocused();
 		await saveAndReopen();
-		await expect(schedule.getByRole('listitem')).toHaveCount(0);
+		await expect(additional).toHaveCount(0);
+		await expect(baseDescription).toHaveValue('');
 		await expect(sectionTotal).toHaveText('₱0');
 	});
 }
+
+test('1701A keeps an older sparse row focused while replacing its only saved value', async ({ page }) => {
+	await seedWorkspace(page, 'light', 'loaded', {
+		civilStatus: 'Single', taxpayerClassification: 'I', taxpayerType: 'single-proprietor'
+	}, [{
+		id: 'sparse-income', taxpayerId, formCode: '1701A', returnPeriod: '2025',
+		status: 'Draft', updatedAt: 1794441600000, finalFlag: '0',
+		values: {
+			'frm1701A:txtYear': '2025', 'frm1701A:optTaxType': 'S', 'frm1701A:optATC': 'II012',
+			'frm1701A:txt42Desc': 'Saved subtotal',
+			'frm1701A:txt42A': '999',
+			'frm1701A:txtmodalPartIVADesc_4C1': 'Old description'
+		}
+	}]);
+	await page.goto(`${list}/1701A?return=sparse-income`);
+	await goToReturnPage(page, 2);
+
+	const description = page.getByRole('textbox', { name: 'Item 42.4 description', exact: true });
+	const amount = page.getByRole('textbox', { name: 'Item 42.4 amount', exact: true });
+	const total = page.locator('[id="frm1701A:txt42A"]');
+	await expect(total).toHaveText('₱0');
+	await description.fill('');
+	await expect(description).toBeFocused();
+	await expect(total).toHaveText('₱0');
+	await description.fill('New description');
+	await description.press('Tab');
+	await amount.fill('750');
+	await expect(total).toHaveText('₱750');
+});
 
 test('1701A lets an active filer reuse the shared entry without overwriting the other filer', async ({ page }) => {
 	await seedWorkspace(page, 'light', 'loaded', { taxpayerClassification: 'I', civilStatus: 'Married' }, [{
@@ -136,21 +170,19 @@ test('1701A lets an active filer reuse the shared entry without overwriting the 
 	await expect(page.getByRole('navigation', { name: 'Return pages' })).toBeVisible({ timeout: 30000 });
 	await goToReturnPage(page, 2);
 	const schedule = page.locator('[data-income-detail-items="42"]');
-	await schedule.getByRole('button', { name: 'Item 42.1', exact: true }).click();
-	const drawer = page.getByRole('dialog');
-	await drawer.getByRole('textbox', { name: 'Description', exact: true }).fill('Rental income');
-	await drawer.getByRole('button', { name: 'Update', exact: true }).click();
-	await schedule.getByRole('button', { name: 'Rental income', exact: true }).click();
-	await expect(drawer.getByRole('textbox', { name: 'Description', exact: true })).toHaveCount(0);
-	await drawer.getByRole('button', { name: 'Delete item', exact: true }).click();
+	const description = schedule.getByRole('textbox', { name: 'Item 42.1 description', exact: true });
+	const taxpayerAmount = schedule.getByRole('textbox', { name: 'Item 42.1 amount · Taxpayer', exact: true });
+	const spouseAmount = schedule.getByRole('textbox', { name: 'Item 42.1 amount · Spouse', exact: true });
+	await description.fill('Rental income');
+	await expect(description).toHaveAttribute('readonly', '');
+	await expect(spouseAmount).toHaveCount(0);
+	await schedule.getByRole('button', { name: 'Clear Item 42.1', exact: true }).click();
 	await expect(page.locator('[id="frm1701A:txt42A"]')).toHaveText('₱0');
-	await expect(schedule.getByRole('button', { name: 'Add item', exact: true })).toBeDisabled();
-	await expect(schedule.getByRole('button', { name: 'Rental income', exact: true })).toBeVisible({ timeout: 2500 });
-	await schedule.getByRole('button', { name: 'Rental income', exact: true }).click();
-	await drawer.getByRole('textbox', { name: 'Taxpayer amount', exact: true }).fill('12000');
-	await drawer.getByRole('button', { name: 'Update', exact: true }).click();
+	await expect(description).toHaveValue('Rental income');
+	await expect(taxpayerAmount).toBeFocused();
+	await taxpayerAmount.fill('12000');
 	await expect(page.locator('[id="frm1701A:txt42A"]')).toHaveText('₱12,000');
 	await page.getByRole('combobox', { name: 'Spouse alphanumeric tax code (ATC)', exact: true }).selectOption('II014');
-	await schedule.getByRole('button', { name: 'Rental income', exact: true }).click();
-	await expect(drawer.getByRole('textbox', { name: 'Spouse amount', exact: true })).toHaveValue('80,000');
+	await expect(spouseAmount).toHaveValue('80,000');
+	await expect(description).toBeEditable();
 });

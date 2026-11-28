@@ -1,5 +1,7 @@
 import { calculateCorporateIncome, corporateProfileField, corporateProfileValues, corporateReturnPeriod, getCorporateIncomeForm, validateCorporateIncome } from './corporate-income';
 import { calculateIndividualIncome, getIndividualIncomeForm, incomeOutputValues, incomeProfileValues, individualIncomePeriod, validateIndividualIncome, type IncomeProfileOptions } from './individual-income';
+import { exportRevisedActivityFields } from './individual-income/annual-2018-activities';
+import { incomeIncludesSpouse } from './individual-income/profile-fields';
 import { buildTaxpayerProfileFormValues, taxpayerEmailError, type TaxpayerProfile } from '$lib/profiles/profile';
 import type { CreatedReturnStatus } from '$lib/ebirforms/created-returns';
 import { calculate1601EQ, validate1601EQ } from './form-1601-eq/form-1601-eq-rules';
@@ -17,7 +19,10 @@ export function calculateReturn(code: string, values: Record<string, string>): R
 export function getReturnExportValues(code: string, values: Record<string, string>): Record<string, string> {
  const calculated = calculateReturn(code, values);
  const income = getIndividualIncomeForm(code);
- if (income) return incomeOutputValues(income, calculated);
+ if (income) {
+  const output = incomeOutputValues(income, calculated);
+  return code === '1701v2018' ? exportRevisedActivityFields(output, incomeIncludesSpouse(code, calculated)) : output;
+ }
  const priorCredit = withholdingPriorRemittanceFields[code];
  const withholding = getWithholdingDefinition(code);
  if (priorCredit && withholding && calculated[withholding.prefix + 'optAmend'] !== 'Y') {

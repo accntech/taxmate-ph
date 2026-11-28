@@ -1,6 +1,7 @@
 /** Whole-peso results retain the saved return’s decimal string format. */
 import { normalizeCurrencyInput, roundWholePeso } from '$lib/components/ui/currency-input/currency';
 import { incomeIncludesSpouse } from "./profile-fields";
+import { revisedActivityCountId, revisedActivityRegime, revisedActivityRegimeApplies, revisedActivitySlots, usesRevisedActivityAttachments } from "./annual-2018-activities";
 import { calculateJuneActivities, calculateRevisedActivities } from "./annual-activity-calculations";
 import { calculateJuneConsolidation, calculateJuneReconciliation, calculateJuneSupplementalIncome } from "./annual-june-schedules";
 
@@ -39,6 +40,10 @@ export const legacy1701Filing = {
 export function legacy1701IsOverpaid(values: Values): boolean {
   return number(values[legacy1701Filing.total]) < 0;
 }
+export const revised1701Overpayment = id("rdoPg1Overpayment");
+export function revised1701DispositionRequired(values: Values): boolean {
+  return number(values[id("txtPg1I32AggregateAmtPyble")]) < 0;
+}
 const legacyEmployer = (row: number) => ({
   earner: `rdoPg5Sc1I${row}TaxpayerSpouse`,
   gross: `txtPg5Sc1I${row}ComIncomeC2`,
@@ -68,6 +73,10 @@ export function annualFieldApplies(code: string, fieldId: string, values: Values
       return type === filing.certificate || type === filing.governmentId;
   }
   if (code !== "1701v2018") return true;
+  // January enables the choice per filer (Item 26), but requires it on the aggregate (Item 32).
+  if (fieldId === revised1701Overpayment)
+    return number(values[id("txtPg1I26A")]) < 0 ||
+      (incomeIncludesSpouse(code, values) && number(values[id("txtPg1I26B")]) < 0);
 
   const column = field.at(-1);
   const atc = revisedAtc(values, column);
@@ -185,7 +194,10 @@ export function calculateAnnual(code: string, values: Values, computed?: Set<str
     derive(carryover, [loss], () => Math.max(0, -n(loss)));
   };
   if (code === "1701v2018") {
-    calculateRevisedActivities(worksheet, selected("Pg3mTaxRegimeTYPE"));
+    calculateRevisedActivities({ ...worksheet, set, setText: (name, value) => {
+      computed?.add(id(name));
+      result[id(name)] = value;
+    } }, values, joint);
     const year = n("txtPg1I1Year");
     for (const column of ["A", "B"]) {
       const active = column === "A" || joint;
@@ -349,6 +361,8 @@ export function calculateAnnual(code: string, values: Values, computed?: Set<str
       "txtPg1I32AggregateAmtPyble",
       n("txtPg1I31ATotalAmtPyble") + n("txtPg1I31BTotalAmtPyble"),
     );
+    if (result[revised1701Overpayment] && !annualFieldApplies(code, revised1701Overpayment, result))
+      result[revised1701Overpayment] = "";
     return result;
   }
   calculateJuneSupplementalIncome(worksheet);
@@ -797,6 +811,15 @@ export function validateAnnual(code: string, values: Values, sourceValues = valu
       errors[id(birthField)] = "Enter a valid birth date in MM/DD/YYYY format.";
   }
   if (code === "1701v2018") {
+    const joint = incomeIncludesSpouse(code, values);
+    if (usesRevisedActivityAttachments(values, joint)) {
+      const configured = revisedActivitySlots(values).filter(slot => {
+        const regime = revisedActivityRegime(values, slot);
+        return regime && (revisedActivityRegimeApplies(values, false, regime) ||
+          (joint && revisedActivityRegimeApplies(values, true, regime)));
+      });
+      if (configured.length < 2) errors[revisedActivityCountId] = "Add at least two exempt or special-rate activities.";
+    }
     require("rdoPg1I7ATC", "the alphanumeric tax code on Item 7");
     require("txtPg1I10BirthDate", "the birth date on Item 10");
     require("txtPg1I12Citizenship", "citizenship on Item 12");
@@ -842,7 +865,6 @@ export function validateAnnual(code: string, values: Values, sourceValues = valu
       require("rdoPg1I17SpouseIncome", "the spouse income election on Item 17");
     if (value("rdoPg1I16CivilStatus") === "Married" && value("rdoPg1I17SpouseIncome") === "Yes")
       require("rdoPg1I18FilingStatus", "filing status on Item 18");
-    const joint = incomeIncludesSpouse(code, values);
     for (const column of joint ? ["A", "B"] : ["A"]) {
       const base = revisedTaxChoice(column);
       const atcRate = revised1701RateForAtc(revisedAtc(values, column));
@@ -907,7 +929,7 @@ export function validateAnnual(code: string, values: Values, sourceValues = valu
         require(base + "Legal", "the legal basis for the special deduction");
       }
     }
-    if (n("txtPg1I32AggregateAmtPyble") < 0)
+    if (revised1701DispositionRequired(result))
       require("rdoPg1Overpayment", "the overpayment disposition");
   } else {
     const joint = incomeIncludesSpouse(code, values);

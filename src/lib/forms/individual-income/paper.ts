@@ -1,7 +1,9 @@
 import { formatCurrencyInput } from '$lib/components/ui/currency-input/currency';
 import type { IncomeForm } from '.';
 import { legacy1700IncomeSourceChecked } from './compensation';
-import { calculateIndividualIncome, hasActivityAttachment, incomeAmountDecimals, incomeCalculatedFields, incomeOutputValues, isIncomeAmount } from '.';
+import { calculateIndividualIncome, incomeAmountDecimals, incomeCalculatedFields, incomeOutputValues, incomePageApplies, isIncomeAmount } from '.';
+import { revisedActivityFieldId, revisedActivityRegime, revisedActivityRegimeApplies, revisedActivitySlots } from './annual-2018-activities';
+import { incomeIncludesSpouse } from './profile-fields';
 import { is1701MSOverpaymentSelected, overpaymentOptions1701MS } from './form-1701ms-overpayment';
 import branchCodeStyles from '$lib/printing/branch-code-boxes.css?raw';
 import sourceStyles from './templates/source-layout.css?raw';
@@ -61,8 +63,35 @@ export function renderIncomePrintChoices(root: ParentNode, form: IncomeForm): vo
 }
 
 export function visiblePaperPages(root: ParentNode, form: IncomeForm, values: Record<string, string>): HTMLElement[] {
-	const attachment = hasActivityAttachment(form, values);
-	return [...root.querySelectorAll<HTMLElement>('[data-income-page]')].filter(page => /^\d+$/.test(page.dataset.incomePage!) || attachment);
+	return [...root.querySelectorAll<HTMLElement>('[data-income-page]')].filter(page => incomePageApplies(form, page.dataset.incomePage!, values));
+}
+
+export function expandRevisedActivityPaper(root: ParentNode, form: IncomeForm, values: Record<string, string>): void {
+	if (form.code !== '1701v2018') return;
+	const templates = [...root.querySelectorAll<HTMLElement>('[data-income-page$="TYPE"]')];
+	if (!templates.length) return;
+	if (incomePageApplies(form, '1mTYPE', values)) {
+		const joint = incomeIncludesSpouse(form.code, values);
+		for (const slot of revisedActivitySlots(values)) {
+			const regime = revisedActivityRegime(values, slot);
+			if (!regime || !(revisedActivityRegimeApplies(values, false, regime) ||
+				(joint && revisedActivityRegimeApplies(values, true, regime)))) continue;
+			for (const template of templates) {
+				const page = template.cloneNode(true) as HTMLElement;
+				for (const control of paperControls(page)) {
+					control.dataset.incomeField = revisedActivityFieldId(control.dataset.incomeField!, slot);
+					const id = control.id;
+					control.id = `${id}-${slot}`;
+					if (control.name.endsWith('TYPE')) control.name = control.dataset.incomeField;
+					for (const label of page.querySelectorAll<HTMLLabelElement>('label[for]')) {
+						if (label.htmlFor === id) label.htmlFor = control.id;
+					}
+				}
+				templates[0].before(page);
+			}
+		}
+	}
+	for (const template of templates) template.remove();
 }
 
 export function renderIndividualIncomeValues(root: ParentNode, form: IncomeForm, values: Record<string, string>, errors: Record<string, string> = {}): void {

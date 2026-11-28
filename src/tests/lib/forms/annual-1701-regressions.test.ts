@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { calculateAnnual, validateAnnual } from "../../../lib/forms/individual-income/annual";
+import { annualFieldApplies, calculateAnnual, validateAnnual } from "../../../lib/forms/individual-income/annual";
 import { getReturnExportValues, validateReturnValues } from "../../../lib/forms/form-runtime";
 import { getIndividualIncomeForm } from "../../../lib/forms/individual-income";
 import { incomeEditorFields } from "../../../lib/forms/individual-income/editor-layout";
@@ -28,6 +28,39 @@ describe("Legacy individual return page counts", () => {
 });
 
 describe("Form 1701 filing transitions", () => {
+  it("clears a January refund when Item 26 stops being negative and requires a fresh choice when it returns", () => {
+    const code = "1701v2018";
+    const choice = p + "rdoPg1Overpayment";
+    const credit = p + "txtPg4IPart7_1A";
+    const paid = values({ txtPg4IPart7_1A: "500", rdoPg1Overpayment: "Refund" });
+    expect(getReturnExportValues(code, paid)[choice]).toBe("Refund");
+    const cleared = calculateAnnual(code, { ...paid, [credit]: "0" });
+    expect(cleared[choice]).toBe("");
+    expect(annualFieldApplies(code, choice, cleared)).toBe(false);
+    expect(getReturnExportValues(code, { ...cleared, [choice]: "Refund" })).not.toHaveProperty(choice);
+    const overpaidAgain = { ...cleared, [credit]: "500" };
+    expect(validateAnnual(code, overpaidAgain)[choice]).toBeTruthy();
+    expect(calculateAnnual(code, overpaidAgain)[choice]).toBe("");
+  });
+
+  it("enables a joint January disposition for a spouse's negative Item 26 even when Item 32 is positive", () => {
+    const code = "1701v2018";
+    const choice = p + "rdoPg1Overpayment";
+    const draft = values({
+      rdoPg1I16CivilStatus: "Married", rdoPg1I17SpouseIncome: "Yes", rdoPg1I18FilingStatus: "Joint",
+      txtPg4IPart7_1B: "500", txtPg1I27A: "800",
+    });
+    const joint = calculateAnnual(code, draft);
+    expect(joint[p + "txtPg1I26B"]).toBe("-500.00");
+    expect(joint[p + "txtPg1I32AggregateAmtPyble"]).toBe("300.00");
+    expect(annualFieldApplies(code, choice, joint)).toBe(true);
+    expect(validateAnnual(code, draft)[choice]).toBeUndefined();
+    expect(getReturnExportValues(code, { ...draft, [choice]: "TCC" })[choice]).toBe("TCC");
+    const separate = calculateAnnual(code, { ...draft, [p + "rdoPg1I18FilingStatus"]: "Separate", [choice]: "TCC" });
+    expect(annualFieldApplies(code, choice, separate)).toBe(false);
+    expect(separate[choice]).toBe("");
+  });
+
   it.each(["txtPg3Pt5I79LessPortion", "txtPg1Pt2I29PortionTax"])(
     "reports an excess installment from %s at the editable Item 79",
     (field) => {

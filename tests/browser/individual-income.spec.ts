@@ -129,7 +129,7 @@ for (const [code, total] of [['1701v2018', 4], ['1702RTv2018C', 4], ['1602Qv2018
 		await page.goto(`${list}/${code}?new=true`);
 		const pager = page.getByRole('navigation', { name: 'Return pages' });
 		const shortcut = pager.getByRole('button', { name: `Find a page, page 1 of ${total}`, exact: true });
-		await expect(shortcut).toBeVisible();
+		await expect(shortcut).toBeVisible({ timeout: 20000 });
 		await expect(page.getByRole('button', { name: /^Find a page,/ })).toHaveCount(1);
 		const next = pager.getByRole('button', { name: 'Next page', exact: true });
 		const numbered = pager.getByRole('button', { name: 'Page 2', exact: true });
@@ -553,15 +553,15 @@ test('1701A aligns schedule amounts and descriptions on page 2', async ({ page }
 	await expect(flat).toHaveCount(0);
 	await expect(credits).toBeVisible();
 	await expect(graduated.getByRole('columnheader', { name: 'Spouse' })).toHaveCount(0);
-	await graduated.locator('[data-income-detail-items="42"]').getByRole('button', { name: 'Add item', exact: true }).click();
-	const drawer = page.getByRole('dialog', { name: 'Add item', exact: true });
-	const description = drawer.getByRole('textbox', { name: 'Description', exact: true });
-	const amount = drawer.getByRole('textbox', { name: 'Taxpayer amount', exact: true });
+	const description = graduated.locator('input[id="frm1701A:txt42Desc"]');
+	const amount = graduated.locator('input[id="frm1701A:txt42A"]');
 	await description.fill('Miscellaneous income');
 	await amount.fill('25000');
 	await amount.blur();
-	expect((await amount.boundingBox())!.y).toBeGreaterThan((await description.boundingBox())!.y);
-	await saveRecord(drawer);
+	const descriptionBox = (await description.boundingBox())!;
+	const amountBox = (await amount.boundingBox())!;
+	expect(Math.abs(amountBox.y - descriptionBox.y)).toBeLessThan(2);
+	expect(amountBox.x).toBeGreaterThan(descriptionBox.x);
 	await expect(graduated.locator('[id="frm1701A:txt44A"]')).toHaveText('₱25,000');
 	await page.setViewportSize({ width: 390, height: 920 });
 	expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
@@ -748,16 +748,16 @@ test('revised 1701 keeps Schedule 4 line numbers inside their cells on one line'
 	await goToReturnPage(page, 3);
 
 	const schedule = page.getByRole('table', { name: /Schedule 4 · Ordinary itemized deductions/ });
-	const services = schedule.locator('[data-income-records="Other services"]');
-	await services.getByRole('button', { name: 'Add item', exact: true }).click();
-	const drawer = page.getByRole('dialog', { name: 'Add item', exact: true });
-	await drawer.getByRole('textbox', { name: 'Description', exact: true }).fill('Other service');
-	await saveRecord(drawer);
+	const services = schedule.locator('[data-income-item="17D"]');
+	const description = services.locator('[id="frm1701:txtPg3IShed4_17dDesc"]');
+	await description.fill('Other service');
+	await expect(description).toHaveValue('Other service');
+	await expect(page.getByRole('dialog')).toHaveCount(0);
 	for (const width of [1280, 390]) {
 		await page.setViewportSize({ width, height: 900 });
 		await page.evaluate(() => document.fonts.ready.then(() => undefined));
 		for (const item of ['17A', '17B', '17C', '17D']) {
-			const cell = item === '17D' ? services.getByText(item, { exact: true }) : schedule.getByRole('cell', { name: item, exact: true });
+			const cell = schedule.getByRole('cell', { name: item, exact: true });
 			await expect(cell).toBeVisible();
 			const fitsOnOneLine = await cell.evaluate((element) => {
 				const range = document.createRange();

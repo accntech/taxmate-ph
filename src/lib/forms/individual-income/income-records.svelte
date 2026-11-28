@@ -7,10 +7,10 @@
 	import { incomeChoiceLabel, type IncomeEditorField } from './editor-layout';
 	import { revised1700FieldApplies } from './compensation';
 
-	type Record = { key: string; item?: string; fields: IncomeEditorField[]; occupied?: boolean };
+	type Record = { key: string; item?: string; fields: IncomeEditorField[] };
 	type Values = { [id: string]: string };
 	let { title, singular = 'item', records, form, values, calculated, computed, errors = {}, onvaluechange,
-		singleton = false, includesSpouse = false, maxItems, readonlyFields = new Set<string>(), ondelete, onediting }: {
+		includesSpouse = false }: {
 		title: string;
 		singular?: string;
 		records: Record[];
@@ -20,33 +20,30 @@
 		computed: Set<string>;
 		errors?: Values;
 		onvaluechange: (patch: Values) => void;
-		singleton?: boolean;
 		includesSpouse?: boolean;
-		maxItems?: number;
-		readonlyFields?: Set<string>;
-		ondelete?: (record: Record) => Values;
-		onediting?: (ids: string[]) => void;
 	} = $props();
 
 	let editing = $state.raw<Record>();
 	let draft = $state<Values>({});
 	let draftErrors = $state<Values>({});
+	let removed = $state.raw<{ key: string; source: Values; previous: Values; patch: Values }>();
+	const canUndo = $derived(removed?.source === values && Object.entries(removed.patch).every(([id, value]) => values[id] === value));
 	let adding = $state(false);
 	let trigger: HTMLElement | undefined;
 	const uid = $props.id();
 	const decimals = $derived(incomeAmountDecimals(form));
 	const currency = $derived(new Intl.NumberFormat('en-PH', { minimumFractionDigits: decimals, maximumFractionDigits: decimals }));
 	const entered = $derived(records.filter(hasEntry));
-	const limit = $derived(maxItems ?? records.length);
+	const limit = $derived(records.length);
 	const available = $derived(entered.length < limit ? records.find(record => !entered.includes(record)) : undefined);
 	const source = $derived(editing ? { ...calculated, ...draft } : calculated);
 
 	function editable(record: Record) {
-		return record.fields.filter(field => !computed.has(field.id) && !readonlyFields.has(field.id));
+		return record.fields.filter(field => !computed.has(field.id));
 	}
 
 	function hasEntry(record: Record) {
-		return record.occupied || editable(record).some(field => {
+		return editable(record).some(field => {
 			const value = values[field.id]?.trim();
 			return !!errors[field.id] || !/Income earner/.test(field.label) && !!value && value !== form.defaults[field.id] &&
 				(field.kind !== 'money' || Number(value.replaceAll(',', '')) !== 0);
@@ -104,7 +101,6 @@
 			if (field.kind === 'radio' && /Income earner/.test(field.label) && options.length === 1 && !draft[field.id]) draft[field.id] = options[0].value;
 		}
 		editing = record;
-		onediting?.(editable(record).map(field => field.id));
 		await tick();
 		const dialog = document.getElementById(`${uid}-fields`)?.closest('dialog');
 		await Promise.all(dialog?.getAnimations().map(animation => animation.finished.catch(() => {})) ?? []);
@@ -116,7 +112,6 @@
 	async function close() {
 		const control = trigger;
 		editing = undefined;
-		onediting?.([]);
 		await tick();
 		if (control?.isConnected && !(control instanceof HTMLButtonElement && control.disabled)) control.focus();
 		else document.getElementById(`${uid}-heading`)?.focus();
@@ -134,15 +129,30 @@
 			document.getElementById(Object.keys(draftErrors)[0])?.focus();
 			return;
 		}
+		removed = undefined;
 		onvaluechange(draft);
 		await close();
 	}
 
 	async function remove() {
 		if (!editing) return;
-		onvaluechange(ondelete ? ondelete(editing) : Object.fromEntries(editable(editing).map(field => [field.id, form.defaults[field.id] ?? ''])));
+		const patch = Object.fromEntries(editable(editing).map(field => [field.id, form.defaults[field.id] ?? '']));
+		removed = {
+			key: editing.key, source: values, patch,
+			previous: Object.fromEntries(Object.keys(patch).map(id => [id, values[id] ?? '']))
+		};
+		onvaluechange(patch);
 		trigger = document.getElementById(`${uid}-add`) ?? undefined;
 		await close();
+	}
+
+	async function undoRemoval() {
+		if (!removed || !canUndo) return;
+		const { previous, key } = removed;
+		removed = undefined;
+		onvaluechange(previous);
+		await tick();
+		document.getElementById(`${uid}-edit-${key}`)?.focus();
 	}
 </script>
 
@@ -157,7 +167,7 @@
 			{#each entered as record (record.key)}
 				<li>
 					<span class="slot">{record.item}</span>
-					<button type="button" class="record-link" aria-haspopup="dialog" data-record-fields={record.fields.map(field => field.id).join(' ')} onclick={(event) => void open(record, event.currentTarget)}>{label(record)}</button>
+					<button id={`${uid}-edit-${record.key}`} type="button" class="record-link" aria-haspopup="dialog" data-record-fields={record.fields.map(field => field.id).join(' ')} onclick={(event) => void open(record, event.currentTarget)}>{label(record)}</button>
 					<dl>
 						{#each record.fields.filter(field => field.kind === 'money' && visible(field, record)) as field (field.id)}
 							<div><dt>{field.column ?? (field.person === 'spouse' ? 'Spouse' : field.person === 'taxpayer' ? 'Taxpayer' : field.label.replace(/^\d+[A-Z]?\s+/, ''))}</dt><dd>{currency.format(Number((calculated[field.id] ?? '0').replaceAll(',', '')))}</dd></div>
@@ -168,6 +178,9 @@
 		</ul>
 	{:else}
 		<p class="schedule-empty-message">No items added</p>
+	{/if}
+	{#if canUndo}
+		<div class="eq-undo"><span role="status">Line item removed.</span><Button variant="ghost" size="sm" onclick={undoRemoval}>Undo</Button></div>
 	{/if}
 </div>
 
@@ -184,7 +197,7 @@
 				{@const value = source[field.id] ?? ''}
 				{@const error = draftErrors[field.id] ?? ''}
 				{@const options = choices(field)}
-				{#if computed.has(field.id) || readonlyFields.has(field.id)}
+				{#if computed.has(field.id)}
 					<div class="computed"><span>{label}</span><output class:font-mono={field.kind !== 'text' && field.kind !== 'select'}>{field.kind === 'money' ? currency.format(Number(value.replaceAll(',', ''))) : value}</output></div>
 				{:else if parts.length > 1}
 					<TinInput id={field.id} label="Employer TIN and branch code" preserveSegments value={parts.map(id => source[id] ?? '').join('-')}
@@ -218,7 +231,7 @@
 	{/if}
 	{#snippet footer()}
 		<div class="record-actions">
-			{#if !adding}<Button variant="danger" data-agent-confirm="delete" onclick={() => void remove()}>{singleton ? 'Clear item' : 'Delete item'}</Button>{/if}
+			{#if !adding}<Button variant="danger" data-agent-confirm="delete" onclick={() => void remove()}>Delete item</Button>{/if}
 			<Button variant="secondary" onclick={() => void close()}>Cancel</Button>
 			<Button onclick={() => void save()}>{adding ? 'Add item' : 'Update'}</Button>
 		</div>

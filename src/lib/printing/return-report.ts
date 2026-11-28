@@ -3,7 +3,7 @@ import type { FormDefinition } from '$lib/forms';
 import { getCorporateIncomeForm } from '$lib/forms/corporate-income';
 import { corporatePaperStyles, renderCorporatePaper } from '$lib/forms/corporate-income/paper';
 import { getIndividualIncomeForm } from '$lib/forms/individual-income';
-import { fitLegacyIncomePrintValues, individualIncomePaperStyles, legacy1700PrintStyles, loadIndividualIncomePaper, renderIndividualIncomeValues, renderIncomePrintChoices, visiblePaperPages } from '$lib/forms/individual-income/paper';
+import { expandRevisedActivityPaper, fitLegacyIncomePrintValues, individualIncomePaperStyles, legacy1700PrintStyles, loadIndividualIncomePaper, renderIndividualIncomeValues, renderIncomePrintChoices, visiblePaperPages } from '$lib/forms/individual-income/paper';
 import { renderLegacy1700Print } from '$lib/forms/individual-income/legacy-1700-print';
 import { renderLegacy1701Print } from '$lib/forms/individual-income/legacy-1701-print';
 import { calculateReturn } from '$lib/forms/form-runtime';
@@ -430,6 +430,7 @@ export async function buildReturnReport(definition: FormDefinition, values: Reco
 				surface.append(print.content);
 			} else {
 				surface.append(template.content);
+				expandRevisedActivityPaper(surface, income, calculated);
 				renderIndividualIncomeValues(surface, income, calculated);
 				if (legacy1701) {
 					const print = document.createElement('template');

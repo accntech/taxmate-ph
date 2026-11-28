@@ -167,6 +167,13 @@ for (const { code, variant } of previewCases) {
 				if (variant === 'activity') {
 					const trigger = code === '1701' ? 'frm1701:rdoPg1Pt1I22IncomeExempt' : 'frm1701:rdoPg1I19IncomeExempt';
 					values[trigger] = 'Yes';
+					if (code === '1701v2018') {
+						values['frm1701:rdoPg1m'] = '2';
+						values['frm1701:Pg3mTaxRegimeTYPE'] = 'Exempt';
+						values['frm1701:Pg3mTaxRegimeACT2'] = 'Exempt';
+						values['frm1701:txtPg3mSchedB_1ATYPE'] = '70000';
+						values['frm1701:txtPg3mSchedB_1AACT2'] = '55000';
+					}
 				}
 			} else if (withholdingForm) {
 				const definition = withholdingForm;
@@ -341,6 +348,10 @@ for (const { code, variant } of previewCases) {
 			await expect(print.locator(`[data-legacy-print-id="${pageCountId}"]`)).toHaveText(String(pagination));
 		}
 		const text = execFileSync('pdftotext', ['-layout', '-', '-'], { input: pdf, encoding: 'utf8' });
+		if (code === '1701v2018' && variant === 'activity') {
+			expect(pagination).toBe(10);
+			for (const amount of ['70,000', '55,000', '125,000']) expect(text).toContain(amount);
+		}
 		expect(text.replace(/\s+/g, ' ')).toContain(code === '1701' || code === '1700' ? 'SANTOS' : profile.taxpayerName);
 		expect(text.match(/FICTIONAL SAMPLE - FOR REVIEW ONLY/g)).toHaveLength(pagination);
 		if (pdfPath && directory) execFileSync('pdftoppm', ['-r', '95', '-png', pdfPath, resolve(directory, 'pdf-page')]);

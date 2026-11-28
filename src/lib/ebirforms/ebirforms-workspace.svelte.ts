@@ -1,5 +1,8 @@
 import { createCorporateIncomeValues, getCorporateIncomeForm } from '$lib/forms/corporate-income';
 import { createIndividualIncomeValues, getIndividualIncomeForm } from '$lib/forms/individual-income';
+import { importRevisedActivityFields, isRevisedActivityFieldId, usesRevisedActivityAttachments } from '$lib/forms/individual-income/annual-2018-activities';
+import { isRevisedActivityRollupField } from '$lib/forms/individual-income/annual-activity-calculations';
+import { incomeIncludesSpouse } from '$lib/forms/individual-income/profile-fields';
 import { deleteStoredDrafts, loadCreatedReturnsData, saveCreatedReturnsData, type CreatedReturn, type CreatedReturnStatus } from './created-returns';
 import { getFormDefinition, listForms } from '$lib/forms';
 import { calculateReturn, validateReturnValues, getReturnPeriod, getReturnTin, getManagedTaxpayerValues, getReturnEmail, getReturnEmailFieldId, getReturnExportValues } from '$lib/forms/form-runtime';
@@ -310,6 +313,14 @@ class EbirformsWorkspace {
 			for (const item of ['26A', '27A', '26B', '27B']) {
 				const id = `frm1701:txtPg3IShed3_${item}`;
 				if (id in this.formValues) calculated[id] = this.formValues[id];
+			}
+			if (usesRevisedActivityAttachments(this.formValues, incomeIncludesSpouse(formCode, this.formValues))) {
+				// Preserve separately entered Part X values when Part XI supplies the displayed rollups.
+				for (const id of Object.keys(calculated)) {
+					if (!isRevisedActivityRollupField(id)) continue;
+					if (id in this.formValues) calculated[id] = this.formValues[id];
+					else delete calculated[id];
+				}
 			}
 		}
 		return calculated;
@@ -623,7 +634,13 @@ class EbirformsWorkspace {
 	}
 
 	importLegacyXml() {
-		const parsed = parseLegacyXml(this.importBuffer);
+		let parsed = parseLegacyXml(this.importBuffer);
+		if (this.selectedForm?.code === '1701v2018') {
+			parsed = importRevisedActivityFields(parsed);
+			if (Object.keys(parsed).some(isRevisedActivityFieldId)) {
+				this.formValues = Object.fromEntries(Object.entries(this.formValues).filter(([id]) => !isRevisedActivityFieldId(id)));
+			}
+		}
 		this.formValues = { ...this.formValues, ...parsed };
 		this.finalFlag = parsed.txtFinalFlag ?? this.finalFlag;
 		this.statusMessage = 'Imported legacy pseudo-XML into the active form.';

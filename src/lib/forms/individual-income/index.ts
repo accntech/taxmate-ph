@@ -4,6 +4,7 @@ import { isPackagedRdoCode } from '../../profiles/rdo-codes';
 import type { FormDefinition, FormField } from '..';
 import { philippineCalendarDate } from '../filing-calendar';
 import { annualAmountField, annualFieldApplies, calculateAnnual, legacy1701Filing, validateAnnual } from './annual';
+import { isRevisedActivityFieldId, revisedActivityFieldId, revisedActivityRegime, revisedActivityRegimeApplies, revisedActivityRegimeId, revisedActivitySlots, revisedActivityTemplateId, usesRevisedActivityAttachments } from './annual-2018-activities';
 import { compensationAmountField, calculateCompensation, validateCompensation, isLegacy1700ContactValid, legacy1700DependentClaim, legacy1700FirstYear, legacy1700LastYear, revised1700EmployerAssignment, revised1700EmployerHasEntry, revised1700EmployerRows, revised1700FieldApplies } from './compensation';
 import { quarterlyAmountField, calculateQuarterly, quarterlyIncomeFieldApplies, validateQuarterly } from './quarterly';
 import { incomeEditorFields } from './editor-layout';
@@ -208,7 +209,7 @@ function incomeAmountFields(form: IncomeForm): ReadonlySet<string> {
 }
 
 export function isIncomeAmount(form: IncomeForm, id: string): boolean {
-	return incomeAmountFields(form).has(id) ||
+	return incomeAmountFields(form).has(form.code === '1701v2018' ? revisedActivityTemplateId(id) : id) ||
 		(form.code === '1701A' && /^frm1701A:txtmodalPartIV[AB]_\d+C[23]$/.test(id));
 }
 
@@ -233,8 +234,7 @@ export function calculateIndividualIncome(form: IncomeForm, values: Values): Val
 	if (!form.pagesFiledField) return calculated;
 
 	const sourcePages = new Set(importedFields[code].map(field => field.page));
-	const attachment = hasActivityAttachment(form, calculated);
-	const pages = [...sourcePages].filter(page => /^\d+$/.test(page) || attachment);
+	const pages = [...sourcePages].filter(page => incomePageApplies(form, page, calculated));
 	return { ...calculated, [form.pagesFiledField]: String(pages.length) };
 }
 
@@ -245,6 +245,12 @@ export function incomeCalculatedFields(form: IncomeForm, values: Values): Set<st
 		.map(field => [field.id, values[field.id] ?? '']));
 	if (form.code === '1701' || form.code === '1701v2018') {
 		const fields = new Set<string>();
+		if (form.code === '1701v2018') {
+			for (const slot of revisedActivitySlots(values)) {
+				const key = revisedActivityFieldId(revisedActivityRegimeId, slot);
+				if (key in values) selectors[key] = values[key];
+			}
+		}
 		calculateAnnual(form.code, selectors, fields);
 		if (form.pagesFiledField) fields.add(form.pagesFiledField);
 		return fields;
@@ -256,6 +262,14 @@ export function incomeCalculatedFields(form: IncomeForm, values: Values): Set<st
 		fields.add('frm1700:txtPg2Pt4I8C2');
 	}
 	return fields;
+}
+
+export function incomePageApplies(form: IncomeForm, page: string, values: Values): boolean {
+	if (/^\d+$/.test(page)) return true;
+	if (form.code === '1701v2018' && page.endsWith('TYPE')) {
+		return usesRevisedActivityAttachments(values, incomeIncludesSpouse(form.code, values));
+	}
+	return hasActivityAttachment(form, values);
 }
 
 export function hasActivityAttachment(form: IncomeForm, values: Values): boolean {
@@ -341,6 +355,27 @@ export function incomeOutputValues(form: IncomeForm, values: Values): Values {
 		const applies = form.code === '1701' || form.code === '1701v2018' ? annualFieldApplies : shortAnnualFieldApplies;
 		for (const id of Object.keys(values)) if (!applies(form.code, id, values)) omitted.add(id);
 	}
+	if (form.code === '1701v2018') {
+		const joint = incomeIncludesSpouse(form.code, values);
+		const activeKeys = new Set<string>();
+		const fields = incomeEditorFields(form).filter(field => isRevisedActivityFieldId(field.id));
+		if (usesRevisedActivityAttachments(values, joint)) {
+			for (const slot of revisedActivitySlots(values)) {
+				const regime = revisedActivityRegime(values, slot);
+				if (!regime) continue;
+				const taxpayer = revisedActivityRegimeApplies(values, false, regime);
+				const spouse = joint && revisedActivityRegimeApplies(values, true, regime);
+				if (!taxpayer && !spouse) continue;
+				for (const field of fields) {
+					if (field.person === 'taxpayer' && !taxpayer || field.person === 'spouse' && !spouse) continue;
+					activeKeys.add(revisedActivityFieldId(field.id, slot));
+				}
+			}
+		}
+		for (const id of Object.keys(values)) {
+			if (isRevisedActivityFieldId(id) && !activeKeys.has(id)) omitted.add(id);
+		}
+	}
 	return Object.fromEntries(Object.entries(output).filter(([id]) => !omitted.has(id)));
 }
 
@@ -375,6 +410,7 @@ export function validateIndividualIncome(form: IncomeForm, values: Values): Valu
 	if (emailError) errors[email] = emailError;
 	for (const field of form.fields) {
 		if (field.id === form.pagesFiledField || paymentFields.has(field.id)) continue;
+		if (form.code === '1701v2018' && isRevisedActivityFieldId(field.id)) continue;
 		if (form.quarter && !quarterlyIncomeFieldApplies(form.code, field.id, values)) continue;
 		if (form.code === '1700v2018' && !revised1700FieldApplies(field.id, values)) continue;
 		const value = values[field.id]?.trim();
@@ -384,6 +420,19 @@ export function validateIndividualIncome(form: IncomeForm, values: Values): Valu
 		if (/Spouse.*RDO|RDOCodeb$|txt7RDOCode$/i.test(field.id)) {
 			if (isPackagedRdoCode(value)) delete errors[field.id];
 			else if (value !== '000') errors[field.id] = 'Enter a valid spouse RDO code.';
+		}
+	}
+	if (form.code === '1701v2018' && incomePageApplies(form, '1mTYPE', values)) {
+		const joint = incomeIncludesSpouse(form.code, values);
+		const fields = incomeEditorFields(form).filter(field => isRevisedActivityFieldId(field.id) && (joint || field.person !== 'spouse'));
+		for (const slot of revisedActivitySlots(values)) {
+			for (const field of fields) {
+				const id = revisedActivityFieldId(field.id, slot);
+				const value = values[id]?.trim();
+				if (value && (field.kind === 'money' || field.kind === 'number') && !/^-?(?:\d+|\d{1,3}(?:,\d{3})+)(?:\.\d{1,2})?%?$/.test(value)) {
+					errors[id] ??= 'Enter a number with up to two decimal places.';
+				}
+			}
 		}
 	}
 	return errors;

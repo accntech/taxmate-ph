@@ -1,4 +1,5 @@
 import legacyTemplates from './templates/fields.json';
+import { revisedActivityFieldId, revisedActivityRegime, revisedActivityRegimeApplies, revisedActivitySlots, usesRevisedActivityAttachments } from './annual-2018-activities';
 
 export type Worksheet = {
 	read: (name: string) => number;
@@ -9,24 +10,31 @@ export type Worksheet = {
 
 const items = (start: number, end: number) => Array.from({ length: end - start + 1 }, (_, index) => start + index);
 const ordinaryItems = [...items(1, 16), '17a', '17b', '17c', '17d'];
+const januaryRegimes = ['Exempt', 'Special Rate'] as const;
+const januaryFilers = [
+	{ column: 'A', spouse: false, reliefSection: '1', firstReliefItem: 1, incomeColumns: ['A', 'B'], ordinaryColumns: ['A', 'B'] },
+	{ column: 'B', spouse: true, reliefSection: '2', firstReliefItem: 6, incomeColumns: ['E', 'F'], ordinaryColumns: ['C', 'D'] }
+] as const;
+const januaryIncomeRollups = [[1, 1], [2, 2], [4, 4], [6, 6], [7, 7], [12, 10], [13, 11], [17, 15]] as const;
+const januaryOtherIncome = [[12, 10], [13, 11]] as const;
+const scheduleB = (item: number, column: string) => `txtPg1mI${item}${column}SchdB`;
+const scheduleC = (item: number | string, column: string) => `txtPg2mI${item}${column}SchdC`;
+const scheduleD = (item: number, column: string) => `txtPg2mI${item}${column}SchdD`;
+const partXiIncome = (item: number, column: string) => `txtPg3mSchedB_${item}${column}TYPE`;
+const partXiExpense = (item: number | string, column: string) => `txtPg${Number(item) <= 3 ? 3 : 4}mSchedC_${item}${column}TYPE`;
+const partXiRelief = (section: string, item: number, column: string) => `txtPg4mSchedD${section}_${item}${column}TYPE`;
+const localActivityField = (template: string, slot: string) =>
+	revisedActivityFieldId(`frm1701:${template}`, slot).slice('frm1701:'.length);
 
-export function calculateRevisedActivities(sheet: Worksheet, activityRegime: string) {
+function calculateRevisedActivity(sheet: Worksheet, slot: string, activityRegime?: 'Exempt' | 'Special Rate') {
 	const { read, copy, total, derive } = sheet;
-	for (const column of ['A', 'B', 'C', 'D']) {
-		const ordinary = (item: number | string) => `txtPg2mI${item}${column}SchdC`;
-		total(ordinary(18), ordinaryItems.map(ordinary));
-	}
-	for (const column of ['A', 'B']) {
-		const special = (item: number) => `txtPg2mI${item}${column}SchdD`;
-		total(special(5), items(1, 4).map(special));
-
-		const income = (item: number) => `txtPg3mSchedB_${item}${column}TYPE`;
-		const expense = (item: number | string) => `txtPg${Number(item) <= 3 ? 3 : 4}mSchedC_${item}${column}TYPE`;
-		const taxpayer = column === 'A';
-		const relief = (item: number) => `txtPg4mSchedD${taxpayer ? 1 : 2}_${item}${column}TYPE`;
-		const reliefTotal = relief(taxpayer ? 5 : 10);
+	for (const { column, reliefSection, firstReliefItem } of januaryFilers) {
+		const income = (item: number) => localActivityField(partXiIncome(item, column), slot);
+		const expense = (item: number | string) => localActivityField(partXiExpense(item, column), slot);
+		const relief = (item: number) => localActivityField(partXiRelief(reliefSection, item, column), slot);
+		const reliefTotal = relief(firstReliefItem + 4);
 		total(expense(18), ordinaryItems.map(expense));
-		total(reliefTotal, items(taxpayer ? 1 : 6, taxpayer ? 4 : 9).map(relief));
+		total(reliefTotal, items(firstReliefItem, firstReliefItem + 3).map(relief));
 		copy(income(6), expense(18));
 		copy(income(7), reliefTotal);
 
@@ -38,10 +46,76 @@ export function calculateRevisedActivities(sheet: Worksheet, activityRegime: str
 		difference(9, 5, 8);
 		total(income(12), [income(10), income(11)]);
 		total(income(13), [income(9), income(12)]);
-		const base = income(activityRegime === 'Special Rate' ? 5 : 13);
+		const base = income(5);
 		const rate = income(14);
-		derive(income(15), [base, rate], () => (activityRegime ? read(base) * read(rate) / 100 : 0));
+		derive(income(15), [base, income(13), rate], () => activityRegime === 'Special Rate' ? read(base) * read(rate) / 100 : 0);
 	}
+}
+
+const revisedRollups = new Set([
+	...januaryFilers.flatMap(({ column, incomeColumns, ordinaryColumns }) => [
+		...incomeColumns.flatMap(incomeColumn => januaryIncomeRollups.map(([item]) => scheduleB(item, incomeColumn))),
+		...ordinaryColumns.flatMap(ordinaryColumn => [...ordinaryItems, 18].map(item => scheduleC(item, ordinaryColumn))),
+		...items(1, 5).map(item => scheduleD(item, column))
+	]),
+	...januaryOtherIncome.map(([item]) => scheduleB(item, 'Desc')),
+	scheduleC('17d', 'Desc'),
+	...items(1, 4).flatMap(item => [scheduleD(item, 'Desc'), scheduleD(item, 'LB')])
+]);
+
+export function isRevisedActivityRollupField(id: string): boolean {
+	return id.startsWith('frm1701:') && revisedRollups.has(id.slice('frm1701:'.length));
+}
+
+export function calculateRevisedActivities(
+	sheet: Worksheet & { set: (name: string, amount: number) => number; setText: (name: string, value: string) => void },
+	values: Record<string, string>,
+	joint: boolean
+) {
+	const { read, total, set, setText } = sheet;
+	const slots = revisedActivitySlots(values);
+	for (const slot of slots) calculateRevisedActivity(sheet, slot, revisedActivityRegime(values, slot));
+	if (usesRevisedActivityAttachments(values, joint)) {
+		const textSources = new Map<string, string[]>();
+		const collectText = (target: string, template: string, sources: string[]) => {
+			const fields = textSources.get(target) ?? [];
+			fields.push(...sources.map(slot => localActivityField(template, slot)));
+			textSources.set(target, fields);
+		};
+		const rollup = (target: string, template: string, sources: string[]) => {
+			set(target, sources.reduce((sum, slot) => sum + read(localActivityField(template, slot)), 0));
+		};
+		for (const { column, spouse, reliefSection, firstReliefItem, incomeColumns, ordinaryColumns } of januaryFilers) {
+			const filerSlots = slots.filter(slot => {
+				const regime = revisedActivityRegime(values, slot);
+				return (!spouse || joint) && regime && revisedActivityRegimeApplies(values, spouse, regime);
+			});
+			for (const [index, regime] of januaryRegimes.entries()) {
+				const regimeSlots = filerSlots.filter(slot => revisedActivityRegime(values, slot) === regime);
+				for (const [target, source] of januaryIncomeRollups)
+					rollup(scheduleB(target, incomeColumns[index]), partXiIncome(source, column), regimeSlots);
+				for (const item of ordinaryItems)
+					rollup(scheduleC(item, ordinaryColumns[index]), partXiExpense(item, column), regimeSlots);
+			}
+			for (const item of items(1, 4)) {
+				const activityItem = firstReliefItem + item - 1;
+				rollup(scheduleD(item, column), partXiRelief(reliefSection, activityItem, column), filerSlots);
+				collectText(scheduleD(item, 'Desc'), partXiRelief(reliefSection, activityItem, ''), filerSlots);
+				// The source uses the distinct LBB identifier for spouse Item 8.
+				const basisColumn = spouse && activityItem === 8 ? 'LBB' : `${column}LB`;
+				collectText(scheduleD(item, 'LB'), partXiRelief(reliefSection, activityItem, basisColumn), filerSlots);
+			}
+			for (const [target, source] of januaryOtherIncome)
+				collectText(scheduleB(target, 'Desc'), partXiIncome(source, ''), filerSlots);
+			collectText(scheduleC('17d', 'Desc'), partXiExpense('17d', ''), filerSlots);
+		}
+		for (const [target, sources] of textSources)
+			setText(target, sources.some(source => values[`frm1701:${source}`]?.trim()) ? 'OTHERS' : '');
+	}
+	for (const column of ['A', 'B', 'C', 'D'])
+		total(scheduleC(18, column), ordinaryItems.map(item => scheduleC(item, column)));
+	for (const column of ['A', 'B'])
+		total(scheduleD(5, column), items(1, 4).map(item => scheduleD(item, column)));
 }
 
 const juneOrdinary = legacyTemplates['1701'].map(field => field.id.slice('frm1701:'.length))

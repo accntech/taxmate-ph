@@ -80,18 +80,18 @@ describe('marked and carried individual income amounts', () => {
 
 	it('derives January 2018 attachment deductions and special-rate tax without overwriting the rate', () => {
 		const result = exportAmounts('1701v2018', {
-			rdoPg1I20IncomeSpecial: 'Yes', Pg3mTaxRegimeTYPE: 'Special Rate',
+			rdoPg1I20IncomeSpecial: 'Yes', rdoPg1m: '2', Pg3mTaxRegimeTYPE: 'Special Rate',
 			txtPg3mSchedB_1ATYPE: '1000', txtPg3mSchedB_2ATYPE: '100',
 			txtPg3mSchedB_4ATYPE: '50', txtPg3mSchedB_14ATYPE: '5%',
 			txtPg3mSchedC_1ATYPE: '75', txtPg4mSchedD1_1ATYPE: '25'
 		});
 		expect(result).toMatchObject({
-			'frm1701:txtPg4mSchedC_18ATYPE': '75.00',
-			'frm1701:txtPg4mSchedD1_5ATYPE': '25.00',
-			'frm1701:txtPg3mSchedB_8ATYPE': '100.00',
-			'frm1701:txtPg3mSchedB_13ATYPE': '750.00',
-			'frm1701:txtPg3mSchedB_14ATYPE': '5%',
-			'frm1701:txtPg3mSchedB_15ATYPE': '43.00'
+			'frm1701:txtPg4mSchedC_18ASP1': '75.00',
+			'frm1701:txtPg4mSchedD1_5ASP1': '25.00',
+			'frm1701:txtPg3mSchedB_8ASP1': '100.00',
+			'frm1701:txtPg3mSchedB_13ASP1': '750.00',
+			'frm1701:txtPg3mSchedB_14ASP1': '5%',
+			'frm1701:txtPg3mSchedB_15ASP1': '43.00'
 		});
 	});
 

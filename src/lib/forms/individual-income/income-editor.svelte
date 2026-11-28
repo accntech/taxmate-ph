@@ -7,11 +7,13 @@
 	import MonthYearInput from '$lib/components/ui/month-year-input/month-year-input.svelte';
 	import { Sheet } from '$lib/components/ui/sheet';
 	import { glyphs } from '$lib/components/ui/icons';
-	import { annualFilingFields, calculateIndividualIncome, hasActivityAttachment, incomeAmountDecimals, incomeCalculatedFields, incomeFilingYear, incomeFilingYearBounds, incomePaymentFieldIds, incomeRegisteredNameContinuation, individualIncomePeriod, isShortFilingPeriod, type IncomeForm } from '.';
+	import { annualFilingFields, calculateIndividualIncome, incomeAmountDecimals, incomeCalculatedFields, incomeFilingYear, incomeFilingYearBounds, incomePageApplies, incomePaymentFieldIds, incomeRegisteredNameContinuation, individualIncomePeriod, isShortFilingPeriod, type IncomeForm } from '.';
+	import { isRevisedActivityFieldId, revisedActivityCountId, revisedActivityFieldId, revisedActivityRegimeId, revisedActivitySlots, revisedActivityTemplateId } from './annual-2018-activities';
+	import { isRevisedActivityRollupField } from './annual-activity-calculations';
 	import { annual1701AScheduleLabels, annual1701ASchedules, incomeChoiceLabel, incomeEditorFields, incomeEditorPageTitle, incomeEditorRowGroups, incomeEditorRows, legacyQuarterlyComputation, type IncomeEditorField } from './editor-layout';
 	import { legacy1700DependentClaim, legacy1700FirstYear, legacy1700IncomeSourceChecked, legacy1700LastYear, revised1700FieldApplies } from './compensation';
 	import { quarterlyFilerReady, quarterlyIncomeFieldApplies, quarterlyRateForAtc, quarterlySelectedRate, quarterlyTaxReliefPatch } from './quarterly';
-	import { annualFieldApplies, legacy1701Filing, legacy1701IsOverpaid, revised1701RateForAtc } from './annual';
+	import { annualFieldApplies, legacy1701Filing, revised1701DispositionRequired, revised1701Overpayment, revised1701RateForAtc } from './annual';
 	import { allowsSignedScheduleAmount, is1701CurrentLoss, validate1701ScheduleRow } from './annual-1701-schedule-validation';
 	import { annual1701ReferenceOwner, annual1701References } from './annual-1701-references';
 	import { january1700References } from './annual-1700-january-references';
@@ -64,6 +66,8 @@
 	let heading: HTMLHeadingElement;
 	let editor: HTMLDivElement;
 	let attachments: { reveal: (field: IncomeEditorField) => void } | undefined = $state();
+	let currentActivity = $state('TYPE');
+	let removedActivity = $state<{ slot: string; regime: string }>();
 	const fields = $derived(incomeEditorFields(form));
 	const fieldsById = $derived(new Map(fields.map(field => [field.id, field])));
 	const calculated = $derived(calculateIndividualIncome(form, values));
@@ -86,10 +90,13 @@
 	]));
 	const includesSpouse = $derived(incomeIncludesSpouse(form.code, values));
 	const paymentFields = $derived(incomePaymentFieldIds(form.code));
-	const pages = $derived([...new Set(fields.map(field => field.page))].filter(page => /^\d+$/.test(page) || hasActivityAttachment(form, values)));
+	const pages = $derived([...new Set(fields.map(field => field.page))].filter(page => incomePageApplies(form, page, values)));
 	const returnPages = $derived(pages.map(id => ({ id, title: incomeEditorPageTitle(form, id) })));
 	const selectedPage = $derived(pages.includes(currentPage) ? currentPage : pages[0]);
 	const guidedAttachment = $derived(form.code === '1701v2018' && !!selectedPage?.includes('m'));
+	const activitySlots = $derived(form.code === '1701v2018' ? revisedActivitySlots(values) : []);
+	const activeActivity = $derived(activitySlots.includes(currentActivity) ? currentActivity : activitySlots[0] ?? 'TYPE');
+	const activeActivityRegime = $derived(values[revisedActivityFieldId(revisedActivityRegimeId, activeActivity)] ?? '');
 	const legacy1700 = $derived(form.code === '1700');
 	const compensationReturn = $derived(legacy1700 || form.code === '1700v2018');
 	const annualFiling = $derived(annualFilingFields[form.code]);
@@ -308,9 +315,10 @@
 				return values[id]?.trim() || errors[id];
 			});
 		}
-		const value = values[field.id]?.trim();
+		const rollup = guidedAttachment && computed.has(field.id) && isRevisedActivityRollupField(field.id);
+		const value = (rollup ? calculated : values)[field.id]?.trim();
 		const numericField = field.kind === 'money' || isShareCount(field.id);
-		return !!errors[field.id] || (!!value && !computed.has(field.id) && value !== form.defaults[field.id] &&
+		return !!errors[field.id] || (!!value && (rollup || !computed.has(field.id)) && value !== form.defaults[field.id] &&
 			(!numericField || Number(value.replaceAll(',', '')) !== 0));
 	}
 
@@ -342,8 +350,8 @@
 		return (detail?.shortLabel ?? detail?.label ?? '').replace(/^\d+[A-Z]?\s+/, '').replace(/ description$/i, '');
 	}
 
-	function relatedOptionalRecords(row: ReturnType<typeof incomeEditorRows>[number], scheduleFields: IncomeEditorField[]) {
-		return incomeEditorRows(scheduleFields).filter(item => !(shortAnnual && (item.item === '42' || item.item === '51')) &&
+	function relatedOptionalRecords(row: ReturnType<typeof incomeEditorRows>[number], rows: ReturnType<typeof incomeEditorRows>) {
+		return rows.filter(item => !(shortAnnual && (item.item === '42' || item.item === '51')) &&
 			optionalRecord(item) && optionalRecordLabel(item) === optionalRecordLabel(row));
 	}
 
@@ -381,6 +389,7 @@
 				return !!errors[field.id] || !!dependentClaim;
 			}
 		}
+		if (field.id === revised1701Overpayment) return annualFieldApplies(form.code, field.id, calculated);
 		if (errors[field.id]) return true;
 		if (legacyAnnual && field.id === 'frm1701:txtPg1Pt1I21Others') {
 			return values['frm1701:rdoPg1Pt1I21Accounting'] === 'Others';
@@ -524,7 +533,11 @@
 		trigger?.focus({ preventScroll: true });
 	}
 
-	async function showPage(page: string, fieldId?: string) {
+	async function showPage(page: string, fieldId?: string, activity?: string) {
+		if (activity) currentActivity = activity;
+		const templateId = fieldId && form.code === '1701v2018' ? revisedActivityTemplateId(fieldId) : fieldId;
+		if (fieldId && templateId && templateId !== fieldId) currentActivity = fieldId.slice(templateId.length - 'TYPE'.length);
+		fieldId = templateId;
 		const destination = fieldId ? fieldsById.get(fieldId) : undefined;
 		const drawerField = destination && isDeductionDrawerField(destination) && !isDeductionDrawerTotal(destination) && !isAutofilledOperatingLoss(destination) ? destination : undefined;
 		const item = drawerField && !isOperatingLossComputation(drawerField) ? drawerField.item : undefined;
@@ -575,6 +588,27 @@
 		}
 	}
 
+	function addActivity() {
+		const last = Math.max(1, ...Object.keys(values).flatMap(id => {
+			const number = id.match(/^frm1701:Pg3mTaxRegimeACT(\d+)$/)?.[1];
+			return number ? [Number(number)] : [];
+		}));
+		currentActivity = `ACT${last + 1}`;
+		onvaluechange({ [revisedActivityFieldId(revisedActivityRegimeId, currentActivity)]: '' });
+	}
+
+	function removeActivity() {
+		removedActivity = { slot: activeActivity, regime: activeActivityRegime };
+		onvaluechange({ [revisedActivityFieldId(revisedActivityRegimeId, activeActivity)]: 'Removed' });
+	}
+
+	function undoActivityRemoval() {
+		if (!removedActivity) return;
+		currentActivity = removedActivity.slot;
+		onvaluechange({ [revisedActivityFieldId(revisedActivityRegimeId, currentActivity)]: removedActivity.regime });
+		removedActivity = undefined;
+	}
+
 	async function focusSection(index: number) {
 		await tick();
 		const section = editor.querySelector<HTMLElement>(`[data-section-index="${index}"]`);
@@ -606,29 +640,38 @@
 	}
 
 	function scheduleReferences(sourceFields: IncomeEditorField[]) {
-		const destinations = new Map<string, { field: IncomeEditorField; label: string; owner?: string }>();
+		const destinations = new Map<string, { field: IncomeEditorField; label: string; owner?: string; activity?: string }>();
 		for (const source of sourceFields) {
 			const references = legacy1700 ? june1700References(source.id)
 				: compensationReturn ? january1700References(source.id)
 				: annual1701References(form.code, source.id);
 			for (const reference of references) {
-				if ('multipleActivities' in reference && reference.multipleActivities && values['frm1701:rdoPg1m'] !== '2') continue;
-				if ('activityRegime' in reference && reference.activityRegime && values['frm1701:Pg3mTaxRegimeTYPE'] !== reference.activityRegime) continue;
+				if ('multipleActivities' in reference && reference.multipleActivities && values[revisedActivityCountId] !== '2') continue;
+				if ('activityRegime' in reference && reference.activityRegime && activeActivityRegime !== reference.activityRegime) continue;
 				const owner = 'owner' in reference ? reference.owner : undefined;
 				if (owner === 'Spouse' && !includesSpouse) continue;
 				const field = fieldsById.get(reference.target);
-				if (field && pages.includes(field.page) && shouldShow(field) && !destinations.has(field.id)) {
+				if (field && pages.includes(field.page) && shouldShow(field)) {
 					const destinationOwner = owner === 'Both filers' && !includesSpouse ? 'Taxpayer' : owner;
-					destinations.set(field.id, {
+					const fromPartX = guidedAttachment && !selectedPage.endsWith('TYPE') && field.page.endsWith('TYPE');
+					const regime = /[BF]SchdB$/.test(source.id) ? 'Special Rate' : 'Exempt';
+					const matchingSlots = fromPartX ? activitySlots.filter(slot => values[revisedActivityFieldId(revisedActivityRegimeId, slot)] === regime) : [];
+					const activity = fromPartX ? (matchingSlots.includes(activeActivity) ? activeActivity : matchingSlots[0] ?? (!activeActivityRegime ? activeActivity : undefined)) : undefined;
+					if (fromPartX && !activity) continue;
+					const key = `${field.id}:${activity ?? ''}`;
+					if (destinations.has(key)) continue;
+					destinations.set(key, {
 						field,
 						label: reference.label,
-						owner: destinationOwner ?? (fullAnnual ? annual1701ReferenceOwner(field, includesSpouse) : undefined)
+						owner: destinationOwner ?? (fullAnnual ? annual1701ReferenceOwner(field, includesSpouse) : undefined),
+						activity
 					});
 				}
 			}
 		}
 		const links = [...destinations.values()];
-		if (filerReferenceLabels) return links;
+		if (filerReferenceLabels) return links.map(link => links.some(other => other !== link && other.field.id === link.field.id)
+			? { ...link, label: `${link.label} (${values[revisedActivityFieldId(revisedActivityRegimeId, link.activity ?? 'TYPE')]})` } : link);
 		return links.map(link => {
 			if (!links.some(other => other !== link && other.label === link.label)) return link;
 			const person = link.field.person === 'taxpayer' ? 'Taxpayer' : link.field.person === 'spouse' ? 'Spouse' : undefined;
@@ -656,14 +699,16 @@
 				return;
 			}
 		}
-		const overpayment = legacy1701Filing.overpayment;
-		if (legacyAnnual && values[overpayment] && !(overpayment in patch) &&
-			(!legacy1701IsOverpaid(calculated) || !legacy1701IsOverpaid(calculateIndividualIncome(form, { ...values, ...patch })))) {
+		const overpayment = legacyAnnual ? legacy1701Filing.overpayment : revised1701Overpayment;
+		if (fullAnnual && values[overpayment] && !(overpayment in patch) &&
+			(!annualFieldApplies(form.code, overpayment, calculated) ||
+			 !annualFieldApplies(form.code, overpayment, calculateIndividualIncome(form, { ...values, ...patch })))) {
 			onPatch({ ...patch, [overpayment]: '' });
 		} else onPatch(patch);
 	}
 
-	function setValue(id: string, value: string) {
+	function setValue(fieldId: string, value: string) {
+		const id = guidedAttachment && isRevisedActivityFieldId(fieldId) ? revisedActivityFieldId(fieldId, activeActivity) : fieldId;
 		if (value === values[id]) return;
 		if (legacyQuarterly) {
 			const patch = quarterlyTaxReliefPatch(values, id, value);
@@ -767,14 +812,14 @@
 		{@const references = scheduleReferences(sourceFields)}
 		{#if references.length}
 			<div class={['annual-reference-list', { 'filer-reference-list': filerReferenceLabels }]}>
-				{#each references as { field, label, owner } (field.id)}
+				{#each references as { field, label, owner, activity } (`${field.id}:${activity ?? ''}`)}
 					{@const itemStart = label.lastIndexOf('Item ')}
 					<button
 						type="button"
 						class="schedule-reference"
 						data-reference-target={field.id}
 						data-reference-page={field.page}
-						onclick={() => void showPage(field.page, field.id)}
+						onclick={() => void showPage(field.page, field.id, activity)}
 					>
 						{#if owner && itemStart >= 0}
 							{label.slice(0, itemStart).trimEnd()}
@@ -931,11 +976,11 @@
 					{@const rowLabel = (amountLabel ?? amountField?.label ?? firstField.label).replace(/^\d+[A-Z]?\s+| · (?:Taxpayer|Spouse)$/g, '')}
 					{@const description = firstField.rowHeading ?? rowLabel}
 					{@const detailFields = row.fields.filter(field => !field.column || scheduleDetailColumns.includes(field.column))}
-					{#if optionalRecord(row)}
-						{@const related = rows.filter(item => optionalRecord(item) && optionalRecordLabel(item) === optionalRecordLabel(row))}
+					{@const related = optionalRecord(row) ? relatedOptionalRecords(row, rows) : []}
+					{#if related.length > 1}
 						{#if related[0].key === row.key}
 							<tr data-income-item={row.item} class="record-table-row"><td colspan={1 + displayColumns.length}>
-								<IncomeRecords title={optionalRecordLabel(row)} records={related} {form} {values} {calculated} {computed} {errors} {onvaluechange} {includesSpouse} singleton={related.length === 1} />
+								<IncomeRecords title={optionalRecordLabel(row)} records={related} {form} {values} {calculated} {computed} {errors} {onvaluechange} {includesSpouse} />
 							</td></tr>
 						{/if}
 					{:else}
@@ -1038,6 +1083,7 @@
 {/snippet}
 
 {#snippet annualSchedule(title: string, scheduleFields: IncomeEditorField[], lastItem?: number)}
+	{@const rows = incomeEditorRows(scheduleFields)}
 	{@const people = compactAnnual || form.quarter || compensationReturn
 		? schedulePeople
 		: schedulePeople.filter(person => scheduleFields.some(field => field.kind === 'money' && (field.person ?? 'taxpayer') === person))}
@@ -1066,7 +1112,7 @@
 				</tr>
 			</thead>
 			<tbody>
-				{#each incomeEditorRows(scheduleFields) as row (row.key)}
+				{#each rows as row (row.key)}
 					{@const item = row.item ?? ''}
 					{@const amountField = row.fields.find(isScheduleValue)}
 					{@const sourceLabel = (amountField?.label ?? '').replace(/^\d+[A-Z]?(?:\/[A-Z])?\s+| · (?:Taxpayer|Spouse)$/g, '')}
@@ -1075,16 +1121,16 @@
 						: annual1701AScheduleLabels[item]}
 					{@const detail = row.fields.find(field => field.kind === 'text')}
 					{@const subheading = row.fields.find(field => field.subheading)?.subheading}
+					{@const related = optionalRecord(row) ? relatedOptionalRecords(row, rows) : []}
 					{#if subheading}
 						<tr class="schedule-subheading"><td colspan={2 + people.length}>{subheading}</td></tr>
 					{/if}
 					{#if shortAnnual && (item === '42' || item === '51')}
 						<Annual1701AIncomeDetail {item} {label} {values} {calculated} {people} {errors} {onvaluechange} />
-					{:else if optionalRecord(row)}
-						{@const related = relatedOptionalRecords(row, scheduleFields)}
+					{:else if related.length > 1}
 						{#if related[0].key === row.key}
 							<tr data-income-item={item} class="record-table-row"><td colspan={2 + people.length}>
-								<IncomeRecords title={optionalRecordLabel(row)} records={related} {form} {values} {calculated} {computed} {errors} {onvaluechange} {includesSpouse} singleton={related.length === 1} />
+								<IncomeRecords title={optionalRecordLabel(row)} records={related} {form} {values} {calculated} {computed} {errors} {onvaluechange} {includesSpouse} />
 							</td></tr>
 						{/if}
 					{:else}
@@ -1162,15 +1208,16 @@
 
 {#snippet fieldControl(field: IncomeEditorField, column?: string, draft?: { label: string; value: string; error: string; change: (value: string) => void })}
 	{@const { id, kind } = field}
+	{@const valueId = guidedAttachment && isRevisedActivityFieldId(id) ? revisedActivityFieldId(id, activeActivity) : id}
 	{@const fieldLabel = field.label.replace(/^\d+[A-Z]?(?:\/[A-Z])?\s+/, '')}
 	{@const label = legacyAnnual && id === legacy1701Filing.type ? 'Identification type' :
-		id === legacy1701Filing.overpayment || id === 'frm1701:rdoPg1Overpayment' ? 'Apply overpayment as' :
+		id === legacy1701Filing.overpayment || id === revised1701Overpayment ? 'Apply overpayment as' :
 		id === legacy1701Filing.issueDate ? 'Date of issue' :
 		id === legacy1701Filing.amount ? 'CTC amount' :
 		id === 'frm1700:txtPg1Pt2I32GovID' || (legacyAnnual && id === legacy1701Filing.number) ? (idType === 'CTC' ? 'CTC number' : 'Government ID number') :
 		form.code === '1700v2018' && !includesSpouse ? fieldLabel.replace(/ · Taxpayer$/, '') :
 		column ? `${fieldLabel.replace(/ · (?:Taxpayer|Spouse)$/, '')} · ${column}` : fieldLabel}
-	{@const value = draft?.value ?? calculated[id] ?? ''}
+	{@const value = draft?.value ?? calculated[valueId] ?? ''}
 	{@const annualAtc = shortAnnual && /^frm1701A:opt(?:Spouse)?ATC$/.test(id)}
 	{@const quarterlyAtc = revisedQuarterly && /^frm1701q:opt(?:Spouse)?ATC$/.test(id)}
 	{@const annualRate = shortAnnual && /^frm1701A:opt(?:Spouse)?TaxRate$/.test(id)}
@@ -1183,7 +1230,7 @@
 	)}
 	{@const birthParts = form.quarter && id.endsWith('BirthMonth') ? ['Month', 'Day', 'Year'].map(part => id.replace(/Month$/, part)) : []}
 	{@const reliefMethod = legacyQuarterly && id === 'frm1701q:txtTaxRelief25'}
-	{@const error = draft?.error ?? errors[id] ?? errors[birthParts[1]] ?? ''}
+	{@const error = draft?.error ?? errors[valueId] ?? errors[birthParts[1]] ?? ''}
 	{@const locked = profileFields.has(id) && (!!value || spouseFieldIds.has(id))}
 	{@const employerEarner = /^frm1700:rdoPg2(?:Pt4I[1-3]Employer|I\d+PartVIEmployee)$/.test(id) || /^frm1701:chkPg2IShed[12]a_[12]$/.test(id)}
 	{@const addressZip = legacy1700 && id === 'frm1700:txtPg4T1ZipCde'}
@@ -1295,16 +1342,16 @@
 			<dt>{label}</dt>
 			<dd class="font-mono">{value || '—'}</dd>
 		</dl>
-	{:else if computed.has(id) && legacy1700 && field.page !== '1' && kind === 'money'}
+	{:else if computed.has(valueId) && legacy1700 && field.page !== '1' && kind === 'money'}
 		<div class="schedule-calculated">
 			<span id={`${id}-label`}>{label}</span>
 			<output {id} aria-labelledby={`${id}-label`} aria-live="off">{currency.format(Number(value.replaceAll(',', '')))}</output>
 		</div>
 		{#if error}<FieldErrors errors={[error]} />{/if}
-	{:else if computed.has(id) && column}
+	{:else if computed.has(valueId) && column}
 		<output {id} aria-label={label} aria-live="off">{kind === 'money' && value !== '' ? currency.format(Number(value.replaceAll(',', ''))) : value || '—'}</output>
 		{#if error}<FieldErrors errors={[error]} />{/if}
-	{:else if computed.has(id)}
+	{:else if computed.has(valueId)}
 		<CalculatedValue {id} {label} value={kind === 'money' && value !== '' ? currency.format(Number(value.replaceAll(',', ''))) : value} {error} />
 	{:else if annualAtc || (quarterlyAtc && !fixedQuarterlyAtc)}
 		{@const choices = annualAtc ? options.filter(option => annual1701AAtcOptions(values[id.replace(/ATC$/, 'TaxType')]).includes(option.value)) : options}
@@ -1349,15 +1396,15 @@
 		{#if error}<FieldErrors errors={[error]} />{/if}
 	{:else if kind === 'radio' && (fullAnnual && options.length > 2 || options.length > 3 && /tax code \(ATC\)/i.test(label))}
 		<Select {id} {label} {value} {options} {error}
-			required={id === legacy1701Filing.overpayment || revisedFilingChoice}
+			required={id === legacy1701Filing.overpayment || (id === revised1701Overpayment && revised1701DispositionRequired(calculated)) || revisedFilingChoice}
 			placeholder={/tax code \(ATC\)/i.test(label) ? 'Select tax code' : undefined}
 			onchange={(next) => setValue(id, next)} />
 	{:else if kind === 'radio' && (options.length > 1 || employerEarner)}
 		<RadioGroup {id} {label} {value} {options} {error}
 			required={id === legacy1701Filing.overpayment || revisedFilingChoice || employerEarner || (legacy1700 && id === 'frm1700:rdoPg1Pt1I3JointFiling')}
-			help={id === 'frm1701:rdoPg1m'
+			help={id === revisedActivityCountId
 				? value === '2'
-					? 'Complete a Part XI attachment for each activity, then enter the combined amounts here.'
+					? 'Complete a Part XI attachment for each activity. Applicable amounts are combined here.'
 					: 'Enter the applicable amounts in the schedules below.'
 				: form.code === '1700v2018' && /I(?:6|20)TaxpayerType$/.test(id)
 					? 'The 25% option is for nonresident aliens not engaged in trade or business.'
@@ -1483,7 +1530,7 @@
 			<ul>
 				{#each Object.entries(errors) as [id, error] (id)}
 					{@const targetId = form.quarter ? id.replace(/Birth(?:Day|Year)$/, 'BirthMonth') : id}
-					{@const target = fields.find(field => field.id === targetId)}
+					{@const target = fieldsById.get(form.code === '1701v2018' ? revisedActivityTemplateId(targetId) : targetId)}
 					<li>
 						{#if profileFields.has(id) || summaryIds.has(id) || (id === form.identity.email && !target)}
 							<ButtonLink href={taxpayerHref} variant="ghost" size="sm">{error}</ButtonLink>
@@ -1492,7 +1539,7 @@
 						{:else if shortAnnual && /^frm1701A:txtmodalPartIV[AB](?:Desc_\d+C1|_\d+C[23])$/.test(targetId)}
 							<button type="button" onclick={() => void showPage('2', targetId)}>{error}</button>
 						{:else if target && pages.includes(target.page)}
-							<button type="button" onclick={() => void showPage(target.page, targetId)}>{error}</button>
+							<button type="button" onclick={() => void showPage(target.page, targetId, isRevisedActivityFieldId(targetId) && targetId.endsWith('TYPE') ? 'TYPE' : undefined)}>{error}</button>
 						{:else}
 							{error}
 						{/if}
@@ -1596,7 +1643,11 @@
 	{/snippet}
 	{#if guidedAttachment}
 		<Annual2018Attachments bind:this={attachments} page={selectedPage} {groups}
-			{values} {includesSpouse} {fieldControl} references={annualReferences} hasEntry={hasScheduleEntry}
+			{values} {includesSpouse} {fieldControl} references={annualReferences}
+			hasEntry={(field) => hasScheduleEntry(isRevisedActivityFieldId(field.id) ? { ...field, id: revisedActivityFieldId(field.id, activeActivity) } : field)}
+			{activitySlots} {activeActivity} canUndoActivityRemoval={!!removedActivity}
+			onactivity={(slot) => currentActivity = slot} onaddactivity={addActivity}
+			onremoveactivity={removeActivity} onundoactivity={undoActivityRemoval}
 			onpage={(page) => void showPage(page)} />
 	{:else}
 	{#each groups as group, index (`${selectedPage}-${index}`)}
@@ -2492,6 +2543,9 @@
 		.annual-schedule .summary-amount { width: 9.5rem; }
 		.annual-schedule.joint-summary .summary-amount { width: 9rem; }
 		.annual-schedule :is(td, th) { padding-inline: .375rem; }
+		.legacy-1701-editor .joint-schedule-viewport > .annual-schedule th[scope='row']:has(> .filer-reference-list) {
+			padding-inline: .25rem;
+		}
 		.tax-summary.compensation-amount-table .summary-amount { width: 9.5rem; }
 		.tax-summary.compensation-amount-table.joint-summary .summary-amount { width: 9rem; }
 	}

@@ -2,12 +2,14 @@
 	import { tick, type Snippet } from 'svelte';
 	import { Button, Label } from '$lib/components/ui';
 	import { Combobox } from '$lib/components/ui/combobox';
+	import { revisedActivityCountId, revisedActivityFieldId, revisedActivityRegimeId } from './annual-2018-activities';
 	import { incomeEditorRows, type IncomeEditorField } from './editor-layout';
 
 	type Row = ReturnType<typeof incomeEditorRows>[number];
 
 	let {
-		page, groups, values, includesSpouse, fieldControl, references, hasEntry, onpage
+		page, groups, values, includesSpouse, fieldControl, references, hasEntry, onpage,
+		activitySlots, activeActivity, canUndoActivityRemoval, onactivity, onaddactivity, onremoveactivity, onundoactivity
 	}: {
 		page: string;
 		groups: { title: string; fields: IncomeEditorField[] }[];
@@ -17,11 +19,21 @@
 		references: Snippet<[IncomeEditorField[]]>;
 		hasEntry: (field: IncomeEditorField) => boolean;
 		onpage: (page: string) => void;
+		activitySlots: string[];
+		activeActivity: string;
+		canUndoActivityRemoval: boolean;
+		onactivity: (slot: string) => void;
+		onaddactivity: () => void;
+		onremoveactivity: () => void;
+		onundoactivity: () => void;
 	} = $props();
 
 	const uid = $props.id();
-	const activityCount = 'frm1701:rdoPg1m';
-	const activityRegime = 'frm1701:Pg3mTaxRegimeTYPE';
+	const activityCount = revisedActivityCountId;
+	const activityRegime = revisedActivityRegimeId;
+	const partXi = $derived(page.endsWith('TYPE'));
+	const selectedRegime = $derived(values[revisedActivityFieldId(activityRegime, activeActivity)]);
+	let activityPicker = $state<HTMLSelectElement>();
 	const titles: Record<string, string> = {
 		'1m': 'Consolidated income tax',
 		'2m': 'Consolidated ordinary itemized deductions',
@@ -54,7 +66,7 @@
 		if (field.person) filer = field.person;
 		if (!field.section.startsWith('Schedule ')) return;
 		const scheduleKey = `${field.page}:${field.section}`;
-		const key = `${scheduleKey}:${field.person ?? activeFiler}`;
+		const key = `${scheduleKey}:${field.person ?? activeFiler}:${partXi ? activeActivity : ''}`;
 		openSchedules[scheduleKey] = true;
 		const column = field.column && regime(field.column);
 		if (column && ['Exempt', 'Special', 'Regular', 'Total'].includes(column)) selectedRegimes[key] = column;
@@ -75,17 +87,44 @@
 			.filter(control => control?.getClientRects().length && control.matches('input,select,button,textarea'));
 		controls[0]?.focus();
 	}
+
+	async function changeActivities(change: () => void) {
+		change();
+		await tick();
+		activityPicker?.focus();
+	}
 </script>
 
 <div class="attachment-content">
 	<p class="attachment-part">
-		{#if page.endsWith('TYPE')}
+		{#if partXi}
 			Part XI · Activity attachment · Part {page.startsWith('1') ? '1' : '2'} of 2
-			{#if page === '2mTYPE' && values[activityRegime]} · {values[activityRegime]}{/if}
+			{#if page === '2mTYPE' && selectedRegime} · {selectedRegime}{/if}
 		{:else}
 			Part X · Consolidated computation by tax regime
 		{/if}
 	</p>
+	{#if partXi}
+		<div class="attachment-filer activity-toolbar">
+			<label>Activity
+				<select bind:this={activityPicker} value={activeActivity} onchange={(event) => onactivity(event.currentTarget.value)}>
+					{#each activitySlots as slot (slot)}
+						{@const taxRegime = values[revisedActivityFieldId(activityRegime, slot)]}
+						<option value={slot}>Activity {slot === 'TYPE' ? '1' : slot.slice(3)}{taxRegime ? ` · ${taxRegime}` : ''}</option>
+					{/each}
+				</select>
+			</label>
+			{#if page === '1mTYPE'}
+				<Button type="button" size="sm" variant="secondary" onclick={() => void changeActivities(onaddactivity)}>Add activity</Button>
+			{/if}
+			{#if activitySlots.length > 1}
+				<Button type="button" size="sm" variant="secondary" onclick={() => void changeActivities(onremoveactivity)}>Remove activity</Button>
+			{/if}
+			{#if canUndoActivityRemoval}
+				<Button type="button" size="sm" variant="secondary" onclick={() => void changeActivities(onundoactivity)}>Undo removal</Button>
+			{/if}
+		</div>
+	{/if}
 	{#each choices as field (field.id)}
 		<div class="attachment-choice">
 			{@render fieldControl(field.id === activityCount
@@ -106,12 +145,12 @@
 			</label>
 		</div>
 	{/if}
-	{#each schedules as group (`${page}:${group.title}`)}
+	{#each schedules as group (`${page}:${group.title}:${partXi ? activeActivity : ''}`)}
 		{@const [scheduleLabel, title] = group.title.split(' · ')}
 		{@const number = scheduleLabel.split(' ')[1]}
 		{@const filerFields = group.fields.filter(field => !field.person || field.person === activeFiler)}
 		{@const scheduleKey = `${page}:${group.title}`}
-		{@const key = `${scheduleKey}:${activeFiler}`}
+		{@const key = `${scheduleKey}:${activeFiler}:${partXi ? activeActivity : ''}`}
 		{@const expanded = openSchedules[scheduleKey] ?? title === titles[page]}
 		{@const columns = [...new Set(filerFields.flatMap(field => field.column?.includes(' · ') ? [field.column] : []))]}
 		{@const availableRegimes = columns.map(regime)}
@@ -255,6 +294,8 @@
 	.attachment-part { margin: 0; color: var(--fg-muted); font-size: .875rem; }
 	.attachment-choice { display: grid; gap: .625rem; justify-items: start; }
 	.attachment-filer { background: var(--bg-subtle, var(--bg-elev)); }
+	.activity-toolbar { display: flex; flex-wrap: wrap; align-items: end; gap: .5rem; }
+	.activity-toolbar label { flex: 0 1 16rem; min-inline-size: 0; }
 	.attachment-filer label, .regime-picker label { display: grid; gap: .25rem; color: var(--fg-muted); font-size: .8125rem; font-weight: 600; }
 	select { padding: .5rem .625rem; width: 100%; min-width: 0; min-height: 2.75rem; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--bg-elev); color: var(--fg); font: inherit; }
 	select:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }

@@ -133,30 +133,29 @@ test('1701Q January edits Item 48 inline and preserves saved other income', asyn
 	await expect(total).toHaveText('₱0.00');
 });
 
-test('1701A other income adds in a drawer and preserves its subtotal through edit and delete', async ({ page }) => {
+test('1701A updates its subtotal when other income is edited or cleared inline', async ({ page }) => {
 	await seedWorkspace(page, 'light', 'loaded', { taxpayerClassification: 'I', civilStatus: 'Single' }, [{
 		id: 'annual-income', taxpayerId, formCode: '1701A', returnPeriod: '2025', status: 'Draft', finalFlag: '0', updatedAt: 1794441600000,
 		values: { 'frm1701A:txtYear': '2025', 'frm1701A:optTaxType': 'S', 'frm1701A:optATC': 'II012' }
 	}]);
 	await page.goto(`${base}/1701A?return=annual-income`);
 	await goToReturnPage(page, 2);
-	const section = page.locator('[data-income-detail-items="42"] [data-income-records]');
-	await expect(section).toBeVisible();
-	await section.getByRole('button', { name: 'Add item', exact: true }).click();
-	const drawer = page.getByRole('dialog', { name: 'Add item', exact: true });
-	await drawer.getByRole('textbox', { name: 'Description', exact: true }).fill('Rental income');
-	await drawer.getByRole('textbox', { name: 'Taxpayer amount', exact: true }).fill('15000');
-	await drawer.getByRole('button', { name: 'Cancel', exact: true }).click();
-	await expect(section.getByRole('listitem')).toHaveCount(0);
-	await section.getByRole('button', { name: 'Add item', exact: true }).click();
-	await drawer.getByRole('textbox', { name: 'Description', exact: true }).fill('Rental income');
-	await drawer.getByRole('textbox', { name: 'Taxpayer amount', exact: true }).fill('15000');
-	await drawer.getByRole('button', { name: 'Add item', exact: true }).click();
-	await expect(page.locator('[id="frm1701A:txt42A"]')).toHaveText('₱15,000');
-	await section.getByRole('button', { name: 'Rental income', exact: true }).click();
-	await page.getByRole('dialog').getByRole('button', { name: 'Delete item', exact: true }).click();
-	await expect(section.getByRole('listitem')).toHaveCount(0);
-	await expect(page.locator('[id="frm1701A:txt42A"]')).toHaveText('₱0');
+	const description = page.locator('input[id="frm1701A:txt42Desc"]');
+	const amount = page.locator('input[id="frm1701A:txt42A"]');
+	const total = page.locator('[id="frm1701A:txt44A"]');
+	await expect(total).toHaveText('₱0');
+	await description.fill('Rental income');
+	await amount.fill('15000');
+	await amount.blur();
+	await expect(total).toHaveText('₱15,000');
+	await amount.fill('16000');
+	await amount.blur();
+	await expect(total).toHaveText('₱16,000');
+	await description.clear();
+	await amount.clear();
+	await amount.blur();
+	await expect(total).toHaveText('₱0');
+	await expect(page.getByRole('dialog')).toHaveCount(0);
 });
 
 test('numbered dependents add and delete through one list while updating the declared count', async ({ page }) => {
