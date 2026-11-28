@@ -1,4 +1,5 @@
 import { invoke } from '@tauri-apps/api/core'
+import type { BirDispatcherConfig } from '$lib/ebirforms/bir-dispatcher-config'
 
 export type SubmissionMode = 'dry_run' | 'legacy_sftp'
 
@@ -20,6 +21,7 @@ export type SubmissionRequest = {
 	email: string
 	mode: SubmissionMode
 	dispatcher?: DispatcherSettings
+	dispatcherConfig?: BirDispatcherConfig
 	fetchDispatcher: boolean
 }
 
@@ -45,6 +47,19 @@ export type SubmissionLog = {
 	path: string
 	content: string
 	truncated: boolean
+}
+
+export type DispatcherConnection =
+	| { kind: 'http'; status: number }
+	| { kind: 'unreachable'; message: string }
+
+export type DispatcherConnectionTest = {
+	primary: DispatcherConnection
+	backup: DispatcherConnection | null
+}
+
+export function testDispatcherConnection(addresses: Pick<BirDispatcherConfig, 'primaryAddress' | 'backupAddress'>) {
+	return invoke<DispatcherConnectionTest>('test_dispatcher_connection', addresses)
 }
 
 export function createSubmissionLogClient(

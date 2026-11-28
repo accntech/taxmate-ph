@@ -78,6 +78,7 @@ fn dry_run_preserves_prior_submission_without_adding_history() {
             email: "test@example.com".into(),
             mode: SubmissionMode::DryRun,
             dispatcher: None,
+            dispatcher_config: None,
             fetch_dispatcher: false,
         },
     )

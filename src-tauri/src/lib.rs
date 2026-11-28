@@ -83,6 +83,7 @@ pub fn run() {
             profile_store::save_taxpayer_profile,
             profile_store::delete_taxpayer_profile,
             submission::submit_return,
+            submission::test_dispatcher_connection,
             submission::read_submission_log,
             working_returns::load_working_returns,
             working_returns::save_working_returns,

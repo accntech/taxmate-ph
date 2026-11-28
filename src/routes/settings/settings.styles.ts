@@ -95,7 +95,7 @@ export const styles = stylex.create({
     "fontWeight": 500,
     "color": "var(--fg-muted)"
   },
-  "agentSetupActions": {
+  "settingsActions": {
     "display": "flex",
     "flexWrap": "wrap",
     "gap": "calc(var(--spacing) * 2)"
@@ -173,11 +173,39 @@ export const styles = stylex.create({
     "display": "grid",
     "gap": "calc(var(--spacing) * 1)"
   },
-  "dispatcherDescription": {
-    "paddingBottom": "calc(var(--spacing) * 2)",
-    "fontSize": "13px",
-    "lineHeight": "calc(var(--spacing) * 5)",
-    "color": "var(--fg-muted)"
+  "dispatcherForm": {
+    "containerType": "inline-size",
+    "containerName": "dispatcher-settings",
+    "display": "grid",
+    "gap": "calc(var(--spacing) * 4)",
+    "paddingBlock": "calc(var(--spacing) * 4)",
+    "borderBlockStyle": "solid",
+    "borderBlockWidth": "1px",
+    "borderColor": "var(--border-soft)"
+  },
+  "dispatcherFooter": {
+    "display": "flex",
+    "flexWrap": "wrap",
+    "alignItems": "flex-end",
+    "justifyContent": "space-between",
+    "gap": "calc(var(--spacing) * 3)"
+  },
+  "dispatcherVersion": {
+    "width": "min(100%, 13rem)"
+  },
+  "dispatcherFeedback": {
+    "display": "grid",
+    "gap": "calc(var(--spacing) * 1)",
+    "paddingBlock": "calc(var(--spacing) * 2)",
+    "paddingInline": "calc(var(--spacing) * 3)",
+    "borderRadius": "var(--radius-md)",
+    "backgroundColor": "var(--bg-elev-2)",
+    "fontSize": "0.875rem",
+    "color": "var(--fg)",
+    "overflowWrap": "anywhere"
+  },
+  "dispatcherError": {
+    "color": "var(--danger)"
   },
   "submissionLog": {
     "minWidth": "0px",
@@ -193,7 +221,7 @@ export const styles = stylex.create({
     "justifyContent": "space-between",
     "gap": "calc(var(--spacing) * 3)"
   },
-  "logTitle": {
+  "subsectionTitle": {
     "fontSize": "0.875rem",
     "lineHeight": "calc(1.25 / 0.875)",
     "fontWeight": 600,

@@ -1,6 +1,9 @@
 use std::{
     fs,
-    sync::{Mutex, OnceLock},
+    io::{BufRead, BufReader, Write},
+    net::TcpListener,
+    sync::{mpsc, Mutex, OnceLock},
+    time::Duration,
 };
 
 use aes::{
@@ -11,8 +14,8 @@ use base64::{engine::general_purpose::STANDARD, Engine};
 use ebirforms_tauri_lib::submission::{
     build_dispatcher_url, build_sftp_upload_plan, decrypt_dispatcher_secret,
     decrypt_native_return_copy, email_file_name, encrypt_native_return_copy,
-    parse_dispatcher_response, run_submission, update_final_flag, DispatcherSettings,
-    SubmissionMode, SubmissionRequest, SubmissionStatus,
+    parse_dispatcher_response, run_submission, test_dispatcher_connection, update_final_flag,
+    DispatcherConnection, DispatcherSettings, SubmissionMode, SubmissionRequest, SubmissionStatus,
 };
 use pbkdf2::pbkdf2_hmac;
 use sha1::Sha1;
@@ -57,12 +60,171 @@ fn build_dispatcher_url_uses_legacy_query_shape() {
         "123456789",
         "1601EQ",
         "7.9.6.0",
-    );
+    )
+    .expect("dispatcher URL");
 
     assert_eq!(
-        url,
+        url.as_str(),
         "https://dispatcher.example.invalid/tinDispatcherSFTP.php?t=123456789&f=1601EQ&v=7.9.6.0"
     );
+}
+
+#[test]
+fn connection_test_only_sends_queryless_heads_to_configured_dispatchers() {
+    let server = TcpListener::bind("127.0.0.1:0").unwrap();
+    let address = server.local_addr().unwrap();
+    let (requests, received) = mpsc::channel();
+    let worker = std::thread::spawn(move || {
+        for (response, stream) in [
+            "302 Found\r\nLocation: /redirect-must-not-be-followed",
+            "404 Not Found",
+            "200 OK",
+        ]
+        .into_iter()
+        .zip(server.incoming())
+        {
+            let mut stream = stream.unwrap();
+            stream
+                .set_read_timeout(Some(Duration::from_secs(3)))
+                .unwrap();
+            let mut reader = BufReader::new(&stream);
+            let mut line = String::new();
+            reader.read_line(&mut line).unwrap();
+            requests.send(line).unwrap();
+            loop {
+                let mut header = String::new();
+                let read = reader.read_line(&mut header).unwrap();
+                if read == 0 || header == "\r\n" {
+                    break;
+                }
+            }
+            write!(
+                stream,
+                "HTTP/1.1 {response}\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
+            )
+            .unwrap();
+        }
+    });
+    let primary = format!("http://{address}/primary");
+    let backup = format!("http://{address}/backup/");
+    let results =
+        tauri::async_runtime::block_on(test_dispatcher_connection(primary.clone(), backup))
+            .unwrap();
+    assert_eq!(results.primary, DispatcherConnection::Http { status: 302 });
+    assert_eq!(
+        results.backup,
+        Some(DispatcherConnection::Http { status: 404 })
+    );
+
+    let results =
+        tauri::async_runtime::block_on(test_dispatcher_connection(primary, " ".into())).unwrap();
+    assert_eq!(results.primary, DispatcherConnection::Http { status: 200 });
+    assert_eq!(results.backup, None);
+    for endpoint in ["primary", "backup", "primary"] {
+        assert_eq!(
+            received.recv_timeout(Duration::from_secs(1)).unwrap(),
+            format!("HEAD /{endpoint}/tinDispatcherSFTP.php HTTP/1.1\r\n")
+        );
+    }
+    worker.join().unwrap();
+}
+
+#[test]
+fn direct_sender_with_blank_backup_reports_primary_connection_failure() {
+    let root = tempfile::tempdir().unwrap();
+    let request: SubmissionRequest = serde_json::from_value(serde_json::json!({
+        "xml": "<div>txtFinalFlag=0txtFinalFlag=</div>",
+        "rdoXml": "<div>txtFinalFlag=0txtFinalFlag=</div>",
+        "returnFilename": "fixture-1601EQ-2026Q1.xml",
+        "formCode": "1601EQ",
+        "tin": "fixture-only",
+        "email": "payer@example.test",
+        "mode": "legacy_sftp",
+        "fetchDispatcher": true,
+        "dispatcherConfig": {
+            "primaryAddress": "http://127.0.0.1:0/",
+            "backupAddress": "",
+            "clientVersion": "7.9.6.0"
+        }
+    }))
+    .unwrap();
+
+    let error = run_submission(root.path(), request)
+        .expect_err("loopback port zero cannot accept requests");
+    assert!(
+        error.message.starts_with("Dispatcher request failed:"),
+        "{}",
+        error.message
+    );
+    let log = fs::read_to_string(error.log_path.unwrap()).unwrap();
+    assert_eq!(log.matches("dispatcher_fetch url=").count(), 1);
+    assert!(log.contains("dispatcher_fetch url=http://127.0.0.1:0/"));
+}
+
+#[test]
+fn direct_sender_uses_configured_addresses_and_client_version_for_failover() {
+    let server = TcpListener::bind("127.0.0.1:0").expect("local dispatcher");
+    let address = server.local_addr().unwrap();
+    let (requests, received) = mpsc::channel();
+    std::thread::spawn(move || {
+        for stream in server.incoming().take(2) {
+            let mut stream = stream.unwrap();
+            stream
+                .set_read_timeout(Some(Duration::from_secs(3)))
+                .unwrap();
+            let mut reader = BufReader::new(&stream);
+            let mut request_line = String::new();
+            reader.read_line(&mut request_line).unwrap();
+            loop {
+                let mut header = String::new();
+                if reader.read_line(&mut header).unwrap() == 0 || header == "\r\n" {
+                    break;
+                }
+            }
+            requests.send(request_line).unwrap();
+            let body =
+                r#"{"mode":"0","server":"","SSLPort":"","port":"","username":"","password":""}"#;
+            write!(
+                stream,
+                "HTTP/1.1 200 OK\r\nConnection: close\r\nContent-Length: {}\r\n\r\n{}",
+                body.len(),
+                body
+            )
+            .unwrap();
+        }
+    });
+
+    let root = tempfile::tempdir().unwrap();
+    let request: SubmissionRequest = serde_json::from_value(serde_json::json!({
+        "xml": "<div>txtFinalFlag=0txtFinalFlag=</div>",
+        "rdoXml": "<div>txtFinalFlag=0txtFinalFlag=</div>",
+        "returnFilename": "1234567890000-1601EQ-2026Q1.xml",
+        "formCode": "1601EQ",
+        "tin": "123456789",
+        "email": "payer@example.com",
+        "mode": "legacy_sftp",
+        "fetchDispatcher": true,
+        "dispatcherConfig": {
+            "primaryAddress": format!("http://{address}/primary"),
+            "backupAddress": format!("http://{address}/backup/"),
+            "clientVersion": "7.9.7.0"
+        }
+    }))
+    .unwrap();
+
+    let error = run_submission(root.path(), request).expect_err("both dispatchers are closed");
+    assert_eq!(
+        error.message,
+        "BIR online filing is currently closed or unavailable."
+    );
+    for path in ["primary", "backup"] {
+        assert_eq!(
+            received.recv_timeout(Duration::from_secs(1)).unwrap(),
+            format!(
+                "GET /{path}/tinDispatcherSFTP.php?t=123456789&f=1601EQ&v=7.9.7.0 HTTP/1.1\r\n"
+            )
+        );
+    }
 }
 
 #[test]
@@ -238,6 +400,7 @@ fn dry_run_writes_savefile_and_email_copy_without_uploading() {
         email: "payer@example.com".into(),
         mode: SubmissionMode::DryRun,
         dispatcher: None,
+        dispatcher_config: None,
         fetch_dispatcher: false,
     };
 
@@ -282,6 +445,7 @@ fn live_1601eq_prepares_encrypted_copy_and_rejects_invalid_dispatcher() {
                     username: "encrypted-user".into(),
                     password: "encrypted-pass".into(),
                 }),
+                dispatcher_config: None,
                 fetch_dispatcher: false,
             };
 

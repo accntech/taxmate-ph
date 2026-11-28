@@ -334,6 +334,7 @@ mod tests {
                     username: encrypt_dispatcher("fixture-user"),
                     password: encrypt_dispatcher("fixture-password"),
                 }),
+                dispatcher_config: None,
                 fetch_dispatcher: false,
             };
             let receipt = run_submission(server.root.path(), request).unwrap();

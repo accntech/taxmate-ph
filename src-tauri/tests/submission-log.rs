@@ -19,6 +19,7 @@ fn every_submission_log_entry_has_a_readable_local_datetime_with_offset() {
             email: "payer@example.com".into(),
             mode: SubmissionMode::DryRun,
             dispatcher: None,
+            dispatcher_config: None,
             fetch_dispatcher: false,
         },
     )

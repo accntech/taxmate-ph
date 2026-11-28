@@ -17,7 +17,7 @@ use pbkdf2::pbkdf2_hmac;
 use serde::{Deserialize, Serialize};
 use sha1::Sha1;
 use sha2::{Digest, Sha256};
-use tauri::Manager;
+use tauri::{Manager, Url};
 
 #[path = "submission-dispatcher.rs"]
 mod dispatcher;
@@ -25,9 +25,6 @@ mod dispatcher;
 #[path = "submission-transport.rs"]
 mod transport;
 
-const CURRENT_VERSION: &str = "7.9.6.0";
-const PRIMARY_DISPATCHER_BASE: &str = "http://birgovph.com/";
-const BACKUP_DISPATCHER_BASE: &str = "http://ws1.birgovph.com/";
 const DISPATCHER_SECRET_PASSWORD_ENV: &str = "EBIRFORMS_DISPATCHER_SECRET_PASSWORD";
 const RETURN_COPY_PASSWORD_ENV: &str = "EBIRFORMS_RETURN_COPY_PASSWORD";
 const SUBMISSION_LOG_TAIL_BYTES: u64 = 128 * 1024;
@@ -112,7 +109,53 @@ pub struct SubmissionRequest {
     pub email: String,
     pub mode: SubmissionMode,
     pub dispatcher: Option<DispatcherSettings>,
+    pub dispatcher_config: Option<BirDispatcherConfig>,
     pub fetch_dispatcher: bool,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BirDispatcherConfig {
+    pub primary_address: String,
+    pub backup_address: String,
+    pub client_version: String,
+}
+
+impl Default for BirDispatcherConfig {
+    fn default() -> Self {
+        Self {
+            primary_address: "http://birgovph.com/".into(),
+            backup_address: "http://ws1.birgovph.com/".into(),
+            client_version: "7.9.6.0".into(),
+        }
+    }
+}
+
+impl BirDispatcherConfig {
+    fn urls(&self, tin: &str, form_code: &str) -> Result<(Url, Option<Url>), SubmissionError> {
+        let version = self.client_version.trim();
+        if !version
+            .split('.')
+            .all(|part| !part.is_empty() && part.bytes().all(|byte| byte.is_ascii_digit()))
+        {
+            return Err(SubmissionError::new(
+                "Enter a client version such as 7.9.6.0.",
+            ));
+        }
+        let primary_url = build_dispatcher_url(&self.primary_address, tin, form_code, version)?;
+        let backup_address = self.backup_address.trim();
+        let backup_url = if backup_address.is_empty() {
+            None
+        } else {
+            Some(build_dispatcher_url(
+                backup_address,
+                tin,
+                form_code,
+                version,
+            )?)
+        };
+        Ok((primary_url, backup_url))
+    }
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
@@ -213,6 +256,23 @@ pub fn run_submission(
     ));
 
     validate_request(&request)?;
+    let dispatcher_urls = if request.mode == SubmissionMode::LegacySftp {
+        let defaults = BirDispatcherConfig::default();
+        let config = match (request.fetch_dispatcher, &request.dispatcher_config) {
+            (true, Some(config)) => config,
+            _ => &defaults,
+        };
+        Some(
+            config
+                .urls(&request.tin, &request.form_code)
+                .map_err(|error| {
+                    logger.log(format!("dispatcher_config_error {}", error.message));
+                    SubmissionError::with_log_path(error.message, &logger)
+                })?,
+        )
+    } else {
+        None
+    };
 
     let save_dir = root.join("savefile");
     let rdo_dir = root.join("IAF_RDO_Copy");
@@ -236,7 +296,7 @@ pub fn run_submission(
         path_to_string(&send_path)
     ));
 
-    if request.mode == SubmissionMode::DryRun {
+    let Some((primary_url, backup_url)) = dispatcher_urls else {
         logger.log("dry_run_complete");
         return Ok(SubmissionReceipt {
             status: SubmissionStatus::Drafted,
@@ -249,15 +309,14 @@ pub fn run_submission(
             message: "Dry run prepared the savefile and email-named RDO copy without upload."
                 .into(),
         });
-    }
+    };
 
-    let dispatcher_url = build_dispatcher_url(
-        PRIMARY_DISPATCHER_BASE,
-        &request.tin,
-        &request.form_code,
-        CURRENT_VERSION,
-    );
-    let (dispatcher, dispatcher_url) = resolve_dispatcher(&request, &dispatcher_url, &logger)?;
+    let (dispatcher, dispatcher_url) = resolve_dispatcher(
+        &request,
+        primary_url.as_str(),
+        backup_url.as_ref().map(Url::as_str),
+        &logger,
+    )?;
     encrypt_native_return_copy(&send_path).map_err(|error| {
         logger.log(format!("native_encrypt_error {}", error.message));
         SubmissionError::with_log_path(error.message, &logger)
@@ -379,14 +438,91 @@ pub fn update_final_flag(xml: &str, flag: &str) -> String {
     format!("{}{flag}{}", &xml[..value_start], &xml[value_end..])
 }
 
-pub fn build_dispatcher_url(base: &str, tin: &str, form_code: &str, version: &str) -> String {
-    format!(
-        "{}tinDispatcherSFTP.php?t={}&f={}&v={}",
-        base.trim_end_matches('/').to_string() + "/",
-        tin,
-        form_code,
-        version
-    )
+pub fn build_dispatcher_url(
+    base: &str,
+    tin: &str,
+    form_code: &str,
+    version: &str,
+) -> Result<Url, SubmissionError> {
+    let mut url = dispatcher_endpoint(base)?;
+    url.query_pairs_mut()
+        .extend_pairs([("t", tin), ("f", form_code), ("v", version)]);
+    Ok(url)
+}
+
+fn dispatcher_endpoint(base: &str) -> Result<Url, SubmissionError> {
+    let invalid_address = || {
+        SubmissionError::new(
+            "Enter HTTP or HTTPS dispatcher addresses without credentials, queries, or fragments.",
+        )
+    };
+    let base = base.trim();
+    let (_, authority) = base.split_once("://").ok_or_else(invalid_address)?;
+    let mut url = Url::parse(base).map_err(|_| invalid_address())?;
+    if !matches!(url.scheme(), "http" | "https")
+        || authority.starts_with(['/', '\\'])
+        || !url.username().is_empty()
+        || url.password().is_some()
+        || url.query().is_some()
+        || url.fragment().is_some()
+    {
+        return Err(invalid_address());
+    }
+    url.path_segments_mut()
+        .map_err(|_| invalid_address())?
+        .pop_if_empty()
+        .push("tinDispatcherSFTP.php");
+    Ok(url)
+}
+
+#[derive(Debug, PartialEq, Eq, Serialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum DispatcherConnection {
+    Http { status: u16 },
+    Unreachable { message: String },
+}
+
+#[derive(Debug, PartialEq, Eq, Serialize)]
+pub struct DispatcherConnectionTest {
+    pub primary: DispatcherConnection,
+    pub backup: Option<DispatcherConnection>,
+}
+
+#[tauri::command]
+pub async fn test_dispatcher_connection(
+    primary_address: String,
+    backup_address: String,
+) -> Result<DispatcherConnectionTest, SubmissionError> {
+    let primary = dispatcher_endpoint(&primary_address)?;
+    let backup = if backup_address.trim().is_empty() {
+        None
+    } else {
+        Some(dispatcher_endpoint(&backup_address)?)
+    };
+
+    tauri::async_runtime::spawn_blocking(move || {
+        let timeout = Duration::from_secs(5);
+        let agent = ureq::AgentBuilder::new()
+            .timeout_connect(timeout)
+            .timeout(timeout)
+            .redirects(0)
+            .build();
+        let probe = |url: Url| match agent.head(url.as_str()).call() {
+            Ok(response) => DispatcherConnection::Http {
+                status: response.status(),
+            },
+            Err(ureq::Error::Status(status, _)) => DispatcherConnection::Http { status },
+            Err(ureq::Error::Transport(error)) => DispatcherConnection::Unreachable {
+                message: error.kind().to_string(),
+            },
+        };
+        DispatcherConnectionTest {
+            primary: probe(primary),
+            backup: backup.map(probe),
+        }
+    })
+    .await
+    .map_err(|error| SubmissionError::new(format!("Dispatcher connection test failed: {error}")))
 }
 
 pub fn parse_dispatcher_response(response: &str) -> Result<DispatcherSettings, SubmissionError> {
@@ -427,6 +563,7 @@ fn validate_request(request: &SubmissionRequest) -> Result<(), SubmissionError> 
 fn resolve_dispatcher(
     request: &SubmissionRequest,
     primary_url: &str,
+    backup_url: Option<&str>,
     logger: &SubmissionLogger,
 ) -> Result<(DispatcherSettings, String), SubmissionError> {
     if !request.fetch_dispatcher {
@@ -443,13 +580,7 @@ fn resolve_dispatcher(
         logger.log(format!("dispatcher_missing {message}"));
         return Err(SubmissionError::with_log_path(message, logger));
     }
-    let backup_url = build_dispatcher_url(
-        BACKUP_DISPATCHER_BASE,
-        &request.tin,
-        &request.form_code,
-        CURRENT_VERSION,
-    );
-    dispatcher::resolve_with(primary_url, &backup_url, |url| {
+    dispatcher::resolve_with(primary_url, backup_url, |url| {
         logger.log(format!("dispatcher_fetch url={url}"));
         let result = fetch_dispatcher(url);
         match &result {

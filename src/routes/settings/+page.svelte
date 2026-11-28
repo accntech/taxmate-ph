@@ -2,9 +2,13 @@
 	import * as stylex from '@stylexjs/stylex';
 	import { Switch, SwitchThumb } from '@ui-sdk/svelte/switch';
 	import { styles } from './settings.styles';
-	import { Badge, Button, Card, Dialog, Page, PageHeader, Select } from '$lib/components/ui';
+	import { Badge, Button, Card, Dialog, Input, Page, PageHeader, Select } from '$lib/components/ui';
 	import { settings, type ColorTheme, type PaperSize } from '$lib/settings.svelte';
-	import { createSubmissionLogClient, formatSubmissionError, formatSubmissionLog, type SubmissionLog } from '$lib/tauri/submission';
+	import { isBirClientVersion, isDispatcherAddress } from '$lib/ebirforms/bir-dispatcher-config';
+	import {
+		createSubmissionLogClient, formatSubmissionError, formatSubmissionLog, testDispatcherConnection,
+		type DispatcherConnection, type DispatcherConnectionTest, type SubmissionLog
+	} from '$lib/tauri/submission';
 	import { copyAgentAccessToken, getAgentBridgeStatus, setAgentBridgeEnabled, type AgentBridgeStatus } from '$lib/tauri/agent-bridge';
 	import { isTauri } from '@tauri-apps/api/core';
 	import Settings from '@solar-icons/svelte/category/settings/Linear/Settings.svelte';
@@ -42,19 +46,21 @@
 	];
 
 	const birLinks = [
-		{ label: 'eBIRForms — official BIR page', href: 'https://www.bir.gov.ph/eservices/ebirforms' },
+		{ label: 'eBIRForms — official BIR page', href: 'https://www.bir.gov.ph/ebirforms' },
 		{ label: 'Bureau of Internal Revenue', href: 'https://www.bir.gov.ph' }
 	];
 
 	let agentBridge = $state<AgentBridgeStatus | null>(null);
 	let agentBridgePending = $state(false);
+	let dispatcherTestAvailable = $state(false);
 	let agentBridgeError = $state('');
 	type AgentSetupItem = 'prompt' | 'token';
 	let agentSetupCopy = $state<{ item: AgentSetupItem; status: 'copying' | 'copied' | 'error' } | null>(null);
 	const agentSetupCopyDisabled = $derived(!agentBridge?.mcp_url || agentBridgePending || agentSetupCopy?.status === 'copying');
 
 	onMount(() => {
-		if (isTauri()) void getAgentBridgeStatus().then(status => { agentBridge = status; }).catch(() => {});
+		dispatcherTestAvailable = isTauri();
+		if (dispatcherTestAvailable) void getAgentBridgeStatus().then(status => { agentBridge = status; }).catch(() => {});
 	});
 
 	async function toggleAgentBridge() {
@@ -93,6 +99,69 @@
 	}
 
 	let resetOpen = $state(false);
+	let primaryAddress = $derived(settings.prefs.birDispatcher.primaryAddress);
+	let backupAddress = $derived(settings.prefs.birDispatcher.backupAddress);
+	let clientVersion = $derived(settings.prefs.birDispatcher.clientVersion);
+	let dispatcherSaved = $state(false);
+	let dispatcherError = $state('');
+	let dispatcherTesting = $state(false);
+	let dispatcherTestResult = $state<DispatcherConnectionTest | null>(null);
+	const dispatcherAddresses = $derived({
+		primaryAddress: primaryAddress.trim(),
+		backupAddress: backupAddress.trim()
+	});
+
+	function readDispatcherAddresses() {
+		const { primaryAddress, backupAddress } = dispatcherAddresses;
+		if (!isDispatcherAddress(primaryAddress) || (backupAddress && !isDispatcherAddress(backupAddress))) {
+			dispatcherError = 'Enter HTTP or HTTPS dispatcher addresses without credentials, queries, or fragments.';
+			return;
+		}
+		return dispatcherAddresses;
+	}
+
+	function saveDispatcher(event: SubmitEvent) {
+		event.preventDefault();
+		const addresses = readDispatcherAddresses();
+		if (!addresses) return;
+		const config = { ...addresses, clientVersion: clientVersion.trim() };
+		if (!isBirClientVersion(config.clientVersion)) {
+			dispatcherError = 'Enter a client version such as 7.9.6.0.';
+			return;
+		}
+		try {
+			settings.saveBirDispatcher(config);
+			dispatcherError = '';
+			dispatcherSaved = true;
+		} catch {
+			dispatcherError = 'Could not save dispatcher settings on this device.';
+		}
+	}
+
+	async function checkDispatcherConnection() {
+		if (dispatcherTesting) return;
+		const addresses = readDispatcherAddresses();
+		if (!addresses) return;
+		dispatcherTesting = true;
+		dispatcherSaved = false;
+		dispatcherError = '';
+		dispatcherTestResult = null;
+		try {
+			const result = await testDispatcherConnection(addresses);
+			if (addresses === dispatcherAddresses) dispatcherTestResult = result;
+		} catch (error) {
+			if (addresses === dispatcherAddresses) dispatcherError = formatSubmissionError(error);
+		} finally {
+			dispatcherTesting = false;
+		}
+	}
+
+	function describeDispatcherConnection(role: string, result: DispatcherConnection) {
+		return result.kind === 'http'
+			? `${role} dispatcher returned HTTP ${result.status}.`
+			: `${role} dispatcher could not be reached (${result.message}).`;
+	}
+
 	let logOpen = $state(false);
 	let logLoading = $state(false);
 	let submissionLog = $state<SubmissionLog | null>(null);
@@ -149,6 +218,9 @@
 
 	function confirmReset() {
 		settings.resetToDefaults();
+		dispatcherSaved = false;
+		dispatcherError = '';
+		dispatcherTestResult = null;
 		resetOpen = false;
 	}
 </script>
@@ -163,7 +235,7 @@
 		</span>
 		<div class={stylex.attrs(styles.copy).class}>
 			<h2 class={stylex.attrs(styles.sectionTitle).class}>{label}</h2>
-			<p class={stylex.attrs(styles.sectionDescription).class}>{desc}</p>
+			{#if desc}<p class={stylex.attrs(styles.sectionDescription).class}>{desc}</p>{/if}
 		</div>
 	</div>
 {/snippet}
@@ -279,7 +351,7 @@
 {/snippet}
 
 {#snippet submissionLogControl()}
-	<Button variant="secondary" aria-expanded={logOpen} aria-controls="submission-log" onclick={toggleSubmissionLog}>
+	<Button variant="secondary" size="sm" aria-expanded={logOpen} aria-controls="submission-log" onclick={toggleSubmissionLog}>
 		{logOpen ? 'Hide submission log' : 'View submission log'}
 	</Button>
 {/snippet}
@@ -303,7 +375,7 @@
 {/snippet}
 
 {#snippet agentSetupControls()}
-	<div class={stylex.attrs(styles.agentSetupActions).class}>
+	<div class={stylex.attrs(styles.settingsActions).class}>
 		<Button
 			variant="primary"
 			disabled={agentSetupCopyDisabled}
@@ -372,14 +444,70 @@
 	</Card>
 
 	<Card variant="panel" padding="lg" class={stylex.attrs(styles.card).class}>
-		{@render sectionTitle('Sending', 'BIR submission is available for Form 1601-EQ first.', Settings)}
+		{@render sectionTitle('eBIRForm Submission', '', Settings)}
 		{@render row('Sending mode', 'Send to BIR uploads the return. Prepare locally saves a package on this device without sending it.', sendingControl, true)}
-		<p class={stylex.attrs(styles.dispatcherDescription).class}>Server settings are retrieved automatically from the BIR dispatcher when sending.</p>
-		{@render row('Submission log', 'Review saved preparation, connection, and upload results on this device.', submissionLogControl, true)}
+		<form
+			aria-labelledby="dispatcher-settings-title"
+			class={stylex.attrs(styles.dispatcherForm).class}
+			onsubmit={saveDispatcher}
+			oninput={() => {
+				dispatcherSaved = false;
+				dispatcherError = '';
+				dispatcherTestResult = null;
+			}}
+		>
+			<div>
+				<h3 id="dispatcher-settings-title" class={stylex.attrs(styles.subsectionTitle).class}>Dispatcher settings</h3>
+				<p class={stylex.attrs(styles.settingDescription).class}>
+					Use trusted addresses. Filing sends the taxpayer’s TIN to the dispatcher.
+				</p>
+			</div>
+			<div class="dispatcher-addresses">
+				<Input label="Primary dispatcher address" type="url" required spellcheck={false} bind:value={primaryAddress} />
+				<Input
+					label="Backup dispatcher address"
+					type="url"
+					help="Leave blank to use only the primary dispatcher."
+					spellcheck={false}
+					bind:value={backupAddress}
+				/>
+			</div>
+			<div class={stylex.attrs(styles.dispatcherFooter).class}>
+				<div class={stylex.attrs(styles.dispatcherVersion).class}>
+					<Input label="eBIRForms client version" required spellcheck={false} bind:value={clientVersion} />
+				</div>
+				<div class={stylex.attrs(styles.settingsActions).class}>
+					<Button type="submit" variant="primary">Save dispatcher settings</Button>
+					{#if dispatcherTestAvailable}
+						<Button type="button" variant="secondary" disabled={dispatcherTesting} onclick={checkDispatcherConnection}>
+							Test dispatcher connection
+						</Button>
+					{/if}
+				</div>
+			</div>
+			{#if dispatcherError}
+				<p role="alert" class={stylex.attrs(styles.settingDescription, styles.dispatcherError).class}>{dispatcherError}</p>
+			{/if}
+			{#if dispatcherSaved}
+				<p role="status" class={stylex.attrs(styles.settingDescription).class}>Dispatcher settings saved.</p>
+			{/if}
+			{#if dispatcherTesting}
+				<p role="status" class={stylex.attrs(styles.dispatcherFeedback).class}>Testing dispatcher connection…</p>
+			{:else if dispatcherTestResult}
+				<div role="status" class={stylex.attrs(styles.dispatcherFeedback).class}>
+					<div>{describeDispatcherConnection('Primary', dispatcherTestResult.primary)}</div>
+					{#if dispatcherTestResult.backup}
+						<div>{describeDispatcherConnection('Backup', dispatcherTestResult.backup)}</div>
+					{/if}
+					<p class={stylex.attrs(styles.settingDescription).class}>This check only tests HTTP reachability.</p>
+				</div>
+			{/if}
+		</form>
+		{@render row('Submission log', 'Preparation, connection, and upload history on this device.', submissionLogControl, true)}
 		{#if logOpen}
 			<section id="submission-log" aria-labelledby="submission-log-title" class={stylex.attrs(styles.submissionLog).class}>
 				<div class={stylex.attrs(styles.logHeading).class}>
-					<h3 id="submission-log-title" class={stylex.attrs(styles.logTitle).class}>Submission log</h3>
+					<h3 id="submission-log-title" class={stylex.attrs(styles.subsectionTitle).class}>Submission log</h3>
 					<Button variant="secondary" size="sm" disabled={logLoading} onclick={() => void loadSubmissionLog()}>Refresh log</Button>
 				</div>
 				<p class={stylex.attrs(styles.logDescription).class}>Upload success does not confirm BIR receipt or acceptance.</p>
@@ -522,7 +650,7 @@
 	bind:open={resetOpen}
 	size="sm"
 	title="Reset preferences?"
-	description="Theme, sidebar, sending mode, and default values return to their originals. Taxpayer records are not affected."
+	description="Theme, sidebar, sending settings, and default values return to their originals. Taxpayer records are not affected."
 >
 	{#snippet footer()}
 		<Button variant="secondary" onclick={() => (resetOpen = false)}>Cancel</Button>
@@ -531,6 +659,19 @@
 </Dialog>
 
 <style>
+	.dispatcher-addresses {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr);
+		align-items: start;
+		gap: calc(var(--spacing) * 4);
+	}
+
+	@container dispatcher-settings (width >= 36rem) {
+		.dispatcher-addresses {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+		}
+	}
+
 	:global(.agent-bridge-switch) {
 		display: grid;
 		place-items: center;

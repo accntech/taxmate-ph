@@ -1,5 +1,6 @@
 import { browser } from '$app/environment';
 import type { PrintPaperSize } from '$lib/printing/profiles';
+import { defaultBirDispatcherConfig, isBirClientVersion, isDispatcherAddress, type BirDispatcherConfig } from '$lib/ebirforms/bir-dispatcher-config';
 import type { SubmissionMode } from '$lib/tauri/submission';
 
 export type ColorTheme = 'ebirforms' | 'teal' | 'catppuccin';
@@ -11,6 +12,7 @@ export type PaperSize = PrintPaperSize;
 
 export type Prefs = {
 	submissionMode: SubmissionMode;
+	birDispatcher: BirDispatcherConfig;
 	paperSize: PaperSize;
 };
 
@@ -22,6 +24,7 @@ const LEGACY_SIDEBAR_KEY = 'taxmate-ph-sidebar';
 
 const defaultPrefs: Prefs = {
 	submissionMode: 'legacy_sftp',
+	birDispatcher: { ...defaultBirDispatcherConfig },
 	paperSize: 'long'
 };
 
@@ -80,7 +83,15 @@ class SettingsStore {
 			const raw = readPreference(PREFS_KEY);
 			if (raw) {
 				const stored = JSON.parse(raw) as Partial<Prefs>;
-				this.prefs = { ...defaultPrefs, ...stored, submissionMode: stored.submissionMode === 'dry_run' ? 'dry_run' : 'legacy_sftp' };
+				const birDispatcher = stored.birDispatcher;
+				const validDispatcher = birDispatcher && isDispatcherAddress(birDispatcher.primaryAddress)
+					&& (birDispatcher.backupAddress === '' || isDispatcherAddress(birDispatcher.backupAddress))
+					&& isBirClientVersion(birDispatcher.clientVersion);
+				this.prefs = {
+					...defaultPrefs, ...stored,
+					submissionMode: stored.submissionMode === 'dry_run' ? 'dry_run' : 'legacy_sftp',
+					birDispatcher: validDispatcher ? birDispatcher : { ...defaultBirDispatcherConfig }
+				};
 			}
 		} catch {
 			this.prefs = { ...defaultPrefs };
@@ -180,6 +191,12 @@ class SettingsStore {
 		}
 	}
 
+	saveBirDispatcher(config: BirDispatcherConfig) {
+		const prefs = { ...this.prefs, birDispatcher: config };
+		localStorage.setItem(PREFS_KEY, JSON.stringify(prefs));
+		this.prefs = prefs;
+	}
+
 	resetToDefaults() {
 		if (browser) {
 			for (const key of [PALETTE_KEY, THEME_KEY, SIDEBAR_KEY, PREFS_KEY, LEGACY_SIDEBAR_KEY]) {
@@ -190,7 +207,7 @@ class SettingsStore {
 		this.colorTheme = 'ebirforms';
 		this.themeMode = 'system';
 		this.sidebarCollapsed = false;
-		this.prefs = { ...defaultPrefs };
+		this.prefs = { ...defaultPrefs, birDispatcher: { ...defaultBirDispatcherConfig } };
 
 		if (browser) {
 			this.#applyTheme();

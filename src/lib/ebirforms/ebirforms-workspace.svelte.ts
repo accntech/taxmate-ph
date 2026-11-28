@@ -648,7 +648,9 @@ class EbirformsWorkspace {
 
 	async submitCurrentReturn() {
 		if (this.isSubmitting || this.isSavingDraft || this.isPersisting) return;
-		if (settings.prefs.submissionMode === 'legacy_sftp' && this.selectedForm?.code !== '1601EQ') {
+		const { submissionMode, birDispatcher } = settings.prefs;
+		const live = submissionMode === 'legacy_sftp';
+		if (live && this.selectedForm?.code !== '1601EQ') {
 			this.statusMessage = 'BIR submission is currently available for Form 1601-EQ only.';
 			return;
 		}
@@ -667,17 +669,18 @@ class EbirformsWorkspace {
 			const submitReturn = createSubmissionClient();
 			const receipt = await submitReturn({
 				xml: this.generatedXml,
-					rdoXml: settings.prefs.submissionMode === 'legacy_sftp' && this.selectedForm?.code === '1601EQ'
-						? serialize1601EQSubmissionXml({ ...submittedValues,
-							txtEmail: getReturnEmail('1601EQ', submittedValues, this.profile), txtFinalFlag: '2' })
-						: undefined,
+				rdoXml: live
+					? serialize1601EQSubmissionXml({ ...submittedValues,
+						txtEmail: getReturnEmail('1601EQ', submittedValues, this.profile), txtFinalFlag: '2' })
+					: undefined,
 				returnFilename: this.returnFilename,
 				formCode: this.selectedForm?.code ?? '1601EQ',
 				tin: this.dispatcherTin,
 				email: getReturnEmail(this.selectedForm?.code ?? '1601EQ', this.formValues, this.profile),
-				mode: settings.prefs.submissionMode,
+				mode: submissionMode,
 				dispatcher: undefined,
-				fetchDispatcher: settings.prefs.submissionMode === 'legacy_sftp'
+				dispatcherConfig: live ? { ...birDispatcher } : undefined,
+				fetchDispatcher: live
 			});
 			const current = this.activeReturnId === returnId && this.selectedProfileId === taxpayerId;
 			const unchanged = current && JSON.stringify(this.formValues) === JSON.stringify(submittedValues);

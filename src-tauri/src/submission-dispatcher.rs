@@ -86,21 +86,23 @@ fn is_open(settings: &DispatcherSettings) -> bool {
 
 pub(super) fn resolve_with(
     primary_url: &str,
-    backup_url: &str,
+    backup_url: Option<&str>,
     mut fetch: impl FnMut(&str) -> Result<DispatcherSettings, SubmissionError>,
 ) -> Result<(DispatcherSettings, String), SubmissionError> {
-    if let Ok(settings) = fetch(primary_url) {
+    let mut fetch_open = |url: &str| {
+        let settings = fetch(url)?;
         if is_open(&settings) {
-            return Ok((settings, primary_url.to_owned()));
+            Ok((settings, url.to_owned()))
+        } else {
+            Err(SubmissionError::new(
+                "BIR online filing is currently closed or unavailable.",
+            ))
         }
-    }
-    let settings = fetch(backup_url)?;
-    if !is_open(&settings) {
-        return Err(SubmissionError::new(
-            "BIR online filing is currently closed or unavailable.",
-        ));
-    }
-    Ok((settings, backup_url.to_owned()))
+    };
+    fetch_open(primary_url).or_else(|primary_error| match backup_url {
+        Some(url) => fetch_open(url),
+        None => Err(primary_error),
+    })
 }
 
 struct Reader<'a> {
@@ -313,7 +315,7 @@ mod tests {
     #[test]
     fn closed_primary_uses_backup_once_and_reports_backup_url() {
         let mut requests = Vec::new();
-        let (_, url) = resolve_with("primary", "backup", |url| {
+        let (_, url) = resolve_with("primary", Some("backup"), |url| {
             requests.push(url.to_owned());
             let mut s = open();
             if url == "primary" {
@@ -329,7 +331,7 @@ mod tests {
     #[test]
     fn both_closed_fail_without_extra_retry() {
         let mut calls = 0;
-        assert!(resolve_with("primary", "backup", |_| {
+        assert!(resolve_with("primary", Some("backup"), |_| {
             calls += 1;
             let mut s = open();
             s.mode.clear();
@@ -342,7 +344,7 @@ mod tests {
     #[test]
     fn open_primary_skips_backup() {
         let mut calls = 0;
-        let (_, url) = resolve_with("primary", "backup", |_| {
+        let (_, url) = resolve_with("primary", Some("backup"), |_| {
             calls += 1;
             Ok(open())
         })
@@ -354,13 +356,13 @@ mod tests {
     #[test]
     fn failed_primary_uses_backup_and_failed_backup_is_final() {
         let mut calls = 0;
-        let result = resolve_with("primary", "backup", |_| {
+        let result = resolve_with("primary", Some("backup"), |_| {
             calls += 1;
             Err(SubmissionError::new("offline"))
         });
         assert!(result.is_err());
         assert_eq!(calls, 2);
-        let (_, url) = resolve_with("primary", "backup", |url| {
+        let (_, url) = resolve_with("primary", Some("backup"), |url| {
             if url == "primary" {
                 Err(SubmissionError::new("offline"))
             } else {
@@ -369,6 +371,23 @@ mod tests {
         })
         .unwrap();
         assert_eq!(url, "backup");
+    }
+
+    #[test]
+    fn closed_primary_without_backup_reports_filing_unavailable() {
+        let mut calls = Vec::new();
+        let error = resolve_with("primary", None, |url| {
+            calls.push(url.to_owned());
+            let mut settings = open();
+            settings.mode = "0".into();
+            Ok(settings)
+        })
+        .unwrap_err();
+        assert_eq!(
+            error.message,
+            "BIR online filing is currently closed or unavailable."
+        );
+        assert_eq!(calls, ["primary"]);
     }
 
     #[test]
