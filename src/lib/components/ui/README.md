@@ -27,10 +27,9 @@ errors, required states, events, and stored form values while composing the
 reusable controls.
 Specialized input adaptations are intentional:
 
-- TIN fields retain the application's 13-digit contract: nine TIN digits and a
-  four-digit branch. The upstream input accepts up to 14 digits and defaults a
-  nine-digit TIN to a three-digit branch; the application adapter preserves the
-  project's own validation and field mapping instead.
+- Taxpayer profile TINs use nine TIN digits and a three- to five-digit branch.
+  Keep the existing branch normalization, leading zeros, and form-specific
+  field mapping when using the application adapter.
 - Currency fields retain strict decimal strings and the application's precision,
   invalid-input feedback, and persistence/calculation behavior. The upstream
   component's numeric callback and clamping behavior do not replace those rules.
@@ -41,8 +40,9 @@ Specialized input adaptations are intentional:
 
 Vite compiles Svelte before StyleX using `stylex.vite.ts`. The root layout loads
 shared scale/composition defaults and StyleX's development runtime; production
-CSS is emitted by the compiler. The application retains its existing theme.
-The library's browser reset is available but is not loaded over Tailwind's reset.
+CSS is emitted by the compiler. [`src/app.css`](../../../app.css) imports the
+checked-in Preflight adaptation before the theme and list controls and defines
+their layer order.
 
 The reusable controls import Solar Icons v2 through the `@solar-icons/svelte-v2`
 npm alias; existing application imports continue using v1.

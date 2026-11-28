@@ -13,7 +13,8 @@
     "test:run": "vitest run",
     "tauri": "tauri",
     "tauri:agent": "mkdir -pm 700 \"$HOME/.codex/taxmate-ui\" && TAXMATE_UI_AGENT_SOCKET=\"$HOME/.codex/taxmate-ui/agent.sock\" tauri dev",
-    "test:browser": "playwright test"
+    "test:browser": "playwright test",
+    "verify:1701": "bun run check && bun run test:run src/tests/lib/forms/annual-2013-editor-layout.test.ts src/tests/lib/forms/annual-1701-june-references.test.ts src/tests/lib/forms/individual-annual.test.ts && bun run test:browser tests/browser/form-1701-layout.spec.ts --grep 'June 1701|1701 June|1701 joint mobile|1701 joint (320|390)px reference owners' --workers=2"
   },
   "license": "MIT",
   "dependencies": {

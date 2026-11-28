@@ -1,8 +1,14 @@
 # Repository Instructions
 
+## TaxMate design and architecture
+
+- For UI or interaction changes, read [DESIGN.md](DESIGN.md) and inspect the closest production screen before editing. Use its component, layout, and interaction patterns as the reference.
+- For workflow, application boundary, or setup changes, use the [TaxMate implementation guide](docs/verification/taxmate-implementation-guide.md). Run the affected workflow checks and report the reference, reused code, results, and any intentional departures.
+
 ## BIR Forms
 
 - For any BIR form addition or change, load [.agents/skills/bir-form-workflow/SKILL.md](.agents/skills/bir-form-workflow/SKILL.md).
+- For complex BIR data-entry patterns, use the [June 2013 Form 1701 baseline](docs/verification/1701-baseline.md). Run `bun run verify:1701` when changing that editor or a shared interaction it exercises.
 
 ## Git
 - Never auto-commit. Even when told to "commit changes", surface the proposed grouping and
