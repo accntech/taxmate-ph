@@ -44,6 +44,26 @@ test('form command lists forms in ascending form number order', async ({ page })
 	expect(withholdingForms).toEqual([...withholdingForms].sort());
 });
 
+test('form command highlights fuzzy matches in codes, titles, and categories', async ({ page }) => {
+	await seedWorkspace(page);
+	await page.goto(tablePath);
+	await page.getByRole('button', { name: 'Create return', exact: true }).click();
+	const dialog = page.getByRole('dialog', { name: 'Create a tax return' });
+	const search = dialog.getByRole('combobox', { name: 'Search BIR forms' });
+	const form = dialog.getByRole('option', { name: /^BIR Form 1601EQ\b/ });
+	await expect(form.locator('mark')).toHaveCount(0);
+
+	for (const query of ['1601‑EQ', '16EQ', 'quarterly rmt', 'wthldng tx']) {
+		await search.fill(query);
+		await expect(form).toBeVisible();
+		const highlighted = await form.locator('mark').allTextContents();
+		expect(highlighted.join('').toLowerCase()).toBe(query.toLowerCase().replace(/[\s‑]/g, ''));
+	}
+
+	await search.clear();
+	await expect(form.locator('mark')).toHaveCount(0);
+});
+
 test('form command filters, handles no matches, and creates with the keyboard', async ({ page }) => {
 	await seedWorkspace(page);
 	await page.goto(tablePath);
@@ -96,6 +116,11 @@ for (const theme of ['light', 'dark']) {
 			const searchBox = await search.boundingBox();
 			const dialogBox = await dialog.boundingBox();
 			expect(searchBox!.y - dialogBox!.y).toBeLessThanOrEqual(24);
+			if (width === 1440) {
+				expect(dialogBox!.width).toBeGreaterThanOrEqual(710);
+			}
+			expect(dialogBox!.height).toBeGreaterThanOrEqual(580);
+			await expect(options.nth(5)).toBeInViewport({ ratio: 1 });
 			await expect(dialog.getByRole('button', { name: 'Create return', exact: true })).toBeVisible();
 			// The entire 3px soft focus ring must fit every clipping ancestor.
 			expect(await search.evaluate(input => {

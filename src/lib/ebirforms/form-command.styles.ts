@@ -6,6 +6,9 @@ export const formCommand = stylex.create({
     minHeight: 0,
     flexDirection: "column"
   },
+  formPicker: {
+    height: "min(75dvh, 44rem)"
+  },
   searchHeader: {
     flexShrink: 0,
     borderBottomWidth: "1px",
@@ -128,36 +131,37 @@ export const formCommand = stylex.create({
       ":disabled": 0.5
     }
   },
-  resultIcon: {
-    display: "grid",
-    width: "2rem",
-    height: "2rem",
-    flexShrink: 0,
-    placeItems: "center",
-    borderRadius: "0.375rem",
-    borderWidth: "1px",
-    borderStyle: "solid",
-    borderColor: "var(--border)",
-    backgroundColor: "var(--bg-elev)",
-    color: "var(--accent)"
-  },
-  icon: {
-    width: "1rem",
-    height: "1rem"
-  },
-  resultText: {
-    display: "grid",
-    minWidth: 0,
+  formResults: {
     flex: 1,
-    gap: "0.125rem"
+    height: "auto",
+    maxHeight: "none",
+    overscrollBehaviorY: "contain",
+    scrollbarGutter: "stable"
   },
-  resultMeta: {
-    display: "flex",
-    flexWrap: "wrap",
-    alignItems: "center",
-    justifyContent: "space-between",
-    columnGap: "0.75rem",
-    rowGap: "0.25rem"
+  formResult: {
+    display: "grid",
+    gridTemplateColumns: {
+      default: "minmax(0, 1fr)",
+      "@media (width >= 28rem)": "minmax(0, 1fr) auto"
+    },
+    columnGap: "1rem",
+    rowGap: "0.125rem",
+    paddingBlock: "0.5rem"
+  },
+  resultCategory: {
+    justifySelf: {
+      default: "start",
+      "@media (width >= 28rem)": "end"
+    },
+    gridColumn: {
+      default: "1",
+      "@media (width >= 28rem)": "2"
+    },
+    gridRow: {
+      default: "auto",
+      "@media (width >= 28rem)": "1 / span 2"
+    },
+    alignSelf: "center"
   },
   resultTitle: {
     fontSize: "0.875rem",
@@ -165,8 +169,9 @@ export const formCommand = stylex.create({
     fontWeight: 500
   },
   resultDescription: {
+    gridColumn: "1",
     fontSize: "0.75rem",
-    lineHeight: 1.625,
+    lineHeight: 1.4,
     color: "var(--fg-muted)"
   },
   empty: {
@@ -179,6 +184,9 @@ export const formCommand = stylex.create({
     gap: "0.5rem",
     padding: "1rem",
     textAlign: "center"
+  },
+  formEmpty: {
+    minHeight: "100%"
   },
   hint: {
     fontSize: "0.75rem",

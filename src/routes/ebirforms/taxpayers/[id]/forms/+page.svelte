@@ -318,7 +318,7 @@
 		</RecordTable>
 	{/if}
 </Page>
-<Dialog bind:open={createOpen} layout="command" size="xl" hideCloseButton title="Create a tax return" description={`Choose the form type for a new return for ${profile?.taxpayerName || 'this taxpayer'}.`}>
+<Dialog bind:open={createOpen} layout="command" size="2xl" hideCloseButton title="Create a tax return" description={`Choose the form type for a new return for ${profile?.taxpayerName || 'this taxpayer'}.`}>
 	{#if createOpen}
 		<FormCommand forms={workspace.forms} taxpayerName={profile?.taxpayerName} status={createError} disabled={busy || !profile || archived || !storageReady} onselect={create} oncancel={() => createOpen = false} />
 	{/if}

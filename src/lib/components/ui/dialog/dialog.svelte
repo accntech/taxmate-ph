@@ -6,7 +6,7 @@
 	import type { Snippet } from 'svelte';
 	import CloseCircle from '@solar-icons/svelte/category/ui/Linear/CloseCircle.svelte';
 
-	type Size = 'sm' | 'md' | 'lg' | 'xl';
+	type Size = 'sm' | 'md' | 'lg' | 'xl' | '2xl';
 
 	let {
 		open = $bindable(false),
@@ -44,7 +44,8 @@
 		sm: wrapperStyles.sm,
 		md: wrapperStyles.md,
 		lg: wrapperStyles.lg,
-		xl: wrapperStyles.xl
+		xl: wrapperStyles.xl,
+		'2xl': wrapperStyles['2xl']
 	};
 
 </script>

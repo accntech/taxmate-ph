@@ -25,6 +25,12 @@ export const wrapperStyles = stylex.create({
       "@media (width >= 40rem)": "var(--container-2xl)"
     }
   },
+  "2xl": {
+    "maxWidth": {
+      "default": "none",
+      "@media (width >= 40rem)": "var(--container-3xl)"
+    }
+  },
   "focus": {
     "--sx-outline-style": {
       "default": null,

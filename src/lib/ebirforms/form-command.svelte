@@ -60,7 +60,7 @@
 	}
 </script>
 
-<div class={stylex.attrs(formCommand.root).class}>
+<div class={stylex.attrs(formCommand.root, formCommand.formPicker).class}>
 	<div class={stylex.attrs(formCommand.searchHeader).class}>
 		<div class={stylex.attrs(formCommand.searchField).class}>
 			<span class={stylex.attrs(formCommand.searchIcon).class}><Icon icon={glyphs.search} /></span>
@@ -87,7 +87,7 @@
 		<span class={stylex.attrs(formCommand.heading).class}>Forms</span>
 		<span class={stylex.attrs(formCommand.taxpayer).class} title={taxpayerName}>{taxpayerName}</span>
 	</div>
-	<div id={`${uid}-results`} role="listbox" aria-label="BIR forms" class={stylex.attrs(formCommand.results).class}>
+	<div id={`${uid}-results`} role="listbox" aria-label="BIR forms" class={stylex.attrs(formCommand.results, formCommand.formResults).class}>
 		{#each matches as form (form.code)}
 			{@const typeColor = form.status === 'ready' ? formTypeColors.get(form.category) : undefined}
 			<button
@@ -100,29 +100,22 @@
 				tabindex="-1"
 				onpointermove={() => { if (form.status === 'ready') activeCode = form.code; }}
 				onclick={() => select(form.code)}
-				class={stylex.attrs(formCommand.result).class}
+				class={stylex.attrs(formCommand.result, formCommand.formResult).class}
 			>
-				<span aria-hidden="true" class={stylex.attrs(formCommand.resultIcon).class}>
-					<span class={stylex.attrs(formCommand.icon).class}>
-						<Icon icon={glyphs.layers} />
-					</span>
-				</span>
-				<span class={stylex.attrs(formCommand.resultText).class}>
-					<span
-						class={[stylex.attrs(formCommand.resultMeta).class, { 'colored-form-type': typeColor }]}
-						style:--form-type-color={typeColor}
-					>
-						<span class={stylex.attrs(formCommand.resultTitle).class}>BIR Form <span class="font-mono">{form.code}</span></span>
-						<Badge size="sm" class="form-type-badge">
-							{form.status === 'ready' ? form.category : 'Coming soon'}
-						</Badge>
-					</span>
-					<span class={stylex.attrs(formCommand.resultDescription).class}>{form.title}</span>
+				<span class={stylex.attrs(formCommand.resultTitle).class}>BIR Form <span class="font-mono">{form.code}</span></span>
+				<span class={stylex.attrs(formCommand.resultDescription).class}>{form.title}</span>
+				<span
+					class={[stylex.attrs(formCommand.resultCategory).class, { 'colored-form-type': typeColor }]}
+					style:--form-type-color={typeColor}
+				>
+					<Badge size="sm" class="form-type-badge">
+						{form.status === 'ready' ? form.category : 'Coming soon'}
+					</Badge>
 				</span>
 			</button>
 		{/each}
 		{#if matches.length === 0}
-			<div class={stylex.attrs(formCommand.empty).class}>
+			<div class={stylex.attrs(formCommand.empty, formCommand.formEmpty).class}>
 				<p class={stylex.attrs(formCommand.resultTitle).class}>No matching forms</p>
 				<p class={stylex.attrs(formCommand.hint).class}>Try another form number, title, or category.</p>
 			</div>
