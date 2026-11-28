@@ -76,7 +76,7 @@ describe('taxpayer profile save validation', () => {
 		expect(workspace.profiles[0].taxpayerName).toBe('Updated taxpayer');
 	});
 
-	it.each(['17A', '21C', '93B'])('saves packaged alphanumeric RDO %s unchanged', async (rdoCode) => {
+	it.each(['001', '17A', '21C', '93B', '43A', '43B', '113', '116', '132'])('saves a recognized RDO %s unchanged', async (rdoCode) => {
 		workspace.profile.rdoCode = rdoCode;
 		await workspace.saveTaxpayerProfile();
 		expect(save).toHaveBeenCalledOnce();
