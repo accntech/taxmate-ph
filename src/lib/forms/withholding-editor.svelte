@@ -264,7 +264,7 @@
 {/snippet}
 
 <div class="paper-sheet wh-preparation">
-	<PaperFormHeader centered={propertyReturn} number={layout.number} title={layout.title} subtitle={layout.subtitle}
+	<PaperFormHeader number={layout.number} title={layout.title} subtitle={layout.subtitle}
 		revision={layout.revision} />
 
 	{#if supporting.length}

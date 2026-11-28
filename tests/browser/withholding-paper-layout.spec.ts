@@ -46,7 +46,9 @@ for (const code of codes) {
 			const [heading, masthead, periodBox, taxpayerBox, secondPart] = await Promise.all(
 				[title, header, period, taxpayer, partTwo].map(locator => locator.boundingBox())
 			);
-			expect(Math.abs(heading!.x + heading!.width / 2 - masthead!.x - masthead!.width / 2)).toBeLessThan(1);
+			const leftPadding = await header.evaluate(element => parseFloat(getComputedStyle(element).paddingLeft));
+			expect(heading!.x - masthead!.x).toBeCloseTo(leftPadding, 0);
+			await expect(title).toHaveCSS('text-align', 'start');
 			expect(periodBox!.y).toBeLessThan(taxpayerBox!.y);
 			expect(taxpayerBox!.y).toBeLessThan(secondPart!.y);
 			const overflow = await sheet.evaluate(element => {

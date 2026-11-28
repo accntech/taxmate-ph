@@ -60,7 +60,7 @@ async function create(page: Page, code: string) {
 	await expect(page.getByRole('region', { name: `BIR Form ${code} workspace`, exact: true }).getByRole('heading', { level: 1 })).toBeVisible();
 }
 
-test('0619E follows the PDF field order in a centered paper form', async ({ page }, testInfo) => {
+test('0619E follows the PDF field order with a left-aligned masthead', async ({ page }, testInfo) => {
 	await seedWorkspace(page);
 	await page.goto(`${listPath}/0619E?new=true`);
 	const title = page.getByRole('heading', { name: /Monthly Remittance Form/ });
@@ -90,8 +90,9 @@ test('0619E follows the PDF field order in a centered paper form', async ({ page
 		const [heading, masthead, periodBox, taxpayerBox, remittanceBox] = await Promise.all(
 			[title, header, period, taxpayer, remittance].map(locator => locator.boundingBox())
 		);
-		expect(Math.abs(heading!.x + heading!.width / 2 - masthead!.x - masthead!.width / 2)).toBeLessThan(1);
-		await expect(title).toHaveCSS('text-align', 'center');
+		const leftPadding = await header.evaluate(element => parseFloat(getComputedStyle(element).paddingLeft));
+		expect(heading!.x - masthead!.x).toBeCloseTo(leftPadding, 0);
+		await expect(title).toHaveCSS('text-align', 'start');
 		expect(periodBox!.y).toBeLessThan(taxpayerBox!.y);
 		expect(taxpayerBox!.y).toBeLessThan(remittanceBox!.y);
 		expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
@@ -187,8 +188,9 @@ test('0619F follows the final withholding PDF and reopens the saved tax type and
 		const [heading, masthead, periodBox, taxpayerBox, remittanceBox] = await Promise.all(
 			[title, header, period, taxpayer, remittance].map(locator => locator.boundingBox())
 		);
-		expect(Math.abs(heading!.x + heading!.width / 2 - masthead!.x - masthead!.width / 2)).toBeLessThan(1);
-		await expect(title).toHaveCSS('text-align', 'center');
+		const leftPadding = await header.evaluate(element => parseFloat(getComputedStyle(element).paddingLeft));
+		expect(heading!.x - masthead!.x).toBeCloseTo(leftPadding, 0);
+		await expect(title).toHaveCSS('text-align', 'start');
 		expect(periodBox!.y).toBeLessThan(taxpayerBox!.y);
 		expect(taxpayerBox!.y).toBeLessThan(remittanceBox!.y);
 		expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);

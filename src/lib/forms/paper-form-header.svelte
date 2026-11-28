@@ -1,14 +1,13 @@
 <script lang="ts">
-	let { number, revision, title, subtitle, centered = false }: {
+	let { number, revision, title, subtitle }: {
 		number: string;
 		revision: string;
 		title: string;
 		subtitle?: string;
-		centered?: boolean;
 	} = $props();
 </script>
 
-<header class={['paper-form-header', centered && 'centered']}>
+<header class="paper-form-header">
 	<h1>
 		{title}
 		{#if subtitle}<span>{subtitle}</span>{/if}
@@ -47,8 +46,6 @@
 		font-weight: 500;
 		line-height: 1.4;
 	}
-	.centered h1 { text-align: center; }
-	.centered .form-number { justify-content: center; }
 	.form-number {
 		display: flex;
 		flex-wrap: wrap;
@@ -85,10 +82,5 @@
 			flex-direction: column;
 			align-items: flex-end;
 		}
-		.centered {
-			grid-template-columns: minmax(8rem, 1fr) minmax(0, 3fr) minmax(8rem, 1fr);
-		}
-		.centered h1 { grid-column: 2; }
-		.centered .form-number { justify-content: start; }
 	}
 </style>

@@ -101,7 +101,7 @@
 {/snippet}
 
 <div class="paper-sheet">
-	<PaperFormHeader centered number={finalTax ? '0619-F' : '0619-E'} revision="January 2018" title="Monthly Remittance Form"
+	<PaperFormHeader number={finalTax ? '0619-F' : '0619-E'} revision="January 2018" title="Monthly Remittance Form"
 		subtitle={finalTax ? 'of Final Income Taxes Withheld' : 'of Creditable Income Taxes Withheld (Expanded)'} />
 
 	<section class={['remittance-period', { 'final-tax': finalTax }]} aria-label="Return period">
