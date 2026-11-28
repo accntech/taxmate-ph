@@ -6,7 +6,6 @@
 	import { legacyExemptIdentificationFields, legacyExemptIdentificationPatch } from './exempt';
 	import { legacyMixedAtc, legacyMixedOtherAtc, legacyMixedOtherAtcElected } from './mixed/atc';
 	import { legacyMixedIdentificationFields } from './mixed/identification';
-	import { isValidLegacyReliefMonth } from './mixed';
 	import { legacyRegularIdentificationFields } from './regular/identification';
 	import RegisteredInformation from './registered-information.svelte';
 	import { corporateScheduleReferences } from './schedule-references';
@@ -14,6 +13,7 @@
 	import { corporateLists, nolcoListLabel, ownerListLabel, type CorporateEntry, type CorporateList } from './editor-lists';
 	import { tick } from 'svelte';
 	import { Button, ButtonLink, CalculatedValue, CheckboxInput, Combobox, CurrencyInput, DateInput, FieldErrors, Input, Label, NumberInput, RadioGroup, Select, TinInput } from '$lib/components/ui';
+	import MonthYearInput from '$lib/components/ui/month-year-input/month-year-input.svelte';
 	import { splitTinSegments } from '$lib/components/ui/tin-input/tin';
 	import { psicClassCode, psicOptionsForCode } from '$lib/profiles/psic';
 	import { formatCurrencyInput } from '$lib/components/ui/currency-input/currency';
@@ -315,6 +315,14 @@
 		return form.fieldApplies?.(field.id, calculated) ?? true;
 	}
 
+	function legacyReliefDateFields(fields: CorporateField[]) {
+		if (!legacyMixed) return;
+		const month = fields.find(field => /^frm1702MX:txtPg1(?:EX|SP)\d+ScAI[56]month$/.test(field.id));
+		if (!month) return;
+		const year = fields.find(field => field.id === month.id.replace(/month$/, 'year'));
+		if (year) return { month, year };
+	}
+
 	function hasVisibleFields(section: CorporateSection) {
 		return section.rows.some(row => row.fields.some(applies));
 	}
@@ -433,7 +441,6 @@
 	{@const ctc = certificate === 'CTC'}
 	{@const legacyNumber = legacyIdentification && id === identificationFields.number}
 	{@const legacyCertificateAmount = legacyIdentification && id === identificationFields.amount}
-	{@const legacyReliefMonth = legacyMixed && /^frm1702MX:txtPg1(?:EX|SP)\d+ScAI[56]month$/.test(id)}
 	{@const label = id === form.year ? 'Year ended' : id === form.month ? 'Year-end month'
 		: legacyNumber && ctc ? 'CTC number'
 		: legacyNumber && certificate === identificationFields.registration ? 'SEC registration number'
@@ -501,13 +508,9 @@
 			disabled={row?.disabled || legacyCertificateAmount && !ctc} allowNegative={!legacyCertificateAmount}
 			data-taxmate-agent-currency={legacyCertificateAmount ? undefined : 'signed'} onchange={(next) => write(id, next)} />
 	{:else if field.kind === 'integer' || field.kind === 'percent'}
-		<NumberInput {id} {label} {value} {error} {required} min={legacyReliefMonth ? 1 : 0}
-			max={legacyReliefMonth ? 12 : field.kind === 'percent' ? 100 : undefined}
+		<NumberInput {id} {label} {value} {error} {required} min={0}
+			max={field.kind === 'percent' ? 100 : undefined}
 			decimal={field.kind === 'percent'} maxlength={field.maxLength} onchange={(next) => write(id, next)}
-			onblur={legacyReliefMonth ? (event) => {
-				const input = event.currentTarget;
-				if (input.value && !isValidLegacyReliefMonth(input.value)) write(id, '');
-			} : undefined}
 			trailing={field.kind === 'percent' ? percentUnit : undefined} />
 	{:else if field.kind === 'date'}
 		<DateInput {id} {label} value={dateValue(value)} {error} {required} onchange={(next) => saveDate(id, next, write)} />
@@ -523,6 +526,24 @@
 	{:else}
 		<Input {id} {label} {value} {error} {required} disabled={row?.disabled} inputmode="text" maxlength={field.maxLength} oninput={(event) => write(id, event.currentTarget.value)} />
 	{/if}
+{/snippet}
+
+{#snippet monthYearControl(month: CorporateField, year: CorporateField, label: string, row: CorporateRow, yearDigits: 2 | 4 = 4)}
+	<div class="month-year-control">
+		<MonthYearInput
+			id={year.id}
+			alternateId={month.id}
+			{label}
+			month={calculated[month.id] ?? month.defaultValue}
+			year={calculated[year.id] ?? year.defaultValue}
+			{yearDigits}
+			fixedMonth={!applies(month) || month.readonly ? calculated[month.id] || month.defaultValue : undefined}
+			disabled={row.disabled || year.readonly}
+			required={corporateFieldRequired(form, year, calculated, row) || corporateFieldRequired(form, month, calculated, row)}
+			error={errors[month.id] || errors[year.id]}
+			onchange={(nextMonth, nextYear) => onvaluechange({ [month.id]: nextMonth, [year.id]: nextYear })}
+		/>
+	</div>
 {/snippet}
 
 {#snippet managedValue(id: string, label: string, value: string, error: string | undefined, monospace: boolean)}
@@ -664,9 +685,9 @@
 						{@const labelColumns = !!section.columns?.length && visible.every(field => field.column !== undefined)}
 						{@const tin = tinFields(visible)}
 						{@const accreditation = accreditationFields(visible)}
-						{@const month = visible.find(field => field.id === form.month)}
-						{@const periodEnd = !!month && visible.some(field => field.id === form.year)}
-						{@const namedMonth = periodEnd && month.options?.some(option => /[a-z]/i.test(option.label))}
+						{@const closingMonth = filing && row.fields.find(field => field.id === form.month)}
+						{@const closingYear = closingMonth && visible.find(field => field.id === form.year)}
+						{@const reliefDate = legacyReliefDateFields(visible)}
 						{@const wide = visible.some(field => field.id === form.quarter)}
 						{@const atcChoice = filing && /\bATC\b|alphanumeric tax code/i.test(row.label)}
 						{@const columnRow = !!section.columns?.length && visible.some(field => field.column !== undefined)}
@@ -724,7 +745,7 @@
 								'deduction-category': deductionCategory,
 								'supplemental-amounts': supplementalAmounts,
 								'final-payable': totalOnly && row.item === '44',
-								wide, 'period-end': periodEnd, 'named-month': namedMonth, 'atc-choice': atcChoice,
+								wide, 'atc-choice': atcChoice,
 								total: visible.some(field => field.id === form.amount),
 								'identification-type': exemptIdentification && visible.some(field => field.id === identificationFields.type),
 								'identification-date': exemptIdentification && visible.some(field => field.id === identificationFields.issueDate),
@@ -770,6 +791,10 @@
 											{@render control(field, row.label, undefined, row)}
 										{/each}
 									</div>
+								{:else if closingMonth && closingYear}
+									{@render monthYearControl(closingMonth, closingYear, 'Year ended', row)}
+								{:else if reliefDate}
+									{@render monthYearControl(reliefDate.month, reliefDate.year, row.item === '5' ? 'Relief from' : 'Relief to', row, 2)}
 								{:else if inlineDescription || deductionEntry}
 									<div class={['inline-entry', inlineAmounts.length > 1 && 'multiple-amounts', sectionLabeledAmounts && 'section-labeled-amounts', deductionEntry && 'deduction-entry']}
 										role={deductionEntry ? 'group' : undefined} aria-label={deductionEntry ? row.label : undefined}>
@@ -1228,13 +1253,7 @@
 		padding-block: .625rem;
 	}
 	.filing .corporate-row :global(legend) { margin-block-end: .5rem; }
-	.filing .period-end .field-row {
-		display: grid;
-		grid-template-columns: minmax(0, 9rem) 6.5rem;
-		gap: .625rem;
-	}
-	.filing .named-month .field-row { grid-template-columns: minmax(0, 10.75rem) 6.5rem; }
-	.filing .period-end .field-control:last-child :global(label) { white-space: nowrap; }
+	.month-year-control { inline-size: min(100%, 12rem); }
 	.filing .atc-choice .field-row {
 		display: flex;
 		flex-wrap: wrap;
@@ -1246,11 +1265,6 @@
 	.filing .atc-checkbox > :global(label) { min-block-size: 2.375rem; }
 	.filing .atc-choice .field-row .field-control:has(:global([role='combobox'])) {
 		inline-size: min(100%, 24rem);
-	}
-	@container paper-form (width < 16rem) {
-		.filing .period-end .field-row {
-			grid-template-columns: minmax(0, 10.75rem);
-		}
 	}
 	@container paper-form (min-width: 30rem) {
 		.filing .corporate-row:nth-child(2),

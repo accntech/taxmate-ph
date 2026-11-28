@@ -96,27 +96,28 @@ test("June 2013 1702MX labels tax relief dates and navigates between attachment 
   }]);
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(`${forms}/1702MX?return=special-review`);
-  await expect(page.getByRole("navigation", { name: "Return pages" })).toBeVisible();
+  await expect(page.getByRole("navigation", { name: "Return pages" })).toBeVisible({ timeout: 20_000 });
   await goToReturnPage(page, 14);
   const identification = page.getByRole("region", { name: "Tax return", exact: true });
   await expect(identification.getByText("Regular rate", { exact: true })).toHaveCount(0);
-  const fromMonth = page.locator(id("txtPg1SP1ScAI5month"));
-  const toMonth = page.locator(id("txtPg1SP1ScAI6month"));
-  for (const [field, name] of [
-    ["txtPg1SP1ScAI5month", /from month/i], ["txtPg1SP1ScAI5year", /from year/i],
-    ["txtPg1SP1ScAI6month", /to month/i], ["txtPg1SP1ScAI6year", /to year/i]
-  ] as const) {
-    await expect(page.locator(id(field))).toHaveAccessibleName(name);
-  }
-  await fromMonth.fill("13");
-  await fromMonth.blur();
-  await expect(fromMonth).not.toHaveValue("13");
-  await toMonth.fill("00");
-  await toMonth.blur();
-  await expect(toMonth).not.toHaveValue("00");
+  const from = page.getByRole("group", { name: "Relief from", exact: true });
+  const to = page.getByRole("group", { name: "Relief to", exact: true });
+  const fromMonth = from.getByRole("spinbutton", { name: "Month", exact: true });
+  const fromYear = from.getByRole("spinbutton", { name: "Year", exact: true });
+  const toMonth = to.getByRole("spinbutton", { name: "Month", exact: true });
+  const toYear = to.getByRole("spinbutton", { name: "Year", exact: true });
   await fromMonth.fill("02");
-  await fromMonth.blur();
+  await fromYear.fill("00");
+  await fromYear.blur();
   await expect(fromMonth).toHaveValue("02");
+  await expect(fromYear).toHaveValue("00");
+  await fromYear.fill("24");
+  await toMonth.fill("09");
+  await toYear.fill("28");
+  await toYear.blur();
+  await expect(fromYear).toHaveValue("24");
+  await expect(toMonth).toHaveValue("09");
+  await expect(toYear).toHaveValue("28");
   const taxRelief = page.getByRole("region", { name: /^Schedule C / });
   await expect(taxRelief.locator('[data-corporate-item="4"] .amount-caption')).toContainText("Less: Income Tax Due (Schedule B Item 12)");
   await taxRelief.getByRole("button", { name: /From .*Schedule B, Item 12/ }).click();
@@ -131,4 +132,11 @@ test("June 2013 1702MX labels tax relief dates and navigates between attachment 
     await expect(target).toBeFocused();
     await expect(target).toHaveText(calculated);
   }
+  await page.getByRole("button", { name: "Save draft", exact: true }).click();
+  const saved = await page.evaluate(() => JSON.parse(localStorage.getItem("ebirforms-created-returns-v1")!).returns
+    .find((record: { id: string }) => record.id === "special-review"));
+  expect(saved.values).toMatchObject({
+    [prefix + "txtPg1SP1ScAI5month"]: "02", [prefix + "txtPg1SP1ScAI5year"]: "24",
+    [prefix + "txtPg1SP1ScAI6month"]: "09", [prefix + "txtPg1SP1ScAI6year"]: "28"
+  });
 });

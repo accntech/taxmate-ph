@@ -435,6 +435,13 @@ describe("necessary fields and remittance conditions", () => {
       ),
     ).toBe(false);
   });
+  it.each(["1601C", "1601Cv2018"])("%s validates the adjustment month/year format", (code) => {
+    const field = "frm1601c:sched1:txtMonthYear0";
+    const values = { "frm1601c:optWithheld": "Y", [field]: "13/2017" };
+    expect(validateWithholding(code, values)[field]).toMatch(/MM\/YYYY/);
+    expect(validateWithholding(code, { ...values, [field]: "02/2017" })[field]).toBeUndefined();
+    expect(validateWithholding(code, { ...values, [field]: "2/2017" })[field]).toBeUndefined();
+  });
   it("retains the legacy compensation current-year/year-end distinction without fixed six rows", () => {
     const d = getWithholdingDefinition("1601C")!;
     const schedule = d.schedules.find((s) => s.id === "adjustments")!;

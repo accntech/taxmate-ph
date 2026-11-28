@@ -333,14 +333,11 @@ export function validateIndividualIncome(form: IncomeForm, values: Values): Valu
 		errors[filing.month] = 'Select the last month of the short filing period.';
 	const paymentFields = incomePaymentFieldIds(form.code);
 	for (const field of paymentFields) delete errors[field];
-	const year = fullYear(form, values[form.year]);
-	const currentYear = form.code === '1701MS' || form.code === '1701Qv2018'
-		? philippineCalendarDate().year : new Date().getFullYear();
-	const legacy = ['1700', '1701', '1701Q'].includes(form.code);
-	const minYear = form.code === '1700' ? legacy1700FirstYear : legacy ? 1900 : form.code === '1701MS' ? first1701MSYear : firstRevisedIncomeYear;
-	if (!/^\d{4}$/.test(year) || Number(year) < minYear || Number(year) > (legacy ? legacy1700LastYear : currentYear)) {
-		errors[form.year] = form.code === '1700' ? `Enter a filing year from ${legacy1700FirstYear} to ${legacy1700LastYear}.` :
-			legacy ? 'Select a filing year through 2017 for this revision.' : `Enter a filing year from ${minYear} through ${currentYear}.`;
+	const year = incomeFilingYear(form, values[form.year]);
+	const { minYear, maxYear } = incomeFilingYearBounds(form);
+	if (!/^\d{4}$/.test(year) || Number(year) < minYear || Number(year) > maxYear) {
+		errors[form.year] = form.code === '1700' ? `Enter a filing year from ${minYear} to ${maxYear}.` :
+			['1701', '1701Q'].includes(form.code) ? 'Select a filing year through 2017 for this revision.' : `Enter a filing year from ${minYear} through ${maxYear}.`;
 	}
 	const tin = ['tin1', 'tin2', 'tin3'].map(key => values[form.identity[key as ProfileKey]!] ?? '');
 	if (!tin.every(part => /^\d{3}$/.test(part)) || tin.join('') === '000000000') errors[form.identity.tin1!] = 'Enter a valid nine-digit TIN.';
@@ -374,11 +371,19 @@ export function validateIndividualIncome(form: IncomeForm, values: Values): Valu
 	return errors;
 }
 
-function fullYear(form: IncomeForm, value = '') {
+export function incomeFilingYearBounds(form: IncomeForm) {
+	if (form.code === '1700') return { minYear: legacy1700FirstYear, maxYear: legacy1700LastYear };
+	if (['1701', '1701Q'].includes(form.code)) return { minYear: 1900, maxYear: legacy1700LastYear };
+	const currentYear = form.code === '1701MS' || form.code === '1701Qv2018'
+		? philippineCalendarDate().year : new Date().getFullYear();
+	return { minYear: form.code === '1701MS' ? first1701MSYear : firstRevisedIncomeYear, maxYear: currentYear };
+}
+
+export function incomeFilingYear(form: IncomeForm, value = '') {
 	return ['1700', '1701'].includes(form.code) && /^\d{2}$/.test(value) ? '20' + value : value;
 }
 
 export function individualIncomePeriod(form: IncomeForm, values: Values): string {
-	const year = fullYear(form, values[form.year]) || 'YYYY';
+	const year = incomeFilingYear(form, values[form.year]) || 'YYYY';
 	return form.quarter ? `${year}Q${values[form.quarter] || ''}` : year;
 }

@@ -12,7 +12,7 @@ test('1701-MS Item 31 supports a refund and carry-over split only when overpaid'
 	const source = page.getByRole('radiogroup', { name: 'Taxpayer income source' });
 	const regime = page.getByRole('radiogroup', { name: 'Taxpayer tax regime' });
 	await expect(choices).toHaveCount(0);
-	await page.getByRole('textbox', { name: /^Filing year/ }).fill('2025');
+	await page.getByRole('group', { name: 'Filing period', exact: true }).getByRole('spinbutton', { name: 'Year', exact: true }).fill('2025');
 	await source.getByRole('radio', { name: 'Income from business' }).check();
 	await regime.getByRole('radio', { name: '8% rate' }).check();
 	await goToReturnPage(page, 2);

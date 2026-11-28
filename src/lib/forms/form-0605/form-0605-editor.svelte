@@ -2,6 +2,7 @@
 	import type { Snippet } from 'svelte';
 	import { CalculatedValue, CurrencyInput, DateInput, FieldErrors, Input, Label, NumberInput, RadioGroup, Select } from '$lib/components/ui';
 	import { Combobox } from '$lib/components/ui/combobox';
+	import MonthYearInput from '$lib/components/ui/month-year-input/month-year-input.svelte';
 	import { normalizeCurrencyInput } from '$lib/components/ui/currency-input/currency';
 	import AtcPicker from '../atc-picker.svelte';
 	import PaperFormHeader from '../paper-form-header.svelte';
@@ -19,6 +20,8 @@
 
 	const definition = getWithholdingDefinition('0605')!;
 	const { code, prefix } = definition;
+	const yearField = definition.yearField;
+	const monthField = prefix + 'itemYearEndMonth';
 	const fields = Object.fromEntries(definition.sections.flatMap(section => section.fields).map(field => [field.id, field]));
 	const currency = new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' });
 	const calculated = $derived(calculateWithholding(code, values));
@@ -37,8 +40,8 @@
 
 	function change(name: string, value: string) {
 		const patch = { [prefix + name]: value };
-		if (name === 'itemFiscalStartMonth' && value === 'Fiscal' && values[prefix + 'itemYearEndMonth'] === '12') {
-			patch[prefix + 'itemYearEndMonth'] = '';
+		if (name === 'itemFiscalStartMonth' && value === 'Fiscal' && values[monthField] === '12') {
+			patch[monthField] = '';
 		}
 		if (name === 'itemModeOfPayment' && value !== 'Installment') patch[prefix + 'txtNumOfInstallment'] = '';
 		if (name === 'itemMannerOfPayment') {
@@ -85,15 +88,15 @@
 		</div>
 	{:else if name === 'itemApprovedYN' || name === 'itemModeOfPayment'}
 		<RadioGroup {id} {label} options={options ?? []} required={required || name === 'itemApprovedYN'} {value} {error} onchange={(next) => change(name, next)} />
-	{:else if (name === 'itemFiscalStartMonth' && individual) || (name === 'itemYearEndMonth' && calendarYear)}
+	{:else if name === 'itemFiscalStartMonth' && individual}
 		<CalculatedValue {id} {label} value={options?.find(option => option.value === value)?.label ?? value} {error} />
 	{:else if type === 'select'}
 		<Select {id} {label} options={options ?? []} {required} {value} {error} onchange={(next) => change(name, next)} />
 	{:else if type === 'number'}
 		<NumberInput {id} {label} {required} {value} {error}
-			min={name === 'txtYearEnded' ? definition.minYear : name === 'txtNumOfInstallment' ? 1 : 0}
-			max={name === 'txtYearEnded' ? 3000 : name === 'txtNumOfInstallment' ? 20 : 99}
-			maxlength={name === 'txtYearEnded' ? 4 : 2}
+			min={name === 'txtNumOfInstallment' ? 1 : 0}
+			max={name === 'txtNumOfInstallment' ? 20 : 99}
+			maxlength={2}
 			onchange={(next) => onvaluechange({ [id]: next })} />
 	{:else if type === 'date'}
 		<DateInput {id} {label} {required} {value} {error} onchange={(next) => onvaluechange({ [id]: next })} />
@@ -133,10 +136,11 @@
 		{@render control('itemFiscalStartMonth', '1', 'year-basis')}
 		<div class="payment-cell numbered year-end">
 			<span class="paper-item-number" aria-hidden="true">2</span>
-			<div class="year-ended">
-				{@render input('itemYearEndMonth')}
-				{@render input('txtYearEnded')}
-			</div>
+			<MonthYearInput id={yearField} alternateId={monthField} label="Year ended" required
+				month={calculated[monthField] ?? fields[monthField].defaultValue} year={values[yearField]}
+				fixedMonth={calendarYear ? '12' : undefined} minYear={definition.minYear} maxYear={3000}
+				error={errors[yearField] || errors[monthField]}
+				onchange={(month, year) => onvaluechange({ [monthField]: month, [yearField]: year })} />
 		</div>
 		{@render control('itemQuarter', '3', 'quarter')}
 		{@render control('dueDate', '4', 'due-date')}
@@ -180,7 +184,6 @@
 <style>
 	.period-grid, .payment-choices, .penalties { display: grid; grid-template-columns: minmax(0, 1fr); }
 	.period-grid { border-bottom: 1px solid var(--border); }
-	.year-ended { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); align-items: start; gap: .5rem; }
 	.tax-type-field { display: grid; min-width: 0; gap: var(--form-label-gap); }
 	.required-mark { margin-inline-start: .25rem; color: var(--danger); }
 	.tax-type-option { display: grid; grid-template-columns: 2rem minmax(0, 1fr); gap: .5rem; width: 100%; }

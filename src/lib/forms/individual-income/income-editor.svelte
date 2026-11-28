@@ -4,9 +4,10 @@
 	import { getTinDigits, splitTinSegments } from '$lib/components/ui/tin-input/tin';
 	import { Button, ButtonLink, CalculatedValue, CheckboxInput, CurrencyInput, DateInput, FieldErrors, Input, Label, NumberInput, RadioGroup, Select, TinInput } from '$lib/components/ui';
 	import Icon from '$lib/components/ui/icon/icon.svelte';
+	import MonthYearInput from '$lib/components/ui/month-year-input/month-year-input.svelte';
 	import { Sheet } from '$lib/components/ui/sheet';
 	import { glyphs } from '$lib/components/ui/icons';
-	import { annualFilingFields, calculateIndividualIncome, hasActivityAttachment, incomeAmountDecimals, incomeCalculatedFields, incomePaymentFieldIds, individualIncomePeriod, isShortFilingPeriod, type IncomeForm } from '.';
+	import { annualFilingFields, calculateIndividualIncome, hasActivityAttachment, incomeAmountDecimals, incomeCalculatedFields, incomeFilingYear, incomeFilingYearBounds, incomePaymentFieldIds, individualIncomePeriod, isShortFilingPeriod, type IncomeForm } from '.';
 	import { annual1701AScheduleLabels, annual1701ASchedules, incomeChoiceLabel, incomeEditorFields, incomeEditorPageTitle, incomeEditorRowGroups, incomeEditorRows, legacyQuarterlyComputation, type IncomeEditorField } from './editor-layout';
 	import { legacy1700DependentClaim, legacy1700FirstYear, legacy1700IncomeSourceChecked, legacy1700LastYear, revised1700FieldApplies } from './compensation';
 	import { quarterlyFilerReady, quarterlyIncomeFieldApplies, quarterlyRateForAtc, quarterlySelectedRate, quarterlyTaxReliefPatch } from './quarterly';
@@ -91,6 +92,8 @@
 	const legacy1700 = $derived(form.code === '1700');
 	const compensationReturn = $derived(legacy1700 || form.code === '1700v2018');
 	const annualFiling = $derived(annualFilingFields[form.code]);
+	const filingYear = $derived(incomeFilingYear(form, calculated[form.year]));
+	const filingYearBounds = $derived(incomeFilingYearBounds(form));
 	const spouseFiling = $derived(incomeSpouseFiling[form.code]);
 	const taxpayerClaimId = 'frm1700:rdoPg1Pt1I14ClaimingAdditionalExemptions';
 	const spouseClaimId = 'frm1700:rdoPg1Pt1I21SpouseClaimAdditionalExemption';
@@ -1178,7 +1181,6 @@
 		(id === 'frm1701q:optSpouseATC' && values['frm1701q:optSpouseType_3'] === 'Compensation' && !values['frm1701q:optSpouseType_1'] && !values['frm1701q:optSpouseType_2'])
 	)}
 	{@const birthParts = form.quarter && id.endsWith('BirthMonth') ? ['Month', 'Day', 'Year'].map(part => id.replace(/Month$/, part)) : []}
-	{@const filingMonth = annualFiling?.month === id}
 	{@const reliefMethod = legacyQuarterly && id === 'frm1701q:txtTaxRelief25'}
 	{@const error = draft?.error ?? errors[id] ?? errors[birthParts[1]] ?? ''}
 	{@const locked = profileFields.has(id) && (!!value || spouseFieldIds.has(id))}
@@ -1192,7 +1194,7 @@
 	{@const revisedEmployerTin = form.code === '1700v2018' && /PartVIEmployerTIN1$/.test(id)}
 	{@const revisedFilingChoice = form.code === '1700v2018' && /^frm1700:rdoPg1I(?:6TaxpayerType|15CivilStatus|16SpouseHasIncome|17FilingStatus|20SpouseTaxpayerType)$/.test(id)}
 	{@const addressRequired = legacy1700 && /^frm1700:txtPg4T1(?:SubdivisionVillage|Barangay|MunicipalityCity|Province|ZipCde)$/.test(id)}
-	{@const options = field.options.filter(option => option !== '' && option !== '000' && (!filingMonth || option !== '00') &&
+	{@const options = field.options.filter(option => option !== '' && option !== '000' &&
 		(!reliefMethod || option !== '0') &&
 		(!employerEarner || includesSpouse || !option.endsWith('Spouse')))
 		.map((option, index) => ({ value: option, label: employerEarner
@@ -1272,11 +1274,6 @@
 			maxlength={field.maxLength ?? undefined} onchange={draft?.change ?? ((next) => setValue(id, next))} />
 	{:else if microSmall && kind === 'percent'}
 		{@render microSmallRateInput(field, label, true)}
-	{:else if filingMonth && annualFiling && !isShortFilingPeriod(annualFiling, values)}
-		<dl class="managed-value" id={id}>
-			<dt>{label}</dt>
-			<dd>December</dd>
-		</dl>
 	{:else if legacyAnnual && id === legacy1701Filing.number && idType === 'CTC'}
 		<NumberInput {id} {label} {value} {error} maxlength={8} min={0} onchange={(next) => setValue(id, next)} />
 	{:else if wholeNumber || addressZip}
@@ -1793,6 +1790,15 @@
 													{@render fieldControl(field)}
 												{/each}
 											</fieldset>
+										{:else if annualFiling && row.fields.some(field => field.id === annualFiling.month)}
+											{@const monthId = annualFiling.month}
+											<div class="income-control filing-period">
+												<MonthYearInput id={form.year} alternateId={monthId} label="Filing period" required {...filingYearBounds}
+													month={calculated[monthId]} year={filingYear}
+													fixedMonth={isShortFilingPeriod(annualFiling, values) ? undefined : '12'}
+													error={errors[form.year] || errors[monthId]}
+													onchange={(month, year) => onvaluechange({ [monthId]: month, [form.year]: year === filingYear ? calculated[form.year] ?? '' : year })} />
+											</div>
 										{:else}
 											<div class="income-row-controls" class:revised-employer-amounts={form.code === '1700v2018' && row.fields.some(field => /ISched1[cde]_/.test(field.id))}
 												class:income-description={row.fields.length > 1 && row.fields[0].id.endsWith('Desc') && row.fields.slice(1).every(field => field.kind === 'money')} style:--income-column-count={row.fields.length}>
@@ -2195,6 +2201,7 @@
 	.income-fields > div { min-width: 0; padding: .75rem .875rem; background: var(--bg-elev); border-bottom: 1px solid var(--border); border-right: 1px solid var(--border-soft); }
 	.income-fields > :is(.income-row, .wide) { border-inline-end: 0; }
 	.return-filing > .income-row { grid-column: auto; }
+	.filing-period { max-inline-size: 14rem; }
 	:is(.revised-1700-editor, .micro-small-editor) .return-filing { --radio-choice-row-gap: .25rem; }
 	.quarter-filing { --radio-choice-row-gap: .25rem; --radio-choice-column-gap: .75rem; }
 	.income-fields :global([data-slot="form-item"]),

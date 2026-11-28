@@ -10,6 +10,7 @@
 	import AltArrowRight from '@solar-icons/svelte/category/arrows/Linear/AltArrowRight.svelte';
 	import TrashBinTrash from '@solar-icons/svelte/category/ui/Linear/TrashBinTrash.svelte';
 	import { Button, CalculatedValue, CurrencyInput, DateInput, Input, NumberInput, RadioGroup, Select, TinInput } from '$lib/components/ui';
+	import MonthYearInput from '$lib/components/ui/month-year-input/month-year-input.svelte';
 	import AtcPicker from './atc-picker.svelte';
 	import { calculateWithholding, isRequiredRemittanceField } from './withholding-rules';
 	import { withholdingSchedules, type WithholdingDefinition, type WithholdingField, type WithholdingRow, type WithholdingSchedule } from './withholding-definitions';
@@ -349,6 +350,10 @@
 			{/if}
 		{:else if field.type === 'date'}
 			<DateInput id={field.id} label={displayLabel(field.label)} {required} value={draft[field.id] ?? ''} error={draftErrors[field.id] ?? ''} onchange={(value) => changeDraft(field, value)} />
+		{:else if schedule.id === 'adjustments' && /:sched1:txtMonthYear\d+$/.test(field.id)}
+			<MonthYearInput id={field.id} label={displayLabel(field.label)} {required}
+				value={draft[field.id] ?? ''} error={draftErrors[field.id] ?? ''}
+				onvaluechange={(value) => changeDraft(field, value)} />
 		{:else}
 			<Input id={field.id} label={displayLabel(field.label)} class={/\b(?:code|TIN|number)\b/i.test(field.label) ? "font-mono" : undefined} {required} value={draft[field.id] ?? ''} error={draftErrors[field.id] ?? ''} oninput={(event) => changeDraft(field, event.currentTarget.value)} />
 		{/if}

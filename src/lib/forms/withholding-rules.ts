@@ -703,9 +703,16 @@ export function validateWithholding(
           "interest-preferential",
         ].includes(schedule.id)
       ) {
-        for (const f of editable)
-          if (!(values[f.id] ?? "").trim())
+        for (const f of editable) {
+          const value = (values[f.id] ?? "").trim();
+          if (!value) {
             errors[f.id] = `${f.label} is required for this row.`;
+          } else if (schedule.id === "adjustments" &&
+            /:sched1:txtMonthYear\d+$/.test(f.id) &&
+            !/^(?:0?[1-9]|1[0-2])\/(?!0000)\d{4}$/.test(value)) {
+            errors[f.id] = "Enter a valid month and year (MM/YYYY).";
+          }
+        }
         if (schedule.id !== "adjustments" && text("optRelief") !== "Y")
           errors[p + "optRelief"] =
             "Select tax relief before entering treaty or preferential-rate details.";

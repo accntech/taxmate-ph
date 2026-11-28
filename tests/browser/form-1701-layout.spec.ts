@@ -2,6 +2,8 @@ import { expect, test, type Page } from '@playwright/test';
 import { goToReturnPage, seedWorkspace, taxpayerId } from './fixtures';
 
 const list = `/ebirforms/taxpayers/${taxpayerId}/forms`;
+const filingYear = (page: Page) => page.getByRole('group', { name: 'Filing period', exact: true })
+	.getByRole('spinbutton', { name: 'Year', exact: true });
 const profile = {
 	taxpayerName: 'SANTOS, ALEX, REYES', taxpayerClassification: 'I' as const,
 	taxpayerType: 'professional' as const, civilStatus: 'Single' as const,
@@ -229,13 +231,13 @@ for (const code of ['1701', '1701v2018']) {
 
 test('June 1701 item reference opens and focuses the tax-due calculation', async ({ page }) => {
 	await openReturn(page, '1701');
-	await page.getByRole('textbox', { name: 'Filing year', exact: true }).fill('2017');
+	await filingYear(page).fill('2017');
 	const taxDue = page.getByRole('table', { name: 'Calculated tax amounts' }).getByRole('row', { name: /^26 / });
 	await taxDue.getByRole('button', { name: 'From Item 72A · Taxpayer', exact: true }).click();
 	await expect(page.locator('[id="frm1701:txtPg3Pt5I72TotalIncomeTaxC1"]')).toBeFocused();
 	await expect(page.getByRole('button', { name: 'Find a page, page 3 of 12', exact: true })).toBeVisible();
 	await goToReturnPage(page, 1);
-	await expect(page.getByRole('textbox', { name: 'Filing year', exact: true })).toHaveValue('2017');
+	await expect(filingYear(page)).toHaveValue('2017');
 });
 
 test('January 1701 item reference reaches the tax-credit total by keyboard on mobile', async ({ page }) => {
@@ -334,7 +336,7 @@ test('1701 exclusive choices with three or more options use selects and preserve
 	const accounting = page.getByRole('combobox', { name: 'Accounting method', exact: true });
 	await accounting.click();
 	await page.getByRole('option', { name: 'Accrual', exact: true }).click();
-	await page.getByRole('textbox', { name: 'Filing year', exact: true }).fill('2017');
+	await filingYear(page).fill('2017');
 	await page.getByRole('button', { name: 'Save draft', exact: true }).click();
 	await expect(page).toHaveURL(/\/forms$/);
 	const values = await page.evaluate(() => JSON.parse(localStorage.getItem('ebirforms-created-returns-v1')!).returns.find((record: { formCode: string }) => record.formCode === '1701').values);
@@ -389,7 +391,7 @@ test('1701 January overpayment uses a select while preserving refund codes', asy
 	const options = page.getByRole('option');
 	await expect(options).toHaveCount(3);
 	await page.getByRole('option', { name: 'Refund', exact: true }).click();
-	await page.getByRole('textbox', { name: 'Filing year', exact: true }).fill('2025');
+	await filingYear(page).fill('2025');
 	await page.getByRole('button', { name: 'Save draft', exact: true }).click();
 	await expect(page).toHaveURL(/\/forms$/);
 	const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('ebirforms-created-returns-v1')!).returns.find((record: { formCode: string }) => record.formCode === '1701v2018').values);
@@ -536,7 +538,7 @@ for (const { code, revision, total } of [
 			const directory = join(process.env.FORM_1701_CAPTURE_DIR!, revision, width === 390 ? 'mobile' : 'desktop');
 			mkdirSync(directory, { recursive: true });
 			await openReturn(page, code, width, true);
-			await page.getByRole('textbox', { name: 'Filing year', exact: true }).fill(code === '1701' ? '2017' : '2025');
+			await filingYear(page).fill(code === '1701' ? '2017' : '2025');
 			await enableAttachments(page);
 			const editor = page.locator('.income-editor');
 			const pager = editor.getByRole('navigation', { name: 'Return pages' });
@@ -647,7 +649,7 @@ for (const { code, revision, total } of [
 for (const width of [1440, 390]) {
 	test(`1701 January edits deductions and operating losses in drawers at ${width}px`, async ({ page }, testInfo) => {
 		await openReturn(page, '1701v2018', width, false, width === 1440 ? 'dark' : 'light');
-		await page.getByRole('textbox', { name: 'Filing year', exact: true }).fill('2025');
+		await filingYear(page).fill('2025');
 		await page.getByRole('combobox', { name: 'Alphanumeric tax code (ATC)', exact: true }).click();
 		await page.getByRole('option', { name: /II012/ }).click();
 		await goToReturnPage(page, 3);
@@ -766,7 +768,7 @@ for (const width of [1440, 390]) {
 for (const width of [1440, 390]) {
 	test(`1701 June edits joint deductions and operating losses in drawers at ${width}px`, async ({ page }, testInfo) => {
 		await openReturn(page, '1701', width, true);
-		await page.getByRole('textbox', { name: 'Filing year', exact: true }).fill('2017');
+		await filingYear(page).fill('2017');
 		await goToReturnPage(page, 8);
 		const field = (id: string) => page.locator(`[id="frm1701:txtPg8Sc${id}"]`);
 		const special = 'Schedule 7 · Special deductions';
@@ -857,7 +859,7 @@ test('January 1701 attachment pages use the full editor width and bottom paginat
 
 test('January 1701 attachment lets mobile filers choose a deduction and follow its calculated total', async ({ page }) => {
 	await openReturn(page, '1701v2018', 390);
-	await page.getByRole('textbox', { name: 'Filing year', exact: true }).fill('2025');
+	await filingYear(page).fill('2025');
 	await enableAttachments(page);
 	await goToReturnPage(page, 5);
 	const income = page.getByRole('table', { name: 'Schedule B · Consolidated income tax', exact: true });

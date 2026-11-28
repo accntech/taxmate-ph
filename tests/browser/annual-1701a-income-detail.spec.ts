@@ -12,7 +12,7 @@ for (const { item, atc, total } of [
 			civilStatus: 'Single', taxpayerClassification: 'I', taxpayerType: 'single-proprietor'
 		});
 		await page.goto(`${list}/1701A?new=true`);
-		const filingYear = page.getByRole('textbox', { name: /^Filing year/ });
+		const filingYear = page.getByRole('group', { name: 'Filing period', exact: true }).getByRole('spinbutton', { name: 'Year', exact: true });
 		await expect(filingYear).toBeVisible({ timeout: 30000 });
 		await filingYear.fill('2025');
 		await page.getByRole('combobox', { name: 'Alphanumeric tax code (ATC)', exact: true }).selectOption(atc);

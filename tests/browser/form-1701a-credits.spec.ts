@@ -10,7 +10,7 @@ test('1701A keeps cleared election credits blank after saving and reopening', as
 	});
 	await page.goto(`/ebirforms/taxpayers/${taxpayerId}/forms/1701A?new=true`);
 	await expect(page.getByRole('navigation', { name: 'Return pages' })).toBeVisible({ timeout: 20000 });
-	await page.getByRole('textbox', { name: /^Filing year/ }).fill('2025');
+	await page.getByRole('group', { name: 'Filing period', exact: true }).getByRole('spinbutton', { name: 'Year', exact: true }).fill('2025');
 
 	const amended = page.getByRole('radiogroup', { name: 'Amended return?', exact: true });
 	const foreignTaxCredits = page.getByRole('radiogroup', { name: 'Claiming foreign tax credits?', exact: true });

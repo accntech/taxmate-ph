@@ -24,8 +24,10 @@ for (const [code] of revisions) {
 		const filing = page.getByRole('region', { name: /^(?:taxpayer and )?filing (?:information|details)$/i });
 		const background = page.getByRole('region', { name: /background information/i });
 		const cells = filing.locator('[data-corporate-item]');
-		const month = filing.getByRole('combobox', { name: 'Year-end month', exact: true });
-		const year = filing.getByRole('textbox', { name: 'Year ended', exact: true }).locator('..');
+		const period = cells.nth(1).getByRole('group', { name: 'Year ended', exact: true });
+		const month = period.getByRole('spinbutton', { name: 'Month', exact: true });
+		const year = period.getByRole('spinbutton', { name: 'Year', exact: true });
+		const picker = period.getByRole('button', { name: 'Choose month and year', exact: true });
 		await expect(filing).toBeVisible({ timeout: 20_000 });
 		await expect(cells.locator('> .paper-item-number')).toHaveText(['1', '2', '3', '4', '5']);
 		await expect(filing.locator('.corporate-row')).toHaveCount(5);
@@ -69,7 +71,8 @@ for (const [code] of revisions) {
 			await expect.poll(async () => {
 				const monthBox = (await month.boundingBox())!;
 				const yearBox = (await year.boundingBox())!;
-				return Math.abs(monthBox.y - yearBox.y) <= 1 && monthBox.x + monthBox.width < yearBox.x;
+				const button = (await picker.boundingBox())!;
+				return Math.abs(monthBox.y - yearBox.y) <= 2 && monthBox.x < yearBox.x && yearBox.x < button.x;
 			}).toBe(true);
 			await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
 			if (process.env.EBIRFORMS_CAPTURE_TEST_PDFS === '1') {
@@ -91,7 +94,7 @@ for (const [code] of revisions) {
 	});
 }
 
-test('1702-RT shows full month names and omits the empty option in the year-end combobox', async ({ page }, info) => {
+test('1702-RT saves the combined year-end month and year under the existing field keys', async ({ page }, info) => {
 	const code = '1702RTv2018';
 	const id = 'blank-closing-month';
 	await seedWorkspace(page, 'light', 'loaded', { taxpayerClassification: 'N' }, [{
@@ -102,28 +105,31 @@ test('1702-RT shows full month names and omits the empty option in the year-end 
 	await page.setViewportSize({ width: 1280, height: 900 });
 	await page.goto(`/ebirforms/taxpayers/${taxpayerId}/forms/${code}?return=${id}`);
 	const filing = page.getByRole('region', { name: 'Filing details', exact: true });
-	const month = filing.getByRole('combobox', { name: 'Year-end month', exact: true });
-	await expect(month).toHaveText('Select an option');
+	const period = filing.getByRole('group', { name: 'Year ended', exact: true });
+	const month = period.getByRole('spinbutton', { name: 'Month', exact: true });
+	const year = period.getByRole('spinbutton', { name: 'Year', exact: true });
 	await filing.getByRole('radio', { name: 'Fiscal', exact: true }).check();
 	for (const width of [1280, 390]) {
 		await page.setViewportSize({ width, height: 900 });
 		await page.keyboard.press('Escape');
-		for (const name of ['12 - December', '09 - September']) {
-			await month.click();
-			await expect(page.getByRole('option', { name: '', exact: true })).toHaveCount(0);
-			await page.getByRole('option', { name, exact: true }).click();
-			const selected = month.getByText(name, { exact: true });
-			await expect(selected).toBeVisible();
-			await expect.poll(() => selected.evaluate(label => {
-				const text = label.getBoundingClientRect();
-				const trigger = label.closest('[role="combobox"]')!.getBoundingClientRect();
-				return label.scrollWidth <= label.clientWidth + 1 && text.right <= trigger.right && text.bottom <= trigger.bottom;
-			})).toBe(true);
-		}
+		const closingYear = width === 1280 ? '2024' : '2025';
+		await month.fill('11');
+		await year.fill(closingYear);
+		await year.blur();
+		await expect(month).toHaveValue('11');
+		await expect(year).toHaveValue(closingYear);
+		await period.getByRole('button', { name: 'Choose month and year', exact: true }).click();
+		await page.getByRole('button', { name: /^September(?:\s|$)/ }).click();
+		await expect(month).toHaveValue('09');
+		await expect(year).toHaveValue(closingYear);
 		if (process.env.EBIRFORMS_CAPTURE_TEST_PDFS === '1') {
 			await filing.screenshot({ path: info.outputPath(`1702rt-year-end-${width}.png`), animations: 'disabled' });
 		}
 	}
+	await page.getByRole('button', { name: 'Save draft', exact: true }).click();
+	const saved = await page.evaluate(returnId => JSON.parse(localStorage.getItem('ebirforms-created-returns-v1')!).returns
+		.find((record: { id: string }) => record.id === returnId), id);
+	expect(saved.values).toMatchObject({ 'frm1702RT:ddlPg1I2Month': '09', 'frm1702RT:txtPg1I2Year': '2025' });
 });
 
 test('1702-Q retains blank registered fields for missing profile values', async ({ page }) => {
@@ -596,8 +602,10 @@ test('quarterly filing uses distinct period labels and the shared ATC search', a
 	await page.goto(`/ebirforms/taxpayers/${taxpayerId}/forms/1702Qv2018C?new=true`);
 	const editor = page.locator('.corporate-editor');
 	await expect(editor.getByRole('heading', { level: 1, name: /^Quarterly Income Tax Return/ })).toBeVisible();
-	await expect(editor.getByRole('textbox', { name: 'Year ended' })).toBeVisible();
-	await expect(editor.getByRole('combobox', { name: 'Year-end month' })).toBeVisible();
+	const period = editor.getByRole('group', { name: 'Year ended', exact: true });
+	await expect(period.getByRole('spinbutton', { name: 'Month', exact: true })).toBeVisible();
+	await expect(period.getByRole('spinbutton', { name: 'Year', exact: true })).toBeVisible();
+	await expect(period.getByRole('button', { name: 'Choose month and year', exact: true })).toBeVisible();
 	const atc = editor.getByRole('combobox', { name: /Alphanumeric tax code/ });
 	await atc.click();
 	await expect(page.getByPlaceholder('Search code or income')).toBeVisible();

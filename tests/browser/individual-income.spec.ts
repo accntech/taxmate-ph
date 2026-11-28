@@ -5,6 +5,8 @@ import { resolve } from 'node:path';
 import { goToReturnPage, seedWorkspace, taxpayerId } from './fixtures';
 
 const list = `/ebirforms/taxpayers/${taxpayerId}/forms`;
+const filingYear = (page: Page) => page.getByRole('group', { name: 'Filing period', exact: true })
+	.getByRole('spinbutton', { name: 'Year', exact: true });
 const fixture = {
 	tin1: '001', tin2: '234', tin3: '567', branchCode: '00008', rdoCode: '047',
 	taxpayerName: 'SANTOS, ALEX, REYES', address: '28 Narra Street', address2: 'Makati City',
@@ -74,7 +76,7 @@ test('June 2013 Form 1701 finds pages by number and title in a command dialog', 
 	await expect(shortcut).toBeVisible({ timeout: 15000 });
 	await expect(page.getByRole('button', { name: /^Find a page,/ })).toHaveCount(1);
 	await expect(pager.getByRole('button', { name: 'Next page', exact: true })).toBeEnabled();
-	await page.getByRole('textbox', { name: 'Filing year', exact: true }).fill('2017');
+	await filingYear(page).fill('2017');
 	await shortcut.scrollIntoViewIfNeeded();
 	await shortcut.press('Enter');
 	const dialog = page.getByRole('dialog', { name: 'Go to page', exact: true });
@@ -108,7 +110,7 @@ test('June 2013 Form 1701 finds pages by number and title in a command dialog', 
 	await expect(page.getByRole('heading', { name: 'Income tax and tax relief', exact: true })).toBeFocused();
 	await expect(page.getByRole('button', { name: 'Find a page, page 3 of 12', exact: true })).toBeVisible();
 	await goToReturnPage(page, 1);
-	await expect(page.getByRole('textbox', { name: 'Filing year', exact: true })).toHaveValue('2017');
+	await expect(filingYear(page)).toHaveValue('2017');
 
 	await page.setViewportSize({ width: 390, height: 844 });
 	await page.getByRole('radiogroup', { name: /Exempt income\?/i }).getByRole('radio', { name: 'Yes', exact: true }).check();
@@ -240,7 +242,7 @@ test('legacy 1701 carries the taxpayer details trade name through a new draft an
 	await expect(tradeName).toHaveCount(0);
 	await expect(page.getByRole('radiogroup', { name: 'Taxpayer type', exact: true })).toHaveCount(0);
 	await expect(page.getByRole('combobox', { name: 'Alphanumeric tax code (ATC)', exact: true })).toBeVisible();
-	await page.getByRole('textbox', { name: 'Filing year' }).fill('2017');
+	await filingYear(page).fill('2017');
 	if (output) await captureDraft('new-draft', output);
 	await page.getByRole('button', { name: 'Save draft', exact: true }).click();
 	await expect(page).toHaveURL(/\/forms$/);
@@ -414,25 +416,107 @@ test('1701A keeps the ATC selector compact and the filing fields aligned on desk
 	await seedWorkspace(page, 'dark', 'loaded', { ...fixture, taxpayerType: 'single-proprietor' });
 	await page.setViewportSize({ width: 1440, height: 960 });
 	await page.goto(`${list}/1701A?new=true`);
-	await expect(page.getByRole('combobox', { name: 'Alphanumeric tax code (ATC)', exact: true })).toBeVisible();
-	const year = page.getByRole('textbox', { name: /^Filing year/ });
+	await expect(page.getByRole('combobox', { name: 'Alphanumeric tax code (ATC)', exact: true })).toBeVisible({ timeout: 20000 });
+	const period = page.getByRole('group', { name: 'Filing period', exact: true });
+	const month = period.getByRole('spinbutton', { name: 'Month', exact: true });
+	const year = period.getByRole('spinbutton', { name: 'Year', exact: true });
+	await expect(year).toBeVisible({ timeout: 4000 });
 	const amended = page.getByRole('radiogroup', { name: 'Amended return?', exact: true });
 	expect(Math.abs((await year.boundingBox())!.y - (await amended.boundingBox())!.y)).toBeLessThan(40);
-	await expect(page.locator('[id="frm1701A:txtMonth"]')).toContainText('December');
+	const picker = page.getByRole('button', { name: 'Choose month and year', exact: true });
+	await expect(picker).toHaveCount(0);
+	await expect(period).toContainText('12');
+	await expect(month).toHaveCount(0);
+	await year.fill('2025');
 	const shortPeriod = page.getByRole('radiogroup', { name: 'Short period return?', exact: true });
 	await shortPeriod.getByRole('radio', { name: 'Yes' }).check();
-	const month = page.getByRole('combobox', { name: 'Filing month', exact: true });
-	await expect(month).toBeVisible();
-	await month.click();
-	await page.getByRole('option', { name: 'June', exact: true }).click();
+	await expect(picker).toBeVisible();
+	await expect(year).toHaveValue('2025');
+	await expect(month).toHaveValue('');
+	await month.fill('06');
+	await year.fill('2024');
+	await expect(month).toHaveValue('06');
+	await year.fill('2025');
 	await shortPeriod.getByRole('radio', { name: 'No' }).check();
-	await expect(page.locator('[id="frm1701A:txtMonth"]')).toContainText('December');
+	await expect(picker).toHaveCount(0);
+	await expect(period).toContainText('12');
+	await expect(month).toHaveCount(0);
+	await expect(year).toHaveValue('2025');
+	await page.getByRole('button', { name: 'Save draft', exact: true }).click();
+	await expect(page).toHaveURL(/\/forms$/);
+	const saved = await page.evaluate(() => {
+		const storage = JSON.parse(localStorage.getItem('ebirforms-created-returns-v1')!);
+		return storage.returns.find((record: { formCode: string }) => record.formCode === '1701A')?.values;
+	});
+	expect(saved).toMatchObject({ 'frm1701A:txtMonth': '12', 'frm1701A:txtYear': '2025', 'frm1701A:optShortPeriod': 'N' });
+});
+
+for (const { code, monthId, yearId, shortId, short, savedYear, displayedYear } of [
+	{ code: '1701', monthId: 'frm1701:ddlPg1I1Month', yearId: 'frm1701:txtPg1I1Year', shortId: 'frm1701:rdoPg1I3ShortPeriod', short: 'Yes', savedYear: '17', displayedYear: '2017' },
+	{ code: '1701v2018', monthId: 'frm1701:txtPg1I1Month', yearId: 'frm1701:txtPg1I1Year', shortId: 'frm1701:rdoPg1I3ShortPeriod', short: 'Yes', savedYear: '2025', displayedYear: '2025' },
+	{ code: '1701A', monthId: 'frm1701A:txtMonth', yearId: 'frm1701A:txtYear', shortId: 'frm1701A:optShortPeriod', short: 'Y', savedYear: '2025', displayedYear: '2025' },
+	{ code: '1701MS', monthId: 'frm1701MS:txtMonthNo1', yearId: 'frm1701MS:txtYearNo1', shortId: 'frm1701MS:txtReturnPeriod', short: 'Y', savedYear: '2025', displayedYear: '2025' }
+]) {
+	test(`${code} reopens a sparse short-period draft and saves the selected month with its existing year`, async ({ page }) => {
+		await seedWorkspace(page, 'light', 'loaded', { ...fixture, taxpayerType: 'single-proprietor' }, [{
+			id: 'older-filing-period', taxpayerId, formCode: code, returnPeriod: displayedYear,
+			status: 'Draft', finalFlag: '0', updatedAt: 1794441600000,
+			values: { [yearId]: savedYear, [shortId]: short }
+		}]);
+		await page.setViewportSize({ width: 1440, height: 960 });
+		await page.goto(`${list}/${code}?return=older-filing-period`);
+		const period = page.getByRole('group', { name: 'Filing period', exact: true });
+		const month = period.getByRole('spinbutton', { name: 'Month', exact: true });
+		const year = period.getByRole('spinbutton', { name: 'Year', exact: true });
+		await expect(year).toHaveValue(displayedYear, { timeout: 20000 });
+		await expect(month).toHaveValue('');
+		const trigger = page.getByRole('button', { name: 'Choose month and year', exact: true });
+		await trigger.click();
+		const june = page.getByRole('button', { name: new RegExp(`^June(?: ${displayedYear})?$`) });
+		await expect(june).toBeVisible();
+		const output = process.env.MONTH_YEAR_PREVIEW_DIR;
+		if (output) {
+			mkdirSync(output, { recursive: true });
+			await page.screenshot({ path: resolve(output, `${code}-desktop.png`), animations: 'disabled' });
+		}
+		await page.setViewportSize({ width: 390, height: 844 });
+		await expect(june).toBeVisible();
+		expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+		if (output) await page.screenshot({ path: resolve(output, `${code}-narrow.png`), animations: 'disabled' });
+		await june.click();
+		await expect(month).toHaveValue('06');
+		await expect(year).toHaveValue(displayedYear);
+		await page.getByRole('button', { name: 'Save draft', exact: true }).click();
+		await expect(page).toHaveURL(/\/forms$/);
+		const saved = await page.evaluate(() => {
+			const storage = JSON.parse(localStorage.getItem('ebirforms-created-returns-v1')!);
+			return storage.returns.find((record: { id: string }) => record.id === 'older-filing-period')?.values;
+		});
+		expect(saved).toMatchObject({ [monthId]: '06', [yearId]: savedYear, [shortId]: short });
+		await page.getByRole('row').filter({ hasText: code }).getByRole('link', { name: 'Edit', exact: true }).click();
+		await expect(month).toHaveValue('06');
+		await expect(year).toHaveValue(displayedYear);
+	});
+}
+
+test('1701A directs short-period month validation to the Month segment', async ({ page }) => {
+	await seedWorkspace(page, 'light', 'loaded', { ...fixture, taxpayerType: 'single-proprietor' }, [{
+		id: 'missing-short-period-month', taxpayerId, formCode: '1701A', returnPeriod: '2025',
+		status: 'Draft', finalFlag: '0', updatedAt: 1794441600000,
+		values: { 'frm1701A:txtYear': '2025', 'frm1701A:optShortPeriod': 'Y' }
+	}]);
+	await page.goto(`${list}/1701A?return=missing-short-period-month&validate=true`);
+	const message = page.getByRole('button', { name: 'Select the last month of the short filing period.', exact: true });
+	await expect(message).toBeVisible({ timeout: 20000 });
+	await message.click();
+	const month = page.getByRole('group', { name: 'Filing period', exact: true }).getByRole('spinbutton', { name: 'Month', exact: true });
+	await expect(month).toBeFocused({ timeout: 1500 });
 });
 
 test('1701A derives the rate from the ATC and retains the calculated total after reopening', async ({ page }) => {
 	await seedWorkspace(page, 'light', 'loaded', { ...fixture, civilStatus: 'Single', taxpayerType: 'single-proprietor' });
 	await page.goto(`${list}/1701A?new=true`);
-	await page.getByRole('textbox', { name: /^Filing year/ }).fill('2025');
+	await filingYear(page).fill('2025');
 	const atc = page.getByRole('combobox', { name: 'Alphanumeric tax code (ATC)', exact: true });
 	await atc.selectOption('II012');
 	await expect(page.locator('[id="frm1701A:optTaxRate"]')).toContainText('Graduated');

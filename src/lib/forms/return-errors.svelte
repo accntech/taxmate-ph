@@ -21,7 +21,9 @@
 	async function focusField(event: MouseEvent, id: string) {
 		event.preventDefault();
 		const target = await onreveal?.(id);
-		const control = document.getElementById(target || id);
+		const fieldId = target || id;
+		const control = document.getElementById(fieldId) ??
+			document.querySelector<HTMLElement>(`[data-field-alias="${CSS.escape(fieldId)}"]`);
 		if (!control) return;
 		let ancestor = control.parentElement;
 		while (ancestor) {

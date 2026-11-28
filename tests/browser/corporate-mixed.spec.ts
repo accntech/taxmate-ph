@@ -354,27 +354,30 @@ test("June 2013 preserves business information and elections through reopening a
   expect(cover).toContain("BOOK PUBLISHING AND DISTRIBUTION");
 });
 
-test("1702-MX CREATE keeps year-end month and year together in compact columns", async ({ page }) => {
+test("1702-MX CREATE keeps the year-end control compact", async ({ page }) => {
   await seedWorkspace(page, "light", "loaded", { taxpayerClassification: "N" }, []);
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto(`/ebirforms/taxpayers/${taxpayerId}/forms/1702MXv2018C?new=true`);
   const filing = page.getByRole("region", { name: "Taxpayer and filing information", exact: true });
-  const month = filing.getByRole("combobox", { name: "Year-end month", exact: true });
-  const year = filing.getByRole("textbox", { name: "Year ended", exact: true });
+  const period = filing.getByRole("group", { name: "Year ended", exact: true });
+  const month = period.getByRole("spinbutton", { name: "Month", exact: true });
+  const year = period.getByRole("spinbutton", { name: "Year", exact: true });
+  const picker = period.getByRole("button", { name: "Choose month and year", exact: true });
   for (const width of [1280, 390]) {
     await page.setViewportSize({ width, height: 900 });
     await page.keyboard.press("Escape");
-    await expect(month).toBeVisible({ timeout: 15000 });
+    await expect(period).toBeVisible({ timeout: 15000 });
     await expect.poll(async () => {
       const left = (await month.boundingBox())!;
-      const right = (await year.locator("..").boundingBox())!;
+      const middle = (await year.boundingBox())!;
+      const right = (await picker.boundingBox())!;
       return {
-        compact: left.width <= 160,
-        separated: left.x + left.width < right.x,
-        aligned: Math.abs(left.y - right.y) < 1,
+        compact: right.x + right.width - left.x <= 192,
+        ordered: left.x < middle.x && middle.x < right.x,
+        aligned: Math.abs(left.y + left.height / 2 - right.y - right.height / 2) <= 2,
       };
     }, { message: `filing period controls at ${width}px` }).toEqual({
-      compact: true, separated: true, aligned: true,
+      compact: true, ordered: true, aligned: true,
     });
   }
 });

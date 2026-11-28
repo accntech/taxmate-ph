@@ -8,6 +8,7 @@
 	import { compareFormItems, getWithholdingPaperLayout, getWithholdingSupportingPages } from './withholding-paper-layout';
 	import AtcPicker from './atc-picker.svelte';
 	import { Button, CalculatedValue, CurrencyInput, DateInput, Input, NumberInput, RadioGroup, Select, TinInput } from '$lib/components/ui';
+	import MonthYearInput from '$lib/components/ui/month-year-input/month-year-input.svelte';
 	import { commitCurrencyInput, normalizeCurrencyInput } from '$lib/components/ui/currency-input/currency';
 	import { withholdingPriorRemittanceFields, withholdingSchedules, withholdingSchedulesEnabled, type WithholdingDefinition, type WithholdingField, type WithholdingSchedule } from './withholding-definitions';
 	import { calculateWithholding, hasConflictingInstallmentPrices } from './withholding-rules';
@@ -274,11 +275,20 @@
 	<div data-return-page="1" hidden={current !== '1'}>
 	<section class="form-paper-grid form-period" aria-label="Return period">
 		{#each periodGroups as group (group.item)}
+			{@const monthField = group.fields.find(field => field.id === definition.monthField)?.id}
+			{@const yearField = definition.yearField}
 			<div class="form-paper-field numbered">
 				<span class="paper-item-number" aria-hidden="true">{group.item}</span>
-				<div class={['period-controls', { 'paired-period': group.fields.length > 1 }]}>
-					{#each group.fields as field (field.id)}{@render control(field)}{/each}
-				</div>
+				{#if monthField && group.fields.some(field => field.id === yearField)}
+					<MonthYearInput id={yearField} alternateId={monthField} label="For the month" required
+						month={values[monthField]} year={values[yearField]} minYear={definition.minYear} maxYear={definition.maxYear}
+						error={displayLabel(errors[yearField] || errors[monthField] || '')}
+						onchange={(month, year) => applyChange({ [monthField]: month, [yearField]: year })} />
+				{:else}
+					<div class={['period-controls', { 'paired-period': group.fields.length > 1 }]}>
+						{#each group.fields as field (field.id)}{@render control(field)}{/each}
+					</div>
+				{/if}
 			</div>
 		{/each}
 		{#if layout.fixedAtc?.inPeriod}

@@ -1,8 +1,6 @@
 <script lang="ts">
-  import { Button as SdkButton } from "@ui-sdk/svelte/button";
   import { Input as SdkInput } from "@ui-sdk/svelte/input";
-  import { Icon as SolarIcon } from "../icon/base";
-  import { icons as dateFieldIcons } from "./date-field.icons";
+  import DateCalendarTrigger from "./date-calendar-trigger.svelte";
 
   import { dateField } from "./date-field.styles";
 
@@ -443,24 +441,12 @@
   </div>
 
   {#if picker}
-    <SdkButton
-      data-icon
-      type="button"
-      class={[
-        stylex.attrs(
-          dateField.calendarButton,
-          size === "sm"
-            ? dateField.smallCalendarButton
-            : dateField.mediumCalendarButton,
-        ).class,
-      ]}
-      aria-label="Open calendar"
-      aria-expanded={popoverOpen}
-      aria-controls={popoverId}
-      onclick={() => triggerPopover?.()}
+    <DateCalendarTrigger
+      open={popoverOpen}
+      controls={popoverId}
+      ontrigger={() => triggerPopover?.()}
+      {size}
       {disabled}
-    >
-      <SolarIcon icon={dateFieldIcons.calendarButton} />
-    </SdkButton>
+    />
   {/if}
 </div>

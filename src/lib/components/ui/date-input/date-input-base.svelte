@@ -4,11 +4,10 @@
   import { styleAttributes } from "../styles/style-attributes";
 
   import * as stylex from "@stylexjs/stylex";
-  import { quartOut } from "svelte/easing";
   import { tick } from "svelte";
   import DateField from "./date-field.svelte";
   import DateCalendar from "./date-calendar.svelte";
-  import { getPopoverPortalParent, pickSide, place } from "./date-popover";
+  import { containDatePopoverTab, datePopoverIntro, datePopoverOutro, focusDatePopover, getPopoverPortalParent, pickSide, place } from "./date-popover";
 
   type Props = {
     value?: string;
@@ -126,62 +125,21 @@
     popoverOpen = false;
   }
 
-  function getTabbables(root: HTMLElement): HTMLElement[] {
-    const nodes = root.querySelectorAll<HTMLElement>(
-      'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
-    );
-    return Array.from(nodes).filter(
-      (el) => el.offsetParent !== null || el === document.activeElement,
-    );
-  }
-
-  // fallow-ignore-next-line complexity
   function onDocKeydown(e: KeyboardEvent) {
     if (e.key === "Escape") {
       e.stopPropagation();
       popoverOpen = false;
       return;
     }
-    if (e.key !== "Tab" || !popoverEl) return;
-    const tabbables = getTabbables(popoverEl);
-    if (tabbables.length === 0) {
-      e.preventDefault();
-      return;
-    }
-    const first = tabbables[0];
-    const last = tabbables[tabbables.length - 1];
-    const active = document.activeElement as HTMLElement | null;
-    if (!active || !popoverEl.contains(active)) {
-      e.preventDefault();
-      (e.shiftKey ? last : first).focus();
-      return;
-    }
-    if (e.shiftKey && active === first) {
-      e.preventDefault();
-      last.focus();
-    } else if (!e.shiftKey && active === last) {
-      e.preventDefault();
-      first.focus();
-    }
+    if (popoverEl) containDatePopoverTab(e, popoverEl);
   }
 
   function popoverIn(_node: Element) {
-    const yStart = placement === "top" ? 4 : -4;
-    return {
-      duration: 180,
-      easing: quartOut,
-      css: (t: number) =>
-        `opacity: ${t}; transform: translateY(${(1 - t) * yStart}px) scale(${0.96 + t * 0.04});`,
-    };
+    return datePopoverIntro(placement);
   }
 
   function popoverOut(_node: Element) {
-    return {
-      duration: 120,
-      easing: quartOut,
-      css: (t: number) =>
-        `opacity: ${t}; transform: scale(${0.97 + t * 0.03}); pointer-events: none;`,
-    };
+    return datePopoverOutro();
   }
 
   function portal(node: HTMLElement) {
@@ -223,10 +181,7 @@
 
     queueMicrotask(() => {
       if (!popoverEl) return;
-      const initial =
-        popoverEl.querySelector<HTMLElement>('[tabindex="0"]') ??
-        getTabbables(popoverEl)[0];
-      initial?.focus();
+      focusDatePopover(popoverEl);
     });
 
     const handler = () => reposition();

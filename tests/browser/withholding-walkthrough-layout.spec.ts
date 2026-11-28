@@ -30,18 +30,23 @@ for (const code of ['0619E', '0619F']) {
   await page.goto(`/ebirforms/taxpayers/${taxpayerId}/forms/${code}?new=true`);
   const period = page.getByRole('region', { name: 'Return period', exact: true });
   await expect(period).toBeVisible();
-  await page.getByRole('combobox', { name: 'Month', exact: false }).click();
-  await page.getByRole('option', { name: 'September', exact: true }).click();
+  const filingPeriod = period.getByRole('group', { name: 'For the month', exact: true });
+  const filingMonth = filingPeriod.getByRole('spinbutton', { name: 'Month', exact: true });
+  const filingYear = filingPeriod.getByRole('spinbutton', { name: 'Year', exact: true });
+  await filingMonth.fill('09');
+  await filingYear.fill('2025');
+  await filingYear.blur();
+  await expect(filingMonth).toHaveValue('09');
+  await expect(filingYear).toHaveValue('2025');
   for (const width of [1280, 1440, 390, 320]) {
    await page.setViewportSize({ width, height: 900 });
    await page.evaluate(() => document.fonts.ready);
    if (width === 390) await page.getByRole('button', { name: 'Toggle sidebar', exact: true }).click();
    const issues = await period.evaluate(element => {
-    const month = element.querySelector('[role="combobox"]')!;
-    const label = [...month.querySelectorAll('span')].find(span => span.textContent === 'September' && !span.querySelector('span'))!;
+    const segments = [...element.querySelectorAll<HTMLInputElement>('input[id$=":txtMonth"], input[id$=":txtYear"]')];
     const legends = [...element.querySelectorAll('legend')];
     return {
-     monthClipped: label.scrollWidth > label.clientWidth + 1,
+     periodClipped: segments.some(segment => segment.scrollWidth > segment.clientWidth + 1),
      detachedRequired: legends.some(legend => {
       const marker = legend.querySelector('span');
       return marker && marker.getBoundingClientRect().top > legend.getBoundingClientRect().top + 5;
@@ -49,7 +54,7 @@ for (const code of ['0619E', '0619F']) {
      overflow: document.documentElement.scrollWidth > innerWidth
     };
    });
-   expect(issues).toEqual({ monthClipped: false, detachedRequired: false, overflow: false });
+   expect(issues).toEqual({ periodClipped: false, detachedRequired: false, overflow: false });
    await page.screenshot({ path: info.outputPath(`${code}-${width}.png`), fullPage: true });
   }
  });

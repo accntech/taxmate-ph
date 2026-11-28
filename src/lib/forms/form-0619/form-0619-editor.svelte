@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
-	import { CurrencyInput, DateInput, NumberInput, RadioGroup, Select } from '$lib/components/ui';
+	import { CurrencyInput, DateInput, RadioGroup, Select } from '$lib/components/ui';
+	import MonthYearInput from '$lib/components/ui/month-year-input/month-year-input.svelte';
 	import { normalizeCurrencyInput } from '$lib/components/ui/currency-input/currency';
 	import PaperFormHeader from '../paper-form-header.svelte';
 	import { getWithholdingDefinition } from '../withholding-definitions';
@@ -17,6 +18,9 @@
 
 	const definition = $derived(getWithholdingDefinition(code)!);
 	const prefix = $derived(definition.prefix);
+	const yearField = $derived(definition.yearField);
+	const monthField = $derived(definition.monthField!);
+	const dueDateField = $derived(prefix + 'dueDate');
 	const fields = $derived(Object.fromEntries(definition.sections.flatMap(section => section.fields).map(field => [field.id, field])));
 	const finalTax = $derived(code === '0619F');
 	const creditItem = $derived(finalTax ? 16 : 15);
@@ -39,14 +43,14 @@
 				patch[prefix + item] = '0.00';
 			}
 		}
-		if (name === 'txtYear' || name === 'txtMonth') {
-			const year = prefix + 'txtYear';
-			const month = prefix + 'txtMonth';
-			const dueDate = prefix + 'dueDate';
-			const priorSuggestion = monthlyRemittanceDueDate(values[year] ?? '', values[month] ?? '');
-			if (!values[dueDate] || values[dueDate] === priorSuggestion) {
-				patch[dueDate] = monthlyRemittanceDueDate(patch[year] ?? values[year] ?? '', patch[month] ?? values[month] ?? '');
-			}
+		onvaluechange(patch);
+	}
+
+	function changeReportingPeriod(month: string, year: string) {
+		const patch = { [monthField]: month, [yearField]: year };
+		const priorSuggestion = monthlyRemittanceDueDate(values[yearField] ?? '', values[monthField] ?? '');
+		if (!values[dueDateField] || values[dueDateField] === priorSuggestion) {
+			patch[dueDateField] = monthlyRemittanceDueDate(year, month);
 		}
 		onvaluechange(patch);
 	}
@@ -58,10 +62,8 @@
 	{@const error = errors[id] ?? ''}
 	{#if type === 'date'}
 		<DateInput {id} {label} {required} {value} {error} onchange={(next) => onvaluechange({ [id]: next })} />
-	{:else if type === 'number'}
-		<NumberInput {id} {label} {required} {value} {error} min={1900} max={9999} maxlength={4} onchange={(next) => changePeriod(name, next)} />
-	{:else if name === 'txtMonth' || name === 'txtTaxTypeCode'}
-		<Select {id} {label} options={options ?? []} {required} {value} {error} wrapLabels={name === 'txtTaxTypeCode'} onchange={(next) => changePeriod(name, next)} />
+	{:else if name === 'txtTaxTypeCode'}
+		<Select {id} {label} options={options ?? []} {required} {value} {error} wrapLabels onchange={(next) => changePeriod(name, next)} />
 	{:else}
 		<RadioGroup {id} {label} options={options ?? []} {required} {value} {error} onchange={(next) => changePeriod(name, next)} />
 	{/if}
@@ -105,10 +107,9 @@
 	<section class={['remittance-period', { 'final-tax': finalTax }]} aria-label="Return period">
 		<div class="period-cell">
 			<span class="paper-item-number" aria-hidden="true">1</span>
-			<div class="month-year">
-				{@render periodField('txtMonth')}
-				{@render periodField('txtYear')}
-			</div>
+			<MonthYearInput id={yearField} alternateId={monthField} label="For the month" required
+				month={values[monthField]} year={values[yearField]} minYear={1900} maxYear={9999}
+				error={errors[yearField] || errors[monthField]} onchange={changeReportingPeriod} />
 		</div>
 		{@render periodItem('2', 'dueDate')}
 		{@render periodItem('3', 'optAmend')}
@@ -168,7 +169,6 @@
 		border-bottom: 1px solid var(--border);
 	}
 	.period-cell:last-child { border-bottom: 0; }
-	.month-year { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); gap: .5rem; }
 	.period-cell :global([data-slot="date-input"]) { max-inline-size: 18rem; }
 	.period-cell :global(legend) { white-space: nowrap; }
 	.period-cell :global(legend > span[aria-hidden="true"]) { margin-inline-start: .25rem; }
