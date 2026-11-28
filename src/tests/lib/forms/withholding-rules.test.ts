@@ -1,4 +1,3 @@
-import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
   calculateWithholding,
@@ -15,6 +14,7 @@ import {
   withholdingRowCountKey,
   withholdingPriorRemittanceFields,
 } from "$lib/forms/withholding-definitions";
+import legacyScheduleControls from "./fixtures/legacy-withholding-schedule-controls.json";
 
 const calculate = (code: string, v: Record<string, string>) => {
   const p = getWithholdingDefinition(code)!.prefix;
@@ -621,16 +621,8 @@ it("validates the packaged investment promotion agency codes", () => {
 
 describe("source-backed legacy schedule fields", () => {
   it("does not add receipt columns absent from legacy annual source schedules", () => {
-    for (const code of ["1604CF", "1604E"]) {
-      const source = JSON.parse(
-        readFileSync(
-          `docs/research/ebirforms-v7.9.6.0/evidence/${code}.json`,
-          "utf8",
-        ),
-      );
-      const sourceIds = source.controls.map(
-        (control: { attributes: { id?: string } }) => control.attributes.id,
-      );
+    for (const code of ["1604CF", "1604E"] as const) {
+      const sourceIds = legacyScheduleControls.forms[code].controlIds;
       for (const field of withholdingFields(getWithholdingDefinition(code)!)) {
         if (/txtSched/.test(field.id))
           expect(sourceIds, field.id).toContain(field.id);

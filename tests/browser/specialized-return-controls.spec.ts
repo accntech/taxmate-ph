@@ -27,19 +27,27 @@ test('0605 shows only the payment-dependent controls and resets their choices', 
 });
 
 for (const code of ['0619E', '0619F']) {
-	test(`${code} shows prior remittance for amended returns and resets it for an original return`, async ({ page }) => {
+	test(`${code} preserves the draft prior remittance while toggling amendment`, async ({ page }) => {
 		await seedWorkspace(page);
 		await page.goto(`/ebirforms/taxpayers/${taxpayerId}/forms/${code}?new=true`);
 		const amended = page.getByRole('radiogroup', { name: 'Amended return?', exact: true });
 		const previous = page.getByRole('textbox', { name: 'Amount previously remitted', exact: true });
+		const tax = page.locator(`[id="frm${code}:${code === '0619E' ? 'txtTax14' : 'txtTax13'}"]`);
+		const net = page.locator(`[id="frm${code}:${code === '0619E' ? 'txtTax16' : 'txtTax17'}"]`);
+		await page.getByRole('radiogroup', { name: 'Any tax withheld?', exact: true })
+			.getByRole('radio', { name: 'Yes', exact: true }).check();
+		await tax.fill('1000');
+		await tax.blur();
 		await expect(previous).toHaveCount(0);
 		await amended.getByRole('radio', { name: 'Yes', exact: true }).check();
 		await previous.fill('500');
 		await previous.blur();
 		await amended.getByRole('radio', { name: 'No', exact: true }).check();
 		await expect(previous).toHaveCount(0);
+		await expect(net).toHaveText('₱1,000.00');
 		await amended.getByRole('radio', { name: 'Yes', exact: true }).check();
-		await expect(previous).toHaveValue('0.00');
+		await expect(previous).toHaveValue('500.00');
+		await expect(net).toHaveText('₱500.00');
 	});
 
 	test(`${code} preserves a sparse older draft credit while excluding it from an original return`, async ({ page }) => {

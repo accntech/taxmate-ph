@@ -16,11 +16,13 @@
 		taxpayerInformation?: Snippet;
 	} = $props();
 	const prefix = 'frm1601EQ:';
+	const overpaymentField = prefix + 'overpaymentOption';
+	const totalDueField = prefix + 'txtTotalAmountDue';
 	const lines = [13, 14, 15, 16, 17, 18];
 	const calculated = $derived(calculate1601EQ(values));
 	const withheld = $derived(values[prefix + 'optTaxesWithheld'] === 'Y');
 	const amended = $derived(values[prefix + 'optAmendedReturn'] === 'Y');
-	const due = $derived(Number(calculated[prefix + 'txtTotalAmountDue'] || 0));
+	const due = $derived(Number(calculated[totalDueField] || 0));
 	const creditFields = $derived(['txtRemittanceFirstMonth', 'txtRemittanceSecondMonth', ...(amended ? ['txtTaxRemittedPreviousReturn'] : []), ...(['Q2', 'Q3', 'Q4'].includes(values[prefix + 'optQuarter']) ? ['txtOverremittancePreviousQuarter'] : [])]);
 	const penaltyFields = ['txtSurcharge', 'txtInterest', 'txtCompromise'];
 	const invalidAmounts = $derived([...creditFields, ...penaltyFields, ...(withheld ? lines.map(line => 'txtTaxBase' + line) : [])].some(id => normalizeCurrencyInput(values[prefix + id] || '') === null));
@@ -28,6 +30,10 @@
 	const yesNo = [{ value: 'Y', label: 'Yes' }, { value: 'N', label: 'No' }];
 	const currency = new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' });
 	function change(patch: Record<string, string>) {
+		if (values[overpaymentField] && !(overpaymentField in patch) &&
+			(due >= 0 || Number(calculate1601EQ({ ...values, ...patch })[totalDueField]) >= 0)) {
+			patch = { ...patch, [overpaymentField]: '' };
+		}
 		if (onvaluechange) onvaluechange(patch);
 		else Object.assign(values, patch);
 	}
@@ -36,8 +42,8 @@
 		const carryOverApplies = quarter !== 'Q4' && values[prefix + 'optQuarter'] !== 'Q4';
 		change({
 			[prefix + 'optQuarter']: quarter,
-			...(!carryOverApplies && values[prefix + 'overpaymentOption'] === 'carry'
-				? { [prefix + 'overpaymentOption']: '' } : {})
+			...(!carryOverApplies && values[overpaymentField] === 'carry'
+				? { [overpaymentField]: '' } : {})
 		});
 	}
 	function money(id: string) { return invalidAmounts ? '—' : currency.format(Number(calculated[prefix + id] || 0)); }
@@ -127,9 +133,9 @@
 			{/if}
 			{#if !invalidAmounts && due < 0}
 				<div class="paper-overpayment">
-					<Select id={prefix + 'overpaymentOption'} label="Apply over-remittance as" required value={values[prefix + 'overpaymentOption'] || ''} error={errors[prefix + 'overpaymentOption'] || ''}
+					<RadioGroup id={overpaymentField} label="Apply over-remittance as" required value={values[overpaymentField] || ''} error={errors[overpaymentField] || ''}
 						options={[{ value: 'refund', label: 'Refund' }, { value: 'certificate', label: 'Tax credit certificate' }, { value: 'carry', label: 'Carry over to next quarter' }].filter(option => option.value !== 'carry' || values[prefix + 'optQuarter'] !== 'Q4')}
-						onchange={(value) => set(prefix + 'overpaymentOption', value)} />
+						onchange={(value) => set(overpaymentField, value)} />
 				</div>
 			{/if}
 		</aside>

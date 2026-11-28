@@ -33,11 +33,9 @@
 		(!field.showWhen || values[field.showWhen.field] === field.showWhen.value)));
 	const invalidAmounts = $derived(editableAmounts.some(field => normalizeCurrencyInput(values[field.id] ?? '') === null));
 	const amended = $derived(values[prefix + 'optAmend'] === 'Y');
-	const previousRemittance = $derived(prefix + `txtTax${creditItem}`);
 
 	function changePeriod(name: string, value: string) {
 		const patch = { [prefix + name]: value };
-		if (name === 'optAmend' && value === 'N') patch[previousRemittance] = '0';
 		if (name === 'optWithheld' || name === 'txtTaxTypeCode') {
 			for (const item of inactiveMonthlyRemittanceAmounts(code, { ...values, ...patch })) {
 				patch[prefix + item] = '0.00';

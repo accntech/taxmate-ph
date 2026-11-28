@@ -41,8 +41,8 @@ test('Yes/No radios reveal applicable fields and preserve withheld entries acros
 	await expect(withheld.getByRole('radio', { name: 'Yes', exact: true })).toBeChecked();
 	await withheld.getByRole('radio', { name: 'No', exact: true }).check();
 	await expect(page.getByRole('list', { name: 'ATC line items', exact: true })).toHaveCount(0);
-	await page.getByRole('combobox', { name: 'Apply over-remittance as', exact: true }).click();
-	await page.getByRole('option', { name: 'Carry over to next quarter', exact: true }).click();
+	await page.getByRole('radiogroup', { name: 'Apply over-remittance as', exact: true })
+		.getByRole('radio', { name: 'Carry over to next quarter', exact: true }).check();
 	await page.getByRole('button', { name: 'Save draft', exact: true }).click();
 	await expect(page).toHaveURL(/\/forms$/);
 	const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('ebirforms-created-returns-v1')!).returns[0].values);
@@ -61,19 +61,40 @@ test('Yes/No radios reveal applicable fields and preserve withheld entries acros
 test('fourth quarter clears a carry-over choice without discarding remittances', async ({ page }) => {
 	const withheld = page.getByRole('radiogroup', { name: 'Any taxes withheld?' });
 	await withheld.getByRole('radio', { name: 'No', exact: true }).check();
-	const treatment = page.getByRole('combobox', { name: 'Apply over-remittance as', exact: true });
-	await treatment.click();
-	await page.getByRole('option', { name: 'Carry over to next quarter', exact: true }).click();
+	const treatment = page.getByRole('radiogroup', { name: 'Apply over-remittance as', exact: true });
+	const carry = treatment.getByRole('radio', { name: 'Carry over to next quarter', exact: true });
+	await carry.check();
 	const quarter = page.getByRole('combobox', { name: 'Quarter', exact: true });
 	await quarter.click();
 	await page.getByRole('option', { name: 'Fourth Quarter', exact: true }).click();
-	await treatment.click();
-	await expect(page.getByRole('option', { name: 'Carry over to next quarter', exact: true })).toHaveCount(0);
-	await page.keyboard.press('Escape');
+	await expect(carry).toHaveCount(0);
 	await quarter.click();
 	await page.getByRole('option', { name: 'Second Quarter', exact: true }).click();
-	await expect(treatment).not.toContainText('Carry over to next quarter');
+	await expect(carry).not.toBeChecked();
 	await expect(page.getByRole('textbox', { name: 'First month', exact: true })).toHaveValue('1,234.56');
+});
+
+test('over-remittance radios require a fresh choice after the balance stops being an over-remittance', async ({ page }, testInfo) => {
+	const firstMonth = page.getByRole('textbox', { name: 'First month', exact: true });
+	const treatment = page.getByRole('radiogroup', { name: 'Apply over-remittance as', exact: true });
+	const refund = treatment.getByRole('radio', { name: 'Refund', exact: true });
+	await firstMonth.fill('10000');
+	await firstMonth.blur();
+	await expect(treatment.getByRole('radio')).toHaveCount(3);
+	await refund.focus();
+	await refund.press('Space');
+	await expect(refund).toBeChecked();
+	for (const width of [1440, 390]) {
+		await page.setViewportSize({ width, height: 960 });
+		await expect.poll(() => treatment.evaluate(group => group.scrollWidth <= group.clientWidth)).toBe(true);
+		await treatment.screenshot({ path: testInfo.outputPath(`over-remittance-${width}.png`), animations: 'disabled' });
+	}
+	await firstMonth.fill('0');
+	await firstMonth.blur();
+	await expect(treatment).toHaveCount(0);
+	await firstMonth.fill('10000');
+	await firstMonth.blur();
+	await expect(refund).not.toBeChecked();
 });
 
 test('calculated outputs are separate from editable inputs and update from the tax base', async ({ page }) => {
@@ -120,7 +141,8 @@ test('calculated outputs are separate from editable inputs and update from the t
 	await expect(row.getByText('Enter an amount such as 1,234.56, zero or greater.', { exact: true })).toBeVisible();
 	await expect(page.getByRole('dialog')).toBeVisible();
 	await page.getByRole('dialog').getByRole('button', { name: 'Cancel', exact: true }).click();
-	await expect(page.getByRole('textbox', { name: 'Item 13 Tax base', exact: true })).toHaveValue('100,000.00');
+	await expect(page.getByRole('dialog')).toBeHidden();
+	await expect(page.getByLabel('Item 13 Tax base', { exact: true })).toHaveText('₱100,000.00');
 });
 
 test('unfinished quarter is saved as a draft and rejected at finalization', async ({ page }) => {

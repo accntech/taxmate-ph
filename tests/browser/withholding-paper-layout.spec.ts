@@ -176,5 +176,5 @@ test('revised 1601C keeps a description beside its same-item amount', async ({ p
 	await amended.getByRole('radio', { name: 'No', exact: true }).check();
 	await expect(prior).toHaveCount(0);
 	await amended.getByRole('radio', { name: 'Yes', exact: true }).check();
-	await expect(prior).toHaveValue('');
+	await expect(prior).toHaveValue('100.00');
 });

@@ -105,7 +105,7 @@ for (const code of otherGatedForms) {
 test('an empty schedule has no extra divider above its totals', async ({ page }) => {
 	const schedule = await seededSchedule(page, '1602Qv2018', 'interest', []);
 	const panel = page.locator('details').filter({ has: page.getByText(schedule.title, { exact: true }) });
-	const emptyState = panel.locator('.empty');
+	const emptyState = page.getByRole('region', { name: schedule.title, exact: true }).getByText('No items added', { exact: true });
 	const totals = panel.locator('.wh-schedule-totals');
 	for (const width of [1440, 390]) {
 		await page.setViewportSize({ width, height: 960 });

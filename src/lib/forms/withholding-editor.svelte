@@ -11,7 +11,7 @@
 	import { Button, CalculatedValue, CurrencyInput, DateInput, Input, NumberInput, RadioGroup, Select, TinInput } from '$lib/components/ui';
 	import MonthYearInput from '$lib/components/ui/month-year-input/month-year-input.svelte';
 	import { commitCurrencyInput, normalizeCurrencyInput } from '$lib/components/ui/currency-input/currency';
-	import { withholdingPriorRemittanceFields, withholdingSchedules, withholdingSchedulesEnabled, type WithholdingDefinition, type WithholdingField, type WithholdingSchedule } from './withholding-definitions';
+	import { withholdingSchedules, withholdingSchedulesEnabled, type WithholdingDefinition, type WithholdingField, type WithholdingSchedule } from './withholding-definitions';
 	import { calculateWithholding, hasConflictingInstallmentPrices } from './withholding-rules';
 	import ScheduleItems from './schedule-items.svelte';
 	import './withholding-layout.css';
@@ -163,13 +163,11 @@
 		onvaluechange(patch);
 	}
 	function change(id: string, value: string) {
-		const prior = withholdingPriorRemittanceFields[definition.code];
 		const patch = { [id]: value };
 		if (installmentSale && id === 'frm1606:txtGross' &&
 			(!conflictingSellingPrices || value !== commitCurrencyInput(values[id] ?? ''))) {
 			patch['frm1606:txtSelling'] = value;
 		}
-		if (id === definition.prefix + 'optAmend' && value === 'N' && prior) patch[definition.prefix + prior] = '';
 		if (propertyReturn && id === definition.prefix + 'transactionType') {
 			if (!hasTransactionDescription(value)) patch[definition.prefix + 'txtOthers20'] = '';
 			for (const field of sectionFields) {
