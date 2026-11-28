@@ -1,7 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::Path;
-use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, OnceLock};
 use std::time::Duration;
 
@@ -96,7 +95,10 @@ pub fn validate_export_request(request: &PdfExportRequest) -> Result<(), PdfExpo
         )));
     }
 
-    if !matches!(request.paper_size.as_str(), "letter" | "a4" | "long" | "legal") {
+    if !matches!(
+        request.paper_size.as_str(),
+        "letter" | "a4" | "long" | "legal"
+    ) {
         return Err(PdfExportError::new(format!(
             "Unsupported paper size: {}",
             request.paper_size
@@ -249,38 +251,30 @@ pub fn cancel_pdf_export(job_id: String) -> bool {
         .unwrap_or(false)
 }
 
-struct ExportDirectory(std::path::PathBuf);
-
-impl ExportDirectory {
-    fn create() -> Result<Self, PdfExportError> {
-        static NEXT: AtomicU64 = AtomicU64::new(0);
-        loop {
-            let path = std::env::temp_dir().join(format!(
-                "ebirforms-pdf-{}-{}-{}",
-                std::process::id(),
-                std::time::SystemTime::now()
-                    .duration_since(std::time::UNIX_EPOCH)
-                    .unwrap_or_default()
-                    .as_nanos(),
-                NEXT.fetch_add(1, Ordering::Relaxed)
-            ));
-            match std::fs::create_dir(&path) {
-                Ok(()) => return Ok(Self(path)),
-                Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => continue,
-                Err(error) => {
-                    return Err(PdfExportError::new(format!(
-                        "Could not prepare PDF export: {error}"
-                    )))
-                }
-            }
-        }
+fn prepare_export_directory() -> Result<tempfile::TempDir, PdfExportError> {
+    let mut builder = tempfile::Builder::new();
+    builder.prefix("taxmate-workpaper-");
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        builder.permissions(std::fs::Permissions::from_mode(0o700));
     }
+    builder
+        .tempdir()
+        .map_err(|error| PdfExportError::new(format!("Could not prepare PDF export: {error}")))
 }
 
-impl Drop for ExportDirectory {
-    fn drop(&mut self) {
-        let _ = std::fs::remove_dir_all(&self.0);
-    }
+#[cfg(all(test, unix))]
+#[test]
+fn export_staging_is_private_to_the_current_user() {
+    use std::os::unix::fs::PermissionsExt;
+
+    let directory = prepare_export_directory().unwrap();
+    let mode = std::fs::metadata(directory.path())
+        .unwrap()
+        .permissions()
+        .mode();
+    assert_eq!(mode & 0o077, 0);
 }
 
 #[derive(Debug, Serialize)]
@@ -324,9 +318,9 @@ pub fn render_pdf_export_with_progress(
     validate_export_request(&request)?;
     job.check_canceled()?;
     let output_path = resolve_output_path(&request);
-    let directory = ExportDirectory::create()?;
-    let input_path = directory.0.join("return.html");
-    let staged_pdf = directory.0.join("return.pdf");
+    let directory = prepare_export_directory()?;
+    let input_path = directory.path().join("return.html");
+    let staged_pdf = directory.path().join("return.pdf");
     let input_url = tauri::Url::from_file_path(&input_path)
         .map_err(|_| PdfExportError::new("Could not convert export HTML path to a file URL."))?;
     let html = inject_print_source_url(request.html, input_url.as_str());
@@ -343,7 +337,7 @@ pub fn render_pdf_export_with_progress(
             stage: "Rendering PDF".into(),
         });
     }
-    let log_path = directory.0.join("renderer.log");
+    let log_path = directory.path().join("renderer.log");
     let log_file = std::fs::File::create(&log_path).map_err(|error| {
         PdfExportError::new(format!("Could not prepare PDF renderer log: {error}"))
     })?;
@@ -400,6 +394,7 @@ pub fn render_pdf_export_with_progress(
     std::fs::copy(&staged_pdf, &output_path)
         .map_err(|error| PdfExportError::new(format!("Could not save PDF: {error}")))?;
     state.finished = true;
+    drop(state);
     on_progress(PdfExportProgress {
         completed_steps: 7,
         total_steps: 7,

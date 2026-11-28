@@ -198,7 +198,8 @@
 			const updateProgress = (progress: PdfExportProgress) => {
 				if (pdfJob === job && !isCanceling && !job.canceled && progress.completedSteps >= pdfProgress.completedSteps) pdfProgress = progress;
 			};
-			const html = await buildReturnReport(definition, values, record.status, paperSize, (completedSteps, stage) => updateProgress({ completedSteps, totalSteps: 7, stage }));
+			const html = await buildReturnReport(definition, values, record.status, paperSize,
+				(completedSteps, stage) => updateProgress({ completedSteps, totalSteps: 7, stage }));
 			if (job.canceled) { toast.info('PDF export canceled.'); return; }
 			updateProgress({ completedSteps: 4, totalSteps: 7, stage: 'Starting PDF renderer' });
 			job.submitted = true;

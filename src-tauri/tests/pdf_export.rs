@@ -1,6 +1,6 @@
 use ebirforms_tauri_lib::pdf_export::{
-    build_chromium_args, find_chromium_renderer, inject_print_source_url, resolve_output_path,
-    validate_export_request, PdfExportRequest,
+    build_chromium_args, find_chromium_renderer, inject_print_source_url, render_pdf_export,
+    resolve_output_path, validate_export_request, PdfExportRequest,
 };
 
 #[test]
@@ -213,17 +213,12 @@ fn failed_render_preserves_existing_destination() {
     std::fs::set_permissions(&renderer, std::fs::Permissions::from_mode(0o755)).unwrap();
     let destination = root.path().join("existing.pdf");
     std::fs::write(&destination, "existing document").unwrap();
-    std::env::set_var("EBIRFORMS_PDF_RENDERER", &renderer);
     let request: PdfExportRequest = serde_json::from_value(serde_json::json!({
         "formCode": "0605", "paperSize": "long", "html": "<!doctype html><html></html>",
         "suggestedFilename": "failed-render-test.pdf", "outputPath": destination
     }))
     .unwrap();
-    let result = tauri::async_runtime::block_on(ebirforms_tauri_lib::pdf_export::export_form_pdf(
-        request,
-        Default::default(),
-    ));
-    std::env::remove_var("EBIRFORMS_PDF_RENDERER");
+    let result = render_pdf_export(request, renderer.to_str().unwrap(), &Default::default());
     assert!(result.is_err());
     assert_eq!(
         std::fs::read_to_string(destination).unwrap(),
