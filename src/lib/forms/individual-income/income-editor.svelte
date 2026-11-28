@@ -20,7 +20,7 @@
 	import Annual1701AIncomeDetail from './annual-1701a-income-detail.svelte';
 	import Annual2018Attachments from './annual-2018-attachments.svelte';
 	import IncomeRecords from './income-records.svelte';
-	import { msSpecialDeductionFields, msSpecialDeductionId, msSpecialDeductionIndices } from './annual-1701ms-special-deductions';
+	import { msSpecialDeductionFields, msSpecialDeductionIndices } from './annual-1701ms-special-deductions';
 	import Form1701MSOverpayment from './form-1701ms-overpayment.svelte';
 	import { clear1701MSOverpayment, has1701MSOverpayment, is1701MSOverpaymentField } from './form-1701ms-overpayment';
 	import { incomeIncludesSpouse, incomePersonalValues, incomeProfileFieldList, incomeSpouseFieldIds, incomeSpouseFiling, legacy1701ProfileIds } from './profile-fields';
@@ -184,18 +184,14 @@
 		else groups.push({ title, fields: [field] });
 		return groups;
 	}, []));
-	const msSpecialDeductionSchedules = $derived(microSmall ? visibleFields.filter(field =>
-		/^frm1701MS:txtSpecialAllowableNo10[ab]$/.test(field.id)
-	).map(aggregate => {
+	const msSpecialDeductionSchedules = $derived(microSmall ? visibleFields.flatMap(aggregate => {
+		if (!/^frm1701MS:txtSpecialAllowableNo10[ab]$/.test(aggregate.id)) return [];
 		const spouse = aggregate.person === 'spouse';
+		const indices = msSpecialDeductionIndices(values, spouse);
+		if (!indices.length) return [];
 		const title = `Item 10B · Special deductions · ${spouse ? 'Spouse' : 'Taxpayer'}`;
-		const existing = msSpecialDeductionIndices(values, spouse);
-		const legacyAmount = values[aggregate.id] ?? '';
-		const preserveAmount = !existing.length && Number(legacyAmount.replaceAll(',', '')) > 0;
-		const next = existing.length ? existing[existing.length - 1] + 1 : 0;
-		const fields = [...existing, next].flatMap(index => msSpecialDeductionFields(aggregate, title, index));
-		const legacyPrefill = preserveAmount ? { [msSpecialDeductionId(spouse, 'Amount', 0)]: legacyAmount } : undefined;
-		return { title, fields, legacyPrefill };
+		const fields = indices.flatMap(index => msSpecialDeductionFields(aggregate, title, index));
+		return [{ title, aggregateId: aggregate.id, fields }];
 	}) : []);
 	const deductionSchedule = $derived(
 		groups.find(group => group.title === deductionDrawer?.title) ??
@@ -468,8 +464,7 @@
 	async function openDeductionDrawer(title: string, trigger: HTMLElement, item?: string, adding = false, targetId?: string) {
 		trigger.focus({ preventScroll: true });
 		deductionOpener = trigger;
-		const legacyPrefill = adding ? msSpecialDeductionSchedules.find(schedule => schedule.title === title)?.legacyPrefill : undefined;
-		deductionDraft = { ...legacyPrefill };
+		deductionDraft = {};
 		deductionValidationAttempted = false;
 		deductionDrawer = { title, item, adding };
 		await focusDeductionDrawer(targetId);
@@ -495,16 +490,18 @@
 		const row = incomeEditorRows(deductionSchedule.fields).find(row => row.item === drawer.item);
 		if (!row) return;
 		const patch = Object.fromEntries(row.fields.filter(field => !isDeductionDrawerBalance(field) && !isDeductionDrawerTotal(field)).map(field => [field.id, '']));
-		if (microSmall) {
+		const aggregateId = msSpecialDeductionSchedules.find(schedule => schedule.title === drawer.title)?.aggregateId;
+		if (aggregateId) {
 			const spouse = row.fields[0].person === 'spouse';
 			const remaining = msSpecialDeductionIndices({ ...values, ...patch }, spouse);
-			if (!remaining.length) patch[`frm1701MS:txtSpecialAllowableNo10${spouse ? 'b' : 'a'}`] = '0';
+			if (!remaining.length) patch[aggregateId] = '0';
 		}
 		onvaluechange(patch);
 		deductionDrawer = undefined;
 		deductionDraft = {};
 		await tick();
-		deductionDrawerOpener(drawer.title)?.focus({ preventScroll: true });
+		const trigger = deductionDrawerOpener(drawer.title) ?? (aggregateId ? document.getElementById(aggregateId) : undefined);
+		trigger?.focus({ preventScroll: true });
 	}
 
 	async function closeDeductionDrawer(apply = false) {
@@ -851,16 +848,18 @@
 	</div>
 {/snippet}
 
-{#snippet deductionLineItems(title: string, sectionFields: IncomeEditorField[], unlimited = false, prefilled = false)}
+{#snippet deductionLineItems(title: string, sectionFields: IncomeEditorField[], savedOnly = false)}
 	{@const rows = incomeEditorRows(sectionFields.filter(field => !isDeductionDrawerTotal(field)))}
-	{@const entries = rows.filter(deductionRowHasEntry)}
+	{@const entries = savedOnly ? rows : rows.filter(deductionRowHasEntry)}
 	{@const available = rows.find(row => !entries.includes(row) && !row.fields.some(field =>
 		isDeductionDrawerBalance(field) && field.column === 'Net operating loss'
 	))}
 	<header class="eq-section-header schedule-record-header">
-		<h3>{title}<span class="schedule-entry-count font-mono">{unlimited ? ` (${entries.length})` : ` (${entries.length}/${rows.length})`}</span></h3>
-		<Button type="button" size="sm" variant="secondary" data-schedule-add aria-haspopup="dialog" disabled={!available}
-			onclick={(event) => available && void openDeductionDrawer(title, event.currentTarget, available.item, true)}>Add item</Button>
+		<h3>{title}<span class="schedule-entry-count font-mono">{savedOnly ? ` (${entries.length})` : ` (${entries.length}/${rows.length})`}</span></h3>
+		{#if !savedOnly}
+			<Button type="button" size="sm" variant="secondary" data-schedule-add aria-haspopup="dialog" disabled={!available}
+				onclick={(event) => available && void openDeductionDrawer(title, event.currentTarget, available.item, true)}>Add item</Button>
+		{/if}
 	</header>
 	{#if entries.length}
 		<ol class="schedule-entry-list" aria-label="Line items">
@@ -1119,7 +1118,8 @@
 									{@const field = row.fields.find(field => isScheduleValue(field) && (field.person ?? 'taxpayer') === person)}
 									{@const value = field ? calculated[field.id] ?? '' : ''}
 									{@const inputLabel = `Item ${item} ${label.toLowerCase()} amount${joint ? ` · ${person === 'spouse' ? 'Spouse' : 'Taxpayer'}` : ''}`}
-									<td class="summary-value" class:summary-input={field && !computed.has(field.id) && !(microSmall && item === '10B')}>
+									{@const readOnly = field && (computed.has(field.id) || msSpecialDeductionSchedules.some(schedule => schedule.aggregateId === field.id))}
+									<td class={['summary-value', { 'summary-input': field && !readOnly }]}>
 									{#if fullAnnual && joint && field}
 										<span class="cell-column-caption" aria-hidden="true">{person === 'spouse' ? 'Spouse' : 'Taxpayer'}</span>
 									{/if}
@@ -1127,7 +1127,7 @@
 											<span aria-label="Not applicable">—</span>
 										{:else if microSmall && field.kind === 'percent'}
 											{@render microSmallRateInput(field, joint ? `${label} · ${person === 'spouse' ? 'Spouse' : 'Taxpayer'}` : label, false)}
-										{:else if computed.has(field.id) || (microSmall && item === '10B')}
+										{:else if readOnly}
 											<output id={field.id} aria-label={inputLabel} aria-live="off">{revisedQuarterly && ['46', '54', '63', '68'].includes(item) &&
 												!(person === 'spouse' ? quarterlySpouseReady : quarterlyTaxpayerReady) ? '—' : currency.format(Number(value.replaceAll(',', '')))}</output>
 											{#if errors[field.id]}<FieldErrors errors={[errors[field.id]]} />{/if}
@@ -1146,7 +1146,7 @@
 								<tr class="ms-special-deduction-details">
 									<td colspan={2 + people.length}>
 										<section aria-label={schedule.title} data-ms-deduction={schedule.title} tabindex="-1">
-											{@render deductionLineItems(schedule.title, schedule.fields, true, !!schedule.legacyPrefill)}
+											{@render deductionLineItems(schedule.title, schedule.fields, true)}
 										</section>
 									</td>
 								</tr>

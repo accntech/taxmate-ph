@@ -177,13 +177,12 @@ test('1701-MS keeps both filers in mixed-rate tables and seven-digit amounts rea
 	await expect(graduated.locator('tr[data-income-item="5"]').getByRole('cell').nth(1)).toHaveText('—');
 	await expect(graduated.locator('tr[data-income-item="5"]').getByRole('cell').nth(2).locator(id('txtSalesRevenueNo5b'))).toBeEditable();
 	await expect(flat.locator('tr[data-income-item="19"]').getByRole('cell').nth(2)).toHaveText('—');
-	const spouseDeductions = page.getByRole('region', { name: 'Item 10B · Special deductions · Spouse', exact: true });
-	await expect(page.getByRole('region', { name: 'Item 10B · Special deductions · Taxpayer', exact: true })).toHaveCount(0);
-	await spouseDeductions.getByRole('button', { name: 'Add item', exact: true }).click();
-	const spouseDrawer = page.getByRole('dialog', { name: 'Item 10B · Special deductions · Spouse', exact: true });
-	await expect(spouseDrawer.getByRole('textbox', { name: 'Description' })).toHaveAttribute('id', 'frm1701MS:sched410A2:Description0');
-	await spouseDrawer.getByRole('button', { name: 'Cancel', exact: true }).click();
-	await expect(spouseDeductions.getByRole('button', { name: 'Add item', exact: true })).toBeFocused();
+	await expect(page.locator(id('txtSpecialAllowableNo10a'))).toHaveCount(0);
+	const spouseTotal = graduated.locator(id('txtSpecialAllowableNo10b'));
+	await expect(spouseTotal).toBeEditable();
+	await spouseTotal.fill('600');
+	await spouseTotal.blur();
+	await expect(graduated.locator(id('txtTotalAllowableItemixedDeductionsNo10b'))).toHaveText('₱600');
 	await page.setViewportSize({ width: 390, height: 920 });
 	await page.keyboard.press('Escape');
 	const scrollRegion = page.getByRole('region', { name: 'Part IV.B2 · Business income at 8% columns' });
@@ -272,8 +271,81 @@ test('1701-MS keeps the preferential rate in its numbered business schedule', as
 	await expect(business.locator(id('txtTaxDueSpeciala'))).toHaveText('₱65,000');
 });
 
+test('1701-MS Item 10B accepts both printed totals directly', async ({ page }, testInfo) => {
+	await seedWorkspace(page, 'light', 'loaded', { ...single, civilStatus: 'Married',
+		spouse: { taxpayerName: 'SANTOS, JAMIE, CRUZ', tin1: '009', tin2: '876', tin3: '543', branchCode: '00000' }
+	}, [{
+		id: 'deduction-totals-ms', taxpayerId, formCode: '1701MS', returnPeriod: '2025', status: 'Draft', finalFlag: '0',
+		updatedAt: 1794441600000, values: {
+			'frm1701MS:txtYearNo1': '2025', 'frm1701MS:civilStatus': 'Married', 'frm1701MS:txtIfMarried': '1',
+			'frm1701MS:sourceOfIncomeTaxpayer': '1', 'frm1701MS:txtTaxpayerNo12a': '2', methodOfDeductionMain: 'itemized',
+			'frm1701MS:sourceOfIncomeSpouse': '3', 'frm1701MS:txtTaxpayerNo12b': '2', methodOfDeductionStandard: 'itemized2',
+			'frm1701MS:txtSpecialAllowableNo10a': '225'
+		}
+	}]);
+	await page.setViewportSize({ width: 1440, height: 980 });
+	await page.goto(`${route}?return=deduction-totals-ms`);
+	await expect(page.getByRole('navigation', { name: 'Return pages' })).toBeVisible({ timeout: 45_000 });
+	await goToReturnPage(page, 2);
+	const taxpayerTotal = page.locator(id('txtSpecialAllowableNo10a'));
+	const spouseTotal = page.locator(id('txtSpecialAllowableNo10b'));
+	await expect(taxpayerTotal).toHaveJSProperty('tagName', 'INPUT', { timeout: 3000 });
+	await expect(taxpayerTotal).toHaveValue('225');
+	await expect(spouseTotal).toBeEditable();
+	await expect(page.getByRole('region', { name: /Item 10B · Special deductions/ })).toHaveCount(0);
+	await taxpayerTotal.fill('1425');
+	await taxpayerTotal.blur();
+	await spouseTotal.fill('650');
+	await spouseTotal.blur();
+	await expect(page.locator(id('txtTotalAllowableItemixedDeductionsNo10a'))).toHaveText('₱1,425');
+	await expect(page.locator(id('txtTotalAllowableItemixedDeductionsNo10b'))).toHaveText('₱650');
+
+	await page.getByRole('button', { name: 'Save draft', exact: true }).click();
+	await expect(page).toHaveURL(/\/forms$/);
+	await page.getByRole('row').filter({ hasText: '1701MS' }).getByRole('link', { name: 'Edit', exact: true }).click();
+	await goToReturnPage(page, 2);
+	await expect(taxpayerTotal).toHaveValue('1,425');
+	await expect(spouseTotal).toHaveValue('650');
+	const row = page.locator('tr[data-income-item="10B"]').filter({ has: taxpayerTotal });
+	await row.screenshot({ path: testInfo.outputPath('1701MS-10b-totals-desktop.png'), animations: 'disabled' });
+	await page.setViewportSize({ width: 390, height: 980 });
+	await page.keyboard.press('Escape');
+	await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+	for (const [field, person] of [[taxpayerTotal, 'taxpayer'], [spouseTotal, 'spouse']] as const) {
+		await field.focus();
+		await expect(field).toBeEditable();
+		await expect.poll(() => field.evaluate(node => {
+			const input = node.getBoundingClientRect();
+			const viewport = node.closest('.joint-schedule-viewport')!.getBoundingClientRect();
+			return input.left >= viewport.left && input.right <= viewport.right;
+		})).toBe(true);
+		await field.screenshot({ path: testInfo.outputPath(`1701MS-10b-${person}-mobile.png`), animations: 'disabled' });
+	}
+
+	const html = await page.evaluate(async () => {
+		const formsPath = '/src/lib/forms/index.ts';
+		const reportPath = '/src/lib/printing/return-report.ts';
+		const { getFormDefinition } = await import(formsPath) as typeof import('../../src/lib/forms');
+		const { buildReturnReport } = await import(reportPath) as typeof import('../../src/lib/printing/return-report');
+		const form = getFormDefinition('1701MS');
+		if (!form) throw new Error('Expected the 1701-MS form definition.');
+		const storage = JSON.parse(localStorage.getItem('ebirforms-created-returns-v1')!);
+		const draft = storage.returns.find((record: { id: string }) => record.id === 'deduction-totals-ms');
+		if (!draft) throw new Error('Expected the saved 1701-MS draft.');
+		if (Object.keys(draft.values).some(id => id.startsWith('frm1701MS:sched410A'))) {
+			throw new Error('An Item 10B total was saved as a detail row.');
+		}
+		return buildReturnReport(form, draft.values, draft.status, 'a4');
+	});
+	const print = await page.context().newPage();
+	await print.setContent(html);
+	await expect(print.locator(id('txtSpecialAllowableNo10a'))).toHaveValue('1,425');
+	await expect(print.locator(id('txtSpecialAllowableNo10b'))).toHaveValue('650');
+	await print.pdf({ path: testInfo.outputPath('1701MS-10b-totals.pdf'), preferCSSPageSize: true, printBackground: true });
+});
+
 for (const width of [1440, 390]) {
-	test(`1701-MS Item 10B edits special deductions in a drawer at ${width}px`, async ({ page }, testInfo) => {
+	test(`1701-MS Item 10B preserves saved deduction details at ${width}px`, async ({ page }, testInfo) => {
 		test.setTimeout(120_000);
 		await seedWorkspace(page, 'light', 'loaded', { ...single, civilStatus: 'Single' }, [{
 			id: 'special-ms', taxpayerId, formCode: '1701MS', returnPeriod: '2025', status: 'Draft', finalFlag: '0',
@@ -282,7 +354,11 @@ for (const width of [1440, 390]) {
 				'frm1701MS:sourceOfIncomeTaxpayer': '1',
 				'frm1701MS:txtTaxpayerNo12a': '2',
 				methodOfDeductionMain: 'itemized',
-				'frm1701MS:txtSpecialAllowableNo10a': '225'
+				'frm1701MS:txtSpecialAllowableNo10a': '225',
+				'frm1701MS:sched410A1:Description0': 'Prior deduction',
+				'frm1701MS:sched410A1:LegalBasis0': 'Prior legal basis',
+				'frm1701MS:sched410A1:Amount0': '225',
+				'frm1701MS:sched410A1:Amount7': '1200'
 			}
 		}]);
 		await page.setViewportSize({ width, height: 980 });
@@ -298,46 +374,48 @@ for (const width of [1440, 390]) {
 		const schedule = page.getByRole('region', { name: label, exact: true });
 		const subtotal = page.locator(id('txtSpecialAllowableNo10a'));
 		await expect(subtotal).toHaveJSProperty('tagName', 'OUTPUT');
-		await expect(subtotal).toHaveText('₱225');
+		await expect(subtotal).toHaveText('₱1,425');
 		await expect(page.locator(id('txtNetOperatingLossNo10a'))).toBeEditable();
-		const openDrawer = schedule.getByRole('button', { name: 'Add item' });
+		await expect(schedule.getByRole('button', { name: 'Add item' })).toHaveCount(0);
+		const sparseDetail = schedule.getByRole('button', { name: 'Edit Item 10B.8' });
 		const drawer = page.getByRole('dialog', { name: label, exact: true });
 		const description = drawer.getByRole('textbox', { name: 'Description' });
-		await openDrawer.click();
+		await sparseDetail.click();
 		await expect(description).toBeFocused();
 		await drawer.getByRole('button', { name: 'Close', exact: true }).click();
-		await expect(drawer).toBeHidden();
+		await expect(sparseDetail).toBeFocused();
 
-		await openDrawer.click();
-		await expect(description).toBeFocused();
-		const add = drawer.getByRole('button', { name: 'Add item', exact: true });
-		await add.click();
-		await expect(drawer.getByRole('textbox', { name: 'Description' })).toBeFocused();
+		await sparseDetail.click();
+		await expect(drawer.getByRole('textbox', { name: 'Amount' })).toHaveValue('1,200');
+		const update = drawer.getByRole('button', { name: 'Update', exact: true });
+		await update.click();
 		await expect(drawer.getByText('Enter the legal basis for the special deduction.', { exact: true })).toBeVisible();
-		await expect(drawer.getByRole('textbox', { name: 'Amount' })).toHaveValue('225');
-		await drawer.getByRole('textbox', { name: 'Description' }).fill('Prior deduction');
-		await drawer.getByRole('textbox', { name: 'Legal basis' }).fill('Prior legal basis');
-		await add.click();
-		await expect(subtotal).toHaveText('₱225');
-
-		await schedule.getByRole('button', { name: 'Add item' }).click();
-		await drawer.getByRole('textbox', { name: 'Description' }).fill('Sample deductible expense');
+		await description.fill('Sample deductible expense');
 		await drawer.getByRole('textbox', { name: 'Legal basis' }).fill('Sample legal basis');
-		await drawer.getByRole('textbox', { name: 'Amount' }).fill('1200');
+		await drawer.getByRole('textbox', { name: 'Amount' }).fill('1300');
 		await drawer.getByRole('textbox', { name: 'Amount' }).blur();
 		await expect(await drawer.evaluate(dialog => dialog.scrollWidth <= dialog.clientWidth)).toBe(true);
-		await page.screenshot({ path: testInfo.outputPath(`1701MS-deduction-drawer-${width}.png`), animations: 'disabled' });
-		await add.click();
-		await expect(subtotal).toHaveText('₱1,425');
+		await page.screenshot({ path: testInfo.outputPath(`1701MS-saved-deduction-drawer-${width}.png`), animations: 'disabled' });
+		await update.click();
+		await expect(subtotal).toHaveText('₱1,525');
 		await expect(schedule.getByText('Sample deductible expense')).toBeVisible();
 		await expect(schedule.getByText('Legal basis · Sample legal basis')).toBeVisible();
-		await page.screenshot({ path: testInfo.outputPath(`1701MS-special-deductions-${width}.png`), animations: 'disabled' });
 
 		await page.getByRole('button', { name: 'Save draft', exact: true }).click();
 		await expect(page).toHaveURL(/\/forms$/);
 		await page.getByRole('row').filter({ hasText: '1701MS' }).getByRole('link', { name: 'Edit', exact: true }).click();
 		await goToReturnPage(page, 2);
-		await expect(subtotal).toHaveText('₱1,425');
+		await expect(subtotal).toHaveText('₱1,525');
 		await expect(schedule.getByText('Sample deductible expense')).toBeVisible();
+
+		await sparseDetail.click();
+		await drawer.getByRole('button', { name: 'Delete item', exact: true }).click();
+		await expect(subtotal).toHaveText('₱225');
+		await schedule.getByRole('button', { name: 'Edit Item 10B.1' }).click();
+		await drawer.getByRole('button', { name: 'Delete item', exact: true }).click();
+		await expect(schedule).toHaveCount(0);
+		await expect(subtotal).toBeFocused();
+		await expect(subtotal).toBeEditable();
+		await expect(subtotal).toHaveValue('0');
 	});
 }
