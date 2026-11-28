@@ -1,6 +1,9 @@
 import { expect, test } from '@playwright/test';
 import { goToReturnPage, seedWorkspace, taxpayerId } from './fixtures';
 import { printSavedReturn } from './helpers/return-pdf';
+import { seedLegacyPrintArtwork } from './helpers/legacy-print-artwork';
+
+test.beforeEach(async ({ page }) => { await seedLegacyPrintArtwork(page); });
 
 const list = `/ebirforms/taxpayers/${taxpayerId}/forms`;
 

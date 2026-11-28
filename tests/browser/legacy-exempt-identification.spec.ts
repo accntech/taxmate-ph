@@ -1,6 +1,9 @@
 import { expect, test, type Page } from '@playwright/test';
 import { philippineCalendarDate } from '../../src/lib/forms/filing-calendar';
 import { seedWorkspace, taxpayerId } from './fixtures';
+import { seedLegacyPrintArtwork } from './helpers/legacy-print-artwork';
+
+test.beforeEach(async ({ page }) => { await seedLegacyPrintArtwork(page); });
 
 const formsPath = `/ebirforms/taxpayers/${taxpayerId}/forms`;
 const id = (key: string) => `frm1702EX:${key}`;

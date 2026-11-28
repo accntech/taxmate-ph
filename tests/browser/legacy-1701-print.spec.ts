@@ -1,6 +1,9 @@
 import { expect, test } from '@playwright/test';
 import { execFileSync } from 'node:child_process';
 import { seedWorkspace } from './fixtures';
+import { seedLegacyPrintArtwork } from './helpers/legacy-print-artwork';
+
+test.beforeEach(async ({ page }) => { await seedLegacyPrintArtwork(page); });
 
 for (const [code, branchId] of [
 	['1700', 'txtPg1Pt1I5BranchCode'],
@@ -123,12 +126,12 @@ test('Form 1701A prints the chosen month as text in its source slot', async ({ p
 test('Legal paper stays selected and sets the PDF page size', async ({ page, context }) => {
 	await seedWorkspace(page);
 	await page.goto('/settings');
-	const paper = page.getByRole('combobox', { name: 'Paper size' });
-	await expect(paper).toContainText('Long / Folio', { timeout: 15_000 });
+	const paper = page.getByRole('combobox').filter({ hasText: 'Long / Folio' });
+	await expect(paper).toBeVisible({ timeout: 15_000 });
 	await paper.click();
 	await page.getByRole('option', { name: /Legal/ }).click();
 	await page.reload();
-	await expect(paper).toContainText('Legal');
+	await expect(page.getByRole('combobox').filter({ hasText: 'Legal' })).toBeVisible();
 
 	for (const [code, pages] of [['1701v2018', 4], ['1701MS', 2]] as const) {
 		const html = await page.evaluate(async (formCode) => {

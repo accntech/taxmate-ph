@@ -1,6 +1,9 @@
 import { expect, test, type Page } from '@playwright/test';
 import { execFileSync } from 'node:child_process';
 import { seedWorkspace, taxpayerId } from './fixtures';
+import { seedLegacyPrintArtwork } from './helpers/legacy-print-artwork';
+
+test.beforeEach(async ({ page }) => { await seedLegacyPrintArtwork(page); });
 
 async function exportForm(page: Page, code: string) {
  await seedWorkspace(page);

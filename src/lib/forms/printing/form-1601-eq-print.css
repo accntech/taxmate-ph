@@ -12,7 +12,7 @@
 	}
 
 	.legacy-bg-strip {
-		background-image: url('/legacy/img/frmbg.png');
+		background-image: url('/forms/shared/frmbg.png');
 		background-position: top;
 		background-repeat: repeat-x;
 		padding: 1%;
@@ -114,7 +114,7 @@
 
 	.tblForm td.tblFormTd,
 	.tblForm td.tblFormTdPart {
-		background-image: url('/legacy/img/frmbg.png');
+		background-image: url('/forms/shared/frmbg.png');
 		background-position: top;
 		background-repeat: repeat-x;
 		border-top: #aaa 1px solid;

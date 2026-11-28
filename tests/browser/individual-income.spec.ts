@@ -3,6 +3,9 @@ import { execFileSync } from 'node:child_process';
 import { mkdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { goToReturnPage, seedWorkspace, taxpayerId } from './fixtures';
+import { seedLegacyPrintArtwork } from './helpers/legacy-print-artwork';
+
+test.beforeEach(async ({ page }) => { await seedLegacyPrintArtwork(page); });
 
 const list = `/ebirforms/taxpayers/${taxpayerId}/forms`;
 const filingYear = (page: Page) => page.getByRole('group', { name: 'Filing period', exact: true })

@@ -499,7 +499,7 @@ export const printBindings: readonly PrintBinding[] = [
                         <img
                           alt="BIR form identifying mark"
                           class="wh-inline-5dfba9815e30"
-                          src="/legacy/img/withholding/original-6c831e35170ff5f3.png"
+                          src="/forms/withholding/shared/bcs_new.png"
                           width="80"
                         />
                       </p>
@@ -510,7 +510,7 @@ export const printBindings: readonly PrintBinding[] = [
                           alt="BIR form identifying mark"
                           class="wh-inline-5dfba9815e30"
                           height="50px"
-                          src="/legacy/img/withholding/original-496a4fcbfde5f354.png"
+                          src="/forms/withholding/shared/header_logo.png"
                           width="210"
                         />
                       </p>
@@ -558,7 +558,7 @@ export const printBindings: readonly PrintBinding[] = [
                           alt="BIR form identifying mark"
                           class="wh-inline-5dfba9815e30"
                           height="75px"
-                          src="/legacy/img/withholding/original-2def78adfb729a7b.png"
+                          src="/forms/withholding/1601-fq/1601FQ_p1.png"
                           width="220"
                         />
                       </p>
@@ -2251,7 +2251,7 @@ export const printBindings: readonly PrintBinding[] = [
                           alt="BIR form identifying mark"
                           class="wh-inline-5dfba9815e30"
                           height="75px"
-                          src="/legacy/img/withholding/original-cc3df6afa528ca19.png"
+                          src="/forms/withholding/1601-fq/1601FQ_p2.png"
                           width="220"
                         />
                       </p>

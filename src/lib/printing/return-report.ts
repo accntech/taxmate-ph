@@ -9,28 +9,15 @@ import { renderLegacy1701Print } from '$lib/forms/individual-income/legacy-1701-
 import { calculateReturn } from '$lib/forms/form-runtime';
 import { arimoFontFaceCss } from './arimo-font';
 import { buildPrintHtml, formatReportFormNumber, PRINT_SOURCE_URL_PLACEHOLDER } from './html';
+import { loadLegacyPrintArtwork } from './legacy-print-artwork';
 import { getWithholdingPrintComponent, getWithholdingPrintStyles } from './withholding-print-registry';
 import { getPrintProfile, type PrintPaperSize, type PrintProfile } from './profiles';
-
-async function dataUrl(url: string): Promise<string> {
-	if (url.startsWith('data:')) return url;
-	if (!url.startsWith('/legacy/')) throw new Error(`Print asset must be bundled locally: ${url}`);
-	const response = await fetch(url);
-	if (!response.ok) throw new Error(`Could not load print asset ${url}`);
-	const blob = await response.blob();
-	return new Promise<string>((resolve, reject) => {
-		const reader = new FileReader();
-		reader.onload = () => resolve(String(reader.result));
-		reader.onerror = () => reject(reader.error);
-		reader.readAsDataURL(blob);
-	});
-}
 
 async function embedAssets(surface: HTMLElement, styles: string): Promise<{ assets: Record<string, string>; styles: string }> {
 	const sources = new Set<string>();
 	for (const image of surface.querySelectorAll<HTMLImageElement>('img[src]')) sources.add(image.getAttribute('src')!);
 	for (const match of styles.matchAll(/url\(\s*(['"]?)([^)'"\s]+)\1\s*\)/g)) sources.add(match[2]);
-	const assets: Record<string, string> = Object.fromEntries(await Promise.all([...sources].filter(source => !source.startsWith('data:')).map(async source => [source, await dataUrl(source)] as const)));
+	const assets = await loadLegacyPrintArtwork(sources);
 	for (const image of surface.querySelectorAll<HTMLImageElement>('img[src]')) {
 		const source = image.getAttribute('src')!;
 		if (assets[source]) image.setAttribute('src', assets[source]);
@@ -40,10 +27,13 @@ async function embedAssets(surface: HTMLElement, styles: string): Promise<{ asse
 
 async function waitForLayout(surface: HTMLElement): Promise<void> {
 	await document.fonts.ready;
-	await Promise.all([...surface.querySelectorAll('img')].map(image => image.complete ? Promise.resolve() : new Promise<void>((resolve, reject) => {
-		image.onload = () => resolve();
-		image.onerror = () => reject(new Error('A bundled print image could not be decoded.'));
-	})));
+	await Promise.all([...surface.querySelectorAll('img')].map(async image => {
+		try {
+			await image.decode();
+		} catch (error) {
+			throw new Error('A legacy print image could not be decoded.', { cause: error });
+		}
+	}));
 	await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
 }
 

@@ -1,6 +1,9 @@
 import { expect, test } from '@playwright/test';
 import { execFileSync } from 'node:child_process';
 import { seedWorkspace } from './fixtures';
+import { seedLegacyPrintArtwork } from './helpers/legacy-print-artwork';
+
+test.beforeEach(async ({ page }) => { await seedLegacyPrintArtwork(page); });
 
 for (const code of ['0619E', '0619F']) {
 	for (const paper of ['letter', 'a4', 'long']) {

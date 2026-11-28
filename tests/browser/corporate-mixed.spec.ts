@@ -1,6 +1,9 @@
 import { expect, test } from "@playwright/test";
 import { execFileSync } from "node:child_process";
 import { goToReturnPage, seedWorkspace, taxpayerId } from "./fixtures";
+import { seedLegacyPrintArtwork } from './helpers/legacy-print-artwork';
+
+test.beforeEach(async ({ page }) => { await seedLegacyPrintArtwork(page); });
 
 const id = (field: string) => `[id="frm1702MX:${field}"]`;
 

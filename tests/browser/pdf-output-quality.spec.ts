@@ -3,6 +3,9 @@ import { execFileSync } from 'node:child_process';
 import { resolve } from 'node:path';
 import { writeFileSync } from 'node:fs';
 import { seedWorkspace, taxpayerId } from './fixtures';
+import { seedLegacyPrintArtwork } from './helpers/legacy-print-artwork';
+
+test.beforeEach(async ({ page }) => { await seedLegacyPrintArtwork(page); });
 
 const forms: Record<string, number> = {
 	'0605': 1, '0619E': 1, '0619F': 1, '1600': 1, '1600PTv2018': 2,

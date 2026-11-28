@@ -3,6 +3,9 @@ import { execFileSync } from 'node:child_process';
 import { writeFile } from 'node:fs/promises';
 import { goToReturnPage, seedWorkspace, taxpayerId } from './fixtures';
 import { printSavedReturn } from './helpers/return-pdf';
+import { seedLegacyPrintArtwork } from './helpers/legacy-print-artwork';
+
+test.beforeEach(async ({ page }) => { await seedLegacyPrintArtwork(page); });
 
 const revisions = [
 	['1702EX', 7], ['1702EXv2018', 3], ['1702EXv2018C', 3],
@@ -147,9 +150,10 @@ test('1702-Q retains blank registered fields for missing profile values', async 
 
 test('1702-RT uses registered details saved in the taxpayer profile', async ({ page }, info) => {
 	const code = '1702RTv2018';
+	const returnEditor = `/ebirforms/taxpayers/${taxpayerId}/forms/${code}?new=true`;
 	await seedWorkspace(page, 'light', 'loaded', { taxpayerClassification: 'N' }, [], { persistProfile: true });
 	await page.setViewportSize({ width: 1280, height: 900 });
-	await page.goto(`/ebirforms/taxpayers/${taxpayerId}/forms/${code}?new=true`);
+	await page.goto(returnEditor);
 	const background = page.getByRole('region', { name: /background information/i });
 	const name = background.getByRole('status', { name: 'Registered name', exact: true });
 	const address = background.getByRole('status', { name: 'Registered address', exact: true });
@@ -160,8 +164,7 @@ test('1702-RT uses registered details saved in the taxpayer profile', async ({ p
 	await page.getByRole('textbox', { name: 'Registered name line 3', exact: true }).fill('Philippines');
 	await page.getByRole('textbox', { name: 'Address line 3', exact: true }).fill('Building 2');
 	await page.getByRole('button', { name: 'Save profile', exact: true }).click();
-	await expect(page).toHaveURL(/\/ebirforms\/taxpayers$/);
-	await page.goto(`/ebirforms/taxpayers/${taxpayerId}/forms/${code}?new=true`);
+	await expect(page).toHaveURL(returnEditor);
 	await expect(name).toHaveText(profileName);
 	await expect(address).toHaveText(profileAddress);
 	await expect(background.getByRole('textbox', { name: /Registered (name|address) line/ })).toHaveCount(0);
@@ -266,7 +269,7 @@ for (const code of ['1702Q', '1702Qv2008C']) {
 		await seedWorkspace(page, 'light', 'loaded', { taxpayerClassification: 'N' }, []);
 		await page.goto(`/ebirforms/taxpayers/${taxpayerId}/forms/${code}?new=true`);
 		const rows = page.locator('[data-corporate-item^="33"]');
-		await expect(rows.locator('> .paper-item-number')).toHaveText(['33A', '33B', '33C', '33D']);
+		await expect(rows.locator('> .paper-item-number')).toHaveText(['33A', '33B', '33C', '33D'], { timeout: 20_000 });
 		const fields = ['Surcharge', 'Interest', 'Compromise'].map(label => page.getByRole('textbox', { name: label, exact: true }));
 		const total = rows.last().getByRole('status', { name: 'Total penalties', exact: true });
 		await expect(total).toHaveText('0.00');

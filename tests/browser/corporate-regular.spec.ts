@@ -2,6 +2,9 @@ import { expect, test } from '@playwright/test';
 import { execFileSync } from 'node:child_process';
 import { goToReturnPage, seedWorkspace, taxpayerId } from './fixtures';
 import type { CorporateField } from '../../src/lib/forms/corporate-income/types';
+import { seedLegacyPrintArtwork } from './helpers/legacy-print-artwork';
+
+test.beforeEach(async ({ page }) => { await seedLegacyPrintArtwork(page); });
 
 const id = (name: string) => `[id="frm1702RT:${name}"]`;
 

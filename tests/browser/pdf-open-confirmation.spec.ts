@@ -1,6 +1,9 @@
 import { expect, test, type Page } from '@playwright/test';
 import type { PdfExportRequest } from '../../src/lib/tauri/pdf-export';
 import { seedWorkspace, taxpayerId } from './fixtures';
+import { seedLegacyPrintArtwork } from './helpers/legacy-print-artwork';
+
+test.beforeEach(async ({ page }) => { await seedLegacyPrintArtwork(page); });
 
 const formsPath = `/ebirforms/taxpayers/${taxpayerId}/forms`;
 const savedReturns = (page: Page) => page.evaluate(() => localStorage.getItem('ebirforms-created-returns-v1'));

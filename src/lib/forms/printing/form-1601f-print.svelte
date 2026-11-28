@@ -224,7 +224,7 @@ export const printBindings: readonly PrintBinding[] = [
                                       alt="birlogo"
                                       class="wh-inline-0c0d8c42d652"
                                       height="49"
-                                      src="/legacy/img/withholding/original-1d5df704be8f0f62.gif"
+                                      src="/forms/withholding/shared/birflog.gif"
                                       width="51"
                                     />
                                   </p>
@@ -1408,7 +1408,7 @@ export const printBindings: readonly PrintBinding[] = [
                               alt="BIR form identifying mark"
                               class="wh-inline-5dfba9815e30"
                               id="frm1601F:jurat"
-                              src="/legacy/img/withholding/original-816b2d6d98e26c06.jpg"
+                              src="/forms/withholding/1601-f/1601F_new.jpg"
                               width="800"
                             />
                           </div>
@@ -1437,7 +1437,7 @@ export const printBindings: readonly PrintBinding[] = [
               ><img
                 alt="BIR form identifying mark"
                 id="frm1601F:bcsImg"
-                src="/legacy/img/withholding/original-b68774359549f254.jpg"
+                src="/forms/withholding/shared/BCS.jpg"
               /></td
             >
           </tr>

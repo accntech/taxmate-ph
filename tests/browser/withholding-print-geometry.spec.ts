@@ -2,6 +2,9 @@ import { execFileSync } from 'node:child_process';
 import { writeFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
 import { captureTestPdfs, seedWorkspace, taxpayerId } from './fixtures';
+import { seedLegacyPrintArtwork } from './helpers/legacy-print-artwork';
+
+test.beforeEach(async ({ page }) => { await seedLegacyPrintArtwork(page); });
 
 async function printForm(page: Page, code: string, paper = 'long', hostile = false, status = 'Draft', name = 'PRINT GEOMETRY TEST', overrides: Record<string, string> = {}) {
 	await seedWorkspace(page);

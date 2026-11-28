@@ -1,5 +1,8 @@
 import { expect, test, type Page } from '@playwright/test';
 import { goToReturnPage, seedWorkspace, taxpayerId } from './fixtures';
+import { seedLegacyPrintArtwork } from './helpers/legacy-print-artwork';
+
+test.beforeEach(async ({ page }) => { await seedLegacyPrintArtwork(page); });
 
 const path = `/ebirforms/taxpayers/${taxpayerId}/forms/1702EX?new=true`;
 

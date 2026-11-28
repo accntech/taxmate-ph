@@ -2,6 +2,9 @@ import { execFileSync } from 'node:child_process';
 import { expect, test, type Page } from '@playwright/test';
 import { goToReturnPage, seedWorkspace, taxpayerId } from './fixtures';
 import { printSavedReturn } from './helpers/return-pdf';
+import { seedLegacyPrintArtwork } from './helpers/legacy-print-artwork';
+
+test.beforeEach(async ({ page }) => { await seedLegacyPrintArtwork(page); });
 
 const listPath = `/ebirforms/taxpayers/${taxpayerId}/forms`;
 const field = (page: Page, id: string) => page.locator(`[id="${id}"]`);

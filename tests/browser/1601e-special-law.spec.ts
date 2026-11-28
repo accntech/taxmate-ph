@@ -1,5 +1,8 @@
 import { expect, test } from '@playwright/test';
 import { seedWorkspace, taxpayerId } from './fixtures';
+import { seedLegacyPrintArtwork } from './helpers/legacy-print-artwork';
+
+test.beforeEach(async ({ page }) => { await seedLegacyPrintArtwork(page); });
 
 test('1601-E prints the special law only while tax relief is Yes', async ({ page }) => {
   await seedWorkspace(page);

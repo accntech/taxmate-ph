@@ -64,7 +64,7 @@ body, html {
 }
 
     .tblForm2200AN td.tblFormTd2200AN {
-        background-image: url("/legacy/individual-income/frmbg.png");
+        background-image: url("/forms/individual-income/shared/frmbg.png");
         background-repeat: repeat-x;
         background-position: top;
         padding: 1px 0 1px 0;
@@ -73,7 +73,7 @@ body, html {
     }
 
     .tblForm2200AN td.tblFormTdPart2200AN {
-        background-image: url("/legacy/individual-income/frmbg.png");
+        background-image: url("/forms/individual-income/shared/frmbg.png");
         background-repeat: repeat-x;
         background-position: top;
         padding: 1px 0 1px 0;
@@ -88,7 +88,7 @@ body, html {
 }
 
     .tblForm1801 td.tblFormTd1801 {
-        background-image: url("/legacy/individual-income/frmbg.png");
+        background-image: url("/forms/individual-income/shared/frmbg.png");
         background-repeat: repeat-x;
         background-position: top;
         padding: 2px 0 2px 0;
@@ -97,7 +97,7 @@ body, html {
     }
 
     .tblForm1801 td.tblFormTdPart1801 {
-        background-image: url("/legacy/individual-income/frmbg.png");
+        background-image: url("/forms/individual-income/shared/frmbg.png");
         background-repeat: repeat-x;
         background-position: top;
         padding: 2px 0 2px 0;
@@ -112,7 +112,7 @@ body, html {
 }
 
     .tblForm td.tblFormTd {
-        background-image: url("/legacy/individual-income/frmbg.png");
+        background-image: url("/forms/individual-income/shared/frmbg.png");
         background-repeat: repeat-x;
         background-position: top;
         padding: 1px 0 1px 0;
@@ -121,7 +121,7 @@ body, html {
     }
 
     .tblForm td.tblFormTdNoTopBorder {
-        /* background-image: url("/legacy/individual-income/frmbg.png");
+        /* background-image: url("/forms/individual-income/shared/frmbg.png");
         background-repeat: repeat-x; */
         background-position: top;
         padding: 1px 0 1px 0;
@@ -129,7 +129,7 @@ body, html {
     }
 
     .tblForm td.tblFormTdPart {
-        background-image: url("/legacy/individual-income/frmbg.png");
+        background-image: url("/forms/individual-income/shared/frmbg.png");
         background-repeat: repeat-x;
         background-position: top;
         padding: 1px 0 1px 0;
@@ -606,13 +606,13 @@ body { font-family:Arial;  }
       width: 19px;
       height: 25px;
       padding: 0 5px 0 0;
-      background: url("/legacy/individual-income/xbox.png") no-repeat;
+      background: url("/forms/individual-income/shared/xbox.png") no-repeat;
       display: block;
       clear: left;
       float: left;
     }
     .radio {
-      background: url("/legacy/individual-income/xbox.png") no-repeat;
+      background: url("/forms/individual-income/shared/xbox.png") no-repeat;
     }
 /*END*/
 
@@ -756,7 +756,7 @@ table.RowSubTable
 {
     padding: 0;
     margin: 0;
-    background-image: url("/legacy/individual-income/frmbg.png");
+    background-image: url("/forms/individual-income/shared/frmbg.png");
 	background-repeat: repeat-x;
 	background-position: top;
 	border-top: #AAAAAA 1px solid;
@@ -809,12 +809,12 @@ border-top: #000000 2px solid;
       width: 19px;
       height: 25px;
       padding: 0 5px 0 0;
-      background: url("/legacy/individual-income/xbox.png") no-repeat;
+      background: url("/forms/individual-income/shared/xbox.png") no-repeat;
       display: block;
       clear: left;
       float: left;
     }
     .radio {
-      background: url("/legacy/individual-income/xbox.png") no-repeat;
+      background: url("/forms/individual-income/shared/xbox.png") no-repeat;
     }
 /*END*/

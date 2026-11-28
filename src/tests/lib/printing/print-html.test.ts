@@ -15,10 +15,10 @@ describe('print HTML export', () => {
 	})
 
 	test('replaces known legacy asset URLs with data URLs', () => {
-		const html = '<img src="/legacy/img/frmbg.png">'
-		const css = ".x{background-image:url('/legacy/img/frmbg.png')}"
+		const html = '<img src="/forms/shared/frmbg.png">'
+		const css = ".x{background-image:url('/forms/shared/frmbg.png')}"
 		const assets = {
-			'/legacy/img/frmbg.png': 'data:image/png;base64,bg'
+			'/forms/shared/frmbg.png': 'data:image/png;base64,bg'
 		}
 
 		const result = replaceLegacyAssetUrls(`${html}<style>${css}</style>`, assets)
@@ -95,7 +95,7 @@ describe('print HTML export', () => {
 			title: 'BIR Form 1601EQ',
 			profile: getPrintProfile('long'),
 			bodyHtml: '<div class="legacy-bg-strip"><div class="legacy-form-paper">Form</div></div>',
-			styleHtml: '<style>.legacy-bg-strip{background-image:url("/legacy/img/frmbg.png")}</style>',
+			styleHtml: '<style>.legacy-bg-strip{background-image:url("/forms/shared/frmbg.png")}</style>',
 			assets: {}
 		})
 

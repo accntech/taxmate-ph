@@ -1,6 +1,9 @@
 import { execFileSync } from 'node:child_process';
 import { expect, test } from '@playwright/test';
 import { captureTestPdfs, seedWorkspace, taxpayerId } from './fixtures';
+import { seedLegacyPrintArtwork } from './helpers/legacy-print-artwork';
+
+test.beforeEach(async ({ page }) => { await seedLegacyPrintArtwork(page); });
 
 const repeatedBranchForms = new Set(['1601Cv2018', '1601FQ', '1603Qv2018', '1604Ev2018', '1604F']);
 const codes = ['0605','0619E','0619F','1600','1600PTv2018','1600VTv2018','1600WP','1601C','1601Cv2018','1601E','1601EQ','1601F','1601FQ','1602','1602Qv2018','1603','1603Qv2018','1604C','1604CF','1604E','1604Ev2018','1604F','1606'];

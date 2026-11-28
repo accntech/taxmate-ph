@@ -537,7 +537,7 @@ export const printBindings: readonly PrintBinding[] = [
                         alt="BIR form identifying mark"
                         class="wh-inline-5dfba9815e30"
                         height="25"
-                        src="/legacy/img/withholding/original-6c831e35170ff5f3.png"
+                        src="/forms/withholding/shared/bcs_new.png"
                         width="80"
                       />
                     </td>
@@ -546,7 +546,7 @@ export const printBindings: readonly PrintBinding[] = [
                         alt="birlogo"
                         class="wh-inline-5dfba9815e30"
                         height="50"
-                        src="/legacy/img/withholding/original-496a4fcbfde5f354.png"
+                        src="/forms/withholding/shared/header_logo.png"
                         width="210"
                       />
                     </td>
@@ -602,7 +602,7 @@ export const printBindings: readonly PrintBinding[] = [
                       <div class="wh-inline-f53335c779da">
                         <img
                           alt="BIR form identifying mark"
-                          src="/legacy/img/withholding/original-594ca0bbf6e6779b.png"
+                          src="/forms/withholding/1602-q/1602QP1.png"
                         />
                       </div>
                     </td>
@@ -1810,7 +1810,7 @@ export const printBindings: readonly PrintBinding[] = [
                       <div class="wh-inline-f53335c779da">
                         <img
                           alt="BIR form identifying mark"
-                          src="/legacy/img/withholding/original-28c4d3fd6603157d.png"
+                          src="/forms/withholding/1602-q/1602QP2.png"
                         />
                       </div>
                     </td>
@@ -2808,7 +2808,7 @@ export const printBindings: readonly PrintBinding[] = [
                       <div class="wh-inline-f53335c779da">
                         <img
                           alt="BIR form identifying mark"
-                          src="/legacy/img/withholding/original-580a5b376dba7239.png"
+                          src="/forms/withholding/1602-q/1602QP3.png"
                         />
                       </div>
                     </td>

@@ -622,7 +622,7 @@ export const printBindings: readonly PrintBinding[] = [
                             alt="birlogo"
                             class="wh-inline-0c0d8c42d652"
                             height="49"
-                            src="/legacy/img/withholding/original-1d5df704be8f0f62.gif"
+                            src="/forms/withholding/shared/birflog.gif"
                             width="51"
                           />
                         </p>

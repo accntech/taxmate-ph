@@ -57,7 +57,7 @@
 													<td class="legacy-barcode-cell">
 														<img
 															alt="1601EQ barcode"
-															src="/legacy/img/1601EQ_BarCode/1601EQ_p1.png"
+															src="/forms/withholding/1601-eq/1601EQ_p1.png"
 														/>
 													</td>
 												</tr>

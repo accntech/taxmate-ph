@@ -1,6 +1,9 @@
 import { expect, test } from '@playwright/test';
 import { resolve } from 'node:path';
 import { goToReturnPage, seedWorkspace, taxpayerId } from './fixtures';
+import { seedLegacyPrintArtwork } from './helpers/legacy-print-artwork';
+
+test.beforeEach(async ({ page }) => { await seedLegacyPrintArtwork(page); });
 
 const route = `/ebirforms/taxpayers/${taxpayerId}/forms/1701MS`;
 const id = (name: string) => `[id="frm1701MS:${name}"]`;

@@ -117,7 +117,7 @@
 
 <div class="remittance-template" data-html-form="0619{variant}" aria-label="BIR Form 0619{variant} printed layout">
   <div class="remittance-bcs" style:top={`${finalTax ? 65 : 92}px`}><span>For BIR<br />Use Only</span><span>BCS/<br />Item:</span></div>
-  <img class="remittance-logo" src="/legacy/img/header_logo.png" alt="Republic of the Philippines, Department of Finance, Bureau of Internal Revenue" style:top={`${finalTax ? 45 : 72}px`} />
+  <img class="remittance-logo" src="/forms/shared/header_logo.png" alt="Republic of the Philippines, Department of Finance, Bureau of Internal Revenue" style:top={`${finalTax ? 45 : 72}px`} />
   {#each backgroundBoxes as box, index (index)}
     <div class="remittance-box {box.kind ?? ''}" style={`left:${box.x}px;top:${box.y}px;width:${box.w}px;height:${box.h}px`}></div>
   {/each}

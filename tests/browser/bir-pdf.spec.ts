@@ -1,5 +1,8 @@
 import { expect, test } from '@playwright/test';
 import { captureTestPdfs, seedWorkspace, taxpayerId } from './fixtures';
+import { seedLegacyPrintArtwork } from './helpers/legacy-print-artwork';
+
+test.beforeEach(async ({ page }) => { await seedLegacyPrintArtwork(page); });
 
 const cases = [
 	{ status: 'Draft', paperSize: 'long' },

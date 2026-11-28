@@ -3,6 +3,9 @@ import { mkdir } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { expect, test, type Locator } from '@playwright/test';
 import { goToReturnPage, seedWorkspace, taxpayerId } from './fixtures';
+import { seedLegacyPrintArtwork } from './helpers/legacy-print-artwork';
+
+test.beforeEach(async ({ page }) => { await seedLegacyPrintArtwork(page); });
 
 const output = process.env.BIR_RETURN_PREVIEW_DIR;
 const codes = [

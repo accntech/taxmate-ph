@@ -2,6 +2,9 @@ import { expect, test } from "@playwright/test";
 import { execFileSync } from 'node:child_process';
 import type { WithholdingDefinition } from '../../src/lib/forms/withholding-definitions';
 import { seedWorkspace, taxpayerId } from "./fixtures";
+import { seedLegacyPrintArtwork } from './helpers/legacy-print-artwork';
+
+test.beforeEach(async ({ page }) => { await seedLegacyPrintArtwork(page); });
 
 test.beforeEach(async ({ page }) => {
   await seedWorkspace(page);
@@ -70,6 +73,7 @@ test('1601FQ print omits retained schedule entries when no tax was withheld', as
     const { createWithholdingPrintModel } = await import(`${base}/printing/withholding-print-model.ts`);
     const values = {
       ...createWithholdingValues('1601FQ'),
+      'frm1601FQ:optWithheld': 'N',
       'frm1601FQ:txtAtcCode1': 'WI202',
       'frm1601FQ:txtTaxBase1': '999123',
       'frm1601FQ:treaty:1:code': 'TT01',

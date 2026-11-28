@@ -1,5 +1,8 @@
 import { expect, test } from '@playwright/test';
 import { goToReturnPage, seedWorkspace, taxpayerId } from './fixtures';
+import { seedLegacyPrintArtwork } from './helpers/legacy-print-artwork';
+
+test.beforeEach(async ({ page }) => { await seedLegacyPrintArtwork(page); });
 
 test('1701-MS Item 31 supports a refund and carry-over split only when overpaid', async ({ page }) => {
 	test.setTimeout(60000);
