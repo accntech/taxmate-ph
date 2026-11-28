@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { calculateReturn, getReturnExportValues, validateReturnValues } from '../../../lib/forms/form-runtime';
 import { parseLegacyXml, serializeLegacyXml } from '../../../lib/legacy/xml';
-import { annual1701AAddDetail, annual1701ADetailFields, annual1701ADetailRows, annual1701ARemoveDetail } from '../../../lib/forms/individual-income/annual-1701a-income-detail';
+import { annual1701ADetailFields, annual1701ADetailRows, annual1701ARemoveDetail } from '../../../lib/forms/individual-income/annual-1701a-income-detail';
 
 const jointMixed = {
 	'frm1701A:txtYear': '2025',
@@ -68,9 +68,8 @@ describe('1701A repeatable other income', () => {
 		expect(exported['frm1701A:txt44A']).toBe('5000.00');
 	});
 
-	it('keeps a new row editable when its amount is cleared before entering a description', () => {
-		const added = annual1701AAddDetail('42', jointMixed);
-		const draft = { ...jointMixed, ...added.patch, [annual1701ADetailFields('42', 1).taxpayer]: '' };
+	it('removes a blank detail row preserved in an older working copy', () => {
+		const draft = { ...jointMixed, 'income:1701A:detailRow42:1': 'Y', [annual1701ADetailFields('42', 1).taxpayer]: '' };
 		expect(annual1701ADetailRows('42', draft)).toHaveLength(1);
 		const removed = { ...draft, ...annual1701ARemoveDetail('42', 1, draft, ['taxpayer']) };
 		expect(annual1701ADetailRows('42', removed)).toHaveLength(0);

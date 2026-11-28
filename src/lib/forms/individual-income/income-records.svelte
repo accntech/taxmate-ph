@@ -7,10 +7,10 @@
 	import { incomeChoiceLabel, type IncomeEditorField } from './editor-layout';
 	import { revised1700FieldApplies } from './compensation';
 
-	type Record = { key: string; item?: string; fields: IncomeEditorField[] };
+	type Record = { key: string; item?: string; fields: IncomeEditorField[]; occupied?: boolean };
 	type Values = { [id: string]: string };
 	let { title, singular = 'item', records, form, values, calculated, computed, errors = {}, onvaluechange,
-		singleton = false, includesSpouse = false, unlimited = false, readonlyFields = new Set<string>(), ondelete, onediting }: {
+		singleton = false, includesSpouse = false, maxItems, readonlyFields = new Set<string>(), ondelete, onediting }: {
 		title: string;
 		singular?: string;
 		records: Record[];
@@ -22,7 +22,7 @@
 		onvaluechange: (patch: Values) => void;
 		singleton?: boolean;
 		includesSpouse?: boolean;
-		unlimited?: boolean;
+		maxItems?: number;
 		readonlyFields?: Set<string>;
 		ondelete?: (record: Record) => Values;
 		onediting?: (ids: string[]) => void;
@@ -37,7 +37,8 @@
 	const decimals = $derived(incomeAmountDecimals(form));
 	const currency = $derived(new Intl.NumberFormat('en-PH', { minimumFractionDigits: decimals, maximumFractionDigits: decimals }));
 	const entered = $derived(records.filter(hasEntry));
-	const available = $derived(records.find(record => !entered.includes(record)));
+	const limit = $derived(maxItems ?? records.length);
+	const available = $derived(entered.length < limit ? records.find(record => !entered.includes(record)) : undefined);
 	const source = $derived(editing ? { ...calculated, ...draft } : calculated);
 
 	function editable(record: Record) {
@@ -45,7 +46,7 @@
 	}
 
 	function hasEntry(record: Record) {
-		return editable(record).some(field => {
+		return record.occupied || editable(record).some(field => {
 			const value = values[field.id]?.trim();
 			return !!errors[field.id] || !/Income earner/.test(field.label) && !!value && value !== form.defaults[field.id] &&
 				(field.kind !== 'money' || Number(value.replaceAll(',', '')) !== 0);
@@ -122,7 +123,7 @@
 	}
 
 	async function save() {
-		if (!editing) return;
+		if (!editing || (adding && editing.key !== available?.key)) return;
 		const result = validateIndividualIncome(form, calculateIndividualIncome(form, { ...values, ...draft }));
 		draftErrors = Object.fromEntries(editable(editing).filter(field => visible(field, editing!) && result[field.id]).map(field => [field.id, result[field.id]]));
 		if (adding && !editable(editing).some(field => !/Income earner/.test(field.label) && draft[field.id]?.trim() && draft[field.id] !== form.defaults[field.id] && (field.kind !== 'money' || Number(draft[field.id].replaceAll(',', '')) !== 0))) {
@@ -147,7 +148,7 @@
 
 <div class="income-records" data-income-records={title}>
 	<header>
-		<h3 id={`${uid}-heading`} tabindex="-1">{title}<span class="count">{unlimited ? ` (${entered.length})` : ` (${entered.length}/${records.length})`}</span></h3>
+		<h3 id={`${uid}-heading`} tabindex="-1">{title}<span class="count">{` (${entered.length}/${limit})`}</span></h3>
 		<Button id={`${uid}-add`} data-record-fields={available?.fields.map(field => field.id).join(' ')} size="sm" variant="secondary" disabled={!available} aria-label={`Add ${singular}`}
 			onclick={(event) => available && void open(available, event.currentTarget, true)}>Add item</Button>
 	</header>

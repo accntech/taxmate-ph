@@ -4,9 +4,9 @@
 	import type { IncomeEditorField } from './editor-layout';
 	import { shortAnnualFieldApplies } from './annual-short';
 	import {
-		annual1701AAddDetail, annual1701ABaseDetailFields, annual1701ADetailFields,
+		annual1701ABaseDetailFields, annual1701ADetailFields, annual1701ADetailHasValues,
 		annual1701ADetailHasDormantAmount, annual1701ADetailRows, annual1701ARemoveDetail,
-		annual1701AVisibleDetailRows, type Annual1701ADetailItem, type Annual1701ADetailPerson
+		type Annual1701ADetailItem, type Annual1701ADetailPerson
 	} from './annual-1701a-income-detail';
 
 	let { item, label, values, calculated, people, errors = {}, onvaluechange }: {
@@ -24,16 +24,14 @@
 	const base = $derived(annual1701ABaseDetailFields(item));
 	const rows = $derived(annual1701ADetailRows(item, values));
 	const active = $derived(people.filter(person => shortAnnualFieldApplies('1701A', base[person], values)));
-	const visibleRows = $derived(annual1701AVisibleDetailRows(item, values, active));
-	const newDetail = $derived(annual1701AAddDetail(item, values));
-	const baseEntered = $derived(Object.values(base).some(id => values[id]?.trim() && (id === base.description || Number(values[id].replaceAll(',', '')) !== 0)));
 	const baseDormant = $derived(annual1701ADetailHasDormantAmount({ taxpayer: values[base.taxpayer] ?? '', spouse: values[base.spouse] ?? '' }, active));
-	const nextId = $derived(Number(/Desc_(\d+)C1$/.exec(newDetail.descriptionId)?.[1]));
-	const records = $derived([
-		...(rows.length ? visibleRows.map(row => ({ key: String(row.id), item: `${item}.${row.id}`, fields: entryFields(annual1701ADetailFields(item, row.id)) })) :
-			!baseDormant || active.some(person => Number((values[base[person]] ?? '').replaceAll(',', '')) !== 0) ? [{ key: 'base', item, fields: entryFields(base) }] : []),
-		...(baseEntered || rows.length ? [{ key: `new-${nextId}`, item: `${item}.${nextId}`, fields: entryFields(annual1701ADetailFields(item, nextId)) }] : [])
-	]);
+	const records = $derived(rows.length
+		? rows.map(row => ({
+			key: String(row.id), item: `${item}.${row.id}`,
+			fields: entryFields(annual1701ADetailFields(item, row.id)),
+			occupied: annual1701ADetailHasValues(row)
+		}))
+		: [{ key: 'base', item, fields: entryFields(base), occupied: baseDormant }]);
 	const readonlyFields = $derived(new Set([
 		...(baseDormant && values[base.description]?.trim() ? [base.description] : []),
 		...rows.flatMap(row => annual1701ADetailHasDormantAmount(row, active) && row.description.trim() ? [annual1701ADetailFields(item, row.id).description] : [])
@@ -45,11 +43,6 @@
 			{ id: ids.description, label: 'Description', kind: 'text', column: 'Description' },
 			...active.map(person => ({ id: ids[person], label: `${person === 'spouse' ? 'Spouse' : 'Taxpayer'} amount`, kind: 'money', person, column: person === 'spouse' ? 'Spouse' : 'Taxpayer' }))
 		].map(field => ({ ...field, item, section: label, page: '2', options: [], maxLength: field.kind === 'money' ? 25 : ids.description === base.description ? 50 : 30, choiceLabels: {} }));
-	}
-
-	function commit(patch: Record<string, string>) {
-		const added = Object.hasOwn(patch, newDetail.descriptionId);
-		onvaluechange({ ...(added ? newDetail.patch : {}), ...patch });
 	}
 
 	function remove(record: { key: string }) {
@@ -69,7 +62,7 @@
 </tr>
 <tr class="income-detail-items" data-income-detail-items={item}><td colspan={2 + people.length}>
 	<IncomeRecords title={label} {records} {form} {values} {calculated} computed={new Set()} {errors}
-		onvaluechange={commit} ondelete={remove} onediting={(ids) => { editingFields = ids; }} {readonlyFields} includesSpouse={people.length > 1} unlimited />
+		{onvaluechange} ondelete={remove} onediting={(ids) => { editingFields = ids; }} {readonlyFields} includesSpouse={people.length > 1} maxItems={1} />
 </td></tr>
 
 <style>

@@ -52,7 +52,7 @@ function detailKeys(item: Annual1701ADetailItem, values: Values) {
 }
 
 function detailRowId(item: Annual1701ADetailItem, row: number): string {
-	// Working copies keep a blank added row open without writing it to legacy XML.
+	// Older working copies can contain a marker for an empty detail row.
 	return `income:1701A:detailRow${item}:${row}`;
 }
 
@@ -74,22 +74,8 @@ export function annual1701AVisibleDetailRows(item: Annual1701ADetailItem, values
 		!annual1701ADetailHasDormantAmount(row, active) || active.some(person => annual1701ADetailHasAmount(row[person])));
 }
 
-export function annual1701AAddDetail(item: Annual1701ADetailItem, values: Values) {
-	const base = annual1701ABaseDetailFields(item);
-	const rows = annual1701ADetailRows(item, values);
-	const newId = Math.max(0, ...detailKeys(item, values).map(({ row }) => row)) + 1;
-	const retainBase = !rows.length && (values[base.description]?.trim() ||
-		[base.taxpayer, base.spouse].some(id => annual1701ADetailHasAmount(values[id] ?? '')));
-	const patch: Values = {};
-	if (retainBase) {
-		const first = annual1701ADetailFields(item, newId);
-		patch[first.description] = values[base.description] ?? '';
-		patch[first.taxpayer] = values[base.taxpayer] || '0.00';
-		patch[first.spouse] = values[base.spouse] ?? '';
-	}
-	const added = newId + (retainBase ? 1 : 0);
-	patch[detailRowId(item, added)] = 'Y';
-	return { patch, descriptionId: annual1701ADetailFields(item, added).description };
+export function annual1701ADetailHasValues(row: Amounts & { description: string }): boolean {
+	return !!row.description.trim() || people.some(person => annual1701ADetailHasAmount(row[person]));
 }
 
 export function annual1701ARemoveDetail(item: Annual1701ADetailItem, id: number, values: Values, active: readonly Annual1701ADetailPerson[]): Values {
