@@ -182,15 +182,13 @@
 	</div>
 {/snippet}
 
-{#snippet segmented(active: boolean, onclick: () => void, label: string)}
-	<button
-		type="button"
-		aria-pressed={active}
-		{onclick}
-		class={(active ? stylex.attrs(styles.segment, styles.segmentInteraction, styles.selectedSegment).class : stylex.attrs(styles.segment, styles.segmentInteraction, styles.unselectedSegment).class)}
-	>
+{#snippet sendingOption(value: 'legacy_sftp' | 'dry_run', label: string)}
+	{@const active = settings.prefs.submissionMode === value}
+	<label class={['sending-segment', stylex.attrs(styles.segment, styles.segmentInteraction, active ? styles.selectedSegment : styles.unselectedSegment).class]}>
+		<input type="radio" name="sending-mode" {value} checked={active}
+			onchange={() => settings.updatePrefs({ submissionMode: value })} />
 		{label}
-	</button>
+	</label>
 {/snippet}
 
 {#snippet colorThemeControl()}
@@ -270,9 +268,9 @@
 {/snippet}
 
 {#snippet sendingControl()}
-	<div role="group" aria-label="Sending mode" class={stylex.attrs(styles.segmentGroup).class}>
-		{@render segmented(settings.prefs.submissionMode === 'legacy_sftp', () => settings.updatePrefs({ submissionMode: 'legacy_sftp' }), 'Send to BIR')}
-		{@render segmented(settings.prefs.submissionMode === 'dry_run', () => settings.updatePrefs({ submissionMode: 'dry_run' }), 'Prepare locally')}
+	<div role="radiogroup" aria-label="Sending mode" class={stylex.attrs(styles.segmentGroup).class}>
+		{@render sendingOption('legacy_sftp', 'Send to BIR')}
+		{@render sendingOption('dry_run', 'Prepare locally')}
 	</div>
 {/snippet}
 
@@ -644,6 +642,9 @@
 		accent-color: var(--accent);
 		cursor: pointer;
 	}
+	.sending-segment { position: relative; display: flex; align-items: center; justify-content: center; }
+	.sending-segment input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+	.sending-segment:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
 	.palette-option { display: grid; padding: .5rem .5rem 0; }
 	.palette-radio { position: absolute; right: 1rem; bottom: 1.5rem; }
 	.palette-details { display: grid; gap: .25rem; padding: .875rem 2rem 1rem .5rem; }
