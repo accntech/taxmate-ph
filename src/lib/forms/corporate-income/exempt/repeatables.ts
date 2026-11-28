@@ -233,8 +233,12 @@ export function exemptRepeatablePages(pages: CorporatePage[]): CorporatePage[] {
   }
   for (const group of supplementalGroups) {
     const row = supplementalRows(result, group).at(-1);
-    if (row && !row.fields.some((field) => field.id === countId(group.key)))
-      row.fields.push(countField(group.key, group.label));
+    if (row && !row.fields.some((field) => field.id === countId(group.key))) {
+      const counter = countField(group.key, group.label);
+      // The June 2013 PDF has no value mapping for the two original property slots.
+      if (group.key === "Pg7S9Pt5") counter.repeatable!.continuationOnly = true;
+      row.fields.push(counter);
+    }
   }
   const prizes = prizeRow(result);
   if (prizes && !prizes.fields.some((field) => field.id === countId(prizesKey)))

@@ -12,7 +12,7 @@ export type CorporateField = {
 	defaultValue?: string;
 	options?: { value: string; label: string }[];
 	maxLength?: number;
-	repeatable?: { label: string; limit: number; fixed?: boolean; rollup?: boolean; seedFrom?: string[] };
+	repeatable?: { label: string; limit: number; fixed?: boolean; rollup?: boolean; seedFrom?: string[]; continuationOnly?: boolean };
 	column?: number;
 };
 

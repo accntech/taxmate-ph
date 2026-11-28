@@ -244,9 +244,9 @@
 		return nolcoYear(entry)?.readonly && !entry.rows.some(row => row.fields.some(field => field.repeatable));
 	}
 
-	function entryHasValues(entry: CorporateEntry) {
+	function entryHasValues(entry: CorporateEntry, source = calculated) {
 		return entryFields(entry).some(field => {
-			const value = calculated[field.id]?.trim();
+			const value = source[field.id]?.trim();
 			if (field.kind === 'select' && value === field.defaultValue) return false;
 			return value && (field.kind !== 'money' && field.kind !== 'percent' || Number(value.replaceAll(',', '')) !== 0);
 		});
@@ -282,6 +282,10 @@
 		if (editingList?.counter?.id === incomeCounterId && adding) {
 			const description = editableFields(editing).find(field => field.kind === 'text');
 			if (description && !draft[description.id]?.trim()) editErrors[description.id] = 'Enter a description.';
+		}
+		if (adding && editingList?.counter?.repeatable?.continuationOnly && !entryHasValues(editing, source)) {
+			const first = editableFields(editing)[0];
+			if (first) editErrors[first.id] ??= 'Enter property details.';
 		}
 		if (editingNolco) {
 			const year = nolcoYear(editing);
@@ -393,6 +397,9 @@
 			for (const [anchor, list] of corporateLists(section)) {
 				if (list.counter?.id === id) return listAnchor(id);
 				const entry = list.entries.find(entry => entry.rows.includes(row));
+				if (entry && list.counter?.repeatable?.continuationOnly && !entry.rows[0].entry && !entryHasValues(entry)) {
+					return listAnchor(list.counter.id);
+				}
 				if (entry && (editableFields(entry).some(field => field.id === id) || list.label === nolcoListLabel)) {
 					const tin = tinFields(row.fields);
 					const target = tin.some(field => field.id === id) ? tin[0].id : id;
@@ -873,11 +880,12 @@
 							{@const entries = (nolco ? list.entries : editable).filter(entry =>
 								entry.rows[0].entry || (nolco && isCurrentNolco(entry) && editable.includes(entry))
 								|| (editable.includes(entry) || nolco && isCurrentNolco(entry)) && entryHasValues(entry))}
-							{@const emptyEntry = editable.find(entry => !entries.includes(entry) && (!nolco || !isCurrentNolco(entry)) &&
+							{@const continuationOnly = counter?.repeatable?.continuationOnly}
+							{@const emptyEntry = continuationOnly ? undefined : editable.find(entry => !entries.includes(entry) && (!nolco || !isCurrentNolco(entry)) &&
 								(!entryFields(entry).some(field => field.kind === 'money') || editableFields(entry).some(field => field.kind === 'money')))}
 							{@const fixed = !counter || counter.repeatable?.fixed}
 							{@const sourceSlots = list.entries.filter(entry => !entry.rows[0].entry).length}
-							{@const limit = fixed ? sourceSlots : counter.repeatable!.limit + sourceSlots
+							{@const limit = continuationOnly ? counter!.repeatable!.limit : fixed ? sourceSlots : counter.repeatable!.limit + sourceSlots
 								- (counter.repeatable!.rollup || counter.repeatable!.seedFrom ? 1 : 0)}
 							{@const anchor = listAnchor(counter?.id ?? row.fields[0].id)}
 							<div class="line-list income-list"
@@ -899,7 +907,7 @@
 										{/if}
 									</div>
 									<Button id={`${anchor}-add`} size="sm" variant="secondary"
-										disabled={fixed ? !emptyEntry || (!nolco && entries.length >= limit)
+										disabled={continuationOnly ? entries.length >= limit : fixed ? !emptyEntry || (!nolco && entries.length >= limit)
 											: !emptyEntry && Number(calculated[counter!.id] || 0) >= counter!.repeatable!.limit}
 										onclick={(event) => emptyEntry ? openListEntry(list, emptyEntry, event.currentTarget, true)
 											: counter && addEntry(index, counter, event.currentTarget)}>
