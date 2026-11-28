@@ -18,10 +18,11 @@
 	import UsersGroupRounded from
 		'@solar-icons/svelte/category/users/Linear/UsersGroupRounded.svelte';
 	import Settings from '@solar-icons/svelte/category/settings/Linear/Settings.svelte';
-	import { onDestroy, onMount } from 'svelte';
+	import { onDestroy, onMount, type Snippet } from 'svelte';
 	import { isTauri } from '@tauri-apps/api/core';
 	import WindowTitlebar from '$lib/window-titlebar.svelte';
 	import { Badge, Sidebar, Topbar, type Crumb } from '$lib/components/ui';
+	import { Tooltip } from '$lib/components/ui/tooltip';
 	import { refreshDevStylesheet } from '$lib/components/ui/stylex-dev';
 	import '@fontsource-variable/inter';
 	import '@fontsource-variable/source-serif-4';
@@ -130,6 +131,16 @@
 	});
 </script>
 
+{#snippet sidebarLink(collapsed: boolean, label: string, link: Snippet)}
+	{#if collapsed}
+		<Tooltip {label} placement="right" floating sx={styles.sidebarTooltip}>
+			{@render link()}
+		</Tooltip>
+	{:else}
+		{@render link()}
+	{/if}
+{/snippet}
+
 {#snippet appIcon(id: SuiteNavItem['id'], size = 18)}
 	<span class={stylex.attrs(styles.appIcon).class} aria-hidden="true">
 		{#if id === 'home'}
@@ -177,10 +188,13 @@
 			storageKey="taxmate-ph-sidebar"
 		>
 			{#snippet header({ collapsed: sidebarCollapsed })}
-				<a class={['brand', { collapsed: sidebarCollapsed }]} href="/" aria-label="TaxMate PH home" onclick={() => (mobileOpen = false)}>
-					<img src="/brand/taxmate-logo.png" alt="TaxMate logo" width="36" height="36" />
-					{#if !sidebarCollapsed}<span>TaxMate PH</span>{/if}
-				</a>
+				{#snippet link()}
+					<a class={['brand', { collapsed: sidebarCollapsed }]} href="/" aria-label="TaxMate PH home" onclick={() => (mobileOpen = false)}>
+						<img src="/brand/taxmate-logo.png" alt="TaxMate logo" width="36" height="36" />
+						{#if !sidebarCollapsed}<span>TaxMate PH</span>{/if}
+					</a>
+				{/snippet}
+				{@render sidebarLink(sidebarCollapsed, 'TaxMate PH home', link)}
 			{/snippet}
 
 			{#snippet content({ collapsed: sidebarCollapsed })}
@@ -190,53 +204,60 @@
 					Workspaces
 				</span>
 				{#each navItems as item (item.id)}
-					<a
-						aria-current={isCurrent(item) ? 'page' : undefined}
-						data-taxmate-agent={item.id === 'ebirforms' ? 'eBIRForms' : undefined}
-						class={["sidebar-row-anim", (sidebarCollapsed
-							? (isCurrent(item) ? stylex.attrs(styles.navigationRow, styles.collapsedNavigation, styles.activeCollapsedNavigation).class : stylex.attrs(styles.navigationRow, styles.collapsedNavigation).class)
-							: (isCurrent(item) ? stylex.attrs(styles.navigationRow, styles.expandedNavigation, styles.activeNavigation).class : stylex.attrs(styles.navigationRow, styles.expandedNavigation).class))]}
-						href={item.href}
-					>
-						{@render appIcon(item.id)}
-						<span
-							class={["sidebar-reveal-anim", (sidebarCollapsed ? stylex.attrs(styles.navigationCopy, styles.collapsedLabel).class : stylex.attrs(styles.navigationCopy).class)]}
+					{#snippet link()}
+						<a
+							aria-current={isCurrent(item) ? 'page' : undefined}
+							aria-label={sidebarCollapsed ? item.name : undefined}
+							data-taxmate-agent={item.id === 'ebirforms' ? 'eBIRForms' : undefined}
+							class={["sidebar-row-anim", (sidebarCollapsed
+								? (isCurrent(item) ? stylex.attrs(styles.navigationRow, styles.collapsedNavigation, styles.activeCollapsedNavigation).class : stylex.attrs(styles.navigationRow, styles.collapsedNavigation).class)
+								: (isCurrent(item) ? stylex.attrs(styles.navigationRow, styles.expandedNavigation, styles.activeNavigation).class : stylex.attrs(styles.navigationRow, styles.expandedNavigation).class))]}
+							href={item.href}
 						>
-							<span class={stylex.attrs(styles.navigationDetails).class}>
-								<span class={stylex.attrs(styles.navigationHeading).class}>
-									<span class={stylex.attrs(styles.truncatedLabel).class}>{item.name}</span>
-									<Badge tone={item.status === 'placeholder' ? 'neutral' : 'accent'} size="sm">
-										{item.stepLabel}
-									</Badge>
-								</span>
-								<span class={stylex.attrs(styles.navigationDescription).class}>
-									{item.description}
+							{@render appIcon(item.id)}
+							<span
+								class={["sidebar-reveal-anim", (sidebarCollapsed ? stylex.attrs(styles.navigationCopy, styles.collapsedLabel).class : stylex.attrs(styles.navigationCopy).class)]}
+							>
+								<span class={stylex.attrs(styles.navigationDetails).class}>
+									<span class={stylex.attrs(styles.navigationHeading).class}>
+										<span class={stylex.attrs(styles.truncatedLabel).class}>{item.name}</span>
+										<Badge tone={item.status === 'placeholder' ? 'neutral' : 'accent'} size="sm">
+											{item.stepLabel}
+										</Badge>
+									</span>
+									<span class={stylex.attrs(styles.navigationDescription).class}>
+										{item.description}
+									</span>
 								</span>
 							</span>
-						</span>
-					</a>
+						</a>
+					{/snippet}
+					{@render sidebarLink(sidebarCollapsed, item.name, link)}
 				{/each}
 
 			{/snippet}
 
 			{#snippet footer({ collapsed: sidebarCollapsed })}
 				<div class={stylex.attrs(styles.footer).class}>
-					<a
-						href="/settings"
-						aria-current={onSettings ? 'page' : undefined}
-						class={["sidebar-row-anim", (sidebarCollapsed
-							? (onSettings ? stylex.attrs(styles.navigationRow, styles.collapsedNavigation, styles.activeCollapsedNavigation).class : stylex.attrs(styles.navigationRow, styles.collapsedNavigation).class)
-							: (onSettings ? stylex.attrs(styles.navigationRow, styles.expandedSettings, styles.activeNavigation).class : stylex.attrs(styles.navigationRow, styles.expandedSettings).class))]}
-					>
-						<span class={stylex.attrs(styles.settingsIcon).class} aria-hidden="true">
-							<Settings size={18} color="currentColor" />
-						</span>
-						<span
-							class={["sidebar-reveal-anim", (sidebarCollapsed ? stylex.attrs(styles.settingsLabel, styles.collapsedLabel).class : stylex.attrs(styles.settingsLabel).class)]}
+					{#snippet link()}
+						<a
+							href="/settings"
+							aria-current={onSettings ? 'page' : undefined}
+							class={["sidebar-row-anim", (sidebarCollapsed
+								? (onSettings ? stylex.attrs(styles.navigationRow, styles.collapsedNavigation, styles.activeCollapsedNavigation).class : stylex.attrs(styles.navigationRow, styles.collapsedNavigation).class)
+								: (onSettings ? stylex.attrs(styles.navigationRow, styles.expandedSettings, styles.activeNavigation).class : stylex.attrs(styles.navigationRow, styles.expandedSettings).class))]}
 						>
-							Settings
-						</span>
-					</a>
+							<span class={stylex.attrs(styles.settingsIcon).class} aria-hidden="true">
+								<Settings size={18} color="currentColor" />
+							</span>
+							<span
+								class={["sidebar-reveal-anim", (sidebarCollapsed ? stylex.attrs(styles.settingsLabel, styles.collapsedLabel).class : stylex.attrs(styles.settingsLabel).class)]}
+							>
+								Settings
+							</span>
+						</a>
+					{/snippet}
+					{@render sidebarLink(sidebarCollapsed, 'Settings', link)}
 				</div>
 			{/snippet}
 		</Sidebar>

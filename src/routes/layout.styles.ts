@@ -1,6 +1,10 @@
 import * as stylex from '@stylexjs/stylex';
 
 export const styles = stylex.create({
+  "sidebarTooltip": {
+    "width": "fit-content",
+    "marginInline": "auto"
+  },
   "appIcon": {
     "display": "grid",
     "width": "calc(var(--spacing) * 5)",
