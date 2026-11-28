@@ -6,6 +6,7 @@ import {
   legacyMixedSpecialRate,
 } from "./atc";
 import { philippineCalendarDate } from '../../filing-calendar';
+import { corporateDateIso } from '../dates';
 import { validateLegacyExemptIdentification } from '../exempt/identification';
 import { legacyMixedIdentificationFields } from './identification';
 import { revisedNolcoField } from "./nolco";
@@ -354,6 +355,9 @@ export function validateMixed(
   need("txtPg1I2YearEnd", "Enter the filing year.");
   need("ddlPg1I2Date", "Select the year-end month.");
   need("txtPg1Pt1I8", "Enter the date of incorporation.");
+  const incorporation = values[p + "txtPg1Pt1I8"]?.trim();
+  if (incorporation && !corporateDateIso(incorporation))
+    errors[p + "txtPg1Pt1I8"] = "Enter a valid date.";
   const election = values[p + "chkPg1I5ATCR1"];
   if (code === "1702MX") {
     const otherElected = legacyMixedOtherAtcElected(values);

@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { getFormDefinition, listForms } from '$lib/forms';
 import { createInitialFormValues, initialProfile } from '$lib/ebirforms/ebirforms-workspace.svelte';
 import { getManagedTaxpayerValues, getReturnExportValues, getReturnTin, getReturnEmail, getReturnPeriod, validateReturnValues } from '$lib/forms/form-runtime';
@@ -9,6 +9,62 @@ const codes = [
 	'1702EX', '1702EXv2018', '1702EXv2018C', '1702MX', '1702MXv2018', '1702MXv2018C',
 	'1702Q', '1702Qv2008C', '1702Qv2018C', '1702RT', '1702RTv2018', '1702RTv2018C'
 ];
+
+describe('corporate filing and calendar-date validation', () => {
+	beforeEach(() => vi.setSystemTime(new Date('2026-11-27T16:00:00Z')));
+	afterEach(() => vi.useRealTimers());
+
+	it.each(codes.filter(code => !code.startsWith('1702EX')))('rejects a future filing period in %s', code => {
+		const form = getCorporateIncomeForm(code)!;
+		const values = {
+			[form.year]: '2099',
+			[form.month!]: '12',
+			[form.periodType!]: 'C',
+			...(form.quarter ? { [form.quarter]: '1' } : {})
+		};
+		expect(validateReturnValues(code, values)[form.year]).toBe('Choose an ended taxable period.');
+		expect(validateReturnValues(code, { ...values, [form.year]: '2019' })[form.year]).toBeUndefined();
+	});
+
+	it.each(codes.filter(code => code.startsWith('1702Q')))('validates the selected quarter rather than the fiscal year end in %s', code => {
+		const form = getCorporateIncomeForm(code)!;
+		const values = {
+			[form.year]: '2027',
+			[form.month!]: '03',
+			[form.periodType!]: 'F',
+			[form.quarter!]: '1'
+		};
+		expect(validateReturnValues(code, values)[form.year]).toBeUndefined();
+		expect(validateReturnValues(code, { ...values, [form.quarter!]: '3' })[form.year])
+			.toBe('Choose an ended taxable period.');
+	});
+
+	it.each([
+		['1702EX', 'frm1702EX:txtPg1Pt1I8DateofIncorporation'],
+		['1702EXv2018', 'frm1702EX:txtPg1Pt1I10DateofIncorporation'],
+		['1702EXv2018C', 'frm1702EX:txtPg1Pt1I10DateofIncorporation'],
+		...codes.filter(code => code.startsWith('1702MX')).map(code => [code, 'frm1702MX:txtPg1Pt1I8'])
+	])('rejects an impossible incorporation date in %s', (code, id) => {
+		const form = getCorporateIncomeForm(code)!;
+		const values = { [form.year]: '2025', [form.month!]: '12' };
+		expect(validateReturnValues(code, { ...values, [id]: '2024-02-30' })[id]).toBe('Enter a valid date.');
+		expect(validateReturnValues(code, { ...values, [id]: '2/29/2024' })[id]).toBeUndefined();
+	});
+
+	it.each(codes.filter(code => code.startsWith('1702EX')))('validates both exemption dates in %s', code => {
+		const item = code === '1702EX' ? '19' : '17';
+		const form = getCorporateIncomeForm(code)!;
+		const start = `frm1702EX:txtPg1Pt1I${item}EffectivityFrom`;
+		const end = `frm1702EX:txtPg1Pt1I${item}EffectivityTo`;
+		const values = { [form.year]: '2025', [start]: '2/30/2024', [end]: '2025-04-31' };
+		expect(validateReturnValues(code, values)).toMatchObject({
+			[start]: 'Enter a valid date.',
+			[end]: 'Enter a valid date.'
+		});
+		const reversed = { ...values, [start]: '2/28/2025', [end]: '2/27/2025' };
+		expect(validateReturnValues(code, reversed)[end]).toBe('Exemption end date must follow the start date.');
+	});
+});
 
 describe('corporate income returns', () => {
 	it.each(codes.filter(code => /^1702(?:RT|MX)/.test(code)))('lists only valid year-end months in %s', code => {

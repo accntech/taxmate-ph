@@ -289,6 +289,22 @@ export function validateCorporateIncome(form: CorporateForm, values: CorporateVa
 		const error = taxpayerEmailError(values[email] ?? '', true);
 		if (error) errors[email] ??= error;
 	}
-	if (!/^\d{4}$/.test(values[form.year] ?? '')) errors[form.year] ??= 'Enter a four-digit taxable year.';
+	const year = values[form.year] ?? '';
+	if (!/^\d{4}$/.test(year)) {
+		errors[form.year] ??= 'Enter a four-digit taxable year.';
+	} else if (!errors[form.year]) {
+		const today = philippineCalendarDate();
+		const periodType = values[form.periodType ?? ''];
+		const yearEndMonth = form.quarter && periodType === 'C' ? 12 : Number(values[form.month ?? '']);
+		const quarter = form.quarter ? Number(values[form.quarter]) : 4;
+		const latestYear = today.year + (form.quarter && periodType === 'F' ? 1 : 0);
+		const hasMonth = Number.isInteger(yearEndMonth) && yearEndMonth >= 1 && yearEndMonth <= 12;
+		const hasQuarter = !form.quarter || [1, 2, 3].includes(quarter);
+		// A quarterly return can close before the calendar year of its fiscal year end.
+		const closingMonth = Number(year) * 12 + yearEndMonth - (4 - quarter) * 3;
+		if (Number(year) > latestYear || (hasMonth && hasQuarter && closingMonth >= today.year * 12 + today.month)) {
+			errors[form.year] = 'Choose an ended taxable period.';
+		}
+	}
 	return errors;
 }

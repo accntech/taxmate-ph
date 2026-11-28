@@ -1,4 +1,5 @@
 import { philippineCalendarDate } from '../../filing-calendar';
+import { corporateDateIso } from '../dates';
 import type { CorporateField, CorporateForm, CorporatePage, CorporateValues } from '../types';
 import legacyPages from './1702ex-pages.json';
 import revisedPages from './1702exv2018-pages.json';
@@ -298,11 +299,6 @@ function fieldsForRevision(raw: CorporatePage[], legacy: boolean, create: boolea
 	return pages;
 }
 
-function displayDate(value: string | undefined): string {
-	const date = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(value ?? '');
-	return date ? `${date[3]}-${date[1].padStart(2, '0')}-${date[2].padStart(2, '0')}` : value ?? '';
-}
-
 function validate(values: CorporateValues, legacy: boolean, create: boolean): CorporateValues {
 	const result = legacy ? calculateLegacy(values) : calculateRevised(values, create);
 	const errors: CorporateValues = {};
@@ -315,8 +311,11 @@ function validate(values: CorporateValues, legacy: boolean, create: boolean): Co
 		errors[year] = 'Choose an ended taxable period.';
 	}
 	const incorporation = field(legacy ? 'txtPg1Pt1I8DateofIncorporation' : 'txtPg1Pt1I10DateofIncorporation');
-	const incorporated = displayDate(result[incorporation]);
-	if (incorporated && incorporated.slice(0, 7) > `${filingYear}-${String(monthNumber).padStart(2, '0')}`) {
+	const incorporationText = result[incorporation]?.trim() ?? '';
+	const incorporated = corporateDateIso(incorporationText);
+	if (incorporationText && !incorporated) {
+		errors[incorporation] = 'Enter a valid date.';
+	} else if (incorporated && incorporated.slice(0, 7) > `${filingYear}-${String(monthNumber).padStart(2, '0')}`) {
 		errors[incorporation] = 'Date of incorporation must fall within or before the filing period.';
 	}
 	const part = legacy ? 'txtPg5S6I10NetTaxable' : 'txtPg3Pt6S3I10NetTaxableIncome';
@@ -332,8 +331,12 @@ function validate(values: CorporateValues, legacy: boolean, create: boolean): Co
 		if (!values[field(key)]?.trim()) errors[field(key)] = 'Required.';
 	}
 	const [start, end] = legalFields.slice(-2).map(key => field('txtPg1Pt1I' + key));
-	const first = displayDate(result[start]);
-	const last = displayDate(result[end]);
+	const startText = result[start]?.trim() ?? '';
+	const endText = result[end]?.trim() ?? '';
+	const first = corporateDateIso(startText);
+	const last = corporateDateIso(endText);
+	if (startText && !first) errors[start] = 'Enter a valid date.';
+	if (endText && !last) errors[end] = 'Enter a valid date.';
 	if (first && last && first > last) errors[end] = 'Exemption end date must follow the start date.';
 	if (last && Number(last.slice(0, 4)) < filingYear) errors[end] = 'The exemption must cover the filing year.';
 	if (first && Number(first.slice(0, 4)) > filingYear) errors[start] = 'The exemption must cover the filing year.';
