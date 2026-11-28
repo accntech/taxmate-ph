@@ -2,8 +2,8 @@
 	import { onMount } from 'svelte';
 	import { buildTaxpayerRoute } from '$lib/apps/app-shell';
 	import { ebirformsWorkspace as workspace } from '$lib/ebirforms/ebirforms-workspace.svelte';
-	import { Badge, ButtonLink, Page } from '$lib/components/ui';
-	import { formatTinInput } from '$lib/profiles/profile';
+	import { Badge, Button, ButtonLink, Card, Page } from '$lib/components/ui';
+	import { buildProfileFilename, formatTinInput } from '$lib/profiles/profile';
 	import { describePsoc } from '$lib/profiles/psoc';
 	import ChevronLeft from '@solar-icons/svelte/category/arrows/Linear/AltArrowLeft.svelte';
 	import CheckCircle from '@solar-icons/svelte/category/ui/Linear/CheckCircle.svelte';
@@ -13,7 +13,7 @@
 
 	let { params } = $props();
 	let formsHref = $derived(`${buildTaxpayerRoute(params.id)}/forms`);
-	let profile = $derived(workspace.profile.id === params.id ? workspace.profile : undefined);
+	const profile = $derived(workspace.profiles.find(candidate => candidate.id === params.id));
 	let spouse = $derived(profile?.spouse);
 	const numericLabels = ['TIN and branch code', 'RDO code', 'Date of birth', 'ZIP code', 'Contact number'];
 	const dateFormatter = new Intl.DateTimeFormat('en-PH', { dateStyle: 'medium', timeZone: 'UTC' });
@@ -44,9 +44,11 @@
 		['Contact number', spouse?.contactNumber]
 	].filter(([, value]) => !!value));
 
-	onMount(() => {
-		void workspace.loadTaxpayerProfiles().then(() => workspace.selectTaxpayerProfile(params.id));
-	});
+	async function loadProfile() {
+		await workspace.loadTaxpayerProfiles();
+		if (workspace.profileLoadState === 'loaded' && profile) workspace.selectTaxpayerProfile(profile.id);
+	}
+	onMount(() => { void loadProfile(); });
 </script>
 
 <svelte:head>
@@ -90,6 +92,19 @@
 		Back to taxpayers
 	</ButtonLink>
 
+	{#if workspace.profileLoadState === 'error'}
+		<Card>
+			<div role="alert">
+				<h1>Could not load taxpayer</h1>
+				<p>{workspace.profileLoadError}</p>
+			</div>
+			<Button variant="secondary" onclick={() => void loadProfile()}>Retry</Button>
+		</Card>
+	{:else if workspace.profileLoadState !== 'loaded'}
+		<Card><p role="status">Loading taxpayer…</p></Card>
+	{:else if !profile}
+		<Card><div role="alert"><h1>Taxpayer not found</h1><p>Return to the taxpayers list and select a saved profile.</p></div></Card>
+	{:else}
 	<div class="checkpoint">
 		<header class="checkpoint-header">
 			<div class="identity">
@@ -97,11 +112,11 @@
 					<UserCheck size={24} color="currentColor" aria-hidden="true" />
 				</div>
 				<div>
-					<h1>{workspace.profile.taxpayerName || 'Selected taxpayer'}</h1>
+					<h1>{profile.taxpayerName || 'Selected taxpayer'}</h1>
 					<div class="identity-meta">
 						<dl class="tin">
 							<dt>TIN</dt>
-							<dd class="font-mono">{workspace.activeTin}</dd>
+							<dd class="font-mono">{formatTinInput(profile)}</dd>
 						</dl>
 						<Badge tone="success" size="sm">
 							<CheckCircle size={14} color="currentColor" aria-hidden="true" />
@@ -127,8 +142,8 @@
 				<section class="detail-section" aria-labelledby="registration-details">
 					<h2 id="registration-details">Registration</h2>
 					<dl class="detail-grid">
-						{@render field('RDO', workspace.profile.rdoCode || 'Not set', Boolean(workspace.profile.rdoCode))}
-						{@render field('Email', workspace.profile.email || 'Not set')}
+						{@render field('RDO', profile.rdoCode || 'Not set', Boolean(profile.rdoCode))}
+						{@render field('Email', profile.email || 'Not set')}
 					</dl>
 				</section>
 
@@ -143,12 +158,15 @@
 			<section class="files detail-section" aria-labelledby="taxpayer-files">
 				<h2 id="taxpayer-files">Files</h2>
 				<dl class="file-list">
-					{@render field('Profile file', workspace.profileFilename, true)}
-					{@render field('Return filename', workspace.returnFilename, true)}
+					{@render field('Profile file', buildProfileFilename(profile), true)}
+					{#if workspace.selectedProfileId === profile.id}
+						{@render field('Return filename', workspace.returnFilename, true)}
+					{/if}
 				</dl>
 			</section>
 		</div>
 	</div>
+	{/if}
 </Page>
 
 <style>

@@ -8,7 +8,7 @@ const savedReturns = (page: Page) => page.evaluate(() => localStorage.getItem('e
 async function preparePdf(page: Page, outcome: 'success' | 'cancel' | 'export-error' | 'open-error' | 'pending' = 'success', theme = 'light') {
 	await seedWorkspace(page, theme);
 	await page.goto(formsPath);
-	await expect(page.getByRole('link', { name: 'Edit', exact: true })).toBeVisible({ timeout: 15_000 });
+	await expect(page.getByRole('link', { name: /^Edit BIR Form / })).toBeVisible({ timeout: 15_000 });
 	await page.evaluate((outcome) => {
 		const state = window as any;
 		state.openedPdfs = [];

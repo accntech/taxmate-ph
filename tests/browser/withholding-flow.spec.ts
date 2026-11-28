@@ -100,7 +100,7 @@ test('0619E follows the PDF field order with a left-aligned masthead', async ({ 
 	}
 	await page.getByRole('button', { name: 'Save draft', exact: true }).click();
 	await expect(page).toHaveURL(/\/forms$/);
-	await page.getByRole('row').filter({ hasText: '0619E' }).getByRole('link', { name: 'Edit', exact: true }).click();
+	await page.getByRole('row').filter({ hasText: '0619E' }).getByRole('link', { name: /^Edit BIR Form / }).click();
 	await expect(field(page, 'frm0619E:txtTax15')).toHaveValue('2,000.00');
 	await expect(field(page, 'frm0619E:txtTax18')).toHaveText('₱8,300.00');
 });
@@ -199,7 +199,7 @@ test('0619F follows the final withholding PDF and reopens the saved tax type and
 
 	await page.getByRole('button', { name: 'Save draft', exact: true }).click();
 	await expect(page).toHaveURL(/\/forms$/);
-	await page.getByRole('row').filter({ hasText: '0619F' }).getByRole('link', { name: 'Edit', exact: true }).click();
+	await page.getByRole('row').filter({ hasText: '0619F' }).getByRole('link', { name: /^Edit BIR Form / }).click();
 	await expect(taxType).toContainText('WF');
 	await expect(field(page, 'frm0619F:txtTax14')).toHaveValue('2,500.25');
 	await expect(field(page, 'frm0619F:txtTax19')).toHaveText('₱2,010.25');
@@ -265,7 +265,7 @@ for (const code of ['1601C', '1601Cv2018']) {
 		const printFieldId = code === '1601C' ? 'frm1601c:SectionA:TxtMonthYearRadio1' : rawPeriodId;
 		await expect(field(printed, printFieldId)).toHaveValue('02/2017');
 		await reopened.getByRole('button', { name: 'Not now', exact: true }).click();
-		await reopened.getByRole('row').filter({ hasText: code }).getByRole('link', { name: 'Edit', exact: true }).click();
+		await reopened.getByRole('row').filter({ hasText: code }).getByRole('link', { name: /^Edit BIR Form / }).click();
 		if (code === '1601Cv2018') await goToReturnPage(reopened, 2);
 		await expect(reopened.getByRole('list', { name: `${adjustments} line items`, exact: true })).toContainText('02/2017');
 	});
@@ -298,7 +298,7 @@ test('0619E saves and reloads calculations and finalizes without BIR requests', 
 	await expect(page).toHaveURL(/\/forms$/);
 	let row = page.getByRole('row').filter({ hasText: '0619E' });
 	await expect(row).toContainText('8,300.00');
-	await row.getByRole('link', { name: 'Edit', exact: true }).click();
+	await row.getByRole('link', { name: /^Edit BIR Form / }).click();
 	await expect(field(page, 'frm0619E:txtTax14')).toHaveValue('10,000.00');
 	await expect(field(page, 'frm0619E:txtTax18')).toContainText('8,300.00');
 	await page.screenshot({ path: testInfo.outputPath('0619e-desktop.png'), fullPage: true });
@@ -352,7 +352,7 @@ test('0619F shows inactive withholding as labeled zeroes through save and reopen
 	}
 	await printed.close();
 	await page.getByRole('button', { name: 'Not now', exact: true }).click();
-	await page.getByRole('row').filter({ hasText: '0619F' }).getByRole('link', { name: 'Edit', exact: true }).click();
+	await page.getByRole('row').filter({ hasText: '0619F' }).getByRole('link', { name: /^Edit BIR Form / }).click();
 	await expect(total).toHaveText('₱0.00');
 	for (const width of [1280, 390]) {
 		await page.setViewportSize({ width, height: 900 });
@@ -391,7 +391,7 @@ test('1606 reconciles two saved selling prices into one labeled amount', async (
 	await expect(field(printed, 'frm1606:txtGross')).toHaveValue('4,100.00');
 	await printed.close();
 	await page.getByRole('button', { name: 'Not now', exact: true }).click();
-	await page.getByRole('row').filter({ hasText: '1606' }).getByRole('link', { name: 'Edit', exact: true }).click();
+	await page.getByRole('row').filter({ hasText: '1606' }).getByRole('link', { name: /^Edit BIR Form / }).click();
 	await expect(gross).toHaveValue('4,100.00');
 	await expect(selling).toHaveText('₱4,100.00');
 	for (const width of [1280, 390]) {
@@ -414,7 +414,7 @@ test('proper date input preserves an ISO leap day and opens its project calendar
 	await expect(page.getByRole('dialog', { name: 'Choose date', exact: true })).toBeHidden();
 	await fillDate(page, 'frm0619E:dueDate', '2024-02-29');
 	await page.getByRole('button', { name: 'Save draft', exact: true }).click();
-	await page.getByRole('row').filter({ hasText: '0619E' }).getByRole('link', { name: 'Edit', exact: true }).click();
+	await page.getByRole('row').filter({ hasText: '0619E' }).getByRole('link', { name: /^Edit BIR Form / }).click();
 	await expect(due.getByRole('spinbutton', { name: 'Month', exact: true })).toHaveValue('02');
 	await expect(due.getByRole('spinbutton', { name: 'Day', exact: true })).toHaveValue('29');
 	await expect(due.getByRole('spinbutton', { name: 'Year', exact: true })).toHaveValue('2024');
@@ -611,7 +611,7 @@ test('0605 keeps the calculated month and amounts when saved, reopened and print
  expect(saved.values['frm0605:txtNumOfInstallment']).toBe('2');
  expect(saved.values['frm0605:itemYearEndMonth']).toBe('12');
  expect(saved.values['frm0605:txtTax21']).toBe('15070.00');
- await page.getByRole('row').filter({ hasText: '0605' }).getByRole('link', { name: 'Edit', exact: true }).click();
+ await page.getByRole('row').filter({ hasText: '0605' }).getByRole('link', { name: /^Edit BIR Form / }).click();
  await expect(quarter).toHaveText('2nd');
  await expect(sheets).toHaveValue('3');
  await expect(installment).toHaveValue('2');
@@ -728,7 +728,7 @@ test('0619F updates its suggested due date with the reporting period and keeps a
 	await expect(month).toHaveValue('12');
 	await withheld.getByRole('radio', { name: 'No', exact: true }).check();
 	await page.getByRole('button', { name: 'Save draft', exact: true }).click();
-	await page.getByRole('row').filter({ hasText: '0619F' }).getByRole('link', { name: 'Edit', exact: true }).click();
+	await page.getByRole('row').filter({ hasText: '0619F' }).getByRole('link', { name: /^Edit BIR Form / }).click();
 	await expect(day).toHaveValue('15');
 	await expect(month).toHaveValue('12');
 	await expect(year).toHaveValue('2025');
@@ -752,7 +752,7 @@ test('1601EQ leaves filing choices open and preserves explicit answers after sav
 	await page.getByRole('option', { name: 'Third Quarter', exact: true }).click();
 	await withheld.getByRole('radio', { name: 'No', exact: true }).check();
 	await page.getByRole('button', { name: 'Save draft', exact: true }).click();
-	await page.getByRole('row').filter({ hasText: '1601EQ' }).getByRole('link', { name: 'Edit', exact: true }).click();
+	await page.getByRole('row').filter({ hasText: '1601EQ' }).getByRole('link', { name: /^Edit BIR Form / }).click();
 	await expect(quarter).toHaveText('Third Quarter');
 	await expect(withheld.getByRole('radio', { name: 'No', exact: true })).toBeChecked();
 });

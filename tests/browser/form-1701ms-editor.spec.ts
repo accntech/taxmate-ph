@@ -133,7 +133,7 @@ test('1701-MS reveals representative data when opening a saved draft', async ({ 
 			?.values['frm1701MS:authorizeRepresentative'];
 	});
 	expect(savedTin).toBe('00123456700089');
-	await page.getByRole('row').filter({ hasText: '1701MS' }).getByRole('link', { name: 'Edit', exact: true }).click();
+	await page.getByRole('row').filter({ hasText: '1701MS' }).getByRole('link', { name: /^Edit BIR Form / }).click();
 	await expect(representativeTin).toHaveValue('001-234-567-00089');
 });
 
@@ -244,7 +244,7 @@ test('1701-MS edits Item 9 inline beside Item 7 and reopens both filers’ credi
 	}
 	await page.getByRole('button', { name: 'Save draft', exact: true }).click();
 	await expect(page).toHaveURL(/\/forms$/);
-	await page.getByRole('row').filter({ hasText: '1701MS' }).getByRole('link', { name: 'Edit', exact: true }).click();
+	await page.getByRole('row').filter({ hasText: '1701MS' }).getByRole('link', { name: /^Edit BIR Form / }).click();
 	await goToReturnPage(page, 2);
 	await expect(description).toHaveValue('Payment certificate');
 	await expect(taxpayer).toHaveValue('150');
@@ -302,7 +302,7 @@ test('1701-MS Item 10B accepts both printed totals directly', async ({ page }, t
 
 	await page.getByRole('button', { name: 'Save draft', exact: true }).click();
 	await expect(page).toHaveURL(/\/forms$/);
-	await page.getByRole('row').filter({ hasText: '1701MS' }).getByRole('link', { name: 'Edit', exact: true }).click();
+	await page.getByRole('row').filter({ hasText: '1701MS' }).getByRole('link', { name: /^Edit BIR Form / }).click();
 	await goToReturnPage(page, 2);
 	await expect(taxpayerTotal).toHaveValue('1,425');
 	await expect(spouseTotal).toHaveValue('650');
@@ -403,7 +403,7 @@ for (const width of [1440, 390]) {
 
 		await page.getByRole('button', { name: 'Save draft', exact: true }).click();
 		await expect(page).toHaveURL(/\/forms$/);
-		await page.getByRole('row').filter({ hasText: '1701MS' }).getByRole('link', { name: 'Edit', exact: true }).click();
+		await page.getByRole('row').filter({ hasText: '1701MS' }).getByRole('link', { name: /^Edit BIR Form / }).click();
 		await goToReturnPage(page, 2);
 		await expect(subtotal).toHaveText('₱1,525');
 		await expect(schedule.getByText('Sample deductible expense')).toBeVisible();

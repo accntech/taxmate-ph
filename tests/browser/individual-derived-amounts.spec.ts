@@ -41,7 +41,7 @@ for (const example of cases) {
 		await resultRow.screenshot({ path: info.outputPath('calculated-desktop.png') });
 		await page.getByRole('button', { name: 'Save draft', exact: true }).click();
 		await expect(page).toHaveURL(forms);
-		await page.getByRole('row').filter({ hasText: example.code }).getByRole('link', { name: 'Edit', exact: true }).click();
+		await page.getByRole('row').filter({ hasText: example.code }).getByRole('link', { name: /^Edit BIR Form / }).click();
 		await expect(page.getByRole('navigation', { name: 'Return pages' })).toBeVisible({ timeout: 20_000 });
 		await goToReturnPage(page, example.resultPage);
 		await expect(result).toHaveText(`₱${example.formatted}`);
@@ -56,7 +56,7 @@ for (const example of cases) {
 		await printed.close();
 		await page.getByRole('dialog', { name: 'Open generated PDF?' })
 			.getByRole('button', { name: 'Not now', exact: true }).click();
-		await page.getByRole('row').filter({ hasText: example.code }).getByRole('link', { name: 'Edit', exact: true }).click();
+		await page.getByRole('row').filter({ hasText: example.code }).getByRole('link', { name: /^Edit BIR Form / }).click();
 		await goToReturnPage(page, example.resultPage);
 		await page.setViewportSize({ width: 390, height: 900 });
 		const sidebar = page.locator('aside.sidebar');

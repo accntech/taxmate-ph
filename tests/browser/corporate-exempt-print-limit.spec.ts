@@ -73,7 +73,7 @@ test('1702EX caps exempt properties at 99 while preserving existing original ent
 
 	await page.getByRole('button', { name: 'Save draft', exact: true }).click();
 	await expect(page).toHaveURL(base);
-	await page.getByRole('link', { name: 'Edit', exact: true }).click();
+	await page.getByRole('link', { name: /^Edit BIR Form / }).click();
 	await goToReturnPage(page, 7);
 	await list.getByRole('button', { name: 'Updated property', exact: true }).click();
 	await expect(propertyField(edit, 'C1')).toHaveValue('Updated property');

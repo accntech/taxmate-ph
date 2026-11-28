@@ -77,7 +77,7 @@ test("June 2013 1702MX sequences Schedule H entries and follows their Schedule B
     await print.close();
     await page.getByRole("dialog", { name: "Open generated PDF?" }).getByRole("button", { name: "Not now", exact: true }).click();
   }
-  await page.getByRole("link", { name: "Edit", exact: true }).click();
+  await page.getByRole("link", { name: /^Edit BIR Form / }).click();
   await goToReturnPage(page, 13);
   await expect(desc(second)).toHaveValue("Research expense");
   await expect(amount(second)).toHaveValue("250");

@@ -151,7 +151,7 @@ for (const code of ["1702MXv2018", "1702MXv2018C"]) {
     }
 
     await page.getByRole("button", { name: "Save draft", exact: true }).click();
-    await page.getByRole("link", { name: "Edit", exact: true }).click();
+    await page.getByRole("link", { name: /^Edit BIR Form / }).click();
     await goToReturnPage(page, 6);
     await expect(amount(ordinaryNext)).toHaveValue("200");
     await expect(amount(specialNext)).toHaveValue("100");
@@ -226,7 +226,7 @@ test("June 2013 activity Schedules F and G edit descriptions inline and carry th
   await expect(page.locator(id("txtPg1EX1ScBI6"))).toHaveText("425");
   await expect(page.locator(id("txtPg1EX1ScBI4"))).toHaveText("275");
   await page.getByRole("button", { name: "Save draft", exact: true }).click();
-  await page.getByRole("link", { name: "Edit", exact: true }).click();
+  await page.getByRole("link", { name: /^Edit BIR Form / }).click();
   await goToReturnPage(page, 12);
   await expect(firstDescription).toHaveValue("Interest income");
   await expect(ordinaryDescription).toHaveValue("Leasehold amortization");
@@ -323,7 +323,7 @@ test("June 2013 preserves business information and elections through reopening a
   await picker.click();
   await page.getByRole("option", { name: /IC010/ }).click();
   await page.getByRole("button", { name: "Save draft", exact: true }).click();
-  await page.getByRole("link", { name: "Edit", exact: true }).click();
+  await page.getByRole("link", { name: /^Edit BIR Form / }).click();
   await expect(business).toHaveValue("Book publishing and distribution");
   await expect(psic).toHaveText("0112");
   await expect(election).toBeChecked();
@@ -476,7 +476,7 @@ for (const code of ["1702MXv2018", "1702MXv2018C"]) {
           .returns[0],
     );
     expect(record.values["frm1702MX:totalSPAttach"]).toBe("1");
-    await page.getByRole("link", { name: "Edit", exact: true }).click();
+    await page.getByRole("link", { name: /^Edit BIR Form / }).click();
     await goToReturnPage(page, 5);
     await expect(page.locator(id("txtPg1SP1ScBI1"))).toHaveValue("1,000,000");
     await expect(page.locator(id("txtPg1SP1ScBI14"))).toHaveText("40,000");

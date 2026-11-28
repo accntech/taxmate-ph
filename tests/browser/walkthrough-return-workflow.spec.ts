@@ -24,7 +24,7 @@ test('a fresh return explains how to save and a saved return identifies new edit
 	await expect(editor.getByText('Unsaved changes', { exact: true })).toHaveCount(0);
 	await expect(editor.getByRole('status').filter({ hasText: 'Save draft to keep this return on this device.' })).toBeVisible();
 	await save.click();
-	await page.getByRole('link', { name: 'Edit', exact: true }).click();
+	await page.getByRole('link', { name: /^Edit BIR Form / }).click();
 	await expect(editor.getByText('Draft', { exact: true })).toBeVisible();
 	await editor.getByRole('textbox', { name: 'Year', exact: true }).fill('2024');
 	await expect(editor.getByText('Unsaved changes', { exact: true })).toBeVisible();
@@ -76,7 +76,7 @@ for (const { code, bank, reference, row } of [
 		await expect(dialog).toBeHidden();
 		await firstSchedule.getByRole('button', { name: 'Edit line item 1', exact: true }).waitFor();
 		await editor.getByRole('button', { name: 'Save draft', exact: true }).click();
-		await page.getByRole('link', { name: 'Edit', exact: true }).click();
+		await page.getByRole('link', { name: /^Edit BIR Form / }).click();
 		await expect(firstSchedule).toContainText('2,300.25');
 	});
 }

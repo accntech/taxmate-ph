@@ -58,7 +58,7 @@ test('1601FQ hides withholding schedules on No and restores draft items on Yes',
 	await expect(scheduleList(page, schedule)).toHaveCount(0);
 	await page.getByRole('button', { name: 'Save draft', exact: true }).click();
 	await expect(page).toHaveURL(/\/forms$/);
-	await page.getByRole('link', { name: 'Edit', exact: true }).click();
+	await page.getByRole('link', { name: /^Edit BIR Form / }).click();
 	await expect(withheld.getByRole('radio', { name: 'No', exact: true })).toBeChecked();
 	await withheld.getByRole('radio', { name: 'Yes', exact: true }).check();
 	await expect(atcHeading).toBeVisible();
@@ -81,7 +81,7 @@ test('1600PT hides ATC and payee schedules on No and restores saved details on Y
 	await expect(page.getByRole('region', { name: 'Monthly alphalist of payees' }).getByText('No taxes withheld this month.', { exact: true })).toBeVisible();
 	await page.getByRole('button', { name: 'Save draft', exact: true }).click();
 	await expect(page).toHaveURL(/\/forms$/);
-	await page.getByRole('link', { name: 'Edit', exact: true }).click();
+	await page.getByRole('link', { name: /^Edit BIR Form / }).click();
 	await expect(withheld.getByRole('radio', { name: 'No', exact: true })).toBeChecked();
 	await withheld.getByRole('radio', { name: 'Yes', exact: true }).check();
 	await expect(atcHeading).toBeVisible();
@@ -182,7 +182,7 @@ for (const [code, scheduleId, tuples] of [
 		await expect(page).toHaveURL(/\/forms$/);
 		const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('ebirforms-created-returns-v1')!).returns[0].values);
 		for (const [index, field] of schedule.rows[0].fields.entries()) if (!field.readonly) expect(saved[field.id]).toBe(tuples[1][index]);
-		await page.getByRole('link', { name: 'Edit', exact: true }).click();
+		await page.getByRole('link', { name: /^Edit BIR Form / }).click();
 		await openSchedule(page, schedule.title);
 		await expect(list.getByRole('listitem').first()).toContainText(tuples[1][0]);
 	});

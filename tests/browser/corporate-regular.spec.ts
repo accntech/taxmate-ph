@@ -119,7 +119,7 @@ test('legacy 1702RT share classes save as independent radio selections', async (
   await page.screenshot({ path: info.outputPath(`1702rt-share-classes-${device}.png`), animations: 'disabled' });
  }
  await page.getByRole('button', { name: 'Save draft', exact: true }).click();
- await page.getByRole('link', { name: 'Edit', exact: true }).click();
+ await page.getByRole('link', { name: /^Edit BIR Form / }).click();
  await goToReturnPage(page, 8);
  await expect(preferred(shareClassA)).toBeChecked();
  await expect(common(shareClassB)).toBeChecked();
@@ -167,7 +167,7 @@ test('legacy 1702RT Schedule 7 shows each item once and enables Item 8 for amend
   await schedule.screenshot({ path: info.outputPath(`schedule-7-amended-${device}.png`), animations: 'disabled' });
  }
  await page.getByRole('button', { name: 'Save draft', exact: true }).click();
- await page.getByRole('link', { name: 'Edit', exact: true }).click();
+ await page.getByRole('link', { name: /^Edit BIR Form / }).click();
  await goToReturnPage(page, 6);
  await expect(priorPayment).toHaveValue('1,250');
  await expect(total).toHaveText('1,250');
@@ -232,7 +232,7 @@ test('legacy 1702RT Schedule 7 keeps item 10 on one numbered row', async ({ page
 
  await page.setViewportSize({ width: 1440, height: 1000 });
  await page.getByRole('button', { name: 'Save draft', exact: true }).click();
- await page.getByRole('link', { name: 'Edit', exact: true }).click();
+ await page.getByRole('link', { name: /^Edit BIR Form / }).click();
  await goToReturnPage(page, 6);
  await expect(description).toHaveValue('Other tax payment');
  await expect(amount).toHaveValue('2,500');
@@ -312,7 +312,7 @@ test('corporate return pagination survives reload and resets on a fresh open', a
  }]);
  const pager = page.getByRole('navigation', { name: 'Return pages' });
  const current = pager.locator('[aria-current="page"]');
- const edit = page.getByRole('link', { name: 'Edit', exact: true });
+ const edit = page.getByRole('link', { name: /^Edit BIR Form / });
  const back = page.getByRole('link', { name: '← Back to forms', exact: true });
 
  await page.goto(formsPath);
@@ -393,7 +393,7 @@ test('regular CREATE details save, reopen and switch deductions at desktop and n
   await page.screenshot({ path: info.outputPath(`regular-detailed-deductions-${device}.png`), animations: 'disabled' });
  }
  await page.getByRole('button', { name: 'Save draft', exact: true }).click();
- await page.getByRole('link', { name: 'Edit', exact: true }).click();
+ await page.getByRole('link', { name: /^Edit BIR Form / }).click();
  await goToReturnPage(page, 3);
  const deductions = page.getByRole('list', { name: 'Other ordinary allowable deductions line items' });
  await expect(deductions.getByText('STATIONERY')).toBeVisible();

@@ -36,7 +36,7 @@ test('opening 1601EQ skips the income and generic withholding editor modules', a
  });
  await seedWorkspace(page);
  await page.goto(formsPath);
- await page.getByRole('link', { name: 'Edit', exact: true }).click();
+ await page.getByRole('link', { name: /^Edit BIR Form / }).click();
  await expect(page.getByRole('textbox', { name: 'Year', exact: true })).toHaveValue('2026', { timeout: 15_000 });
  expect(unrelatedEditors).toEqual([]);
 });
@@ -45,7 +45,7 @@ for (const action of ['open', 'create'] as const) {
  test(`${action} a form from the list without reloading saved returns and taxpayers`, async ({ page }) => {
   await seedWorkspace(page);
   await page.goto(formsPath);
-  const savedForm = page.getByRole('link', { name: 'Edit', exact: true });
+  const savedForm = page.getByRole('link', { name: /^Edit BIR Form / });
   await expect(savedForm).toBeVisible({ timeout: 15_000 });
   await page.evaluate(() => {
    const tauri = (window as typeof window & {

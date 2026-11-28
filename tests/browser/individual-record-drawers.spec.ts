@@ -48,7 +48,7 @@ test('1701 Schedule 5 manages non-operating income in a drawer and totals each f
 
 	await page.getByRole('button', { name: 'Save draft', exact: true }).click();
 	await expect(page).toHaveURL(base);
-	await page.getByRole('row').filter({ hasText: '1701' }).getByRole('link', { name: 'Edit', exact: true }).click();
+	await page.getByRole('row').filter({ hasText: '1701' }).getByRole('link', { name: /^Edit BIR Form / }).click();
 	await goToReturnPage(page, 6);
 	await items.getByRole('button', { name: 'Equipment rental', exact: true }).click();
 	await edit.getByRole('button', { name: 'Delete item', exact: true }).click();
@@ -80,7 +80,7 @@ test('numbered employers use one list and draft changes commit through the drawe
 	await expect(section.getByRole('button', { name: 'Updated employer', exact: true })).toBeVisible();
 	await page.getByRole('button', { name: 'Save draft', exact: true }).click();
 	await expect(page).toHaveURL(base);
-	await page.getByRole('row').filter({ hasText: '1700v2018' }).getByRole('link', { name: 'Edit', exact: true }).click();
+	await page.getByRole('row').filter({ hasText: '1700v2018' }).getByRole('link', { name: /^Edit BIR Form / }).click();
 	await goToReturnPage(page, 2);
 	await expect(section.getByRole('heading', { name: 'Employers (1/4)', exact: true })).toBeVisible();
 	await page.setViewportSize({ width: 390, height: 900 });
@@ -123,7 +123,7 @@ test('1701Q January edits Item 48 inline and preserves saved other income', asyn
 
 	await page.getByRole('button', { name: 'Save draft', exact: true }).click();
 	await expect(page).toHaveURL(/\/forms$/);
-	await page.getByRole('row').filter({ hasText: '1701Qv2018' }).getByRole('link', { name: 'Edit', exact: true }).click();
+	await page.getByRole('row').filter({ hasText: '1701Qv2018' }).getByRole('link', { name: /^Edit BIR Form / }).click();
 	await goToReturnPage(page, 2);
 	await expect(description).toHaveValue('Rental income');
 	await expect(amount).toHaveValue('18,000.00');

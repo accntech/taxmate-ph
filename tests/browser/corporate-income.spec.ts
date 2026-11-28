@@ -175,7 +175,7 @@ test('1702-RT uses registered details saved in the taxpayer profile', async ({ p
 	}
 	await page.setViewportSize({ width: 1280, height: 900 });
 	await page.getByRole('button', { name: 'Save draft', exact: true }).click();
-	const edit = page.getByRole('link', { name: 'Edit', exact: true });
+	const edit = page.getByRole('link', { name: /^Edit BIR Form / });
 	await expect(edit).toBeVisible();
 	const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('ebirforms-created-returns-v1')!).returns
 		.find((entry: { formCode: string }) => entry.formCode === '1702RTv2018').values);
@@ -308,7 +308,7 @@ for (const code of ['1702Q', '1702Qv2008C']) {
 		await page.setViewportSize({ width: 1440, height: 1000 });
 		await page.getByRole('button', { name: 'Save draft', exact: true }).click();
 		await expect(page).toHaveURL(`/ebirforms/taxpayers/${taxpayerId}/forms`);
-		await page.getByRole('link', { name: 'Edit', exact: true }).click();
+		await page.getByRole('link', { name: /^Edit BIR Form / }).click();
 		await expect(total).toHaveText('1,300.75');
 		await page.getByRole('link', { name: 'Back to forms', exact: false }).click();
 		const printed = await printSavedReturn(page, code, info.outputPath(`${code}-penalties.pdf`), async () => {
@@ -387,7 +387,7 @@ for (const [code, item] of [
 		if (code === '1702RTv2018') {
 			await page.setViewportSize({ width: 1280, height: 900 });
 			await page.getByRole('button', { name: 'Save draft', exact: true }).click();
-			await page.getByRole('link', { name: 'Edit', exact: true }).click();
+			await page.getByRole('link', { name: /^Edit BIR Form / }).click();
 			await expect(count).toHaveValue('03');
 		}
 	});
@@ -867,7 +867,7 @@ test('revised quarterly OSD saves and prints the computed deduction and rate', a
 	}
 	await page.getByRole('button', { name: 'Save draft', exact: true }).click();
 	await expect(page).toHaveURL(forms);
-	await page.getByRole('link', { name: 'Edit', exact: true }).click();
+	await page.getByRole('link', { name: /^Edit BIR Form / }).click();
 	await goToReturnPage(page, 2);
 	await expect(deduction).toHaveText('400');
 	await expect(rate).toHaveText('25%');
@@ -915,7 +915,7 @@ test('1702RT January 2018 adds NOLCO in a drawer and keeps the total and transfe
 	await edit.getByRole('button', { name: 'Cancel', exact: true }).click();
 	await expect(total).toHaveText(/250/);
 	await page.getByRole('button', { name: 'Save draft', exact: true }).click();
-	await page.getByRole('link', { name: 'Edit', exact: true }).click();
+	await page.getByRole('link', { name: /^Edit BIR Form / }).click();
 	await goToReturnPage(page, 4);
 	await expect(total).toHaveText(/250/);
 	await schedule.getByRole('button', { name: '2023', exact: true }).click();

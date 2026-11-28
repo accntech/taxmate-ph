@@ -3,6 +3,7 @@
 	import type { TaxpayerProfile } from '$lib/profiles/profile';
 	import PaperFormHeader from './paper-form-header.svelte';
 	import ReturnPagination from './return-pagination.svelte';
+	import { getReturnPage, selectReturnPage } from './return-page-navigation';
 	import ReturnRecord from './return-record.svelte';
 	import ReturnTaxpayerInformation from './return-taxpayer-information.svelte';
 	import { compareFormItems, getWithholdingPaperLayout, getWithholdingSupportingPages } from './withholding-paper-layout';
@@ -35,7 +36,8 @@
 	const primarySchedules = $derived(schedules.filter(schedule =>
 		!supporting.some(page => 'schedules' in page && page.schedules.includes(schedule.id))
 	));
-	let current = $state('1');
+	const selectedPage = $derived(getReturnPage());
+	const current = $derived(pages.find(item => item.id === selectedPage)?.id ?? '1');
 	let heading = $state<HTMLHeadingElement>();
 	const headingId = $props.id();
 	const annual = $derived(definition.period === 'year');
@@ -109,7 +111,7 @@
 	const currency = new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' });
 
 	async function showPage(id: string) {
-		current = id;
+		await selectReturnPage(id);
 		await tick();
 		heading?.focus({ preventScroll: true });
 		heading?.scrollIntoView({ block: 'start', behavior: 'instant' });
@@ -119,7 +121,7 @@
 		const schedule = schedules.find(schedule => schedule.totals?.some(field => field.id === id) ||
 			schedule.rows.some(row => row.fields.some(field => field.id === id)));
 		const page = schedule && supporting.find(page => 'schedules' in page && page.schedules.includes(schedule.id));
-		current = page ? page.id : '1';
+		await selectReturnPage(page?.id ?? '1');
 		await tick();
 		if (propertyDetails.some(group => group.fields.some(field => field.id === id))) {
 			await propertyRecord?.revealField(id);

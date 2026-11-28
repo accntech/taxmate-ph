@@ -25,7 +25,7 @@ for (const code of ['1601EQ', '1601FQ', '1602Qv2018', '1603', '1603Qv2018']) {
 		const prefix = `frm${code.replace('v2018', '')}:`;
 		expect(saved.values[prefix + 'optQuarter']).toBe('Q3');
 		await page.getByRole('row').filter({ hasText: `BIR Form ${code}` }).filter({ hasText: 'Q3' })
-			.getByRole('link', { name: 'Edit', exact: true }).click();
+			.getByRole('link', { name: /^Edit BIR Form / }).click();
 		await expect(quarter).toHaveText('Third Quarter');
 	});
 }

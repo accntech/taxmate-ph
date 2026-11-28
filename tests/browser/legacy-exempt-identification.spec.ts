@@ -53,7 +53,7 @@ test('June 2013 1702EX switches CTC and SEC and keeps the active identification 
 	const savedCertificate = await page.evaluate(() => JSON.parse(localStorage.getItem('ebirforms-created-returns-v1')!).returns[0].values);
 	expect(savedCertificate).toMatchObject({ CTCorReg: 'CTC', [numberId]: '00123456', [dateId]: `01/01/${year}`,
 		[placeId]: 'Example City', [amountId]: '925' });
-	await page.getByRole('link', { name: 'Edit', exact: true }).click();
+	await page.getByRole('link', { name: /^Edit BIR Form / }).click();
 	await expect(ctc).toBeChecked();
 	await expect(number).toHaveValue('00123456');
 	await expect(amount).toHaveValue('925');
@@ -87,7 +87,7 @@ test('June 2013 1702EX switches CTC and SEC and keeps the active identification 
 	const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('ebirforms-created-returns-v1')!).returns[0].values);
 	expect(saved).toMatchObject({ CTCorReg: 'Reg', [numberId]: 'CS-00123', [dateId]: '02/29/2000',
 		[placeId]: 'Example City', [amountId]: '0' });
-	await page.getByRole('link', { name: 'Edit', exact: true }).click();
+	await page.getByRole('link', { name: /^Edit BIR Form / }).click();
 	await expect(sec).toBeChecked();
 	await expect(number).toHaveValue('CS-00123');
 	await expect(amount).toBeDisabled();
@@ -144,7 +144,7 @@ for (const code of ['1702MX', '1702RT'] as const) {
 		await identification.getByRole('textbox', { name: 'Place of issue', exact: true }).fill('Example City');
 		await page.getByRole('button', { name: 'Save draft', exact: true }).click();
 		await expect(page).toHaveURL(formsPath);
-		await page.getByRole('link', { name: 'Edit', exact: true }).click();
+		await page.getByRole('link', { name: /^Edit BIR Form / }).click();
 		await expect(number).toHaveValue('CS-00123');
 		await expect(page.getByRole('radio', { name: 'SEC registration', exact: true })).toBeChecked();
 		await expect(amount).toBeDisabled();

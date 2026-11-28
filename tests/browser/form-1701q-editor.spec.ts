@@ -71,7 +71,7 @@ test('1701Q July identifies tax relief and clears the method when the filer opts
 	const returns = await page.evaluate(() => JSON.parse(localStorage.getItem('ebirforms-created-returns-v1')!).returns);
 	const saved = returns.find((record: { formCode: string }) => record.formCode === '1701Q');
 	expect(saved.values).toMatchObject({ 'frm1701q:j_id217': 'N', 'frm1701q:txtTaxRelief25': '0' });
-	await page.getByRole('row').filter({ hasText: '1701Q' }).getByRole('link', { name: 'Edit' }).click();
+	await page.getByRole('row').filter({ hasText: '1701Q' }).getByRole('link', { name: /^Edit BIR Form / }).click();
 	await expect(question.getByRole('radio', { name: 'No' })).toBeChecked();
 	await expect(method).toBeDisabled();
 });

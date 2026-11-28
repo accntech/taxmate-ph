@@ -50,7 +50,7 @@ test('1701-MS Item 31 supports a refund and carry-over split only when overpaid'
 		}), { message: `Item 31 amount column at ${width}px` }).toEqual([]);
 	}
 	await page.getByRole('button', { name: 'Save draft', exact: true }).click();
-	await page.getByRole('row').filter({ hasText: '1701MS' }).getByRole('link', { name: 'Edit', exact: true }).click();
+	await page.getByRole('row').filter({ hasText: '1701MS' }).getByRole('link', { name: /^Edit BIR Form / }).click();
 	await expect(refundAmount).toHaveValue('600');
 	await expect(carryAmount).toHaveValue('400');
 

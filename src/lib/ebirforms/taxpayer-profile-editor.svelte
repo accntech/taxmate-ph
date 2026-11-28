@@ -2,7 +2,7 @@
 	import * as stylex from '@stylexjs/stylex';
 	import { profileEditor } from './taxpayer-profile-editor.styles';
 	import { onMount, tick } from 'svelte';
-	import { goto } from '$app/navigation';
+	import { beforeNavigate, goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { buildTaxpayerRoute } from '$lib/apps/app-shell';
 	import { ebirformsWorkspace as workspace } from '$lib/ebirforms/ebirforms-workspace.svelte';
@@ -13,6 +13,8 @@
 	import type { CivilStatus, TaxpayerSize, TaxpayerSpouse } from '$lib/profiles/profile';
 
 	let { profileId }: { profileId?: string } = $props();
+	const correctionReturnTo = $derived(profileId ? workspace.profileCorrectionReturnTo(profileId) : undefined);
+	const exitHref = $derived(correctionReturnTo ?? resolve('/ebirforms/taxpayers'));
 	let ready = $state(false);
 	let notFound = $state(false);
 	const categoryOptions = [
@@ -70,10 +72,17 @@
 		email: validationErrors.spouseEmail
 	});
 
+	let mounted = false;
 	onMount(() => {
-		let active = true;
-		void workspace.loadTaxpayerProfiles().then(() => {
-			if (!active) return;
+		mounted = true;
+		void loadProfile();
+		return () => { mounted = false; };
+	});
+	async function loadProfile() {
+		ready = false;
+		await workspace.loadTaxpayerProfiles();
+		if (!mounted) return;
+		if (workspace.profileLoadState === 'loaded') {
 			if (profileId) {
 				notFound = !workspace.profiles.some((profile) => profile.id === profileId);
 				if (!notFound) workspace.selectTaxpayerProfile(profileId);
@@ -81,11 +90,17 @@
 				workspace.startNewTaxpayerProfile();
 			}
 			tinInput = profileId ? formatTinInput(workspace.profile) : '';
-			ready = true;
-		});
-		return () => {
-			active = false;
-		};
+		}
+		ready = true;
+	}
+	beforeNavigate(({ cancel, from, to }) => {
+		if (isSavingProfile) {
+			workspace.statusMessage = 'Wait for the profile to finish saving before leaving.';
+			cancel();
+			return;
+		}
+		if (correctionReturnTo && (!to || to.url.origin !== from?.url.origin
+			|| to.url.pathname + to.url.search + to.url.hash !== correctionReturnTo)) workspace.discardReturnChanges();
 	});
 
 	function updateTinParts(value: string) {
@@ -111,12 +126,13 @@
 			return;
 		}
 		isSavingProfile = true;
+		let saved = false;
 		try {
-			const saved = await workspace.saveTaxpayerProfile(tinInput, profileToSave);
-			if (saved) await goto(resolve('/ebirforms/taxpayers'));
+			saved = await workspace.saveTaxpayerProfile(tinInput, profileToSave);
 		} finally {
 			isSavingProfile = false;
 		}
+		if (saved) await goto(exitHref, { replaceState: !!correctionReturnTo });
 	}
 </script>
 
@@ -125,12 +141,17 @@
 </svelte:head>
 
 <Page size="md">
-	<ButtonLink href="/ebirforms/taxpayers" variant="ghost" size="sm" class={stylex.attrs(profileEditor.backLink).class}>
-		Back to taxpayers
+	<ButtonLink href={isSavingProfile ? undefined : exitHref} aria-disabled={isSavingProfile || undefined} data-sveltekit-replacestate={correctionReturnTo ? 'true' : undefined} variant="ghost" size="sm" class={stylex.attrs(profileEditor.backLink).class}>
+		{correctionReturnTo ? 'Back to return' : 'Back to taxpayers'}
 	</ButtonLink>
 	{#if !ready}
 		<Card>
 			<p role="status">Loading taxpayer profile…</p>
+		</Card>
+	{:else if workspace.profileLoadState === 'error'}
+		<Card>
+			<div role="alert"><h1>Could not load taxpayer</h1><p>{workspace.profileLoadError}</p></div>
+			<Button variant="secondary" onclick={() => void loadProfile()}>Retry</Button>
 		</Card>
 	{:else if notFound}
 		<Card>
@@ -152,8 +173,8 @@
 			}}>
 			<header class="editor-heading">
 				<h1>{profileId ? 'Edit taxpayer' : 'New taxpayer'}</h1>
-				{#if profileId && activeProfileRoute}
-					<ButtonLink href={activeProfileRoute} variant="ghost" size="sm">
+				{#if profileId && activeProfileRoute && !correctionReturnTo}
+					<ButtonLink href={isSavingProfile ? undefined : activeProfileRoute} aria-disabled={isSavingProfile || undefined} variant="ghost" size="sm">
 						Open forms
 					</ButtonLink>
 				{/if}
@@ -403,9 +424,11 @@
 					<Button type="submit" disabled={isSavingProfile}>
 						{isSavingProfile ? 'Saving…' : 'Save profile'}
 					</Button>
-					<ButtonLink href="/ebirforms/taxpayers" variant="secondary">
-						Cancel
-					</ButtonLink>
+					{#if isSavingProfile}
+						<Button variant="secondary" disabled>Cancel</Button>
+					{:else}
+						<ButtonLink href={exitHref} data-sveltekit-replacestate={correctionReturnTo ? 'true' : undefined} variant="secondary">Cancel</ButtonLink>
+					{/if}
 				</div>
 				<div class="workspace-status" role="status" aria-live="polite">
 					<span class="status-dot" aria-hidden="true"></span>

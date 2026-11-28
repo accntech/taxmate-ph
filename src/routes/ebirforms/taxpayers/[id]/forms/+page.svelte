@@ -32,6 +32,8 @@
 	let createOpen = $state(false);
 	let createError = $state('');
 	let deleteId = $state('');
+	let deleting = $state(false);
+	let deleteError = $state('');
 	let draftDeletion: { taxpayerId: string; confirmationId: string; ids: string[] } | null = null;
 	let isPrinting = $state(false);
 	let isGenerating = $state(false);
@@ -43,6 +45,7 @@
 	let actionErrors = $state<Record<string, string>>({});
 	let submissionNotice = $state<{ message: string; error: boolean } | null>(null);
 	let archivedNotice = $state<string | null>(null);
+	let recordNotice = $state<{ message: string; error?: boolean } | null>(null);
 	const profile = $derived(workspace.profiles.find(profile => profile.id === params.id));
 	const archived = $derived(workspace.archivedTaxpayerIds.includes(params.id));
 	const busy = $derived(workspace.isSavingDraft || workspace.isSubmitting || workspace.isPersisting || isPrinting);
@@ -82,18 +85,46 @@
 		errorRecordId = id;
 		actionErrors = { ...workspace.validationErrors };
 	}
+	function returnDescription(record: CreatedReturn) {
+		return `BIR Form ${record.formCode}, ${record.returnPeriod}`;
+	}
 	async function archiveForm(id: string) {
-		if (recordForAction(id) && await workspace.archiveReturn(id)) { archivedNotice = id; clearErrors(); }
+		const record = recordForAction(id);
+		if (!record) return;
+		if (await workspace.archiveReturn(id)) {
+			archivedNotice = id;
+			clearErrors();
+			recordNotice = { message: `${returnDescription(record)} archived. Use the Archived status filter to find it later.` };
+		} else {
+			recordNotice = { message: workspace.statusMessage, error: true };
+		}
 	}
 	async function restoreForm(id: string) {
-		if (recordForAction(id) && await workspace.restoreReturn(id)) archivedNotice = null;
+		const record = recordForAction(id);
+		if (!record) return;
+		if (await workspace.restoreReturn(id)) {
+			if (archivedNotice === id) archivedNotice = null;
+			recordNotice = { message: `${returnDescription(record)} restored.` };
+		} else {
+			recordNotice = { message: workspace.statusMessage, error: true };
+		}
 	}
 	async function deleteForm() {
-		if (!recordForAction(deleteId)) return;
-		if (await workspace.deleteReturn(deleteId)) {
-			if (errorRecordId === deleteId) clearErrors();
-			if (archivedNotice === deleteId) archivedNotice = null;
+		const record = recordForAction(deleteId);
+		if (!record || deleting) return;
+		deleting = true;
+		deleteError = '';
+		try {
+			if (!await workspace.deleteReturn(record.id)) {
+				deleteError = workspace.statusMessage;
+				return;
+			}
+			if (errorRecordId === record.id) clearErrors();
+			if (archivedNotice === record.id) archivedNotice = null;
+			recordNotice = { message: `Saved form deleted. ${returnDescription(record)} submission history has been kept.` };
 			deleteId = '';
+		} finally {
+			deleting = false;
 		}
 	}
 	function prepareDraftDeletion() {
@@ -211,11 +242,14 @@
 	}
 	function date(timestamp: number) { return new Intl.DateTimeFormat('en-PH', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Manila' }).format(timestamp); }
 	function amount(value: number) { return new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(value); }
+	async function loadRecords() {
+		ready = false;
+		[storageReady] = await Promise.all([workspace.loadCreatedReturns(), workspace.loadTaxpayerProfiles()]);
+		if (profile && workspace.profileLoadState === 'loaded') workspace.selectTaxpayerProfile(params.id);
+		ready = true;
+	}
 	onMount(() => {
-		void Promise.all([workspace.loadCreatedReturns().then(loaded => { storageReady = loaded; }), workspace.loadTaxpayerProfiles()]).then(() => {
-			if (profile) workspace.selectTaxpayerProfile(params.id);
-			ready = true;
-		});
+		void loadRecords();
 		return registerAgentControls(() => {
 			if (!ready || !storageReady || !profile || busy) return [];
 			const editControls = [...drafts]
@@ -252,6 +286,9 @@
 	<ButtonLink href="/ebirforms/taxpayers" variant="ghost" size="sm" class={stylex.attrs(styles.backLink).class}>← Back to taxpayers</ButtonLink>
 	{#if !ready}
 		<p role="status" class={stylex.attrs(styles.loading).class}>Loading taxpayer…</p>
+	{:else if workspace.profileLoadState === 'error'}
+		<div role="alert"><h1 class={stylex.attrs(styles.notFoundHeading).class}>Could not load taxpayer</h1><p class={stylex.attrs(styles.notFoundDescription).class}>{workspace.profileLoadError}</p></div>
+		<Button variant="secondary" onclick={() => void loadRecords()}>Retry</Button>
 	{:else if !profile}
 		<div role="alert"><h1 class={stylex.attrs(styles.notFoundHeading).class}>Taxpayer not found</h1><p class={stylex.attrs(styles.notFoundDescription).class}>Return to the taxpayers list and select a saved profile.</p></div>
 	{:else}
@@ -260,10 +297,10 @@
 			<Button data-taxmate-agent="Create return" data-taxmate-agent-sdk="" disabled={busy || archived || !storageReady} onclick={() => { createError = ''; createOpen = true; }}><AddCircle size={18} color="currentColor" />Create return</Button>
 		</header>
 		{#if archived}<p class={stylex.attrs(styles.status).class}>This taxpayer is archived. Restore the profile to create new returns.</p>{/if}
-		{#if archivedNotice}
+		{#if recordNotice || archivedNotice}
 			<div class={stylex.attrs(styles.archiveNotice).class}>
-				<p class={stylex.attrs(styles.statusMessage).class}>Return archived. Use the Archived status filter to find it later.</p>
-				<Button variant="secondary" size="sm" disabled={busy} onclick={() => archivedNotice && restoreForm(archivedNotice)}>Undo archive</Button>
+				{#if recordNotice}<p role={recordNotice.error ? 'alert' : 'status'} class={stylex.attrs(recordNotice.error ? styles.error : styles.statusMessage).class}>{recordNotice.message}</p>{/if}
+				{#if archivedNotice}<Button variant="secondary" size="sm" disabled={busy} onclick={() => archivedNotice && restoreForm(archivedNotice)}>Undo archive</Button>{/if}
 			</div>
 		{/if}
 		{#if errorRecord && Object.keys(actionErrors).length}
@@ -296,9 +333,9 @@
 			{/snippet}
 			{#snippet actions(row)}
 				{#if busy || !storageReady}
-					<Button variant="secondary" size="sm" disabled><span class="action-icon"><Icon icon={glyphs.pencil} /></span>Edit</Button>
+					<Button variant="secondary" size="sm" disabled aria-label={`Edit BIR Form ${row.form}, ${row.period}`}><span class="action-icon"><Icon icon={glyphs.pencil} /></span>Edit</Button>
 				{:else}
-					<ButtonLink href={route(row.id, String(row.form))} variant="secondary" size="sm"><span class="action-icon"><Icon icon={glyphs.pencil} /></span>Edit</ButtonLink>
+					<ButtonLink href={route(row.id, String(row.form))} variant="secondary" size="sm" aria-label={`Edit BIR Form ${row.form}, ${row.period}`}><span class="action-icon"><Icon icon={glyphs.pencil} /></span>Edit</ButtonLink>
 				{/if}
 				<Menu label={`More actions for BIR Form ${row.form}, ${row.period}`} tooltip="More actions" align="right" disabled={busy || !storageReady} triggerClass="form-actions-trigger" panelClass="form-actions-panel">
 					{#snippet trigger()}<span class="action-icon"><Icon icon={glyphs.more} /></span>{/snippet}
@@ -310,7 +347,7 @@
 						<MenuItem variant="ghost" size="compact" class="form-action" disabled={settings.prefs.submissionMode === 'legacy_sftp' && row.form !== '1601EQ'} onSelect={() => { close(); void submit(row.id); }}><span class="action-icon"><Icon icon={glyphs.send} /></span>{settings.prefs.submissionMode === 'legacy_sftp' ? 'Submit to BIR' : 'Prepare locally'}</MenuItem>
 						<MenuItem variant="ghost" size="compact" class="form-action" onSelect={() => { close(); void print(row.id); }}><span class="action-icon"><Icon icon={glyphs.printer} /></span>Generate PDF</MenuItem>
 						<div class="action-separator" role="separator"></div>
-						<MenuItem variant="destructive-ghost" size="compact" class="form-action" onSelect={() => { close(); deleteId = row.id; }}><span class="action-icon"><Icon icon={glyphs.trash} /></span>Delete…</MenuItem>
+						<MenuItem variant="destructive-ghost" size="compact" class="form-action" onSelect={() => { close(); deleteError = ''; deleteId = row.id; }}><span class="action-icon"><Icon icon={glyphs.trash} /></span>Delete…</MenuItem>
 						</div>
 					{/snippet}
 				</Menu>
@@ -323,12 +360,12 @@
 		<FormCommand forms={workspace.forms} taxpayerName={profile?.taxpayerName} status={createError} disabled={busy || !profile || archived || !storageReady} onselect={create} oncancel={() => createOpen = false} />
 	{/if}
 </Dialog>
-<Dialog open={!!deleteId} onOpenChange={(open) => { if (!open) deleteId = ''; }} title="Delete return?"
+<Dialog open={!!deleteId} onOpenChange={(open) => { if (!open && !deleting) deleteId = ''; }} closedByBackdrop={!deleting} closedByEscape={!deleting} title="Delete return?"
 	description={`Delete BIR Form ${deletingRecord?.formCode || ''}, ${deletingRecord?.returnPeriod || ''}? This removes the working copy permanently. Submitted return history is kept.`}>
-	<p class={stylex.attrs(styles.status).class}>{workspace.statusMessage}</p>
+	{#if deleteError}<p role="alert" class={stylex.attrs(styles.error).class}>{deleteError}</p>{/if}
 	{#snippet footer()}
-		<Button variant="secondary" onclick={() => deleteId = ''}>Cancel</Button>
-		<Button variant="danger" data-agent-confirm="delete" disabled={busy || !storageReady} onclick={deleteForm}>Delete return</Button>
+		<Button variant="secondary" disabled={deleting} onclick={() => deleteId = ''}>Cancel</Button>
+		<Button variant="danger" data-agent-confirm="delete" disabled={deleting || busy || !storageReady} onclick={deleteForm}>{deleting ? 'Deleting…' : 'Delete return'}</Button>
 	{/snippet}
 </Dialog>
 <Toaster />

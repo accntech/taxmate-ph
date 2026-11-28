@@ -80,7 +80,7 @@ for (const { item, atc, total } of [
 		async function saveAndReopen() {
 			await page.getByRole('button', { name: 'Save draft', exact: true }).click();
 			await expect(page).toHaveURL(list);
-			await page.getByRole('row').filter({ hasText: '1701A' }).getByRole('link', { name: 'Edit', exact: true }).click();
+			await page.getByRole('row').filter({ hasText: '1701A' }).getByRole('link', { name: /^Edit BIR Form / }).click();
 			await goToReturnPage(page, 2);
 		}
 		await saveAndReopen();

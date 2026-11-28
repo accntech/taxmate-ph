@@ -22,7 +22,7 @@ for (const { status, paperSize } of cases) {
 		}, { status, paperSize });
 		await page.goto(`/ebirforms/taxpayers/${taxpayerId}/forms`);
 		// A cold Vite server compiles the UI modules before the page can hydrate.
-		await expect(page.getByRole('link', { name: 'Edit', exact: true })).toBeVisible({ timeout: 15_000 });
+		await expect(page.getByRole('link', { name: /^Edit BIR Form / })).toBeVisible({ timeout: 15_000 });
 		await page.evaluate(() => {
 			const native = (window as any).__TAURI_INTERNALS__;
 			native.transformCallback = () => 1;

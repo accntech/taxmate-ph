@@ -8,13 +8,13 @@ async function menu(page: Page) {
 test('table owns all six actions and editor saves back to the table', async ({ page }) => {
 	await seedWorkspace(page);
 	await page.goto(tablePath);
-	await expect(page.getByRole('link', { name: 'Edit', exact: true })).toBeVisible();
+	await expect(page.getByRole('link', { name: /^Edit BIR Form / })).toBeVisible();
 	await menu(page);
 	for (const name of ['Archive', 'Delete…', 'Mark as final', 'Submit to BIR', 'Generate PDF']) {
 		await expect(page.getByRole('menuitem', { name, exact: true })).toBeVisible();
 	}
 	await page.keyboard.press('Escape');
-	await page.getByRole('link', { name: 'Edit', exact: true }).click();
+	await page.getByRole('link', { name: /^Edit BIR Form / }).click();
 	await expect(page).toHaveURL(formPath);
 	for (const name of ['Mark as final', 'Submit to BIR', 'Print to PDF']) {
 		await expect(page.getByRole('button', { name, exact: true })).toHaveCount(0);
@@ -23,15 +23,15 @@ test('table owns all six actions and editor saves back to the table', async ({ p
 	await page.getByRole('button', { name: 'Save draft', exact: true }).click();
 	await expect(page).toHaveURL(tablePath);
 	await expect(page.getByRole('cell', { name: '2025Q2', exact: true })).toBeVisible();
-	await page.getByRole('link', { name: 'Edit', exact: true }).click();
+	await page.getByRole('link', { name: /^Edit BIR Form / }).click();
 	await page.getByRole('textbox', { name: 'Year', exact: true }).fill('2024');
 	await page.getByRole('button', { name: 'Cancel', exact: true }).click();
 	await expect(page).toHaveURL(tablePath);
 	await expect(page.getByRole('cell', { name: '2025Q2', exact: true })).toBeVisible();
-	await page.getByRole('link', { name: 'Edit', exact: true }).click();
+	await page.getByRole('link', { name: /^Edit BIR Form / }).click();
 	await page.getByRole('textbox', { name: 'Year', exact: true }).fill('2023');
 	await page.getByRole('link', { name: '← Back to forms', exact: true }).click();
-	await page.getByRole('link', { name: 'Edit', exact: true }).click();
+	await page.getByRole('link', { name: /^Edit BIR Form / }).click();
 	await expect(page.getByRole('textbox', { name: 'Year', exact: true })).toHaveValue('2025');
 });
 
@@ -40,17 +40,17 @@ test('archive is reversible and delete requires confirmation from the table', as
 	await page.goto(tablePath);
 	await menu(page);
 	await page.getByRole('menuitem', { name: 'Archive', exact: true }).click();
-	await expect(page.getByRole('link', { name: 'Edit', exact: true })).toHaveCount(0);
+	await expect(page.getByRole('link', { name: /^Edit BIR Form / })).toHaveCount(0);
 	expect(await page.evaluate(() => JSON.parse(localStorage.getItem('ebirforms-created-returns-v1')!).returns[0].archived)).toBe(true);
 	await page.getByRole('button', { name: 'Undo archive', exact: true }).click();
 	await menu(page);
 	await page.getByRole('menuitem', { name: 'Delete…', exact: true }).click();
 	await page.getByRole('dialog').getByRole('button', { name: 'Cancel', exact: true }).click();
-	await expect(page.getByRole('link', { name: 'Edit', exact: true })).toBeVisible();
+	await expect(page.getByRole('link', { name: /^Edit BIR Form / })).toBeVisible();
 	await menu(page);
 	await page.getByRole('menuitem', { name: 'Delete…', exact: true }).click();
 	await page.getByRole('dialog').getByRole('button', { name: 'Delete return', exact: true }).click();
-	await expect(page.getByRole('link', { name: 'Edit', exact: true })).toHaveCount(0);
+	await expect(page.getByRole('link', { name: /^Edit BIR Form / })).toHaveCount(0);
 	expect(await page.evaluate(() => JSON.parse(localStorage.getItem('ebirforms-created-returns-v1')!).returns)).toEqual([]);
 });
 

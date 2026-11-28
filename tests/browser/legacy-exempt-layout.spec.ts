@@ -204,7 +204,7 @@ test('June 2013 Form 1702EX saves the accreditation number and dates in their or
 
 	await page.getByRole('button', { name: 'Save draft', exact: true }).click();
 	await expect(page).toHaveURL(`/ebirforms/taxpayers/${taxpayerId}/forms`);
-	const edit = page.getByRole('link', { name: 'Edit', exact: true });
+	const edit = page.getByRole('link', { name: /^Edit BIR Form / });
 	await expect(edit).toBeVisible();
 	const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('ebirforms-created-returns-v1')!).returns[0].values);
 	await edit.click();

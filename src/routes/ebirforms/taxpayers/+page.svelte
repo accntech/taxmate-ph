@@ -4,7 +4,6 @@
   import { onMount } from "svelte";
   import { resolve } from "$app/paths";
   import Menu from "$lib/components/ui/menu/menu.svelte";
-  import ActionButton from "$lib/components/ui/button/compat-button.svelte";
   import MenuItem from "$lib/components/ui/menu-item/menu-item.svelte";
   import Icon from "$lib/components/ui/icon/icon.svelte";
   import { glyphs } from "$lib/components/ui/icons";
@@ -205,14 +204,14 @@
         {/if}
       {/snippet}
       {#snippet actions(row)}
-        <ActionButton
+        <ButtonLink
           href={`${buildTaxpayerRoute(row.id)}/edit`}
-          size="compact"
-          variant="outlined"
+          size="sm"
+          variant="secondary"
           aria-label={`Edit profile for ${row.name}`}
         >
           <span class="action-icon"><Icon icon={glyphs.pencil} /></span>Edit
-        </ActionButton>
+        </ButtonLink>
         <Menu
           label={`More actions for ${row.name}`}
           tooltip="More actions"

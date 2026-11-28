@@ -37,7 +37,7 @@ test('1701A keeps cleared election credits blank after saving and reopening', as
 	}
 	await expect(foreignTaxNumber).toHaveCount(0);
 	await page.getByRole('button', { name: 'Save draft', exact: true }).click();
-	await page.getByRole('row').filter({ hasText: '1701A' }).getByRole('link', { name: 'Edit', exact: true }).click();
+	await page.getByRole('row').filter({ hasText: '1701A' }).getByRole('link', { name: /^Edit BIR Form / }).click();
 
 	for (const election of [amended, foreignTaxCredits]) {
 		await expect(election.getByRole('radio', { name: 'No', exact: true })).toBeChecked();

@@ -66,7 +66,7 @@ test('the filing period uses DateInput’s tab order and advances after typing a
 
 	await page.getByRole('button', { name: 'Save draft', exact: true }).click();
 	await expect(page).toHaveURL(formsPath);
-	await page.getByRole('link', { name: 'Edit', exact: true }).click();
+	await page.getByRole('link', { name: /^Edit BIR Form / }).click();
 	await expect(month).toHaveValue('12');
 	await expect(year).toHaveValue('2023');
 });
@@ -83,7 +83,7 @@ test('the filing period supports whole-period paste and returns focus after usin
 	const values = await page.evaluate(() => JSON.parse(localStorage.getItem('ebirforms-created-returns-v1')!).returns[0].values);
 	expect(values).toMatchObject({ [prefix + 'txtMonth']: '07', [prefix + 'txtYear']: '' });
 
-	await page.getByRole('link', { name: 'Edit', exact: true }).click();
+	await page.getByRole('link', { name: /^Edit BIR Form / }).click();
 	await expect(month).toHaveValue('07');
 	await expect(year).toHaveValue('');
 	await month.focus();

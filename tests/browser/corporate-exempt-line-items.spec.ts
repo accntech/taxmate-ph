@@ -94,7 +94,7 @@ test('1702EX Schedule 3 adds, edits and deletes income in a side drawer', async 
 
 	await page.getByRole('button', { name: 'Save draft', exact: true }).click();
 	await expect(page).toHaveURL(base);
-	await page.getByRole('link', { name: 'Edit', exact: true }).click();
+	await page.getByRole('link', { name: /^Edit BIR Form / }).click();
 	await goToReturnPage(page, 4);
 	await expect(count(2)).toBeVisible();
 	await expect(service).toBeVisible();
@@ -141,7 +141,7 @@ test('1702EX retains saved continuation entries and calculated totals', async ({
 		[id('txtPg4S3I3_2Col2')]: '450',
 	});
 
-	await page.getByRole('link', { name: 'Edit', exact: true }).click();
+	await page.getByRole('link', { name: /^Edit BIR Form / }).click();
 	await goToReturnPage(page, 4);
 	for (const name of ['Existing rental', 'Existing fee']) {
 		await income.getByRole('button', { name, exact: true }).click();
@@ -270,7 +270,7 @@ test('1702EXv2018C adds each custom item 17 deduction separately', async ({ page
 	await expect(printedField('txtPg3Pt6S1I18TotOrdinaryAllowableItemDeduc')).toHaveValue('675');
 	await printed.close();
 	await page.getByRole('button', { name: 'Not now', exact: true }).click();
-	await page.getByRole('link', { name: 'Edit', exact: true }).click();
+	await page.getByRole('link', { name: /^Edit BIR Form / }).click();
 	await goToReturnPage(page, 3);
 	await expect(heading).toHaveText(`${title} (5/6)`);
 	await expect(list.getByRole('button', { name: 'Saved expense', exact: true })).toBeVisible();

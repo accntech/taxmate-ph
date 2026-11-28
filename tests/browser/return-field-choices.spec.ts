@@ -49,7 +49,7 @@ test('Yes/No radios reveal applicable fields and preserve withheld entries acros
 	expect(saved['frm1601EQ:optTaxesWithheld']).toBe('N');
 	expect(saved['frm1601EQ:txtATC13']).toBe('WI120');
 	expect(saved['frm1601EQ:txtTaxBase13']).toBe('100000');
-	await page.getByRole('link', { name: 'Edit', exact: true }).click();
+	await page.getByRole('link', { name: /^Edit BIR Form / }).click();
 	await expect(withheld.getByRole('radio', { name: 'No', exact: true })).toBeChecked();
 	await withheld.getByRole('radio', { name: 'Yes', exact: true }).check();
 	await page.getByRole('button', { name: 'Edit line item 1', exact: true }).click();

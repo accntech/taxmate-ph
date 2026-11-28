@@ -160,7 +160,7 @@ test('drag and keyboard reordering persist whole rows through save and reopen', 
 	expect(saved['frm1601EQ:txtTaxWithheld13']).toBe('1000.00');
 	expect(saved['frm1601EQ:txtATC14']).toBe('WI120');
 	expect(saved['frm1601EQ:txtTaxBase14']).toBe('100000');
-	await page.getByRole('link', { name: 'Edit', exact: true }).click();
+	await page.getByRole('link', { name: /^Edit BIR Form / }).click();
 	await expect(items(page).getByRole('listitem').first()).toContainText('WI010');
 	await deleteLine(page, 1);
 	await expect(items(page).getByRole('listitem')).toHaveCount(1);

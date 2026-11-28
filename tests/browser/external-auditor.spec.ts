@@ -111,7 +111,7 @@ for (const [code, accreditation, issueDate, savedAccreditation] of [
 		await expect(page).toHaveURL(returns);
 		const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('ebirforms-created-returns-v1')!).returns[0].values);
 		expect(saved).toMatchObject({ ...savedAccreditation, [issueDate]: '01/15/2024' });
-		await page.getByRole('link', { name: 'Edit', exact: true }).click();
+		await page.getByRole('link', { name: /^Edit BIR Form / }).click();
 		await goToReturnPage(page, 2);
 		await expect(number).toHaveValue(accreditation);
 		await expect(date.getByRole('spinbutton', { name: 'Year', exact: true })).toHaveValue('2024');

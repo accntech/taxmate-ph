@@ -75,8 +75,19 @@ export function createInitialFormValues(profile: TaxpayerProfile, code = '1601EQ
 
 const newDraftMessage = 'Save draft to keep this return on this device.';
 
+type ProfileCorrection = {
+	returnTo: string;
+	record: CreatedReturn;
+	values: Record<string, string>;
+	finalFlag: string;
+	status: CreatedReturnStatus;
+	validate: boolean;
+	isNew: boolean;
+};
+
 class EbirformsWorkspace {
 	#pendingReturn = $state<CreatedReturn | null>(null);
+	#profileCorrection: ProfileCorrection | null = null;
 	#profileLoad: Promise<void> | null = null;
 	#workingCopiesLoaded = false;
 	#workingCopiesLoadFailed = false;
@@ -141,6 +152,7 @@ class EbirformsWorkspace {
 
 	discardReturnChanges(): void {
 		if (this.isPersisting) return;
+		this.#profileCorrection = null;
 		this.#pendingReturn = null;
 		if (this.activeReturnId && this.createdReturns.some(item => item.id === this.activeReturnId)
 			&& this.openReturn(this.activeReturnId)) return;
@@ -151,6 +163,36 @@ class EbirformsWorkspace {
 		this.submissionReceipt = null;
 		this.importBuffer = '';
 		this.statusMessage = 'Unsaved form discarded.';
+	}
+
+	suspendReturnForProfile(taxpayerId: string, formCode: string, returnId: string | null, returnTo: string): boolean {
+		const record = returnId ? this.createdReturns.find(item => item.id === returnId) : this.#pendingReturn;
+		if (!record || record.id !== this.activeReturnId || record.taxpayerId !== taxpayerId || record.formCode !== formCode) return false;
+		this.#profileCorrection = {
+			returnTo, record: { ...record, values: { ...record.values } }, values: { ...this.formValues }, finalFlag: this.finalFlag, status: this.currentReturnStatus,
+			validate: Object.keys(this.validationErrors).length > 0, isNew: !returnId
+		};
+		return true;
+	}
+
+	profileCorrectionReturnTo(taxpayerId: string): string | undefined {
+		return this.#profileCorrection?.record.taxpayerId === taxpayerId ? this.#profileCorrection.returnTo : undefined;
+	}
+
+	resumeReturnAfterProfile(taxpayerId: string, formCode: string, returnTo: string): boolean {
+		const correction = this.#profileCorrection;
+		if (!correction || correction.returnTo !== returnTo || correction.record.taxpayerId !== taxpayerId || correction.record.formCode !== formCode) return false;
+		this.#profileCorrection = null;
+		this.#pendingReturn = correction.isNew ? correction.record : null;
+		if (!this.openReturn(correction.record.id)) return false;
+		this.formValues = {
+			...correction.values,
+			...getManagedTaxpayerValues(formCode, this.profile, correction.status, correction.values)
+		};
+		this.finalFlag = correction.finalFlag;
+		if (correction.validate) this.validationErrors = validateReturnValues(formCode, this.formValues);
+		this.statusMessage = correction.isNew ? newDraftMessage : this.hasUnsavedChanges ? 'Save draft to keep your changes.' : 'Saved form opened.';
+		return true;
 	}
 
 	returnPeriod = $derived(getReturnPeriod(this.selectedForm?.code ?? '1601EQ', this.formValues));

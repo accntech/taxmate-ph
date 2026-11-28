@@ -342,7 +342,7 @@ test('1701 exclusive choices with three or more options use selects and preserve
 	const values = await page.evaluate(() => JSON.parse(localStorage.getItem('ebirforms-created-returns-v1')!).returns.find((record: { formCode: string }) => record.formCode === '1701').values);
 	expect(values['frm1701:rdoPg1Pt1I4ATC']).toBe('Mixed');
 	expect(values['frm1701:rdoPg1Pt1I21Accounting']).toBe('Accrual');
-	await page.getByRole('row').filter({ hasText: 'BIR Form 1701' }).getByRole('link', { name: 'Edit', exact: true }).click();
+	await page.getByRole('row').filter({ hasText: 'BIR Form 1701' }).getByRole('link', { name: /^Edit BIR Form / }).click();
 	await expect(atc).toContainText('Mixed');
 	await expect(accounting).toContainText('Accrual');
 });
@@ -749,7 +749,7 @@ for (const width of [1440, 390]) {
 
 		await page.getByRole('button', { name: 'Save draft', exact: true }).click();
 		await expect(page).toHaveURL(/\/forms$/);
-		await page.getByRole('row').filter({ hasText: 'BIR Form 1701' }).getByRole('link', { name: 'Edit', exact: true }).click();
+		await page.getByRole('row').filter({ hasText: 'BIR Form 1701' }).getByRole('link', { name: /^Edit BIR Form / }).click();
 		await goToReturnPage(page, 3);
 		await expect(field('5_3')).toHaveText('₱1,200');
 		await expect(field('6_8D')).toHaveText('₱400');
@@ -828,7 +828,7 @@ for (const width of [1440, 390]) {
 
 		await page.getByRole('button', { name: 'Save draft', exact: true }).click();
 		await expect(page).toHaveURL(/\/forms$/);
-		await page.getByRole('row').filter({ hasText: 'BIR Form 1701' }).getByRole('link', { name: 'Edit', exact: true }).click();
+		await page.getByRole('row').filter({ hasText: 'BIR Form 1701' }).getByRole('link', { name: /^Edit BIR Form / }).click();
 		await goToReturnPage(page, 8);
 		await expect(field('7I5Spouse')).toHaveText('₱800');
 		await expect(field('8B1I8TotalNOLCO')).toHaveText('₱400');
@@ -899,7 +899,7 @@ test('January 1701 attachment lets mobile filers choose a deduction and follow i
 	await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
 	await page.getByRole('button', { name: 'Save draft', exact: true }).click();
 	await expect(page).toHaveURL(/\/forms$/);
-	await page.getByRole('row').filter({ hasText: 'BIR Form 1701' }).getByRole('link', { name: 'Edit', exact: true }).click();
+	await page.getByRole('row').filter({ hasText: 'BIR Form 1701' }).getByRole('link', { name: /^Edit BIR Form / }).click();
 	await expect(page.locator('.income-editor')).toBeVisible();
 	await goToReturnPage(page, 8);
 	await expect(rent).toHaveValue('18,000');

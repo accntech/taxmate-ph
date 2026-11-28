@@ -52,7 +52,7 @@ test('June 2013 Form 1701 reads Item 29 from the editable installment on page 3'
 	await expect(summary).toHaveText('₱12,500');
 	await page.getByRole('button', { name: 'Save draft', exact: true }).click();
 	await expect(page).toHaveURL(list);
-	await page.getByRole('row').filter({ hasText: '1701' }).getByRole('link', { name: 'Edit', exact: true }).click();
+	await page.getByRole('row').filter({ hasText: '1701' }).getByRole('link', { name: /^Edit BIR Form / }).click();
 	await expect(summary).toHaveText('₱12,500');
 	for (const width of [1280, 390]) {
 		await page.setViewportSize({ width, height: 900 });
@@ -251,7 +251,7 @@ test('legacy 1701 carries the taxpayer details trade name through a new draft an
 		return storage.returns.find((record: { formCode: string }) => record.formCode === '1701')?.values[field];
 	}, field);
 	expect(savedName).toBe(name);
-	await page.getByRole('row').filter({ hasText: 'BIR Form 1701' }).getByRole('link', { name: 'Edit', exact: true }).click();
+	await page.getByRole('row').filter({ hasText: 'BIR Form 1701' }).getByRole('link', { name: /^Edit BIR Form / }).click();
 	await expect(displayName.locator('dd')).toHaveText(name);
 	await expect(displayType.locator('dd')).toHaveText('Professional');
 	if (output) await captureDraft('saved-draft', output);
@@ -304,7 +304,7 @@ test('prefills the quarterly taxpayer type and preserves a saved return override
 	const trust = type.getByRole('radio', { name: 'Trust', exact: true });
 	await trust.check();
 	await page.getByRole('button', { name: 'Save draft', exact: true }).click();
-	await page.getByRole('row').filter({ hasText: '1701Qv2018' }).getByRole('link', { name: 'Edit', exact: true }).click();
+	await page.getByRole('row').filter({ hasText: '1701Qv2018' }).getByRole('link', { name: /^Edit BIR Form / }).click();
 	await expect(trust).toBeChecked();
 });
 
@@ -324,7 +324,7 @@ for (const code of ['1701Q', '1701Qv2018']) {
 			return storage.returns.find((record: { formCode: string }) => record.formCode === code)?.values[branchId];
 		}, { code, branchId });
 		expect(savedBranch).toBe('078');
-		await page.getByRole('row').filter({ hasText: code }).getByRole('link', { name: 'Edit', exact: true }).click();
+		await page.getByRole('row').filter({ hasText: code }).getByRole('link', { name: /^Edit BIR Form / }).click();
 		await expect(tin).toBeVisible({ timeout: 30_000 });
 		await tin.screenshot({ path: testInfo.outputPath(`${code}-branch-code.png`) });
 	});
@@ -493,7 +493,7 @@ for (const { code, monthId, yearId, shortId, short, savedYear, displayedYear } o
 			return storage.returns.find((record: { id: string }) => record.id === 'older-filing-period')?.values;
 		});
 		expect(saved).toMatchObject({ [monthId]: '06', [yearId]: savedYear, [shortId]: short });
-		await page.getByRole('row').filter({ hasText: code }).getByRole('link', { name: 'Edit', exact: true }).click();
+		await page.getByRole('row').filter({ hasText: code }).getByRole('link', { name: /^Edit BIR Form / }).click();
 		await expect(month).toHaveValue('06');
 		await expect(year).toHaveValue(displayedYear);
 	});
@@ -529,7 +529,7 @@ test('1701A derives the rate from the ATC and retains the calculated total after
 	await page.getByRole('button', { name: 'Previous page', exact: true }).click();
 	await expect(page.locator('[id="frm1701A:txt30"]')).toHaveText('₱62,500');
 	await page.getByRole('button', { name: 'Save draft', exact: true }).click();
-	await page.getByRole('row').filter({ hasText: '1701A' }).getByRole('link', { name: 'Edit', exact: true }).click();
+	await page.getByRole('row').filter({ hasText: '1701A' }).getByRole('link', { name: /^Edit BIR Form / }).click();
 	await expect(page.locator('[id="frm1701A:txt30"]')).toHaveText('₱62,500');
 	const output = process.env.INCOME_PREVIEW_DIR;
 	if (output) {
@@ -859,7 +859,7 @@ test('1700v2018 uses native fields and retains values while paging and reopening
  await expect(edit).toBeHidden();
  await page.getByRole('button', { name: 'Save draft', exact: true }).click();
  await expect(page).toHaveURL(/\/forms$/);
- await page.getByRole('row').filter({ hasText: '1700v2018' }).getByRole('link', { name: 'Edit', exact: true }).click();
+ await page.getByRole('row').filter({ hasText: '1700v2018' }).getByRole('link', { name: /^Edit BIR Form / }).click();
  await expect(year).toHaveValue('2025');
  await page.getByRole('button', { name: 'Next page', exact: true }).click();
  await page.getByRole('button', { name: 'Sample Employer', exact: true }).click();
@@ -1596,7 +1596,7 @@ test('legacy 1700 groups employer TIN entry and preserves each saved segment', a
  }
  await page.getByRole('button', { name: 'Save draft', exact: true }).click();
  await expect(page).toHaveURL(/\/forms$/);
- await page.getByRole('row').filter({ hasText: '1700' }).getByRole('link', { name: 'Edit', exact: true }).click();
+ await page.getByRole('row').filter({ hasText: '1700' }).getByRole('link', { name: /^Edit BIR Form / }).click();
  await goToReturnPage(page, 2);
  for (const [number, value] of [[1, '001-024-350-00008'], [2, '---00007']] as const) {
   await page.getByRole('button', { name: `Employer ${number}`, exact: true }).click();

@@ -14,6 +14,7 @@
 	import Form0619Editor from '$lib/forms/form-0619/form-0619-editor.svelte';
 	import Form1601EQ from '$lib/forms/form-1601-eq/form-1601-eq.svelte';
 	import FormSkeleton from '$lib/forms/form-skeleton.svelte';
+	import { returnHrefWithoutPage } from '$lib/forms/return-page-navigation';
 	import ReturnErrors from '$lib/forms/return-errors.svelte';
 	import ReturnTaxpayerInformation from '$lib/forms/return-taxpayer-information.svelte';
 	import { ebirformsWorkspace as workspace } from '$lib/ebirforms/ebirforms-workspace.svelte';
@@ -43,26 +44,46 @@
 		return null;
 	});
 	const recordId = $derived(page.url.searchParams.get('return'));
+	const returnHref = $derived(page.url.pathname + page.url.search + page.url.hash);
+	const taxpayerHref = $derived(resolve('/ebirforms/taxpayers/[id]/edit', { id: params.id }));
 	const busy = $derived(workspace.isSavingDraft || workspace.isSubmitting || workspace.isPersisting);
+	let loadVersion = 0;
+	let requestedHref: string | undefined;
 	onMount(() => {
-		let mounted = true;
-		void workspace.ensureReturnEditorData().then(() => {
-			if (!mounted) return;
-			openRequestedReturn();
-			ready = true;
-		});
-		return () => { mounted = false; };
+		loadRequestedReturn();
+		return () => { loadVersion += 1; };
 	});
-	afterNavigate(() => { if (ready) openRequestedReturn(); });
-	beforeNavigate(({ cancel }) => {
+	afterNavigate(loadRequestedReturn);
+	function loadRequestedReturn() {
+		const href = returnHrefWithoutPage(page.url.href);
+		if (requestedHref === href) return;
+		requestedHref = href;
+		void loadReturn();
+	}
+	async function loadReturn() {
+		const version = ++loadVersion;
+		ready = false;
+		await workspace.ensureReturnEditorData();
+		if (version !== loadVersion) return;
+		if (workspace.profileLoadState === 'loaded') openRequestedReturn();
+		ready = true;
+	}
+	beforeNavigate(({ cancel, from, to }) => {
 		if (busy) {
 			workspace.statusMessage = 'Wait for the current operation to finish before leaving.';
 			cancel();
-		} else {
-			workspace.discardReturnChanges();
+			return;
 		}
+		if (from?.url && to?.url && returnHrefWithoutPage(to.url.href) === returnHrefWithoutPage(from.url.href)) return;
+		if (ready && !recordError && to?.url.origin === page.url.origin && to.url.pathname === taxpayerHref && !to.url.search
+			&& workspace.suspendReturnForProfile(params.id, params.formCode, recordId, returnHref)) return;
+		workspace.discardReturnChanges();
 	});
 	function openRequestedReturn() {
+		if (workspace.resumeReturnAfterProfile(params.id, params.formCode, returnHref)) {
+			recordError = '';
+			return;
+		}
 		if (!recordId && page.url.searchParams.get('new') === 'true') {
 			recordError = workspace.createReturn(params.id, params.formCode) ? '' : workspace.statusMessage;
 			return;
@@ -96,6 +117,9 @@
 	</ButtonLink>
 	{#if !ready}
 		<FormSkeleton />
+	{:else if workspace.profileLoadState === 'error'}
+		<div role="alert" class={stylex.attrs(styles.error).class}>{workspace.profileLoadError}</div>
+		<Button variant="secondary" onclick={() => void loadReturn()}>Retry</Button>
 	{:else if recordError}
 		<p role="alert" class={stylex.attrs(styles.error).class}>{recordError}</p>
 	{:else}
@@ -117,12 +141,12 @@
 				</header>
 				{#if workspace.selectedForm}
 					{#snippet taxpayerInformation()}
-						<ReturnTaxpayerInformation formCode={params.formCode} values={workspace.formValues} profile={workspace.profile} taxpayerHref={`/ebirforms/taxpayers/${params.id}/edit`} />
+							<ReturnTaxpayerInformation formCode={params.formCode} values={workspace.formValues} profile={workspace.profile} {taxpayerHref} />
 					{/snippet}
 					{#if !incomeForm && Object.keys(workspace.validationErrors).length}
 						<div class="eq-errors">
 							<ReturnErrors definition={workspace.selectedForm} errors={workspace.validationErrors}
-								taxpayerHref={`/ebirforms/taxpayers/${params.id}/edit`} fieldLabel={corporateForm ? (id) => corporateFieldLabel(corporateForm, workspace.formValues, id) : undefined}
+								{taxpayerHref} fieldLabel={corporateForm ? (id) => corporateFieldLabel(corporateForm, workspace.formValues, id) : undefined}
 								onreveal={corporateEditor?.revealField ?? withholdingEditor?.revealField} />
 						</div>
 					{/if}
@@ -130,14 +154,14 @@
 						<legend class={stylex.attrs(styles.visuallyHidden).class}>BIR form details</legend>
 						{#if incomeForm && editor?.kind === 'income'}
 							{#key incomeForm.code}
-								<editor.Component form={incomeForm} profile={workspace.profile} values={workspace.formValues} errors={workspace.validationErrors} taxpayerHref={`/ebirforms/taxpayers/${params.id}/edit`} onvaluechange={(patch) => workspace.updateFormValues(patch)} />
+									<editor.Component form={incomeForm} profile={workspace.profile} values={workspace.formValues} errors={workspace.validationErrors} {taxpayerHref} onvaluechange={(patch) => workspace.updateFormValues(patch)} />
 							{/key}
 						{:else if corporateForm && editor?.kind === 'corporate'}
 							{#key `${params.formCode}:${recordId ?? ''}`}
 								<editor.Component bind:this={corporateEditor} form={corporateForm} values={workspace.formValues}
 									hasProfileBusinessLine={!!workspace.profile.lineOfBusiness?.trim()}
 									profilePsicCode={workspace.profile.psicCode}
-									errors={workspace.validationErrors} taxpayerHref={`/ebirforms/taxpayers/${params.id}/edit`}
+										errors={workspace.validationErrors} {taxpayerHref}
 									onvaluechange={(patch) => workspace.updateFormValues(patch)} />
 							{/key}
 						{:else if workspace.selectedForm.code === '1601EQ'}
@@ -148,7 +172,7 @@
 							<Form0619Editor code={workspace.selectedForm.code} values={workspace.formValues} errors={workspace.validationErrors} onvaluechange={(patch) => workspace.updateFormValues(patch)} {taxpayerInformation} />
 						{:else if withholdingDefinition && editor?.kind === 'withholding'}
 							{#key `${params.formCode}:${recordId ?? ''}`}
-								<editor.Component bind:this={withholdingEditor} definition={withholdingDefinition} values={workspace.formValues} errors={workspace.validationErrors} profile={workspace.profile} taxpayerHref={`/ebirforms/taxpayers/${params.id}/edit`} onvaluechange={(patch) => workspace.updateFormValues(patch)} />
+									<editor.Component bind:this={withholdingEditor} definition={withholdingDefinition} values={workspace.formValues} errors={workspace.validationErrors} profile={workspace.profile} {taxpayerHref} onvaluechange={(patch) => workspace.updateFormValues(patch)} />
 							{/key}
 						{/if}
 					</fieldset>

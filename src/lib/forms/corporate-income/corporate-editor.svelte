@@ -1,6 +1,4 @@
 <script lang="ts">
-	import { replaceState } from '$app/navigation';
-	import { page } from '$app/state';
 	import AccreditationNumberInput from './accreditation-number-input.svelte';
 	import { corporateBackgroundCell, corporateBackgroundRows, isRegisteredInformationRow } from './background-layout';
 	import { legacyExemptIdentificationFields, legacyExemptIdentificationPatch } from './exempt';
@@ -23,6 +21,7 @@
 	import AtcPicker from '../atc-picker.svelte';
 	import PaperFormHeader from '../paper-form-header.svelte';
 	import ReturnPagination from '../return-pagination.svelte';
+	import { getReturnPage, selectReturnPage } from '../return-page-navigation';
 	import type { CorporateField, CorporateForm, CorporateRow, CorporateSection, CorporateValues } from './types';
 	import '../form-editor-layout.css';
 
@@ -36,7 +35,7 @@
 		onvaluechange: (patch: CorporateValues) => void;
 	} = $props();
 
-	const selectedPage = $derived(page.state.corporateReturnPage ?? page.url.searchParams.get('page'));
+	const selectedPage = $derived(getReturnPage());
 	let editing = $state.raw<CorporateEntry>();
 	let editingList = $state.raw<CorporateList>();
 	let editingContext = $state('');
@@ -356,15 +355,8 @@
 		onvaluechange(Object.fromEntries(fields.map((field, index) => [field.id, segments[index] ?? ''])));
 	}
 
-	function selectPage(id: string) {
-		const url = new URL(window.location.href);
-		if (id === '1') url.searchParams.delete('page');
-		else url.searchParams.set('page', id);
-		replaceState(url, { ...page.state, corporateReturnPage: id });
-	}
-
 	async function showPage(id: string) {
-		selectPage(id);
+		await selectReturnPage(id);
 		await tick();
 		const heading = document.getElementById(headingId);
 		heading?.focus({ preventScroll: true });
@@ -372,7 +364,7 @@
 	}
 
 	async function showSection(id: string, title: string) {
-		selectPage(id);
+		await selectReturnPage(id);
 		await tick();
 		const index = active.sections.findIndex(section => section.title.startsWith(title));
 		const heading = document.getElementById(`${headingId}-section-${index}`);
@@ -383,7 +375,7 @@
 	export async function revealField(id: string) {
 		const index = allPages.findIndex(page => page.sections.some(section => section.rows.some(row =>
 			row.fields.some(field => field.id === id))));
-		if (index !== -1) selectPage(String(index + 1));
+		if (index !== -1) await selectReturnPage(String(index + 1));
 		await tick();
 		const section = allPages[index]?.sections.find(section => section.rows.some(row => row.fields.some(field => field.id === id)));
 		const row = section?.rows.find(row => row.fields.some(field => field.id === id));

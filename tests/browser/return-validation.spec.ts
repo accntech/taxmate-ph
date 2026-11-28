@@ -29,7 +29,7 @@ for (const scenario of ['no ATC', 'zero tax base']) {
 		await page.getByRole('menuitem', { name: 'Mark as final', exact: true }).click();
 		await expect(page.getByRole('alert')).toContainText(scenario === 'no ATC' ? 'Add at least one ATC' : 'Enter a tax base greater than zero');
 		expect(await page.evaluate(() => localStorage.getItem('ebirforms-created-returns-v1'))).toBe(savedDraft);
-		await page.getByRole('link', { name: 'Edit', exact: true }).click();
+		await page.getByRole('link', { name: /^Edit BIR Form / }).click();
 		await page.getByRole('button', { name: scenario === 'no ATC' ? 'Add line item' : 'Edit line item 1' }).click();
 		const editor = page.getByRole('dialog');
 		if (scenario === 'no ATC') {

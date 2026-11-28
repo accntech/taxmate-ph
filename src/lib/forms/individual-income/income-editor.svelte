@@ -26,6 +26,7 @@
 	import { incomeIncludesSpouse, incomePersonalValues, incomeProfileFieldList, incomeSpouseFieldIds, incomeSpouseFiling, legacy1701ProfileIds } from './profile-fields';
 	import PaperFormHeader from '../paper-form-header.svelte';
 	import ReturnPagination from '../return-pagination.svelte';
+	import { getReturnPage, selectReturnPage } from '../return-page-navigation';
 	import ReturnTaxpayerInformation from '../return-taxpayer-information.svelte';
 	import { joinRegisteredLines, registeredNameLines, type TaxpayerProfile } from '$lib/profiles/profile';
 	import type { TaxpayerItemKey } from '../withholding-paper-layout';
@@ -51,7 +52,7 @@
 		onvaluechange: (patch: Record<string, string>) => void;
 	} = $props();
 
-	let currentPage = $state('1');
+	const currentPage = $derived(getReturnPage());
 	let addedDependentRows = $state(1);
 	let addedSupplementalEntries = $state<string[]>([]);
 	let scheduleOpen = $state<Record<string, boolean>>({});
@@ -527,7 +528,7 @@
 		const destination = fieldId ? fieldsById.get(fieldId) : undefined;
 		const drawerField = destination && isDeductionDrawerField(destination) && !isDeductionDrawerTotal(destination) && !isAutofilledOperatingLoss(destination) ? destination : undefined;
 		const item = drawerField && !isOperatingLossComputation(drawerField) ? drawerField.item : undefined;
-		currentPage = page;
+		await selectReturnPage(page);
 		await tick();
 		if (attachments && destination) {
 			attachments.reveal(destination);
