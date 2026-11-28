@@ -1,5 +1,6 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 import { ebirformsWorkspace as workspace, initialProfile } from '$lib/ebirforms/ebirforms-workspace.svelte';
+import { parseLegacyXml } from '$lib/legacy/xml';
 
 const key = 'ebirforms-created-returns-v1';
 let saved: Map<string, string>;
@@ -31,6 +32,51 @@ it('keeps a new form in memory until Save creates it, then updates the same reco
  const records = JSON.parse(saved.get(key)!).returns;
  expect(records).toHaveLength(1);
  expect(records[0]).toMatchObject({ id, values: { 'frm1601EQ:txtYear': '2024' } });
+});
+
+it('preserves 1701 eligibility amounts through draft save and reopen', async () => {
+ const id = workspace.createReturn(initialProfile.id, '1701v2018')!;
+ const sales = 'frm1701:txtPg3IShed3_26A';
+ const otherIncome = 'frm1701:txtPg3IShed3_27A';
+ workspace.updateFormValues({
+  'frm1701:txtPg1I1Year': '2025',
+  'frm1701:rdoPg1I7ATC': 'II015',
+  [sales]: '2900000.29',
+  [otherIncome]: '99999.72'
+ });
+ expect(await workspace.saveActiveReturn('Draft')).toBe(true);
+ expect(workspace.openReturn(id)).toBe(true);
+ expect(workspace.formValues[sales]).toBe('2900000.29');
+ expect(workspace.formValues[otherIncome]).toBe('99999.72');
+ await workspace.markFinalCopy();
+ expect(workspace.validationErrors[sales]).toEqual(expect.stringMatching(/3,000,000/));
+ expect(workspace.currentReturnStatus).toBe('Draft');
+});
+
+it('keeps exact-boundary 1701 eligibility stable when validating twice and rounds the filing XML', () => {
+ workspace.profiles = [{
+  ...initialProfile, address: '123 Example Street', zipCode: '1000',
+  civilStatus: 'Single', taxpayerType: 'single-proprietor'
+ }];
+ workspace.createReturn(initialProfile.id, '1701v2018');
+ const sales = 'frm1701:txtPg3IShed3_26A';
+ const otherIncome = 'frm1701:txtPg3IShed3_27A';
+ workspace.updateFormValues({
+  'frm1701:txtPg1I1Year': '2025',
+  'frm1701:txtPg1I10BirthDate': '01/01/1987',
+  'frm1701:txtPg1I12Citizenship': 'Filipino',
+  'frm1701:rdoPg1I6TaxpayerTypeS': 'Y',
+  'frm1701:rdoPg1I7ATC': 'II015',
+  'frm1701:rdoPg1I19IncomeExempt': 'No',
+  'frm1701:rdoPg1I20IncomeSpecial': 'No',
+  [sales]: '2900000.50',
+  [otherIncome]: '99999.50'
+ });
+ workspace.validateReturn();
+ expect(workspace.validationErrors).toEqual({});
+ expect(workspace.validateReturn()).toBe(true);
+ expect(workspace.formValues[sales]).toBe('2900000.50');
+ expect(parseLegacyXml(workspace.generatedXml)[sales]).toBe('2900001');
 });
 
 it('retains an unsaved new form for retry when Save fails', async () => {

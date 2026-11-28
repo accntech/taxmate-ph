@@ -261,6 +261,18 @@ class EbirformsWorkspace {
 		return true;
 	}
 
+	#calculateWorkingReturn(formCode: string): Record<string, string> {
+		const calculated = calculateReturn(formCode, this.formValues);
+		if (formCode === '1701v2018') {
+			// Keep eligibility inputs that can carry centavos in an imported draft.
+			for (const item of ['26A', '27A', '26B', '27B']) {
+				const id = `frm1701:txtPg3IShed3_${item}`;
+				if (id in this.formValues) calculated[id] = this.formValues[id];
+			}
+		}
+		return calculated;
+	}
+
 	async saveActiveReturn(status?: CreatedReturnStatus): Promise<boolean> {
 		if (this.isPersisting || this.#workingCopiesLoad) return false;
 		const active = this.createdReturns.find(item => item.id === this.activeReturnId)
@@ -270,7 +282,7 @@ class EbirformsWorkspace {
 			return false;
 		}
 		const nextStatus = status ?? (this.hasUnsavedChanges ? 'Draft' : active.status);
-		const calculated = calculateReturn(active.formCode, this.formValues);
+		const calculated = this.#calculateWorkingReturn(active.formCode);
 		const values = getCorporateIncomeForm(active.formCode) ? calculated : { ...this.formValues };
 		if (active.formCode === '1601EQ') {
 			if ('txtEmail' in calculated) values.txtEmail = calculated.txtEmail;
@@ -547,7 +559,7 @@ class EbirformsWorkspace {
 				'Correct the highlighted return details before finalizing or submitting.';
 			return false;
 		}
-		if (applyCalculations) this.formValues = calculateReturn(this.selectedForm?.code ?? '1601EQ', this.formValues);
+		if (applyCalculations) this.formValues = this.#calculateWorkingReturn(this.selectedForm?.code ?? '1601EQ');
 		return true;
 	}
 

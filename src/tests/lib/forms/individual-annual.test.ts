@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import * as annual from "../../../lib/forms/individual-income/annual";
+import { validateReturnValues } from "../../../lib/forms/form-runtime";
 import {
   calculate1701A,
   calculate1701MS,
@@ -75,6 +76,49 @@ describe("individual annual income computations", () => {
     });
     expect(errors[p + "txtPg1I25A"]).toMatch(/50%/);
     expect(errors[p + "txtPg3IShed3_29A"]).toMatch(/250,000/);
+  });
+  it("checks combined gross receipts and non-operating income separately for each active 8% filer", () => {
+    const values = {
+      [p + "txtPg1I1Year"]: "2025",
+      [p + "rdoPg1I16CivilStatus"]: "Married",
+      [p + "rdoPg1I17SpouseIncome"]: "Yes",
+      [p + "rdoPg1I18FilingStatus"]: "Joint",
+      [p + "rdoPg1I7ATC"]: "II015",
+      [p + "rdoPg2I4ATC"]: "II016",
+      [p + "txtPg3IShed3_26A"]: "2900000",
+      [p + "txtPg3IShed3_27A"]: "100000",
+      [p + "txtPg3IShed3_26B"]: "2900000",
+      [p + "txtPg3IShed3_27B"]: "100001",
+    };
+    const errors = validateReturnValues("1701v2018", values);
+    expect(errors[p + "txtPg3IShed3_26A"]).toBeUndefined();
+    expect(errors[p + "txtPg3IShed3_26B"]).toEqual(expect.stringMatching(/3,000,000/));
+    const separate = validateReturnValues("1701v2018", {
+      ...values,
+      [p + "rdoPg1I18FilingStatus"]: "Separate",
+      [p + "txtPg3IShed3_27A"]: "100001",
+    });
+    expect(separate[p + "txtPg3IShed3_26A"]).toEqual(expect.stringMatching(/3,000,000/));
+    expect(separate[p + "txtPg3IShed3_26B"]).toBeUndefined();
+    const graduated = validateReturnValues("1701v2018", {
+      ...values,
+      [p + "rdoPg2I4ATC"]: "II013",
+    });
+    expect(graduated[p + "txtPg3IShed3_26B"]).toBeUndefined();
+  });
+  it("checks centavos on an imported 1701 draft before whole-peso calculations", () => {
+    const input = {
+      [p + "txtPg1I1Year"]: "2025",
+      [p + "rdoPg1I7ATC"]: "II015",
+      [p + "txtPg3IShed3_26A"]: "2,900,000.29",
+      [p + "txtPg3IShed3_27A"]: "99,999.71",
+    };
+    expect(validateReturnValues("1701v2018", input)[p + "txtPg3IShed3_26A"]).toBeUndefined();
+    const above = validateReturnValues("1701v2018", {
+      ...input,
+      [p + "txtPg3IShed3_27A"]: "99,999.72",
+    });
+    expect(above[p + "txtPg3IShed3_26A"]).toEqual(expect.stringMatching(/3,000,000/));
   });
   it("requires foreign tax number conditionally and rejects pre-2018 year", () => {
     const errors = annual.validateAnnual("1701v2018", {
@@ -335,5 +379,30 @@ describe("short annual income returns", () => {
     });
     expect(errors["frm1701MS:txtTaxpayerNo16a"]).toMatch(/before the filing period ends/i);
     expect(errors["frm1701MS:txtTaxpayerNo16a1"]).toMatch(/on or after the filing period ends/i);
+  });
+
+  it("requires a tax relief end date for each active special or exempt filer", () => {
+    const values = {
+      "frm1701MS:txtYearNo1": "2025",
+      "frm1701MS:txtMonthNo1": "12",
+      "frm1701MS:civilStatus": "Married",
+      "frm1701MS:txtIfMarried": "1",
+      "frm1701MS:sourceOfIncomeTaxpayer": "1",
+      "frm1701MS:sourceOfIncomeSpouse": "1",
+      "frm1701MS:txtTaxpayerNo12a": "4",
+      "frm1701MS:txtTaxpayerNo12b": "5",
+      "frm1701MS:txtTaxpayerNo16a": "01/01/2025",
+      "frm1701MS:txtTaxpayerNo16b": "01/01/2025",
+    };
+    const errors = validateReturnValues("1701MS", values);
+    expect(errors["frm1701MS:txtTaxpayerNo16a1"]).toEqual(expect.stringMatching(/end date/i));
+    expect(errors["frm1701MS:txtTaxpayerNo16b1"]).toEqual(expect.stringMatching(/end date/i));
+    const separate = validateReturnValues("1701MS", {
+      ...values,
+      "frm1701MS:txtIfMarried": "2",
+      "frm1701MS:txtTaxpayerNo16a1": "12/31/2025",
+    });
+    expect(separate["frm1701MS:txtTaxpayerNo16a1"]).toBeUndefined();
+    expect(separate["frm1701MS:txtTaxpayerNo16b1"]).toBeUndefined();
   });
 });

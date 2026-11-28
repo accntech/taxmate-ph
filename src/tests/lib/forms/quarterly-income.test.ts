@@ -37,6 +37,33 @@ describe('quarterly individual income returns', () => {
   expect(errors[p+'txtBirthDay']).toBeTruthy();
   expect(errors[p+'txt52A']).toBeTruthy();
  });
+ it('checks current and previous-quarter income against the 8% cap for each active filer', () => {
+  const input = values({
+   txtYear: '2025', DateQuarter: '3', optTaxpayerType: 'Single', optATC: 'II015',
+   txt47A: '1100000', txt48A: '100000', txt50A: '1800000', txt52A: '250000',
+   txtSpouseName: 'SYNTHETIC, SAM', optSpouseType_1: 'Business', optSpouseATC: 'II016',
+   txt47B: '1100000', txt48B: '100001', txt50B: '1800000', txt51B: '0.00'
+  });
+  const errors = validateReturnValues('1701Qv2018', input);
+  expect(errors[p + 'txt47A']).toBeUndefined();
+  expect(errors[p + 'txt47B']).toEqual(expect.stringMatching(/3,000,000/));
+  const separate = validateReturnValues('1701Qv2018', {
+   ...input, 'income:useSavedSpouse': 'N', [p + 'txt48A']: '100001'
+  });
+  expect(separate[p + 'txt47A']).toEqual(expect.stringMatching(/3,000,000/));
+  expect(separate[p + 'txt47B']).toBeUndefined();
+  const graduated = validateReturnValues('1701Qv2018', { ...input, [p + 'optSpouseATC']: 'II013' });
+  expect(graduated[p + 'txt47B']).toBeUndefined();
+ });
+ it('checks quarterly centavos before rounding the displayed cumulative amount', () => {
+  const input = values({
+   txtYear: '2025', DateQuarter: '3', optTaxpayerType: 'Single', optATC: 'II015',
+   txt47A: '1100000.29', txt48A: '99999.71', txt50A: '1800000'
+  });
+  expect(validateReturnValues('1701Qv2018', input)[p + 'txt47A']).toBeUndefined();
+  const above = validateReturnValues('1701Qv2018', { ...input, [p + 'txt48A']: '99999.72' });
+  expect(above[p + 'txt47A']).toEqual(expect.stringMatching(/3,000,000/));
+ });
  it('excludes tax paid on a previously filed legacy return until an amendment is selected', () => {
   const input = values({ AmendedRtn: 'N', txt26A: '100000', txt38A: '500', txt38I: '3000', txt38J: '500', txtSpousename: 'EXAMPLE, SAM' });
   const original = calculateReturn('1701Q', input);

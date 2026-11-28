@@ -389,6 +389,7 @@ export function validate1701MS(values: Values): Values {
 			for (const item of ['13', '14', '15', '16']) require('txtTaxpayerNo' + item + person, `the tax relief details for Item ${item}`);
 			const fromId = 'txtTaxpayerNo16' + person;
 			const toId = fromId + '1';
+			require(toId, 'the tax relief end date');
 			const from = parseDate(value(fromId));
 			const to = parseDate(value(toId));
 			if (value(fromId) && !from) errors[field(fromId)] = 'Enter a valid tax relief start date.';

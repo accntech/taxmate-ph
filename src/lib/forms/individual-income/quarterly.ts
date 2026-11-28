@@ -293,9 +293,17 @@ export function validateQuarterly(code: string, values: Values): Values {
   }
   const rate = quarterlySelectedRate(values, spousePerson);
   if (rate === 'Graduated') select(methodName, ['I', 'O'], 'the deduction method');
-  const subtraction = amount(values, 'txt52' + person);
-  if (rate === 'Percentage' && atc !== 'II016' && (subtraction < 0 || subtraction > 250000)) {
-   errors[field('txt52' + person)] = 'Item 52 must be between zero and P250,000.';
+  if (rate === 'Percentage') {
+   const cumulativeIncomeCents = [47, 48, 50].reduce(
+    (total, item) => total + Math.round(amount(values, 'txt' + item + person) * 100), 0
+   );
+   if (cumulativeIncomeCents > 300_000_000) {
+    errors[field('txt47' + person)] = 'Cumulative sales or receipts plus other non-operating income exceed ₱3,000,000. Select graduated rates.';
+   }
+   const subtraction = amount(values, 'txt52' + person);
+   if (atc !== 'II016' && (subtraction < 0 || subtraction > 250000)) {
+    errors[field('txt52' + person)] = 'Item 52 must be between zero and P250,000.';
+   }
   }
  }
  return errors;

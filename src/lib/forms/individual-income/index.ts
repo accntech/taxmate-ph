@@ -15,6 +15,7 @@ import importedFields from './templates/fields.json';
 type Values = Record<string, string>;
 type ProfileKey = keyof TaxpayerProfile;
 type Rule = (code: string, values: Values) => Values;
+type ValidationRule = (code: string, values: Values, sourceValues: Values) => Values;
 const identityKeys = ['tin1', 'tin2', 'tin3', 'branchCode', 'rdoCode', 'taxpayerName', 'address', 'address2', 'zipCode', 'contactNumber', 'email'] as const;
 const codeDetails = {
 	'1700': ['1700 · June 2013', 'Annual return for purely compensation income', 'frm1700', 'txtYear', 'txtPg1Pt1I5TIN1 txtPg1Pt1I5TIN2 txtPg1Pt1I5TIN3 txtPg1Pt1I5BranchCode txtPg1Pt1I6RDOCode txtPg1Pt1I8TaxFilerLastName txtPg1Pt1I9Address1 txtPg1Pt1I9Address2 - txtPg1Pt1I12ContactNo txtPg1Pt1I11EmailAddress'],
@@ -34,7 +35,7 @@ const pagesFiledFields: Partial<Record<IncomeCode, string>> = {
 const first1701MSYear = 2024;
 const firstRevisedIncomeYear = 2018;
 
-const rules: Record<IncomeCode, { calculate: Rule; validate: Rule; amount: (code: string) => string }> = {
+const rules: Record<IncomeCode, { calculate: Rule; validate: ValidationRule; amount: (code: string) => string }> = {
 	'1700': { calculate: calculateCompensation, validate: validateCompensation, amount: compensationAmountField },
 	'1700v2018': { calculate: calculateCompensation, validate: validateCompensation, amount: compensationAmountField },
 	'1701': { calculate: calculateAnnual, validate: validateAnnual, amount: annualAmountField },
@@ -344,7 +345,7 @@ export function incomeOutputValues(form: IncomeForm, values: Values): Values {
 }
 
 export function validateIndividualIncome(form: IncomeForm, values: Values): Values {
-	const errors = rules[form.code as IncomeCode].validate(form.code, roundIncomeAmounts(form, values));
+	const errors = rules[form.code as IncomeCode].validate(form.code, roundIncomeAmounts(form, values), values);
 	const filing = annualFilingFields[form.code];
 	if (filing && isShortFilingPeriod(filing, values) && !/^(?:0[1-9]|1[0-2])$/.test(values[filing.month] ?? ''))
 		errors[filing.month] = 'Select the last month of the short filing period.';

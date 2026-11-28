@@ -1,5 +1,5 @@
 /** Whole-peso results retain the saved return’s decimal string format. */
-import { roundWholePeso } from '$lib/components/ui/currency-input/currency';
+import { normalizeCurrencyInput, roundWholePeso } from '$lib/components/ui/currency-input/currency';
 import { incomeIncludesSpouse } from "./profile-fields";
 import { calculateJuneActivities, calculateRevisedActivities } from "./annual-activity-calculations";
 import { calculateJuneConsolidation, calculateJuneReconciliation, calculateJuneSupplementalIncome } from "./annual-june-schedules";
@@ -755,7 +755,7 @@ export function calculateAnnual(code: string, values: Values, computed?: Set<str
   return result;
 }
 
-export function validateAnnual(code: string, values: Values): Values {
+export function validateAnnual(code: string, values: Values, sourceValues = values): Values {
   const errors: Values = {};
   const result = calculateAnnual(code, values);
   const n = (name: string) => number(result[id(name)]);
@@ -870,12 +870,16 @@ export function validateAnnual(code: string, values: Values): Values {
       if (reductionApplies && n(reduction) > 250000)
         errors[id(`txtPg3IShed3_29${column}`)] =
           "The deduction cannot exceed 250,000.";
-      if (
-        eightPercent &&
-        n(`txtPg3IShed3_26${column}`) > 3000000
-      )
-        errors[id(`txtPg3IShed3_26${column}`)] =
-          "Gross receipts exceed the packaged 3,000,000 threshold for the 8% election.";
+      if (eightPercent) {
+        // Imported drafts can retain centavos that are rounded on the form.
+        const combinedIncomeCents = [26, 27].reduce((total, item) => {
+          const amount = normalizeCurrencyInput(sourceValues[id(`txtPg3IShed3_${item}${column}`)] ?? "", true);
+          return total + Math.round(Number(amount) * 100);
+        }, 0);
+        if (combinedIncomeCents > 300_000_000)
+          errors[id(`txtPg3IShed3_26${column}`)] =
+            "Gross sales or receipts plus other non-operating income exceed ₱3,000,000. Select graduated rates.";
+      }
       if (
         reductionApplies &&
         n(`txtPg2IShed2_6${column}`) > 0 &&
